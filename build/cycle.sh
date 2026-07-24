@@ -1,0 +1,79 @@
+#!/bin/bash
+# 一轮完整的构建与发布。定时任务跑的就是这个。
+#
+# 顺序：更新 overlay → 构建 → 发布 → 报告失败。
+#
+# 并发由 build-container.sh 那层的锁挡住：手工调、定时器调、只重跑几个包，
+# 走的都是那一层。
+
+set -euo pipefail
+
+# 主体放进函数：bash 按字节偏移边读边执行，脚本在运行中被替换会让执行路径错乱。
+main() {
+cd "$(dirname "$0")/.."
+
+OVERLAY="${OVERLAY:-/var/lib/binhost/overlay}"
+LOGDIR="${LOGDIR:-/var/lib/binhost/logs/x86-64}"
+ALERT_CONF="${ALERT_CONF:-/etc/binhost/alert.conf}"
+
+alert() {
+    # 文件在却读不到，和没配过是两回事：前者说明属主与跑它的用户对不上，
+    # 告警会一直发不出去而没有任何迹象。这条要出现在构建日志里。
+    if [[ -e ${ALERT_CONF} && ! -r ${ALERT_CONF} ]]; then
+        echo "!! ${ALERT_CONF} 读不到（当前用户 $(id -un)），告警发不出去" >&2
+        return 0
+    fi
+    [[ -r ${ALERT_CONF} ]] || return 0
+    # shellcheck source=/dev/null
+    . "${ALERT_CONF}"
+    curl -fsS --max-time 20 -o /dev/null \
+        "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+        --data-urlencode "chat_id=${TELEGRAM_CHAT}" \
+        --data-urlencode "text=$1" || true
+}
+
+# set -e 之下任何一步失败都直接退出。没有这个 trap，git fetch 半夜取不到就是
+# 悄无声息地结束，第二天才发现索引还停在前一天。下面几处 if ! 有各自更具体的
+# 说法，它们不触发 ERR，两者不重复。
+on_error() {
+    local rc=$1 line=$2 cmd=$3
+    echo "!!! 第 ${line} 行失败（退出码 ${rc}）：${cmd}" >&2
+    alert "binhost 本轮失败（$(hostname)）
+第 ${line} 行，退出码 ${rc}
+${cmd}"
+    exit "${rc}"
+}
+trap 'on_error "$?" "${LINENO}" "${BASH_COMMAND}"' ERR
+
+echo "=== $(date '+%F %T') 开始 ==="
+
+# 构建按 overlay 的当前状态来，先取最新的
+git -C "${OVERLAY}" fetch --quiet origin master
+git -C "${OVERLAY}" reset --quiet --hard origin/master
+echo "overlay $(git -C "${OVERLAY}" rev-parse --short HEAD)"
+
+if ! ./build/run-full.sh; then
+    alert "binhost 构建阶段失败（$(hostname)）"
+    exit 1
+fi
+
+if ! ./build/publish.sh; then
+    alert "binhost 发布阶段失败（$(hostname)）：包已构建，未同步到镜像机"
+    exit 1
+fi
+
+# 单包失败不影响本轮其余部分，但需要通知。分类报告区分了
+# 「ebuild 需修改」与「构建环境需调整」，前者才涉及 overlay。
+if [[ -s ${LOGDIR}/failed.txt ]]; then
+    n=$(wc -l < "${LOGDIR}/failed.txt")
+    report=$(python3 ./build/classify-failures.py "${LOGDIR}")
+    echo "${report}"
+    alert "binhost 构建失败 ${n} 个（$(hostname)）:
+${report}"
+fi
+
+echo "=== $(date '+%F %T') 结束 ==="
+
+}
+
+main "$@"
