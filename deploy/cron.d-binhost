@@ -1,0 +1,6 @@
+# 每 5 分钟看仓库有没有新提交，有才同步站点
+*/5 * * * * zakk /usr/local/bin/binhost-site-sync
+# 每天查密钥/证书/索引/取包，失败推 Telegram
+23 6 * * * root /usr/local/bin/binhost-status
+# distfiles 每天凌晨同步。单核，白天跑会和发文件抢 CPU。
+17 4 * * * root /usr/local/bin/binhost-daily >> /var/log/emirrordist/run.log 2>&1

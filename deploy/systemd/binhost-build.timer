@@ -1,0 +1,12 @@
+[Unit]
+Description=每日构建并发布 binhost
+
+[Timer]
+# 深夜跑。一轮增量通常远快于首次全量，但仍可能几个小时。
+OnCalendar=*-*-* 02:00:00
+# 机器关过机时补跑，别静默跳过一天
+Persistent=true
+RandomizedDelaySec=15m
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=binhost 健康检查（站外观察 + 签名密钥有效期）
+
+[Service]
+Type=oneshot
+# 和构建同一个用户：脚本里读签名密钥用的是 sudo gpg，本来就不是给 root 写的。
+# 装的时候按实际用户改。
+User=adminc3b9c6
+Group=adminc3b9c6
+ExecStart=/usr/local/bin/binhost-status
