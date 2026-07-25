@@ -1,0 +1,11 @@
+[Unit]
+Description=把 %i 的失败推出去
+
+# 单元被 systemd 杀掉时（超时、OOM），失败的那个脚本自己的 trap 跑不到，
+# 只有这一层还能说话。凭据读不到就什么都不做，和脚本里那个 alert 一致。
+
+[Service]
+Type=oneshot
+User=adminc3b9c6
+Group=adminc3b9c6
+ExecStart=/var/lib/binhost/build/alert-failed.sh %i.service
