@@ -1,0 +1,535 @@
+/* distfiles.gentoozh.org */
+
+:root {
+  color-scheme: light dark;
+
+  /* 强调色取自 gentoozh.org 的 hsl(255 55% 70%)，色相与 Gentoo 官方紫
+     #54487a 一致。全站只有这一个强调色相。 */
+  --accent: #5b43a3;
+  --accent-dim: #8779af;
+  --accent-weak: #f3f0f9;
+  --ok: #2f7d4f;
+
+  /* 中性色偏一点点紫，避免纯灰的死板；不用 Tailwind 那套蓝灰。 */
+  --bg: #fcfcfd;
+  --surface: #ffffff;
+  --border: #e1e0e6;
+  --fg: #1c1a23;
+  --fg-body: #494653;
+  --fg-soft: #726e7c;
+  --hover: rgba(28,26,35,0.04);
+  --chip: rgba(28,26,35,0.05);
+
+  --sans: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+  --mono: ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+
+  /* 兼容尚未改完的旧选择器，逐步移除 */
+  --primary: var(--accent);
+  --card: var(--surface);
+  --panel: var(--surface);
+  --panel-head: var(--bg);
+  /* 代码块只用一个色相：值用强调色，其余靠中性色的明暗分层。
+     原来值是青绿，和紫色是两个色相，跟设计语言里写的对不上。 */
+  --c-sec: var(--accent);      /* 段名 [gentoo-zh] */
+  --c-key: var(--fg);          /* 键、命令 */
+  --c-val: var(--accent);      /* 值、地址 */
+  --c-flag: var(--fg-soft);    /* 选项 */
+  --c-prompt: var(--accent-dim); /* 提示符 # $ */
+  --shadow: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --accent: #9d88dd;
+    --accent-dim: #7b6aaf;
+    --accent-weak: #231d35;
+    --ok: #6cc08b;
+
+    --bg: #111113;
+    --surface: #1b1b1d;
+    --border: #313036;
+    --fg: #f2f1f3;
+    --fg-body: #c5c4ca;
+    --fg-soft: #918d9a;
+    --hover: rgba(255,255,255,0.05);
+    --chip: rgba(255,255,255,0.07);
+
+    --primary: var(--accent);
+    --card: var(--surface);
+    --panel: var(--surface);
+    --panel-head: #17171a;
+    --c-sec: var(--accent); --c-key: var(--fg); --c-val: var(--accent);
+    --c-flag: var(--fg-soft); --c-prompt: var(--accent-dim);
+    --shadow: none;
+  }
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --accent: #9d88dd;
+  --accent-dim: #7b6aaf;
+  --accent-weak: #231d35;
+  --ok: #6cc08b;
+
+  --bg: #111113;
+  --surface: #1b1b1d;
+  --border: #313036;
+  --fg: #f2f1f3;
+  --fg-body: #c5c4ca;
+  --fg-soft: #918d9a;
+  --hover: rgba(255,255,255,0.05);
+  --chip: rgba(255,255,255,0.07);
+
+  --primary: var(--accent);
+  --card: var(--surface);
+  --panel: var(--surface);
+  --panel-head: #17171a;
+  --c-sec: var(--accent); --c-key: var(--fg); --c-val: var(--accent);
+  --c-flag: var(--fg-soft); --c-prompt: var(--accent-dim);
+  --shadow: none;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0; background: var(--bg); color: var(--fg-body); line-height: 1.75;
+  font-family: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- 顶栏 --- */
+
+.nav {
+  position: sticky; top: 0; z-index: 40; border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(12px) saturate(180%); backdrop-filter: blur(12px) saturate(180%);
+}
+.nav-inner {
+  max-width: 780px; margin: 0 auto; padding: 0.5rem 1.25rem;
+  display: flex; align-items: center; gap: 0.25rem 1rem;
+}
+.nav-brand { display: inline-flex; align-items: center; gap: 0.55rem; text-decoration: none; color: var(--fg); min-width: 0; }
+.nav-brand img { height: 26px; width: auto; }
+.nav-title { font-weight: 700; font-size: 0.95rem; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav-links {
+  display: flex; align-items: center; gap: 0.1rem;
+  /* margin-left: auto 把链接连同后面的语言、主题一起推到右边。
+     用 flex: 1 的话它会占满中间，链接就贴在品牌旁边。 */
+  flex: 0 1 auto; margin-left: auto;
+  min-width: 0; overflow-x: auto; scrollbar-width: none;
+}
+.nav-links::-webkit-scrollbar { display: none; }
+.nav-tools { display: flex; align-items: center; gap: 0.2rem; flex: none; }
+.nav-link {
+  color: var(--fg-soft); text-decoration: none; font-size: 0.86rem; font-weight: 600;
+  padding: 0.32rem 0.5rem; border-radius: 4px; white-space: nowrap;
+}
+.nav-link:hover { background: var(--hover); color: var(--fg); }
+
+/* i18n.js 注入的语言按钮与主题菜单。样式必须跟着脚本一起带，
+   缺了这段控件会退化成浏览器默认的灰色方块。 */
+.lang { display: inline-flex; align-items: center; }
+.lang-btn {
+  border: none; background: transparent; color: var(--fg-soft); font: inherit;
+  font-size: 0.88rem; font-weight: 600; padding: 0.32rem 0.46rem;
+  border-radius: 4px; cursor: pointer; line-height: 1;
+}
+.lang-btn:hover { background: var(--hover); color: var(--fg); }
+.lang-btn.active { color: var(--primary); }
+
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border: none; border-radius: 4px;
+  background: transparent; color: var(--fg-soft); cursor: pointer;
+}
+.icon-btn:hover { background: var(--hover); color: var(--fg); }
+
+.menu-wrap { position: relative; }
+.menu {
+  position: absolute; right: 0; top: calc(100% + 6px); min-width: 138px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 4px;
+  padding: 0.3rem; display: flex; flex-direction: column; gap: 0.1rem; z-index: 50;
+}
+.menu[hidden] { display: none; }
+.menu-item {
+  display: flex; align-items: center; gap: 0.55rem; width: 100%; border: none;
+  background: transparent; color: var(--fg-body); font: inherit; font-size: 0.86rem;
+  padding: 0.42rem 0.6rem; border-radius: 4px; cursor: pointer; text-align: left;
+}
+.menu-item:hover { background: var(--hover); }
+.menu-item.active { color: var(--primary); font-weight: 600; }
+.menu-item svg { flex: none; }
+
+/* --- 正文 --- */
+
+/* 列表页放宽：780px 是给正文定的行长，一张 431 行的表在这个宽度里
+   说明栏会被压成两行，行高参差不齐。 */
+.wrap.wide, .foot.wide .foot-inner, .nav.wide .nav-inner { max-width: 1100px; }
+.wrap { max-width: 780px; margin: 0 auto; padding: 2.75rem 1.25rem 3rem; position: relative; }
+.title { font-size: 1.6rem; line-height: 1.35; letter-spacing: -0.01em; font-weight: 600; color: var(--fg); margin: 0 0 0.35rem; }
+
+.lead { font-size: 0.95rem; line-height: 1.8; color: var(--fg-soft); margin: 0 0 1.75rem; max-width: 42em; }
+
+h2 {
+  font-size: 0.9rem; font-weight: 600; color: var(--fg); letter-spacing: 0;
+  margin: 2.75rem 0 1.1rem; padding-top: 1.1rem; border-top: 1px solid var(--border);
+}
+h2:first-of-type { margin-top: 2rem; }
+
+.uri {
+  display: flex; align-items: stretch; margin: 0 0 0.7rem;
+  border: 1px solid var(--border); border-radius: 4px; overflow: hidden;
+  background: var(--card); box-shadow: var(--shadow);
+}
+.uri .k {
+  flex: none; display: flex; align-items: center; padding: 0.6rem 0.8rem;
+  background: var(--panel-head); color: var(--primary); font-weight: 600;
+  font-family: var(--mono); font-size: 0.74rem; letter-spacing: 0.02em;
+  border-right: 1px solid var(--border);
+}
+.uri code {
+  flex: 1; min-width: 0; display: flex; align-items: center;
+  overflow-x: auto; white-space: nowrap; padding: 0.6rem 0.8rem;
+  font-family: var(--mono); font-size: 0.82rem; color: var(--fg); background: none;
+}
+.uri .copy-chip {
+  flex: none; border: 0; border-left: 1px solid var(--border);
+  background: transparent; color: var(--fg-soft); cursor: pointer;
+  font: inherit; font-size: 0.74rem; padding: 0 0.85rem;
+}
+.uri .copy-chip:hover { background: var(--chip); color: var(--fg); }
+
+/* --- 配置步骤 --- */
+
+.step { margin-top: 1.4rem; }
+.step:first-of-type { margin-top: 0; }
+.step-title {
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+  margin: 0 0 0.45rem; font-size: 0.9rem; font-weight: 600; color: var(--fg);
+}
+/* 高度由内容撑出来，上下用对称内边距，而不是固定 1.3rem 再居中。
+   固定高度加 flex/grid 居中，对齐的是行盒不是字形：等宽字体的 ascent
+   比 descent 大得多，数字会明显偏上。 */
+.step-title .n {
+  flex: none; min-width: 1.35em;
+  border-radius: 4px; text-align: center;
+  background: var(--accent-weak); color: var(--accent);
+  font: 600 0.74rem/1 var(--mono);
+  /* 上下不对称：line-height 为 1 时行盒（11.8px）比字体自然高度（ascent 10
+     + descent 4）矮，基线因此上移，数字的墨迹中心比盒中心高约 1.2px。
+     两者差 0.2em 正好把这段补平。实测得来，换字体要重新量。 */
+  padding: 0.44em 0.3em 0.24em;
+}
+
+/* 文件名做成标题栏，而不是浮在框外面的一行字 */
+.code {
+  border: 1px solid var(--border); border-radius: 4px; overflow: hidden;
+}
+.code-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+  padding: 0.42rem 0.5rem 0.42rem 0.85rem;
+  background: var(--panel-head); border-bottom: 1px solid var(--border);
+}
+.code-head .path {
+  font-family: var(--mono); font-size: 0.74rem; color: var(--fg-soft);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.code-head .copy-chip {
+  flex: none; border: 0; border-radius: 0.3rem; background: transparent;
+  color: var(--fg-soft); cursor: pointer; font: inherit; font-size: 0.72rem;
+  padding: 0.16rem 0.5rem;
+}
+.code-head .copy-chip:hover { background: var(--bg); color: var(--fg); }
+.code pre {
+  margin: 0; padding: 0.9rem 1rem; overflow-x: auto; background: var(--panel);
+  font-family: var(--mono); font-size: 0.8rem; line-height: 1.8; color: var(--fg-body);
+}
+/* 配置片段是静态的，用几个 span 上色就够，不值得为此引入高亮库 */
+.code .sec { color: var(--c-sec); font-weight: 600; }
+.code .key { color: var(--c-key); }
+.code .val { color: var(--c-val); }
+.code .flag { color: var(--c-flag); }
+/* 提示符只表示身份，不可选中，复制时不会带上 */
+.code .prompt { color: var(--c-prompt); user-select: none; }
+/* 四个条目排 2×2。auto-fit 在这个宽度下会排成 3+1，落单一个不好看 */
+
+.note { font-size: 0.88rem; line-height: 1.8; color: var(--fg-soft); }
+.note code, p code, li code, td code {
+  font-family: var(--mono); font-size: 0.86em; background: var(--chip);
+  padding: 0.08rem 0.34rem; border-radius: 0.3rem; color: var(--fg-body);
+  white-space: nowrap;
+}
+a { color: var(--primary); text-decoration: none; }
+/* 一律不加 hover 下划线，链接靠颜色区分就够了 */
+
+/* --- 页脚 --- */
+
+.foot { margin-top: 2.6rem; border-top: 1px solid var(--border); }
+.foot-inner {
+  max-width: 780px; margin: 0 auto; padding: 1.2rem 1.25rem 2.6rem;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.8rem 1.4rem; flex-wrap: wrap;
+  font-size: 0.82rem; color: var(--fg-soft);
+}
+.foot-brand { font-weight: 600; color: var(--fg-soft); }
+.foot-links { display: flex; gap: 1.1rem; flex-wrap: wrap; }
+/* 页脚链接是次要信息，用正文色而不是主色，免得整行都在抢注意力 */
+.foot-links a { color: var(--fg-soft); }
+.foot-links a:hover { color: var(--primary); text-decoration: none; }
+
+/* --- 目录浏览 --- */
+
+.crumbs { font-family: var(--mono); font-size: 0.82rem; color: var(--fg-soft); margin: 0 0 1rem; word-break: break-all; }
+/* 表格宽过视口时让它自己横向滚，不要把整个页面撑出横向滚动条 */
+#out { overflow-x: auto; }
+.listing { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.84rem; }
+.listing th {
+  text-align: left; font-weight: 600; color: var(--fg-soft); font-size: 0.74rem;
+  letter-spacing: 0.03em; white-space: nowrap;
+  padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border);
+}
+/* 名称列吃掉剩余宽度，否则「大小」这种两字表头会被挤成竖排 */
+.listing th:first-child { width: 100%; }
+.listing td { padding: 0.36rem 0.6rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.listing tr:hover td { background: var(--hover); }
+.listing td.name { white-space: normal; word-break: break-all; width: 100%; }
+.listing td.size, .listing td.date, .listing th.size, .listing th.date { text-align: right; color: var(--fg-soft); }
+.listing a.dir::after { content: "/"; color: var(--fg-soft); }
+.msg { color: var(--fg-soft); padding: 2rem 0; }
+
+/* --- 复制提示 --- */
+
+#copy-toast {
+  position: fixed; left: 50%; bottom: 1.6rem; transform: translateX(-50%) translateY(0.8rem);
+  background: var(--primary); color: #fff; font-size: 0.84rem; font-weight: 600;
+  padding: 0.45rem 1rem; border-radius: 4px; opacity: 0; pointer-events: none; z-index: 60;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+#copy-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 40rem) {
+  .title { font-size: 1.6rem; line-height: 1.35; letter-spacing: -0.01em; font-weight: 600; color: var(--fg); margin: 0 0 0.35rem; }
+  .listing td.date, .listing th.date { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* --- 交互反馈 ---
+   可点的东西要看得出可点，按下去要有回应。悬停变色、聚焦有描边、
+   点击有位移。除此之外没有动画。 */
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+/* 导航、语言按钮、页脚已经用底色或颜色表示悬停，再加下划线是重复的反馈。 */
+.nav-link:hover, .nav-brand:hover, .lang-btn:hover, .icon-btn:hover,
+.foot-links a:hover, .menu-item:hover { text-decoration: none; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+button, .copy-chip, .nav-link, .lang-btn, .icon-btn, .filter {
+  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+button:active, .copy-chip:active { transform: translateY(1px); }
+
+/* 表格行悬停：一行几十个字符，没有底色很难对上列 */
+.listing tbody tr:hover td { background: var(--hover); }
+
+/* 数据带：包数、更新时间这类事实，放在标题下方一行 */
+/* 两列网格：一行一个来源，数量与时间各占一列，时间因此左对齐成一竖排。
+   用 flex 换行的话两行的时间会错开。 */
+.facts {
+  display: grid; grid-template-columns: auto auto;
+  justify-content: start; gap: 0.35rem 1.75rem;
+  margin: -0.75rem 0 2rem;
+  font-family: var(--mono); font-size: 0.78rem; color: var(--fg-soft);
+}
+.facts span { display: inline-flex; align-items: baseline; gap: 0.3em; }
+/* 数量用强调色、字号大一档：这一行的信息量集中在两个数字上，
+   全用次要色的话要逐字读才找得到。时间用正文色，说明文字保持次要色。 */
+.facts .num { color: var(--accent); font-size: 0.95rem; font-weight: 600; }
+.facts b { font-weight: 500; color: var(--fg-body); }
+.facts:empty { display: none; }
+
+/* 联系方式：一行一条，不用卡片网格 */
+.links { border-top: 1px solid var(--border); margin: 0.5rem 0 0; }
+.links div {
+  display: flex; gap: 1rem; align-items: baseline;
+  padding: 0.6rem 0; border-bottom: 1px solid var(--border);
+}
+.links dt { flex: none; width: 7rem; font-size: 0.86rem; color: var(--fg-body); }
+.links dd { margin: 0; font-family: var(--mono); font-size: 0.82rem; }
+
+/* --- FAQ --- */
+
+.qa h2 {
+  font-size: 0.9rem; font-weight: 600; color: var(--fg); letter-spacing: 0;
+  margin: 2.75rem 0 1.1rem; padding-top: 1.1rem; border-top: 1px solid var(--border);
+}
+
+h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0.6rem; }
+.qa h2:first-child { margin-top: 1.4rem; }
+.qa p { margin: 0; font-size: 0.9rem; line-height: 1.8; color: var(--fg-soft); max-width: 62ch; }
+
+/* --- 包列表 --- */
+
+.search {
+  width: 100%; margin-bottom: 0.9rem;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--card);
+  color: var(--fg); font: inherit; font-size: 0.9rem; padding: 0.55rem 0.85rem;
+}
+.search:focus { outline: none; border-color: var(--primary); }
+/* 计数与更新时间按行给：三个数量口径不同，挤成一行读不出区别。
+   pre-line 让脚本仍用 textContent 输出，不必为换行改成 innerHTML。 */
+.count {
+  font-size: 0.82rem; color: var(--fg-soft); margin: 0 0 0.7rem;
+  white-space: pre-line; line-height: 1.65;
+}
+
+/* 目录页让名称列吃满宽度，包列表要反过来：说明才是长的那列。
+   包名不能断行——.listing 那边给文件名用的 break-all 会把
+   app-admin/chezmoi 拆成一个字一行。 */
+.pkgs th:first-child { width: 1%; }
+/* 只在 <wbr> 标出的斜线处断。包名里没有空格，所以不加 <wbr> 就等于 nowrap，
+   那样这一栏的最小宽度会等于最长的那个包名，把说明挤成三行、版本挤出屏幕。 */
+.pkgs td.name {
+  white-space: normal; word-break: normal; overflow-wrap: normal;
+  width: auto;   /* 盖掉 .listing td.name 的 width:100%，那是给文件名用的 */
+}
+
+/* 宽到放得下就不断行。说明栏声明了 width:100%，会把剩余宽度全吃掉，
+   包名栏因此缩到最小内容宽度，明明有空间也照断。 */
+@media (min-width: 62rem) {
+  .pkgs td.name { white-space: nowrap; }
+}
+.pkgs td.desc, .pkgs th.desc { white-space: normal; color: var(--fg-soft); width: 100%; }
+/* 一行不换行，行高统一：四百多行的表格里，参差的行高比读不全一句话更碍事。
+   截断改成横向滚动，长说明在格子里划一下就能读完，不必再点进包页面。
+   滚动条藏起来——每行一条会把表格切成一片横线。 */
+.pkgs td.desc {
+  white-space: nowrap; max-width: 0;
+  overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none;
+}
+.pkgs td.desc::-webkit-scrollbar { display: none; }
+/* 不收录的原因跟在说明后面，压暗一档，读的时候不会和说明本身混起来。 */
+.pkgs td.desc .why { color: var(--fg-soft); font-style: italic; opacity: 0.85; }
+/* 不收录的类别标签。压得比「待构建」更暗——那是等得到的，这是等不到的。 */
+.pkgs td.mark .why-tag { color: var(--fg-soft); font-style: normal; opacity: 0.75; }
+.pkgs td.ver, .pkgs th.ver { text-align: right; white-space: nowrap; }
+/* 还没构建的行压暗，一眼能看出哪些现在拿不到 */
+.pkgs tr.pending td { opacity: 0.55; }
+.pkgs tr.pending td.ver { font-style: italic; }
+
+@media (max-width: 62rem) {
+  /* 状态列才是这张表的重点，先牺牲体积再牺牲版本 */
+  .pkgs td.size, .pkgs th.size { display: none; }
+}
+@media (max-width: 52rem) {
+  .pkgs td.ver, .pkgs th.ver { display: none; }
+}
+@media (max-width: 44rem) {
+  .pkgs td.desc, .pkgs th.desc { display: none; }
+}
+@media (max-width: 30rem) {
+}
+
+/* 指纹放在步骤标题旁，导入完可以直接对一眼 */
+.fpr {
+  margin-left: auto; font-family: var(--mono); font-size: 0.68rem;
+  color: var(--fg-soft); background: var(--chip);
+  padding: 0.14rem 0.45rem; border-radius: 0.3rem; white-space: nowrap;
+}
+@media (max-width: 52rem) { .fpr { display: none; } }
+h2[id] { scroll-margin-top: 4.5rem; }
+
+/* 对勾列。窄到只放得下一个符号，别让它抢名称列的宽度 */
+.listing th.mark, .listing td.mark { text-align: center; width: 1%; white-space: nowrap; }
+.listing td.mark.yes { color: #16a34a; font-weight: 600; }
+.listing td.mark.no { color: var(--fg-soft); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .listing td.mark.yes { color: #4ade80; } }
+[data-theme="dark"] .listing td.mark.yes { color: #4ade80; }
+.mirrors td, .mirrors th { white-space: nowrap; }
+.table-wrap { overflow-x: auto; }
+
+/* 过滤按钮 */
+.filters { display: flex; gap: 0.4rem; margin: 0 0 0.6rem; flex-wrap: wrap; }
+
+/* 表格里四种状态的含义。符号本身没有自解释性，列表页第一次看会猜。 */
+.legend {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.3rem 0.7rem;
+  align-items: baseline;
+  margin: 0 0 0.9rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  font-size: 0.8rem;
+}
+.legend dt { justify-self: center; white-space: nowrap; }
+.legend dt.mark.yes { color: #16a34a; font-weight: 600; }
+.legend dt.mark.no { color: var(--fg-soft); }
+.legend dt .pend { font-size: 0.74rem; font-style: italic; color: var(--fg-soft); }
+.legend dd { margin: 0; color: var(--fg-soft); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .legend dt.mark.yes { color: #4ade80; }
+}
+[data-theme="dark"] .legend dt.mark.yes { color: #4ade80; }
+.filter {
+  border: 1px solid var(--border); border-radius: 4px; background: var(--card);
+  color: var(--fg-soft); font: inherit; font-size: 0.8rem;
+  padding: 0.28rem 0.7rem; cursor: pointer;
+}
+.filter:hover { color: var(--fg); }
+.filter.on { border-color: var(--primary); color: var(--primary); font-weight: 600; }
+/* 「待构建」比破折号长，别让它把这列撑开 */
+.listing td.mark .pend { font-size: 0.74rem; font-style: italic; }
+
+/* --- 窄屏 --- */
+@media (max-width: 23rem) {
+  /* 三栏加内边距刚好超一点，表格会出现几像素的横向滚动 */
+  .pkgs td, .pkgs th { padding-left: 0.35rem; padding-right: 0.35rem; }
+}
+
+@media (max-width: 34rem) {
+  .wrap { padding: 2.25rem 1rem 2.5rem; }
+
+  /* 镜像表四栏：站点、地址、两个状态。地址最长，让它换行而不是把表撑出屏幕。 */
+  .mirrors td, .mirrors th { padding-left: 0.4rem; padding-right: 0.4rem; }
+  .mirrors td:nth-child(2) { white-space: normal; word-break: break-all; }
+  .mirrors th.mark, .mirrors td.mark { font-size: 0.72rem; }
+  .title { font-size: 1.45rem; }
+
+  /* 顶栏压成两行：品牌与语言/主题一行，导航链接一行。
+     链接横向可滑，不换行，避免一个链接单独占一行。 */
+  .nav-inner { flex-wrap: wrap; padding: 0.7rem 1rem 0.55rem; row-gap: 0.5rem; }
+  /* basis 用 0：auto 会让浏览器优先换行而不是缩短品牌名，
+     结果工具被挤到第二行、链接到第三行。 */
+  .nav-brand { flex: 1 1 0; min-width: 0; }
+  .nav-tools { flex: none; margin-left: auto; }
+  /* 手机上链接单独一行，靠左排 */
+  .nav-links { flex: 1 0 100%; order: 3; gap: 0; margin: 0 -0.4rem; }
+  .nav-link { padding: 0.3rem 0.4rem; }
+
+  .step { margin-top: 1.2rem; }
+  .code pre { font-size: 0.72rem; padding: 0.7rem 0.75rem; }
+  .code-head .path { font-size: 0.68rem; }
+  /* 换行之后标签独占一整条太空。压成小标签，地址与复制按钮一行。 */
+  .uri { flex-wrap: wrap; }
+  .uri .k {
+    width: 100%; border-right: 0; border-bottom: 1px solid var(--border);
+    padding: 0.35rem 0.7rem; font-size: 0.68rem;
+  }
+  .uri code { font-size: 0.74rem; padding: 0.5rem 0.7rem; }
+  .uri .copy-chip { padding: 0 0.7rem; }
+  .foot-inner { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+}
+
+/* 任何宽度都不该出现整页横向滚动：内容自己滚，页面不动 */
+html, body { max-width: 100%; overflow-x: clip; }

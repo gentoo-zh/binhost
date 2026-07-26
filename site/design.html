@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>设计语言 — distfiles.gentoozh.org</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/assets/logo.webp">
+<link rel="stylesheet" href="/assets/site.css">
+<style>
+/* 这一页自带的展示用样式。正式页面不需要这些。 */
+.sw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 0.75rem; margin: 1rem 0 1.75rem; }
+.sw { border: 1px solid var(--border); }
+.sw i { display: block; height: 3.25rem; }
+.sw b { display: block; padding: 0.45rem 0.6rem 0.15rem; font: 500 0.8rem/1.3 var(--sans); }
+.sw span { display: block; padding: 0 0.6rem 0.5rem; font: 400 0.74rem/1.3 var(--mono); color: var(--fg-soft); }
+.spec { border-collapse: collapse; width: 100%; margin: 0.5rem 0 1.75rem; }
+.spec td, .spec th { border-bottom: 1px solid var(--border); padding: 0.5rem 0.7rem; text-align: left; vertical-align: baseline; }
+.spec th { font: 500 0.78rem/1.4 var(--sans); color: var(--fg-soft); }
+.spec td:first-child { font-family: var(--mono); font-size: 0.8rem; white-space: nowrap; color: var(--accent); }
+.spec td:last-child { color: var(--fg-soft); font-size: 0.85rem; }
+.demo { border: 1px solid var(--border); padding: 1.25rem; margin: 0.75rem 0 1.75rem; }
+.rule-do, .rule-dont { padding-left: 1.35rem; position: relative; margin: 0.3rem 0; }
+.rule-do::before { content: "＋"; position: absolute; left: 0; color: var(--ok); }
+.rule-dont::before { content: "－"; position: absolute; left: 0; color: var(--fg-soft); }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="/">
+      <img src="/assets/logo.webp" alt="">
+      <span class="nav-title">distfiles.gentoozh.org</span>
+    </a>
+    <nav class="nav-links" aria-label="页面">
+      <a class="nav-link" href="/">配置</a>
+      <a class="nav-link" href="/packages">包列表</a>
+      <a class="nav-link" href="/files/">文件</a>
+      <a class="nav-link" href="/mirror">镜像</a>
+      <a class="nav-link" href="/faq">FAQ</a>
+    </nav>
+    <div class="nav-tools" id="controls"></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <h1 class="title">设计语言</h1>
+  <p class="lead">
+    这个站点的取值与规则。改样式之前先看这里，新页面照这里取值。
+  </p>
+
+  <h2>定位</h2>
+
+  <p class="note">
+    这是一个索引站点，不是产品主页。访客来这里是为了取一个地址、确认一个包在不在、
+    看一个目录里有什么。所有决定都服从这一点：信息密度优先于留白，
+    数据可读优先于版面漂亮。
+  </p>
+
+  <p class="note">
+    与 <a href="https://gentoozh.org/">gentoozh.org</a> 共用同一个色相与深色基底，
+    不照搬它的卡片网格。那是导航型首页的形态，用在数据表上会把行距撑散。
+  </p>
+
+  <h2>色彩</h2>
+
+  <p class="note">
+    强调色取自 gentoozh.org 的 <code>hsl(255 55% 70%)</code>，色相与 Gentoo 官方紫
+    <code>#54487a</code> 一致。全站只有这一个强调色，不再引入第二种色相；
+    状态用绿色，仅出现在表格的对勾上。
+  </p>
+
+  <h3>深色</h3>
+  <div class="sw-grid" id="sw-dark"></div>
+
+  <h3>浅色</h3>
+  <div class="sw-grid" id="sw-light"></div>
+
+  <table class="spec">
+    <thead><tr><th>变量</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td>--bg</td><td>页面底色</td></tr>
+      <tr><td>--surface</td><td>代码块、表头等需要与底色区分的面</td></tr>
+      <tr><td>--border</td><td>分隔线。全站用线不用阴影</td></tr>
+      <tr><td>--fg</td><td>标题与强调文字</td></tr>
+      <tr><td>--fg-body</td><td>正文</td></tr>
+      <tr><td>--fg-soft</td><td>次要信息：说明、时间、单位、占位</td></tr>
+      <tr><td>--accent</td><td>链接、当前项、代码里的值</td></tr>
+      <tr><td>--accent-weak</td><td>当前项的背景，极低饱和</td></tr>
+      <tr><td>--ok</td><td>只用于「已构建」这类肯定状态</td></tr>
+    </tbody>
+  </table>
+
+  <h2>字体</h2>
+
+  <p class="note">
+    正文用系统 sans，数据用等宽。包名、版本、路径、体积、时间一律等宽，
+    因为它们要对齐着扫，比例字体做不到。中文行高 1.8，比英文站点宽，
+    否则汉字挤在一起。
+  </p>
+
+  <div class="demo">
+    <p style="font-family: var(--sans); margin: 0 0 0.5rem;">系统 sans：正文与说明文字 The quick brown fox</p>
+    <p style="font-family: var(--mono); margin: 0;">等宽：app-i18n/fcitx-rime-extra 5.1.8 · 12.4 M · 2026-07-27</p>
+  </div>
+
+  <table class="spec">
+    <thead><tr><th>尺寸</th><th>用在哪</th></tr></thead>
+    <tbody>
+      <tr><td>2rem / 600</td><td>页面标题，每页一个</td></tr>
+      <tr><td>1.05rem / 600</td><td>章节标题</td></tr>
+      <tr><td>1rem / 400</td><td>引导句</td></tr>
+      <tr><td>0.92rem / 400</td><td>正文与说明</td></tr>
+      <tr><td>0.84rem / 400</td><td>表格数据</td></tr>
+      <tr><td>0.78rem / 400</td><td>表头、单位、时间戳</td></tr>
+    </tbody>
+  </table>
+
+  <h2>间距与分隔</h2>
+
+  <p class="note">
+    间距取 4 的倍数。区块之间用 1px 线分隔，不用卡片、不用阴影、不用圆角容器；
+    圆角只出现在按钮和标签这类可点的小元素上，2px。
+  </p>
+
+  <h2>移动端</h2>
+
+  <p class="note">
+    断点只有一个：34rem。小于它按手机排，大于它按桌面排。多设几档会让每一档
+    都缺少验证。
+  </p>
+
+  <table class="spec">
+    <thead><tr><th>规则</th><th>原因</th></tr></thead>
+    <tbody>
+      <tr><td>顶栏两行</td><td>品牌与语言、主题一行，导航链接一行。品牌用 flex-basis 0 先缩，否则浏览器会换行成三行</td></tr>
+      <tr><td>导航链接横向可滑</td><td>不换行，避免一个链接单独占一行</td></tr>
+      <tr><td>表格逐列隐藏</td><td>体积、版本、说明按这个顺序让位，状态列留到最后</td></tr>
+      <tr><td>包名在斜线处断行</td><td>用 &lt;wbr&gt; 标出断点。word-break: break-all 会把 app-admin/1password 切成认不出的三段</td></tr>
+      <tr><td>页面不横向滚动</td><td>宽内容（表格、代码块）在自己的容器里滚，body 不滚</td></tr>
+      <tr><td>正文内边距 1rem</td><td>桌面 1.25rem。再小会贴边</td></tr>
+    </tbody>
+  </table>
+
+  <p class="note">
+    改完在 360、390、430 三个宽度各看一遍，确认
+    <code>documentElement.scrollWidth</code> 不大于
+    <code>clientWidth</code>。
+  </p>
+
+  <h2>组件</h2>
+
+  <h3>数据表</h3>
+  <div class="demo" style="padding: 0;">
+    <table class="listing pkgs" style="margin: 0;">
+      <thead><tr><th>包</th><th class="desc">说明</th><th class="mark">二进制包</th><th class="ver">版本</th></tr></thead>
+      <tbody>
+        <tr><td class="name"><a href="#">app-admin/chezmoi</a></td><td class="desc">Manage your dotfiles across machines</td><td class="mark yes">✓</td><td class="ver">2.71.1</td></tr>
+        <tr><td class="name"><a href="#">app-misc/crush</a></td><td class="desc">A command line shell</td><td class="mark no"><span class="pend">不构建</span></td><td class="ver"></td></tr>
+        <tr><td class="name"><a href="#">app-text/goldendict</a></td><td class="desc">Feature-rich dictionary lookup program</td><td class="mark no"><span class="pend">待构建</span></td><td class="ver"></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>代码块</h3>
+  <div class="step" style="margin-bottom: 1.75rem;">
+    <div class="code">
+      <div class="code-head">
+        <span class="path">/etc/portage/binrepos.conf/gentoo-zh.conf</span>
+        <button class="copy-chip" data-copy="sync-uri = https://distfiles.gentoozh.org/binpkgs/x86-64">复制</button>
+      </div>
+<pre><span class="key">sync-uri</span> = <span class="val">https://distfiles.gentoozh.org/binpkgs/x86-64</span></pre>
+    </div>
+  </div>
+
+  <p class="note">
+    路径写在标题栏，命令与配置在下方。值用强调色，键用正文色，注释与提示符用次要色。
+    每一块都能整段复制，不需要用户自己选中。
+  </p>
+
+  <h2>文字</h2>
+
+  <p class="note">
+    先给结论再给理由，因果写出来，不只并列现象。段落不超过 4 句。
+    不写总结段，不升华。简体用大陆用语（软件、网络、程序、数据、默认、内存），
+    繁体用台湾用语，技术术语保留英文原文。
+  </p>
+
+  <div class="demo">
+    <p class="rule-do">因为 portage 接受二进制包时不比较 CFLAGS，所以这一点只能在构建端保证。</p>
+    <p class="rule-dont">我们非常重视兼容性，会尽力确保您的使用体验。</p>
+    <p class="rule-do">这里只有 overlay 的源码，不能替代官方源。</p>
+    <p class="rule-dont">三样东西都可以直接浏览和下载哦。</p>
+  </div>
+
+  <h3>禁止的句式</h3>
+  <table class="spec">
+    <thead><tr><th>句式</th><th>问题</th></tr></thead>
+    <tbody>
+      <tr><td>不是 X，而是 Y</td><td>否定式对比，绕一圈才说到点</td></tr>
+      <tr><td>这不仅是…更是…</td><td>伪广度，没有增加信息</td></tr>
+      <tr><td>从 X 到 Y</td><td>同上</td></tr>
+      <tr><td>无缝、直观、强大</td><td>三项形容词堆叠，都不可验证</td></tr>
+      <tr><td>值得注意的是</td><td>该注意的直接写，不用预告</td></tr>
+      <tr><td>总的来说 / 综上所述</td><td>总结段本身就不写</td></tr>
+      <tr><td>随着…的不断发展</td><td>套话开头</td></tr>
+      <tr><td>其实 / 说白了 / 坦白讲</td><td>口语开头</td></tr>
+    </tbody>
+  </table>
+
+  <h3>禁止的词</h3>
+  <table class="spec">
+    <thead><tr><th>类别</th><th>例</th></tr></thead>
+    <tbody>
+      <tr><td>互联网黑话</td><td>赋能、抓手、闭环、底层逻辑、颗粒度、心智、护城河、沉淀、生态位</td></tr>
+      <tr><td>公文腔</td><td>不断深化、持续推动、有力支撑、彰显、诠释、注入新的活力</td></tr>
+      <tr><td>翻译腔空转词</td><td>作为、关于、基于、进行、通过（能删则删）</td></tr>
+      <tr><td>口语</td><td>的话、就行、拉下来、装上、搞定</td></tr>
+    </tbody>
+  </table>
+
+  <h3>标点</h3>
+  <table class="spec">
+    <thead><tr><th>符号</th><th>规则</th></tr></thead>
+    <tbody>
+      <tr><td>“ ”</td><td>只用于引述与专有名称，不用于强调</td></tr>
+      <tr><td>——</td><td>全角，两侧不加空格，每千字不超过 1 次</td></tr>
+      <tr><td>—</td><td>不用 em dash 加空格的英式写法</td></tr>
+      <tr><td>……</td><td>省略号用这个，不用三个点</td></tr>
+      <tr><td>emoji</td><td>不用</td></tr>
+    </tbody>
+  </table>
+
+  <h2>刻意不做的</h2>
+
+  <div class="demo">
+    <p class="rule-dont">渐变光晕、彩色渐变标题、玻璃拟态</p>
+    <p class="rule-dont">大圆角卡片加投影堆成的网格</p>
+    <p class="rule-dont">超大字号的营销式首屏</p>
+    <p class="rule-dont">图标装饰每一个标题</p>
+    <p class="rule-dont">动效。除按钮的即时反馈外，没有动画</p>
+  </div>
+
+  <p class="note">
+    这些是当下生成式工具的默认产物，堆在一起会让任何站点看着像同一个模板。
+    这个站点靠排版和信息组织成立，不靠装饰。
+  </p>
+
+</main>
+
+<footer class="foot">
+  <div class="foot-inner">
+    <span class="foot-brand">distfiles.gentoozh.org</span>
+    <nav class="foot-links">
+      <a href="https://github.com/gentoo-zh/binhost">源码</a>
+      <a href="/design">设计语言</a>
+      <a href="https://gentoozh.org/">Gentoo 中文社区</a>
+    </nav>
+  </div>
+</footer>
+
+<div id="copy-toast" aria-hidden="true"></div>
+
+<script src="/assets/strings.js"></script>
+<script src="/assets/i18n.js"></script>
+<script>
+/* 色板从当前生效的 CSS 变量读。另抄一份数值的话，早晚会和样式表走散。 */
+(function () {
+  var TOKENS = ['bg', 'surface', 'border', 'fg', 'fg-body', 'fg-soft',
+                'accent', 'accent-weak', 'ok'];
+
+  function swatches(el, theme) {
+    var probe = document.createElement('div');
+    probe.setAttribute('data-theme', theme);
+    probe.style.display = 'none';
+    document.body.appendChild(probe);
+    var cs = getComputedStyle(probe);
+    el.innerHTML = TOKENS.map(function (t) {
+      var v = cs.getPropertyValue('--' + t).trim();
+      return '<div class="sw"><i style="background:' + v + '"></i>' +
+             '<b>' + t + '</b><span>' + v + '</span></div>';
+    }).join('');
+    probe.remove();
+  }
+
+  swatches(document.getElementById('sw-dark'), 'dark');
+  swatches(document.getElementById('sw-light'), 'light');
+})();
+</script>
+</body>
+</html>

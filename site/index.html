@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>distfiles.gentoozh.org</title>
+<meta name="description" content="gentoo-zh 的二进制包与 distfiles 镜像。">
+<link rel="icon" href="/assets/logo.webp">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="/">
+      <img src="/assets/logo.webp" alt="">
+      <span class="nav-title" data-i18n="brand">distfiles.gentoozh.org</span>
+    </a>
+    <nav class="nav-links" aria-label="页面">
+      <a class="nav-link" href="/" data-i18n="navSetup">配置</a>
+      <a class="nav-link" href="/packages" data-i18n="navPkgs">包列表</a>
+      <a class="nav-link" href="/files/" data-i18n="navFiles">文件</a>
+      <a class="nav-link" href="/mirror" data-i18n="navMirror">镜像</a>
+      <a class="nav-link" href="/faq">FAQ</a>
+      <a class="icon-btn" href="https://github.com/gentoo-zh/binhost"
+         title="gentoo-zh/binhost" aria-label="GitHub">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.02-2.06-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.62-5.48 5.92.43.37.81 1.1.81 2.22 0 1.61-.01 2.9-.01 3.29 0 .32.21.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5z"/></svg>
+      </a>
+    </nav>
+    <div class="nav-tools" id="controls"></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <h1 class="title" data-i18n="title">配置</h1>
+
+  <p class="lead" data-i18n-html="lead">
+    gentoo-zh overlay 的二进制包与 distfiles 镜像。两者相互独立，按需分别配置。
+    ::gentoo 的部分用 <a href="https://gentoozh.org/mirrorlist/">社区镜像列表</a>里的节点。
+  </p>
+
+  <p class="facts" id="facts"></p>
+
+  <h2 data-i18n="h2bin">二进制包</h2>
+
+  <div class="uri">
+    <span class="k">sync-uri</span>
+    <code>https://distfiles.gentoozh.org/binpkgs/x86-64</code>
+    <button class="copy-chip" data-copy="https://distfiles.gentoozh.org/binpkgs/x86-64" data-i18n="copy">复制</button>
+  </div>
+
+  <div class="step">
+    <p class="step-title"><span class="n">1</span><span data-i18n="step1">导入签名公钥</span>
+      <code class="fpr">6A07 26AF 1476 A2F3 82C6  AC66 38A0 234E C16A D42E</code></p>
+    <p class="note" data-i18n-html="keyPkg">
+      公钥也在 overlay 里：<code>emerge sec-keys/openpgp-keys-gentoozh</code>
+      把它装到 <code>/usr/share/openpgp-keys/gentoozh.asc</code>，
+      密钥跟着已经受信任的同步通道过来，轮替时随 overlay 更新。
+      下面第一条命令可换成读那个文件。
+    </p>
+    <div class="code">
+      <div class="code-head">
+        <span class="path">shell</span>
+        <button class="copy-chip" data-copy="curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc
+gpg --homedir /etc/portage/gnupg --import gentoo-zh-binhost.asc
+gpg --homedir /etc/portage/gnupg --batch --yes --pinentry-mode loopback --passphrase-file /etc/portage/gnupg/pass --lsign-key binhost@gentoozh.org
+gpg --homedir /etc/portage/gnupg --check-trustdb" data-i18n="copy">复制</button>
+      </div>
+<pre><span class="prompt"># </span><span class="key">curl</span> <span class="flag">-O</span> <span class="val">https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</span>
+<span class="prompt"># </span><span class="key">gpg</span> <span class="flag">--homedir</span> /etc/portage/gnupg <span class="flag">--import</span> gentoo-zh-binhost.asc
+<span class="prompt"># </span><span class="key">gpg</span> <span class="flag">--homedir</span> /etc/portage/gnupg <span class="flag">--batch --yes --pinentry-mode loopback</span> \
+    <span class="flag">--passphrase-file</span> /etc/portage/gnupg/pass <span class="flag">--lsign-key</span> <span class="val">binhost@gentoozh.org</span>
+<span class="prompt"># </span><span class="key">gpg</span> <span class="flag">--homedir</span> /etc/portage/gnupg <span class="flag">--check-trustdb</span></pre>
+    </div>
+  </div>
+
+  <p class="note" data-i18n-html="keyNote">
+    签名用的是 getuto 建立的 Portage Local Trust Key，口令在
+    <code>/etc/portage/gnupg/pass</code>，因此要用 <code>--passphrase-file</code> 读。
+    验签以 <code>portage</code> 用户执行，该用户对 trustdb 没有写入权限，
+    所以 trustdb 要预先算好。
+  </p>
+
+  <div class="step">
+    <p class="step-title"><span class="n">2</span><span data-i18n="step2">添加仓库</span></p>
+    <div class="code">
+      <div class="code-head">
+        <span class="path">/etc/portage/binrepos.conf/gentoo-zh.conf</span>
+        <button class="copy-chip" data-copy="[gentoo-zh]
+sync-uri = https://distfiles.gentoozh.org/binpkgs/x86-64
+priority = 10
+verify-signature = true
+location = /var/cache/binhost/gentoo-zh" data-i18n="copy">复制</button>
+      </div>
+<pre><span class="sec">[gentoo-zh]</span>
+<span class="key">sync-uri</span> = <span class="val">https://distfiles.gentoozh.org/binpkgs/x86-64</span>
+<span class="key">priority</span> = <span class="val">10</span>
+<span class="key">verify-signature</span> = <span class="val">true</span>
+<span class="key">location</span> = <span class="val">/var/cache/binhost/gentoo-zh</span></pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <p class="step-title"><span class="n">3</span><span data-i18n="step3">打开 getbinpkg（追加）</span></p>
+    <div class="code">
+      <div class="code-head">
+        <span class="path">/etc/portage/make.conf</span>
+        <button class="copy-chip" data-copy='FEATURES="${FEATURES} getbinpkg binpkg-request-signature"' data-i18n="copy">复制</button>
+      </div>
+<pre><span class="key">FEATURES</span>=<span class="val">"${FEATURES} getbinpkg binpkg-request-signature"</span></pre>
+    </div>
+  </div>
+
+  <h2 data-i18n="h2dist">Distfiles</h2>
+
+  <p class="note" data-i18n-html="distNote">
+    这里只有 overlay 的源码，不能替代官方源，因此是追加而非替换。
+    地址不写 <code>distfiles/</code>，portage 会自己补上。
+    国内用户可换成<a href="/mirror">镜像</a>页列出的节点，例如南京大学。
+  </p>
+
+  <div class="step">
+    <div class="code">
+      <div class="code-head">
+        <span class="path">/etc/portage/make.conf</span>
+        <button class="copy-chip" data-copy='GENTOO_MIRRORS="${GENTOO_MIRRORS} https://distfiles.gentoozh.org"' data-i18n="copy">复制</button>
+      </div>
+<pre><span class="key">GENTOO_MIRRORS</span>=<span class="val">"${GENTOO_MIRRORS} https://distfiles.gentoozh.org"</span></pre>
+    </div>
+  </div>
+
+  <p class="note" data-i18n-html="distOptOut">
+    因版权等原因不希望某个包被镜像时，在其 ebuild 中加入
+    <code>RESTRICT="mirror"</code>，同步工具会跳过。
+  </p>
+
+  <h2 data-i18n="h2contact">联系</h2>
+
+  <dl class="links">
+    <div>
+      <dt>GitHub Issues</dt>
+      <dd><a href="https://github.com/gentoo-zh/binhost/issues">gentoo-zh/binhost</a></dd>
+    </div>
+    <div>
+      <dt data-i18n="ctForum">论坛</dt>
+      <dd><a href="https://forum.gentoozh.org/">forum.gentoozh.org</a></dd>
+    </div>
+    <div>
+      <dt>Telegram</dt>
+      <dd><a href="https://t.me/gentoo_zh">@gentoo_zh</a> · <a href="https://t.me/gentoocn">@gentoocn</a></dd>
+    </div>
+    <div>
+      <dt>Matrix</dt>
+      <dd><a href="https://matrix.to/#/#gentoo-zh:gentoozh.org">#gentoo-zh</a></dd>
+    </div>
+  </dl>
+
+</main>
+
+<footer class="foot">
+  <div class="foot-inner">
+    <span class="foot-brand">distfiles.gentoozh.org</span>
+    <nav class="foot-links">
+      <a href="https://github.com/gentoo-zh/binhost" data-i18n="fSrc">源码</a>
+      <a href="/gentoo-zh-binhost.asc" data-i18n="fKey">签名公钥</a>
+      <a href="/design" data-i18n="fDesign">设计语言</a>
+      <a href="https://github.com/gentoo-zh/overlay">gentoo-zh/overlay</a>
+      <a href="https://gentoozh.org/" data-i18n="fCommunity">Gentoo 中文社区</a>
+    </nav>
+  </div>
+</footer>
+
+<div id="copy-toast" aria-hidden="true"></div>
+
+<script src="/assets/strings.js"></script>
+<script>
+window.MIRROR_I18N = {
+  'zh-tw': {
+    title: '設定',
+    lead: 'gentoo-zh overlay 的二進位套件與 distfiles 鏡像。兩者相互獨立，按需分別設定。::gentoo 的部分用 <a href="https://gentoozh.org/mirrorlist/">社群鏡像列表</a>裡的節點。',
+    h2bin: '二進位套件', h2dist: 'Distfiles',
+    distNote: '這裡只有 overlay 的原始碼，不能替代官方來源，因此是追加而非替換。位址不寫 <code>distfiles/</code>，portage 會自己補上。中國大陸的使用者可換成<a href="/mirror">鏡像</a>頁列出的節點，例如南京大學。',
+    distOptOut: '因版權等原因不希望某個套件被鏡像時，在其 ebuild 中加入 <code>RESTRICT="mirror"</code>，同步工具會跳過。',
+    step1: '匯入簽章公鑰', step2: '加入倉庫', step3: '打開 getbinpkg（附加）',
+    keyPkg: '公鑰也在 overlay 裡：<code>emerge sec-keys/openpgp-keys-gentoozh</code> 會把它裝到 <code>/usr/share/openpgp-keys/gentoozh.asc</code>，密鑰跟著已經受信任的同步通道過來，輪替時隨 overlay 更新。下面第一條命令可換成讀那個檔案。',
+    keyNote: '簽章用的是 getuto 建立的 Portage Local Trust Key，口令在 <code>/etc/portage/gnupg/pass</code>，因此要用 <code>--passphrase-file</code> 讀。驗簽以 <code>portage</code> 使用者執行，該使用者對 trustdb 沒有寫入權限，所以 trustdb 要預先算好。',
+    factPkgs: ' 個二進位套件', factDist: ' 個 distfiles', factTime: '更新於 ',
+    h2contact: '聯絡', ctForum: '論壇'
+  },
+  'en': {
+    title: 'Setup',
+    lead: 'Binary package and distfiles mirror for the gentoo-zh overlay. The two are independent and configured separately. For ::gentoo, use a node from the <a href="https://gentoozh.org/mirrorlist/">community mirror list</a>.',
+    h2bin: 'Binary packages', h2dist: 'Distfiles',
+    distNote: 'Only overlay sources live here, so this adds a mirror rather than replacing the official ones. Leave <code>distfiles/</code> off the address; portage appends it. Users in China can switch to a node listed on the <a href="/mirror">mirrors</a> page, such as Nanjing University.',
+    distOptOut: 'When a maintainer does not want a package mirrored — licensing or otherwise — they add <code>RESTRICT="mirror"</code> to its ebuild and the sync tool skips it.',
+    step1: 'Import the signing key', step2: 'Add the repository', step3: 'Enable getbinpkg (append)',
+    keyPkg: 'The key is also in the overlay: <code>emerge sec-keys/openpgp-keys-gentoozh</code> installs it to <code>/usr/share/openpgp-keys/gentoozh.asc</code>, so it arrives over the sync you already trust and rotates with the overlay. The first command below can read that file instead.',
+    keyNote: 'The signature is made with the Portage Local Trust Key getuto created. Its passphrase is in <code>/etc/portage/gnupg/pass</code>, hence <code>--passphrase-file</code>. Verification runs as the <code>portage</code> user, which has no write access to the trustdb, so the trustdb must be computed beforehand.',
+    factPkgs: ' binary packages', factDist: ' distfiles', factTime: 'updated ',
+    h2contact: 'Contact', ctForum: 'Forum'
+  }
+};
+</script>
+<script src="/assets/i18n.js"></script>
+
+<script>
+/* 两个来源各写了一个小状态文件：二进制包由 publish.sh 写，distfiles 由
+   distfiles-index.sh 写。读各自的索引也能拿到这几个数，但 Packages 有
+   160 KB、distfiles 索引有一千多个文件名，为四个数字传这些不值得。 */
+(function () {
+  var langTable = window.MIRROR_I18N || {};
+  function s(key, fallback) {
+    var lang = null;
+    try { lang = localStorage.getItem('mirror-lang'); } catch (e) {}
+    var t = lang && langTable[lang];
+    return (t && key in t) ? t[key] : fallback;
+  }
+
+  /* UTC+8。这个站点的用户主要在中国大陆、台湾、新加坡、马来西亚，都是 +8。
+     不写时区会被当成本地时间读错，所以标出来。 */
+  function stamp(unix) {
+    /* 先转成数字：来源换成字符串时相加会变成拼接，Date 越界后抛 RangeError。 */
+    var n = Number(unix);
+    if (!n) return '';
+    return new Date((n + 8 * 3600) * 1000)
+      .toISOString().slice(0, 16).replace('T', ' ') + ' UTC+8';
+  }
+
+  function fact(count, unit, generated) {
+    return '<span><b class="num">' + count + '</b>' + unit + '</span>' +
+           '<span>' + (generated ? s('factTime', '更新于 ') + '<b>' + stamp(generated) + '</b>' : '') + '</span>';
+  }
+
+  var el = document.getElementById('facts');
+  Promise.allSettled([
+    fetch('/binpkgs/x86-64/status.json').then(function (r) { return r.ok ? r.json() : null; }),
+    fetch('/distfiles-status.json').then(function (r) { return r.ok ? r.json() : null; })
+  ]).then(function (rs) {
+    var bin = rs[0].value, dist = rs[1].value;
+    var html = '';
+    if (bin && bin.packages) html += fact(bin.packages, s('factPkgs', ' 个二进制包'), bin.generated);
+    if (dist && dist.files) html += fact(dist.files, s('factDist', ' 个 distfiles'), dist.generated);
+    el.innerHTML = html;
+  });
+})();
+</script>
+</body>
+</html>

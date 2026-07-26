@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>包列表 — distfiles.gentoozh.org</title>
+<link rel="icon" href="/assets/logo.webp">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+
+<header class="nav wide">
+  <div class="nav-inner">
+    <a class="nav-brand" href="/">
+      <img src="/assets/logo.webp" alt="">
+      <span class="nav-title" data-i18n="brand">distfiles.gentoozh.org</span>
+    </a>
+    <nav class="nav-links" aria-label="页面">
+      <a class="nav-link" href="/" data-i18n="navSetup">配置</a>
+      <a class="nav-link" href="/packages" data-i18n="navPkgs">包列表</a>
+      <a class="nav-link" href="/files/" data-i18n="navFiles">文件</a>
+      <a class="nav-link" href="/mirror" data-i18n="navMirror">镜像</a>
+      <a class="nav-link" href="/faq">FAQ</a>
+      <a class="icon-btn" href="https://github.com/gentoo-zh/binhost"
+         title="gentoo-zh/binhost" aria-label="GitHub">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.02-2.06-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.62-5.48 5.92.43.37.81 1.1.81 2.22 0 1.61-.01 2.9-.01 3.29 0 .32.21.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5z"/></svg>
+      </a>
+    </nav>
+    <div class="nav-tools" id="controls"></div>
+  </div>
+</header>
+
+<main class="wrap wide">
+
+  <h1 class="title" data-i18n="title">包列表</h1>
+  <p class="lead" data-i18n="lead">
+    标签的含义见下方图例，鼠标停留查看详情。
+  </p>
+
+  <input class="search" id="q" type="search" autocomplete="off"
+         placeholder="搜索包名或说明">
+
+  <div class="filters" id="filters"></div>
+
+  <dl class="legend">
+    <dt class="mark yes">&#10003;</dt>
+    <dd data-i18n="lgBuilt">已发布</dd>
+    <dt><span class="pend" data-i18n="pending">待构建</span></dt>
+    <dd data-i18n="lgPending">等待构建</dd>
+    <dt><span class="pend" data-i18n="excluded">不构建</span></dt>
+    <dd data-i18n="lgExcluded">不收录</dd>
+    <dt><span class="pend why-tag" data-i18n="why_prebuilt">预编译</span></dt>
+    <dd data-i18n="lgDashBin">不在收录清单</dd>
+    <dt class="mark no">&#8212;</dt>
+    <dd data-i18n="lgDashDist">没有源码文件，或下载失败</dd>
+  </dl>
+
+  <p class="count" id="count"></p>
+  <p class="count" id="updated"></p>
+  <div id="out" class="msg" data-i18n="loading">加载中…</div>
+
+</main>
+
+<footer class="foot wide">
+  <div class="foot-inner">
+    <span class="foot-brand">distfiles.gentoozh.org</span>
+    <nav class="foot-links">
+      <a href="https://github.com/gentoo-zh/binhost" data-i18n="fSrc">源码</a>
+      <a href="/gentoo-zh-binhost.asc" data-i18n="fKey">签名公钥</a>
+      <a href="/design" data-i18n="fDesign">设计语言</a>
+      <a href="https://github.com/gentoo-zh/overlay">gentoo-zh/overlay</a>
+      <a href="https://gentoozh.org/" data-i18n="fCommunity">Gentoo 中文社区</a>
+    </nav>
+  </div>
+</footer>
+
+<div id="strings" hidden>
+  <span data-i18n="thPkg">包</span>
+  <span data-i18n="thDesc">说明</span>
+  <span data-i18n="thVer">版本</span>
+  <span data-i18n="thSize">体积</span>
+  <span data-i18n="thBin">二进制包</span>
+  <span data-i18n="thDist">Distfiles</span>
+  <span data-i18n="pending">待构建</span>
+  <span data-i18n="excluded">不构建</span>
+  <span data-i18n="notListed">不收录</span>
+  <span data-i18n="updBin">二进制包更新于 </span>
+  <span data-i18n="updDist">distfiles 更新于 </span>
+  <span data-i18n="fltAll">全部</span>
+  <span data-i18n="fltBin">仅二进制包</span>
+  <span data-i18n="fltDist">仅 distfiles</span>
+  <span data-i18n="countFmt">overlay {n} 个包
+二进制包 {b} 个
+distfiles {d} 个</span>
+  <span data-i18n="lgBuilt">已发布</span>
+  <span data-i18n="lgPending">等待构建</span>
+  <span data-i18n="lgExcluded">不收录</span>
+  <span data-i18n="lgDashBin">二进制包这列：不在收录清单，我们不构建它</span>
+  <span data-i18n="lgDashDist">没有源码文件，或下载失败</span>
+  <span data-i18n="why_prebuilt">预编译</span>
+  <span data-i18n="why_nobuild">无构建</span>
+  <span data-i18n="why_bindist">不可分发</span>
+  <span data-i18n="why_nokeyword">无 amd64</span>
+  <span data-i18n="why_masked">已屏蔽</span>
+  <span data-i18n="why_meta">元包</span>
+  <span data-i18n="why_candidate">待复查</span>
+  <span data-i18n="whyLong_prebuilt">上游发布二进制包，无编译过程</span>
+  <span data-i18n="whyLong_nobuild">字体、词库、主题，无构建系统</span>
+  <span data-i18n="whyLong_bindist">RESTRICT=bindist，许可证不允许再分发</span>
+  <span data-i18n="whyLong_nokeyword">没有 amd64 keyword</span>
+  <span data-i18n="whyLong_masked">被 profiles/package.mask 屏蔽</span>
+  <span data-i18n="whyLong_meta">virtual、acct-user，不安装文件</span>
+  <span data-i18n="whyLong_candidate">有构建系统但未收录，需人工确认</span>
+  <span data-i18n="none">没有匹配的包。</span>
+  <span data-i18n="ph">搜索包名或说明</span>
+</div>
+
+<script src="/assets/strings.js"></script>
+<script>
+window.MIRROR_I18N = {
+  'zh-tw': {
+    pending: '待建置', excluded: '不建置', notListed: '不收錄', updBin: '二進位套件更新於 ', updDist: 'distfiles 更新於 ', fltAll: '全部', fltBin: '僅二進位套件', fltDist: '僅 distfiles', title: '套件列表',
+    lead: '標籤的含義見下方圖例，滑鼠停留查看詳情。',
+    loading: '載入中…', thPkg: '套件', thDesc: '說明', thVer: '版本', thSize: '體積', thBin: '二進位套件', thDist: 'Distfiles', countFmt: 'overlay {n} 個套件\n二進位套件 {b} 個\ndistfiles {d} 個', none: '沒有符合的套件。',
+    lgBuilt: '已發布',
+    lgPending: '等待建置',
+    lgExcluded: '不收錄',
+    lgDashBin: '不在收錄清單',
+    why_prebuilt: '預編譯', why_nobuild: '無建置', why_bindist: '不可散佈',
+    why_nokeyword: '無 amd64', why_masked: '已遮蔽', why_meta: '元套件', why_candidate: '待複查',
+    whyLong_prebuilt: '上游發布二進位套件，無編譯過程',
+    whyLong_nobuild: '字型、詞庫、佈景，無建置系統',
+    whyLong_bindist: 'RESTRICT=bindist，授權條款不允許再散佈',
+    whyLong_nokeyword: '沒有 amd64 keyword',
+    whyLong_masked: '被 profiles/package.mask 遮蔽',
+    whyLong_meta: 'virtual、acct-user，不安裝檔案',
+    whyLong_candidate: '有建置系統但未收錄，需人工確認',
+    lgDashDist: '沒有原始碼檔案，或下載失敗',
+    ph: '搜尋套件名稱或說明'
+  },
+  'en': {
+    pending: 'pending', excluded: 'excluded', notListed: 'not listed', updBin: 'binaries updated ', updDist: 'distfiles updated ', fltAll: 'All', fltBin: 'Binaries', fltDist: 'Distfiles', title: 'Packages',
+    lead: 'The legend below explains each tag; hover for detail.',
+    loading: 'Loading…', thPkg: 'Package', thDesc: 'Description', thVer: 'Version', thSize: 'Size', thBin: 'Binary', thDist: 'Distfiles',
+    countFmt: 'overlay {n} packages\nbinpkg {b}\ndistfiles {d}', none: 'No matching packages.',
+    lgBuilt: 'Published.',
+    lgPending: 'Waiting to be built.',
+    lgExcluded: 'Not included.',
+    lgDashBin: 'Not on the list.',
+    why_prebuilt: 'prebuilt', why_nobuild: 'no build', why_bindist: 'no redist',
+    why_nokeyword: 'no amd64', why_masked: 'masked', why_meta: 'meta', why_candidate: 'review',
+    whyLong_prebuilt: 'Upstream ships a binary; nothing is compiled.',
+    whyLong_nobuild: 'Fonts, dictionaries, themes. No build system.',
+    whyLong_bindist: 'RESTRICT=bindist; the licence forbids redistribution.',
+    whyLong_nokeyword: 'No amd64 keyword.',
+    whyLong_masked: 'Masked in profiles/package.mask.',
+    whyLong_meta: 'A virtual or acct-user package.',
+    whyLong_candidate: 'Has a build system but is not on the list.',
+    lgDashDist: 'No source files, or the download failed.',
+    ph: 'Search name or description'
+  }
+};
+</script>
+<script src="/assets/i18n.js"></script>
+
+<script>
+// 两个数据源：packages.json 是收录清单（构建之前就存在），
+// Packages 是 portage 的索引，说明哪些真的已经构建出来了。
+// 清单以前者为准，后者只补版本和体积。反过来则未构建的包会整个消失。
+
+// 路径和文件名都进 innerHTML。路径来自 URL，任何以斜杠结尾的地址 nginx 都
+// 回这个页面；文件名来自 ebuild 的 Manifest。两者都不是我们能约束的内容。
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+function t(key) {
+  const el = document.querySelector('#strings [data-i18n="' + key + '"]');
+  return el ? el.textContent : key;
+}
+
+function human(n) {
+  if (!n) return "";
+  if (n < 1024) return n + " B";
+  const unit = ["K", "M", "G"];
+  let i = -1;
+  do { n /= 1024; i++; } while (n >= 1024 && i < unit.length - 1);
+  return n.toFixed(n < 10 ? 1 : 0) + " " + unit[i];
+}
+
+// CPV 拆成 category/name 和版本。版本从第一个「-数字」开头的段起。
+function splitCPV(cpv) {
+  const parts = cpv.split("-");
+  for (let i = 1; i < parts.length; i++) {
+    if (/^[0-9]/.test(parts[i])) {
+      return [parts.slice(0, i).join("-"), parts.slice(i).join("-")];
+    }
+  }
+  return [cpv, ""];
+}
+
+// 按 - 和 . 拆段，数字段按数值比，非数字段按字符串比。不是完整的 PMS 比较，
+// 但足以在同一个包的几个版本之间挑出最高的那个。
+function cmpVer(a, b) {
+  const pa = String(a).split(/[-.]/), pb = String(b).split(/[-.]/);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const x = pa[i] === undefined ? "" : pa[i], y = pb[i] === undefined ? "" : pb[i];
+    const nx = /^\d+$/.test(x), ny = /^\d+$/.test(y);
+    if (nx && ny) { if (+x !== +y) return +x - +y; }
+    else if (x !== y) return x < y ? -1 : 1;
+  }
+  return 0;
+}
+
+function parsePackages(text) {
+  const built = {};
+  text.split("\n\n").slice(1).forEach(function (stanza) {
+    const cpv = /^CPV: (.+)$/m.exec(stanza);
+    if (!cpv) return;
+    const size = /^SIZE: (\d+)$/m.exec(stanza);
+    const [cp, ver] = splitCPV(cpv[1].trim());
+    // 同一个包可能有多个实例（不同 USE），留版本最高的那个。
+    // 按段比较而不是整串比字符串：字符串序会把 1.9 排在 1.10 后面。
+    if (!built[cp] || cmpVer(ver, built[cp].ver) > 0) {
+      built[cp] = { ver: ver, size: size ? +size[1] : 0 };
+    }
+  });
+  return built;
+}
+
+let rows = [];
+let filter = "all";
+let distGenerated = 0, binGenerated = 0;
+
+function fmtTime(unix) {
+  // UTC+8：站点的用户主要在中国大陆、台湾、新加坡、马来西亚。
+  //
+  // 先转成数字再算。索引里的 TIMESTAMP 是正则抓出来的字符串，直接相加会变成
+  // 字符串拼接，Date 拿到的数越界，toISOString 抛 RangeError，整页加载失败。
+  const n = Number(unix);
+  if (!n) return "";
+  return new Date((n + 8 * 3600) * 1000)
+    .toISOString().slice(0, 16).replace("T", " ") + " UTC+8";
+}
+
+function render() {
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  let hit = rows;
+  if (filter === "bin") hit = hit.filter(function (r) { return r.binhost; });
+  else if (filter === "dist") hit = hit.filter(function (r) { return r.dist; });
+  if (q) hit = hit.filter(function (r) {
+    return r.cp.toLowerCase().indexOf(q) >= 0 || r.desc.toLowerCase().indexOf(q) >= 0;
+  });
+
+  const out = document.getElementById("out");
+  if (!hit.length) {
+    out.className = "msg";
+    out.textContent = t("none");
+    return;
+  }
+
+  out.className = "";
+  out.innerHTML =
+    '<table class="listing pkgs"><thead><tr>' +
+      '<th>' + t("thPkg") + '</th>' +
+      '<th class="desc">' + t("thDesc") + '</th>' +
+      '<th class="mark">' + t("thBin") + '</th>' +
+      '<th class="mark">' + t("thDist") + '</th>' +
+      '<th class="ver">' + t("thVer") + '</th>' +
+      '<th class="size">' + t("thSize") + '</th>' +
+    '</tr></thead><tbody>' +
+    hit.map(function (r) {
+      // 连 overlay 自己的树。overlay 的包大多不在 packages.gentoo.org 上，
+      // 那边给的是 404。
+      const url = "https://github.com/gentoo-zh/overlay/tree/master/" + r.cp;
+      return '<tr>' +
+        '<td class="name"><a href="' + esc(url) + '">' + esc(r.cp).replace("/", "/<wbr>") + '</a></td>' +
+        // 排除的包把原因直接写在说明后面。原来只挂 title，浏览器原生提示要停
+        // 一两秒才出来，样式也改不了，手机上根本没有 hover。
+        // 排除原因跟在说明后面。不再写「不构建：」前缀——右边那一列的标签
+        // 已经是这三个字，重复一遍还会撞出「：::gentoo」这样三个冒号连排。
+        '<td class="desc" title="' +
+          esc(r.desc + (r.excluded ? "　" + r.excluded : "")) + '">' +
+          esc(r.desc) +
+          (r.excluded ? ' <span class="why">· ' + esc(r.excluded) + '</span>' : '') +
+        '</td>' +
+        '<td class="mark ' + (r.ver ? 'yes' : 'no') + '"' +
+          (r.excluded ? ' title="' + esc(r.excluded) + '"' : '') + '>' +
+          (r.ver ? '\u2713'
+                 : r.excluded ? '<span class="pend">' + t("excluded") + '</span>'
+                 : r.binhost ? '<span class="pend">' + t("pending") + '</span>'
+                 // 不收录的包原本只有一个破折号，什么都不说。四百多行里这样的
+                 // 占一大半，标签直接写明是哪一类。
+                 : r.why ? '<span class="pend why-tag" title="' + esc(t("whyLong_" + r.why)) + '">' +
+                             t("why_" + r.why) + '</span>'
+                 : '\u2014') + '</td>' +
+        '<td class="mark ' + (r.dist ? 'yes' : 'no') + '">' + (r.dist ? '\u2713' : '\u2014') + '</td>' +
+        '<td class="ver">' + r.ver + '</td>' +
+        '<td class="size">' + human(r.size) + '</td></tr>';
+    }).join("") +
+    '</tbody></table>';
+}
+
+function counts() {
+  // 三个数量口径不同：overlay 全部、已发布二进制包、源码文件齐全的。收录清单
+  // 的数量不写在这里——它只说明我们打算构建什么，读者要的是现在能装什么。
+  const b = rows.filter(function (r) { return r.ver; }).length;
+  const d = rows.filter(function (r) { return r.dist; }).length;
+  document.getElementById("count").textContent = t("countFmt")
+    .replace("{n}", rows.length).replace("{b}", b).replace("{d}", d);
+
+  const u = [];
+  if (binGenerated) u.push(t("updBin") + fmtTime(binGenerated));
+  if (distGenerated) u.push(t("updDist") + fmtTime(distGenerated));
+  document.getElementById("updated").textContent = u.join("\n");
+
+  const box = document.getElementById("filters");
+  box.innerHTML = [["all","fltAll"],["bin","fltBin"],["dist","fltDist"]].map(function (f) {
+    return '<button class="filter' + (filter === f[0] ? ' on' : '') +
+           '" data-f="' + f[0] + '">' + t(f[1]) + '</button>';
+  }).join("");
+}
+
+Promise.all([
+  fetch("/packages.json").then(function (r) { return r.json(); }),
+  // 索引不存在（还没发布过）不算错误，当成「一个都没构建」
+  fetch("/binpkgs/x86-64/Packages")
+    .then(function (r) { return r.ok ? r.text() : ""; })
+    .catch(function () { return ""; }),
+  // 镜像上实际存在的 distfile 文件名。文件散在两级哈希目录里，
+  // 页面自己遍历要几百个请求，所以服务器端预先算好一份。
+  fetch("/distfiles-index.json")
+    .then(function (r) { return r.ok ? r.json() : { files: [] }; })
+    .catch(function () { return { files: [] }; })
+]).then(function (res) {
+  const built = parsePackages(res[1]);
+  const have = new Set(res[2].files || []);
+  distGenerated = res[2].generated || 0;
+  binGenerated = (/^TIMESTAMP: (\d+)/m.exec(res[1]) || [])[1] || 0;
+  rows = res[0].packages.map(function (p) {
+    const b = built[p.cp] || {};
+    // 齐全才算有：缺一个源码文件，这个包照样编不了
+    const dist = p.dist && p.dist.length > 0 && p.dist.every(function (f) { return have.has(f); });
+    return { cp: p.cp, desc: p.desc, binhost: p.binhost, excluded: p.excluded || "",
+             why: p.why || "", ver: b.ver || "", size: b.size || 0, dist: dist };
+  });
+  counts();
+  render();
+  document.getElementById("q").placeholder = t("ph");
+}).catch(function (e) {
+  document.getElementById("out").textContent = "加载失败：" + e;
+});
+
+document.getElementById("q").addEventListener("input", render);
+document.getElementById("filters").addEventListener("click", function (e) {
+  const b = e.target.closest("button[data-f]");
+  if (!b) return;
+  filter = b.dataset.f;
+  counts(); render();
+});
+
+// 切语言时表头、状态词和计数都要跟着变
+new MutationObserver(function () {
+  if (rows.length) { counts(); render(); }
+  const ph = t("ph");
+  if (ph) document.getElementById("q").placeholder = ph;
+}).observe(document.getElementById("strings"), { subtree: true, characterData: true, childList: true });
+</script>
+</body>
+</html>
