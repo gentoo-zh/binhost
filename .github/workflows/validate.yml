@@ -1,0 +1,174 @@
+name: validate
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  packages:
+    runs-on: ubuntu-latest
+    # 在 stage3 里跑：版本比较用 portage.versions.vercmp，自己写一套迟早和 PMS
+    # 对不上。用 stage3 而不是 gentoo/portage——后者只有一棵 ebuild 树，
+    # 缺 glibc，runner 自带的 node 起不来。
+    container: gentoo/stage3:amd64
+    steps:
+      - uses: actions/checkout@v5
+
+      # stage3 里没有 git。用 tarball 取 overlay：这里要的是「包在不在树里、
+      # RESTRICT 是什么」，不需要提交记录，也省掉装 git 的几分钟。
+      - name: Fetch the overlay
+        run: |
+          mkdir -p /tmp/overlay
+          wget -qO- https://github.com/gentoo-zh/overlay/archive/refs/heads/master.tar.gz |
+            tar xz -C /tmp/overlay --strip-components=1
+
+      - name: Check packages.txt
+        run: python3 build/validate.py /tmp/overlay
+
+      # 两份清单互斥、排除项必须写原因。漏掉的话被排除的包会被重新构建，
+      # 而每轮都以同样的方式失败。
+      - name: Exclusion list is enforced
+        run: |
+          cp build/packages.txt /tmp/packages.txt.bak
+          head -1 build/excluded.txt >/dev/null
+          cp="$(grep -vE '^\s*(#|$)' build/excluded.txt | head -1 | awk '{print $1}')"
+          echo "$cp" >> build/packages.txt
+          if python3 build/validate.py /tmp/overlay; then
+            echo "!! 同时出现在两份清单里却没报错"; exit 1
+          fi
+          cp /tmp/packages.txt.bak build/packages.txt
+          python3 build/validate.py /tmp/overlay
+
+      # 生成器本身别写坏了。产物不入库：它随 overlay 变化，镜像机每天自己生成。
+      - name: Check the list generator runs
+        run: OUT=/tmp/packages.json python3 build/gen-packages.py /tmp/overlay
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      # classify-failures.py 只在一次全量构建的末尾跑，语法错要等几个小时才发现
+      - name: Compile
+        run: python3 -m py_compile build/*.py
+      - name: Classifier against real log shapes
+        run: |
+          d=$(mktemp -d)
+          cat > "$d/app-misc_a.log" <<'EOF'
+          !!! All ebuilds that could satisfy "app-misc/a" have been masked.
+          - app-misc/a-1.0::gentoo-zh (masked by: FSL-1.1-MIT license(s))
+          EOF
+          cat > "$d/app-misc_b.log" <<'EOF'
+          The following USE changes are necessary to proceed:
+          # required by app-misc/b-1.0::gentoo-zh
+          >=dev-libs/foo-1.2 python
+          EOF
+          cat > "$d/app-misc_c.log" <<'EOF'
+          configure: error: XML::Parser perl module is required for intltool
+           * ERROR: app-misc/c-1.0::gentoo-zh failed (configure phase):
+          EOF
+          out=$(python3 build/classify-failures.py "$d")
+          echo "$out"
+          echo "$out" | grep -q "许可证不允许再分发（1 个）" || { echo "!! 许可证未识别"; exit 1; }
+          echo "$out" | grep -q "依赖需要调整 USE（1 个）"   || { echo "!! USE 未识别"; exit 1; }
+          echo "$out" | grep -q "构建失败（1 个）"           || { echo "!! 构建失败未识别"; exit 1; }
+          echo "$out" | grep -q "未归类"                     && { echo "!! 出现未归类"; exit 1; }
+          exit 0
+
+  site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check i18n tables
+        run: node build/check-i18n.js site
+      # 写作规范见 site/design.html 的「文字」一节
+      - name: Check copy
+        run: python3 build/check-copy.py site
+      # 死规则、同层级重复的选择器、没人用的变量
+      - name: Check stylesheet
+        run: python3 build/check-css.py site
+
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: shellcheck
+        run: shellcheck build/*.sh deploy/*.sh deploy-site.sh
+
+  nginx:
+    runs-on: ubuntu-latest
+    # 用官方镜像而不是 runner 自带的 nginx：配置里的 http2 指令要 1.25 以上，
+    # 而且镜像里的用户名和 mime.types 路径与我们的一致，不用为发行版差异改配置。
+    container: nginx:mainline
+    steps:
+      - uses: actions/checkout@v5
+      - name: Parse nginx config
+        run: |
+          apt-get update -qq && apt-get install -y -qq openssl curl
+          mkdir -p /srv/mirrors /var/www/acme
+          # 自签一张，让 TLS 那段也一起校验；删掉它只会漏掉一半配置
+          live=/etc/letsencrypt/live/mirrors.gentoozh.org
+          mkdir -p $live
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+            -subj /CN=mirrors.gentoozh.org \
+            -keyout $live/privkey.pem -out $live/fullchain.pem 2>/dev/null
+          cp nginx/mirror-common.inc nginx/mirrors.conf /etc/nginx/conf.d/
+          # Gentoo 装成 mime.types.nginx，其他地方是 mime.types
+          sed 's/mime\.types\.nginx/mime.types/' nginx/nginx.conf > /etc/nginx/nginx.conf
+          nginx -t
+
+      # nginx -t 只说配置能解析，说不了它会怎么回答请求。这一步复现的是真出过的
+      # 那次事故：不存在的路径回落到 SPA，portage 拿到 200 加一段 HTML，
+      # 当成下载成功。
+      - name: Answer real requests
+        run: |
+          cp site/_app.html site/index.html site/faq.html /srv/mirrors/
+          mkdir -p /srv/pub/binpkgs/x86-64 /srv/pub/distfiles
+          printf 'PACKAGES: 1\n\nCPV: a/b-1\n' > /srv/pub/binpkgs/x86-64/Packages
+          printf '[structure]\n0=filename-hash BLAKE2B 8\n' > /srv/pub/distfiles/layout.conf
+          mkdir -p /srv/pub/distfiles/c6 && echo x > /srv/pub/distfiles/c6/t.tar.gz
+          nginx
+          sleep 1
+          H='Host: mirrors.gentoozh.org'
+          code() { curl -sS -o /dev/null -w '%{http_code}' -H "$H" "http://127.0.0.1$1"; }
+          loc()  { curl -sS -o /dev/null -w '%{redirect_url}' -H "$H" "http://127.0.0.1$1"; }
+          fail() { echo "!! $1"; exit 1; }
+
+          # 不存在的包必须是 404。曾经回落到 SPA 返回 200 加一段 HTML，
+          # portage 会把那段网页当成下载成功。
+          [ "$(code /binpkgs/x86-64/nope.gpkg.tar)" = 404 ] || fail "不存在的包没有返回 404"
+          [ "$(code /binpkgs/x86-64/Packages)" = 200 ]      || fail "索引取不到"
+          [ "$(code /distfiles/layout.conf)" = 200 ]        || fail "distfiles 取不到"
+          # portage 用 GENTOO_MIRRORS 时自己接上 distfiles/，站点文档写的是站点根。
+          # 多写一层的话真实请求会变成 /distfiles/distfiles/... 而 404。
+          [ "$(code /distfiles/c6/t.tar.gz)" = 200 ]        || fail "distfiles 布局不对"
+          [ "$(code /distfiles/distfiles/layout.conf)" = 404 ] || fail "distfiles 多了一层"
+
+          # 目录交给前端渲染
+          [ "$(code /binpkgs/x86-64/)" = 200 ] || fail "目录浏览打不开"
+          [ "$(code /files/)" = 200 ]          || fail "浏览根打不开"
+
+          # 页面地址不带扩展名，旧地址跳过来
+          [ "$(code /faq)" = 200 ]              || fail "/faq 打不开"
+          [ "$(code /faq.html)" = 301 ]         || fail "/faq.html 没有跳转"
+          case "$(loc /faq.html)" in *"/faq") ;; *) fail "/faq.html 跳到了 $(loc /faq.html)" ;; esac
+          [ "$(code /index.html)" = 301 ]       || fail "/index.html 没有跳转"
+
+          # 带项目名的旧路径跳到新址
+          [ "$(code /gentoo-zh/binpkgs/x86-64/Packages)" = 301 ] || fail "旧路径没有跳转"
+
+          # _app.html 是内部回落目标，不能被 .html 跳转规则卷进去；
+          # 但它本身不该是一个能直接访问的地址
+          [ "$(code /_app.html)" = 200 ] || fail "_app.html 被跳转了"
+          [ "$(code /_app)" = 404 ]      || fail "/_app 不该可访问"
+
+          # /files/ 只有根这一层，往下没有东西
+          [ "$(code /files/nope/)" = 404 ] || fail "/files/ 下的路径该是 404"
+
+          # 页面要发缓存头，否则改了样式用户看不到
+          curl -sS -I -H "$H" http://127.0.0.1/faq | grep -qi '^cache-control: no-cache' \
+            || fail "页面没有发 Cache-Control"
+          curl -sS -I -H "$H" http://127.0.0.1/faq | grep -qi '^strict-transport-security' \
+            || fail "页面没有发 HSTS"
+
+          echo "  全部通过"

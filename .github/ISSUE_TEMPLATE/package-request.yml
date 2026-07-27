@@ -1,0 +1,31 @@
+name: 申请收录包
+description: 申请将某个 overlay 中的包收录进 binhost
+labels: [package request]
+body:
+  - type: input
+    id: atom
+    attributes:
+      label: 包名
+      placeholder: category/package
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: 收录理由
+      description: |
+        编译耗时、依赖链规模、使用面。
+        已是预编译二进制的 -bin 包安装过程仅为解压，收录后收益有限。
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 确认事项
+      options:
+        - label: 该包属于 gentoo-zh overlay，而非 ::gentoo
+          required: true
+        - label: ebuild 中不含 RESTRICT=bindist
+          required: true
