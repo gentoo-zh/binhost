@@ -33,14 +33,16 @@
 <main class="wrap wide">
 
   <h1 class="title" data-i18n="title">包列表</h1>
-  <p class="lead" data-i18n="lead">
-    标签的含义见下方图例，鼠标停留查看详情。
-  </p>
+  <p class="lead" data-i18n="lead">标签含义见下方图例，包说明在列表中最多显示两行。</p>
 
+  <label class="sr-only" for="q" data-i18n="searchLabel">搜索包名或说明</label>
   <input class="search" id="q" type="search" autocomplete="off"
          placeholder="搜索包名或说明">
 
-  <div class="filters" id="filters"></div>
+  <div class="filter-bar">
+    <div class="filters" id="filters"></div>
+    <p class="result-count" id="result-count" aria-live="polite"></p>
+  </div>
 
   <dl class="legend">
     <dt class="mark yes">&#10003;</dt>
@@ -57,7 +59,7 @@
 
   <p class="count" id="count"></p>
   <p class="count" id="updated"></p>
-  <div id="out" class="msg" data-i18n="loading">加载中…</div>
+  <div id="out" class="msg pkgs-out" data-i18n="loading">加载中…</div>
 
 </main>
 
@@ -73,6 +75,14 @@
     </nav>
   </div>
 </footer>
+
+<button class="to-top" id="to-top" type="button" hidden>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="m18 15-6-6-6 6"/>
+  </svg>
+  <span class="sr-only" data-i18n="toTop">回到顶部</span>
+</button>
 
 <div id="strings" hidden>
   <span data-i18n="thPkg">包</span>
@@ -113,6 +123,8 @@ distfiles {d} 个</span>
   <span data-i18n="whyLong_candidate">有构建系统但未收录，需人工确认</span>
   <span data-i18n="none">没有匹配的包。</span>
   <span data-i18n="ph">搜索包名或说明</span>
+  <span data-i18n="searchLabel">搜索包名或说明</span>
+  <span data-i18n="resultFmt">显示 {shown} / {total}</span>
 </div>
 
 <script src="/assets/strings.js"></script>
@@ -120,7 +132,7 @@ distfiles {d} 个</span>
 window.MIRROR_I18N = {
   'zh-tw': {
     pending: '待建置', excluded: '不建置', notListed: '不收錄', updBin: '二進位套件更新於 ', updDist: 'distfiles 更新於 ', fltAll: '全部', fltBin: '僅二進位套件', fltDist: '僅 distfiles', title: '套件列表',
-    lead: '標籤的含義見下方圖例，滑鼠停留查看詳情。',
+    lead: '標籤含義見下方圖例，套件說明在列表中最多顯示兩行。',
     loading: '載入中…', thPkg: '套件', thDesc: '說明', thVer: '版本', thSize: '體積', thBin: '二進位套件', thDist: 'Distfiles', countFmt: 'overlay {n} 個套件\n二進位套件 {b} 個\ndistfiles {d} 個', none: '沒有符合的套件。',
     lgBuilt: '已發布',
     lgPending: '等待建置',
@@ -136,11 +148,12 @@ window.MIRROR_I18N = {
     whyLong_meta: 'virtual、acct-user，不安裝檔案',
     whyLong_candidate: '有建置系統但未收錄，需人工確認',
     lgDashDist: '沒有原始碼檔案，或下載失敗',
-    ph: '搜尋套件名稱或說明'
+    ph: '搜尋套件名稱或說明', searchLabel: '搜尋套件名稱或說明', resultFmt: '顯示 {shown} / {total}',
+    toTop: '回到頂部'
   },
   'en': {
     pending: 'pending', excluded: 'excluded', notListed: 'not listed', updBin: 'binaries updated ', updDist: 'distfiles updated ', fltAll: 'All', fltBin: 'Binaries', fltDist: 'Distfiles', title: 'Packages',
-    lead: 'The legend below explains each tag; hover for detail.',
+    lead: 'The legend below explains each tag. Descriptions use at most two lines.',
     loading: 'Loading…', thPkg: 'Package', thDesc: 'Description', thVer: 'Version', thSize: 'Size', thBin: 'Binary', thDist: 'Distfiles',
     countFmt: 'overlay {n} packages\nbinpkg {b}\ndistfiles {d}', none: 'No matching packages.',
     lgBuilt: 'Published.',
@@ -157,7 +170,8 @@ window.MIRROR_I18N = {
     whyLong_meta: 'A virtual or acct-user package.',
     whyLong_candidate: 'Has a build system but is not on the list.',
     lgDashDist: 'No source files, or the download failed.',
-    ph: 'Search name or description'
+    ph: 'Search name or description', searchLabel: 'Search package name or description', resultFmt: 'Showing {shown} / {total}',
+    toTop: 'Back to top'
   }
 };
 </script>
@@ -254,14 +268,17 @@ function render() {
     return r.cp.toLowerCase().indexOf(q) >= 0 || r.desc.toLowerCase().indexOf(q) >= 0;
   });
 
+  document.getElementById("result-count").textContent = t("resultFmt")
+    .replace("{shown}", hit.length).replace("{total}", rows.length);
+
   const out = document.getElementById("out");
   if (!hit.length) {
-    out.className = "msg";
+    out.className = "msg pkgs-out";
     out.textContent = t("none");
     return;
   }
 
-  out.className = "";
+  out.className = "pkgs-out";
   out.innerHTML =
     '<table class="listing pkgs"><thead><tr>' +
       '<th>' + t("thPkg") + '</th>' +
@@ -276,16 +293,18 @@ function render() {
       // 那边给的是 404。
       const url = "https://github.com/gentoo-zh/overlay/tree/master/" + r.cp;
       return '<tr>' +
-        '<td class="name"><a href="' + esc(url) + '">' + esc(r.cp).replace("/", "/<wbr>") + '</a></td>' +
+        '<td class="name"><a href="' + esc(url) + '">' + esc(r.cp).replace("/", "/<wbr>") + '</a>' +
+          '<span class="mobile-desc">' + esc(r.desc) +
+            (r.excluded ? ' · ' + esc(r.excluded) : '') + '</span></td>' +
         // 排除的包把原因直接写在说明后面。原来只挂 title，浏览器原生提示要停
         // 一两秒才出来，样式也改不了，手机上根本没有 hover。
         // 排除原因跟在说明后面。不再写「不构建：」前缀——右边那一列的标签
         // 已经是这三个字，重复一遍还会撞出「：::gentoo」这样三个冒号连排。
         '<td class="desc" title="' +
-          esc(r.desc + (r.excluded ? "　" + r.excluded : "")) + '">' +
-          esc(r.desc) +
-          (r.excluded ? ' <span class="why">· ' + esc(r.excluded) + '</span>' : '') +
-        '</td>' +
+          esc(r.desc + (r.excluded ? "　" + r.excluded : "")) + '"><span class="desc-text">' +
+            esc(r.desc) +
+            (r.excluded ? ' <span class="why">· ' + esc(r.excluded) + '</span>' : '') +
+          '</span></td>' +
         '<td class="mark ' + (r.ver ? 'yes' : 'no') + '"' +
           (r.excluded ? ' title="' + esc(r.excluded) + '"' : '') + '>' +
           (r.ver ? '\u2713'
@@ -319,7 +338,7 @@ function counts() {
   const box = document.getElementById("filters");
   box.innerHTML = [["all","fltAll"],["bin","fltBin"],["dist","fltDist"]].map(function (f) {
     return '<button class="filter' + (filter === f[0] ? ' on' : '') +
-           '" data-f="' + f[0] + '">' + t(f[1]) + '</button>';
+           '" data-f="' + f[0] + '" aria-pressed="' + (filter === f[0]) + '">' + t(f[1]) + '</button>';
   }).join("");
 }
 
@@ -367,6 +386,18 @@ new MutationObserver(function () {
   const ph = t("ph");
   if (ph) document.getElementById("q").placeholder = ph;
 }).observe(document.getElementById("strings"), { subtree: true, characterData: true, childList: true });
+
+const toTop = document.getElementById("to-top");
+function updateToTop() {
+  toTop.hidden = window.scrollY <= window.innerHeight;
+}
+window.addEventListener("scroll", updateToTop, { passive: true });
+window.addEventListener("resize", updateToTop);
+toTop.addEventListener("click", function () {
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
+});
+updateToTop();
 </script>
 </body>
 </html>

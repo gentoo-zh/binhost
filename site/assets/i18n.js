@@ -69,6 +69,17 @@
   var curLang = detectLang();
   var themeMode = read('mirror-theme') || 'system';
 
+  /* 导航在所有页面共用，按当前 URL 标出所在栏目。目录浏览的子路径都归到「文件」。 */
+  var path = location.pathname.replace(/\.html$/, '');
+  document.querySelectorAll('.nav-link').forEach(function (link) {
+    var href = link.getAttribute('href');
+    var active = href === '/' ? path === '/'
+      : href === '/files/' ? path.indexOf('/files/') === 0
+      : path === href || path === href + '/';
+    if (active) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
+
   var controls = document.getElementById('controls');
   if (!controls) return;
 

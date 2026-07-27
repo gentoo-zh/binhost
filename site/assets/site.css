@@ -127,6 +127,9 @@ body {
   padding: 0.32rem 0.5rem; border-radius: 4px; white-space: nowrap;
 }
 .nav-link:hover { background: var(--hover); color: var(--fg); }
+.nav-link[aria-current="page"] {
+  background: var(--accent-weak); color: var(--accent); font-weight: 700;
+}
 
 /* i18n.js 注入的语言按钮与主题菜单。样式必须跟着脚本一起带，
    缺了这段控件会退化成浏览器默认的灰色方块。 */
@@ -168,12 +171,12 @@ body {
    说明栏会被压成两行，行高参差不齐。 */
 .wrap.wide, .foot.wide .foot-inner, .nav.wide .nav-inner { max-width: 1100px; }
 .wrap { max-width: 780px; margin: 0 auto; padding: 2.75rem 1.25rem 3rem; position: relative; }
-.title { font-size: 1.6rem; line-height: 1.35; letter-spacing: -0.01em; font-weight: 600; color: var(--fg); margin: 0 0 0.35rem; }
+.title { font-size: 1.9rem; line-height: 1.3; letter-spacing: -0.02em; font-weight: 600; color: var(--fg); margin: 0 0 0.45rem; }
 
 .lead { font-size: 0.95rem; line-height: 1.8; color: var(--fg-soft); margin: 0 0 1.75rem; max-width: 42em; }
 
 h2 {
-  font-size: 0.9rem; font-weight: 600; color: var(--fg); letter-spacing: 0;
+  font-size: 1.05rem; font-weight: 600; color: var(--fg); letter-spacing: -0.005em;
   margin: 2.75rem 0 1.1rem; padding-top: 1.1rem; border-top: 1px solid var(--border);
 }
 h2:first-of-type { margin-top: 2rem; }
@@ -310,7 +313,7 @@ a { color: var(--primary); text-decoration: none; }
 #copy-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 @media (max-width: 40rem) {
-  .title { font-size: 1.6rem; line-height: 1.35; letter-spacing: -0.01em; font-weight: 600; color: var(--fg); margin: 0 0 0.35rem; }
+  .title { font-size: 1.7rem; }
   .listing td.date, .listing th.date { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -367,7 +370,7 @@ button:active, .copy-chip:active { transform: translateY(1px); }
 /* --- FAQ --- */
 
 .qa h2 {
-  font-size: 0.9rem; font-weight: 600; color: var(--fg); letter-spacing: 0;
+  font-size: 1.02rem; font-weight: 600; color: var(--fg); letter-spacing: -0.005em;
   margin: 2.75rem 0 1.1rem; padding-top: 1.1rem; border-top: 1px solid var(--border);
 }
 
@@ -383,6 +386,11 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
   color: var(--fg); font: inherit; font-size: 0.9rem; padding: 0.55rem 0.85rem;
 }
 .search:focus { outline: none; border-color: var(--primary); }
+.search:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
 /* 计数与更新时间按行给：三个数量口径不同，挤成一行读不出区别。
    pre-line 让脚本仍用 textContent 输出，不必为换行改成 innerHTML。 */
 .count {
@@ -407,15 +415,20 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
   .pkgs td.name { white-space: nowrap; }
 }
 .pkgs td.desc, .pkgs th.desc { white-space: normal; color: var(--fg-soft); width: 100%; }
-/* 一行不换行，行高统一：四百多行的表格里，参差的行高比读不全一句话更碍事。
-   截断改成横向滚动，长说明在格子里划一下就能读完，不必再点进包页面。
-   滚动条藏起来——每行一条会把表格切成一片横线。 */
-.pkgs td.desc {
-  white-space: nowrap; max-width: 0;
-  overflow-x: auto; overflow-y: hidden;
-  scrollbar-width: none;
+/* 说明最多显示两行。比每个单元格各自横向滚动更容易扫描，也适合触摸设备。 */
+.pkgs td.desc { max-width: 0; }
+.pkgs .desc-text {
+  display: -webkit-box; overflow: hidden;
+  -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  line-clamp: 2; white-space: normal; line-height: 1.55;
 }
-.pkgs td.desc::-webkit-scrollbar { display: none; }
+.pkgs .mobile-desc { display: none; }
+.pkgs-out#out { overflow: visible; }
+.pkgs thead th {
+  position: sticky; top: 3.15rem; z-index: 20;
+  background: var(--bg); border-bottom: 0;
+  box-shadow: inset 0 -1px 0 var(--border);
+}
 /* 不收录的原因跟在说明后面，压暗一档，读的时候不会和说明本身混起来。 */
 .pkgs td.desc .why { color: var(--fg-soft); font-style: italic; opacity: 0.85; }
 /* 不收录的类别标签。压得比「待构建」更暗——那是等得到的，这是等不到的。 */
@@ -434,6 +447,12 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 }
 @media (max-width: 44rem) {
   .pkgs td.desc, .pkgs th.desc { display: none; }
+  .pkgs .mobile-desc {
+    display: -webkit-box; overflow: hidden; margin-top: 0.16rem;
+    -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+    line-clamp: 2; color: var(--fg-soft); font-family: var(--sans);
+    font-size: 0.76rem; line-height: 1.45;
+  }
 }
 @media (max-width: 30rem) {
 }
@@ -442,22 +461,33 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 .fpr {
   margin-left: auto; font-family: var(--mono); font-size: 0.68rem;
   color: var(--fg-soft); background: var(--chip);
-  padding: 0.14rem 0.45rem; border-radius: 0.3rem; white-space: nowrap;
+  padding: 0.26rem 0.5rem 0.2rem; border-radius: 0.3rem;
+  line-height: 1.25; white-space: nowrap;
 }
-@media (max-width: 52rem) { .fpr { display: none; } }
+@media (max-width: 52rem) {
+  .step-title:has(.fpr) { display: grid; grid-template-columns: auto minmax(0, 1fr); }
+  .fpr {
+    grid-column: 1 / -1; justify-self: start;
+    width: fit-content; max-width: 100%; margin-left: 0;
+    white-space: normal; overflow-wrap: anywhere;
+  }
+}
 h2[id] { scroll-margin-top: 4.5rem; }
 
 /* 对勾列。窄到只放得下一个符号，别让它抢名称列的宽度 */
 .listing th.mark, .listing td.mark { text-align: center; width: 1%; white-space: nowrap; }
-.listing td.mark.yes { color: #16a34a; font-weight: 600; }
+.listing td.mark.yes { color: var(--ok); font-weight: 600; }
 .listing td.mark.no { color: var(--fg-soft); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .listing td.mark.yes { color: #4ade80; } }
-[data-theme="dark"] .listing td.mark.yes { color: #4ade80; }
 .mirrors td, .mirrors th { white-space: nowrap; }
 .table-wrap { overflow-x: auto; }
 
 /* 过滤按钮 */
-.filters { display: flex; gap: 0.4rem; margin: 0 0 0.6rem; flex-wrap: wrap; }
+.filter-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.5rem 1rem; margin: 0 0 0.6rem; flex-wrap: wrap;
+}
+.filters { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.result-count { margin: 0; color: var(--fg-soft); font: 0.76rem/1.5 var(--mono); }
 
 /* 表格里四种状态的含义。符号本身没有自解释性，列表页第一次看会猜。 */
 .legend {
@@ -473,28 +503,47 @@ h2[id] { scroll-margin-top: 4.5rem; }
   font-size: 0.8rem;
 }
 .legend dt { justify-self: center; white-space: nowrap; }
-.legend dt.mark.yes { color: #16a34a; font-weight: 600; }
+.legend dt.mark.yes { color: var(--ok); font-weight: 600; }
 .legend dt.mark.no { color: var(--fg-soft); }
 .legend dt .pend { font-size: 0.74rem; font-style: italic; color: var(--fg-soft); }
 .legend dd { margin: 0; color: var(--fg-soft); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .legend dt.mark.yes { color: #4ade80; }
-}
-[data-theme="dark"] .legend dt.mark.yes { color: #4ade80; }
 .filter {
   border: 1px solid var(--border); border-radius: 4px; background: var(--card);
   color: var(--fg-soft); font: inherit; font-size: 0.8rem;
   padding: 0.28rem 0.7rem; cursor: pointer;
 }
 .filter:hover { color: var(--fg); }
-.filter.on { border-color: var(--primary); color: var(--primary); font-weight: 600; }
+.filter.on { border-color: var(--primary); background: var(--accent-weak); color: var(--primary); font-weight: 600; }
 /* 「待构建」比破折号长，别让它把这列撑开 */
 .listing td.mark .pend { font-size: 0.74rem; font-style: italic; }
+
+.to-top {
+  position: fixed;
+  right: calc(1rem + env(safe-area-inset-right));
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+  z-index: 30;
+  display: grid; place-items: center;
+  width: 2.75rem; height: 2.75rem;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: var(--surface); color: var(--accent); cursor: pointer;
+}
+.to-top[hidden] { display: none; }
+.to-top:hover { border-color: var(--accent-dim); background: var(--accent-weak); }
 
 /* --- 窄屏 --- */
 @media (max-width: 23rem) {
   /* 三栏加内边距刚好超一点，表格会出现几像素的横向滚动 */
   .pkgs td, .pkgs th { padding-left: 0.35rem; padding-right: 0.35rem; }
+}
+
+@media (max-width: 46rem) {
+  /* 平板宽度就切成两行，避免英文导航和工具按钮挤进隐藏的横向区域。 */
+  .nav-inner { flex-wrap: wrap; padding: 0.7rem 1rem 0.55rem; row-gap: 0.5rem; }
+  .nav-brand { flex: 1 1 0; min-width: 0; }
+  .nav-tools { flex: none; margin-left: auto; }
+  .nav-links { flex: 1 0 100%; order: 3; gap: 0; margin: 0 -0.4rem; }
+  .nav-link { padding: 0.3rem 0.4rem; }
+  .pkgs thead th { top: 6rem; }
 }
 
 @media (max-width: 34rem) {
@@ -504,18 +553,7 @@ h2[id] { scroll-margin-top: 4.5rem; }
   .mirrors td, .mirrors th { padding-left: 0.4rem; padding-right: 0.4rem; }
   .mirrors td:nth-child(2) { white-space: normal; word-break: break-all; }
   .mirrors th.mark, .mirrors td.mark { font-size: 0.72rem; }
-  .title { font-size: 1.45rem; }
-
-  /* 顶栏压成两行：品牌与语言/主题一行，导航链接一行。
-     链接横向可滑，不换行，避免一个链接单独占一行。 */
-  .nav-inner { flex-wrap: wrap; padding: 0.7rem 1rem 0.55rem; row-gap: 0.5rem; }
-  /* basis 用 0：auto 会让浏览器优先换行而不是缩短品牌名，
-     结果工具被挤到第二行、链接到第三行。 */
-  .nav-brand { flex: 1 1 0; min-width: 0; }
-  .nav-tools { flex: none; margin-left: auto; }
-  /* 手机上链接单独一行，靠左排 */
-  .nav-links { flex: 1 0 100%; order: 3; gap: 0; margin: 0 -0.4rem; }
-  .nav-link { padding: 0.3rem 0.4rem; }
+  .title { font-size: 1.55rem; }
 
   .step { margin-top: 1.2rem; }
   .code pre { font-size: 0.72rem; padding: 0.7rem 0.75rem; }

@@ -109,7 +109,7 @@
   <table class="spec">
     <thead><tr><th>尺寸</th><th>用在哪</th></tr></thead>
     <tbody>
-      <tr><td>2rem / 600</td><td>页面标题，每页一个</td></tr>
+      <tr><td>1.9rem / 600</td><td>页面标题，每页一个</td></tr>
       <tr><td>1.05rem / 600</td><td>章节标题</td></tr>
       <tr><td>1rem / 400</td><td>引导句</td></tr>
       <tr><td>0.92rem / 400</td><td>正文与说明</td></tr>
@@ -128,8 +128,8 @@
   <h2>移动端</h2>
 
   <p class="note">
-    断点只有一个：34rem。小于它按手机排，大于它按桌面排。多设几档会让每一档
-    都缺少验证。
+    主要布局断点有两个：46rem 时顶栏改成两行，34rem 时正文按手机排。数据表
+    只在列放不下时逐级调整，不用设备名称推断宽度。
   </p>
 
   <table class="spec">
@@ -137,7 +137,7 @@
     <tbody>
       <tr><td>顶栏两行</td><td>品牌与语言、主题一行，导航链接一行。品牌用 flex-basis 0 先缩，否则浏览器会换行成三行</td></tr>
       <tr><td>导航链接横向可滑</td><td>不换行，避免一个链接单独占一行</td></tr>
-      <tr><td>表格逐列隐藏</td><td>体积、版本、说明按这个顺序让位，状态列留到最后</td></tr>
+      <tr><td>表格逐列调整</td><td>体积、版本先让位；说明在窄屏移到包名下方，状态列始终保留</td></tr>
       <tr><td>包名在斜线处断行</td><td>用 &lt;wbr&gt; 标出断点。word-break: break-all 会把 app-admin/1password 切成认不出的三段</td></tr>
       <tr><td>页面不横向滚动</td><td>宽内容（表格、代码块）在自己的容器里滚，body 不滚</td></tr>
       <tr><td>正文内边距 1rem</td><td>桌面 1.25rem。再小会贴边</td></tr>
