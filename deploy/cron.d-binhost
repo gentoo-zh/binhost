@@ -2,5 +2,7 @@
 */5 * * * * zakk /usr/local/bin/binhost-site-sync
 # 每天查密钥/证书/索引/取包，失败推 Telegram
 23 6 * * * root /usr/local/bin/binhost-status
-# distfiles 每天凌晨同步。单核，白天跑会和发文件抢 CPU。
-17 4 * * * root /usr/local/bin/binhost-daily >> /var/log/emirrordist/run.log 2>&1
+# distfiles 每小时同步。overlay 的提交散布在一天里，一天一次会让下午合并的
+# 版本等到次日才镜像，最长差 24 小时。这一步很便宜：没有新文件时 1 秒，
+# 取两个新文件 5 秒，因为等的是上游网络而不是这台的单核。
+17 * * * * root /usr/local/bin/binhost-daily >> /var/log/emirrordist/run.log 2>&1
