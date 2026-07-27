@@ -66,6 +66,12 @@ sudo logrotate -d /etc/logrotate.d/binhost >/dev/null
 echo '--- 定时任务'
 sudo install -m644 cron.d-binhost /etc/cron.d/binhost
 
+echo '--- 监控'
+# node_exporter 供两套 Prometheus 抓取。9100 由 nftables 的 monitor_hosts 集合
+# 限定来源，集合本身带外填（见 nftables.conf）。
+command -v node_exporter >/dev/null || sudo emerge -q app-metrics/node_exporter
+sudo rc-update add node_exporter default 2>/dev/null || true
+
 echo '--- overlay 副本'
 # distfiles 按它的 Manifest 取，包列表按它的目录生成
 [ -d /var/lib/binhost-overlay/.git ] ||
@@ -80,10 +86,10 @@ echo '--- 启动'
 sudo rc-update add cronie default 2>/dev/null || true
 sudo rc-update add rsyncd default 2>/dev/null || true
 sudo rc-update add nginx  default 2>/dev/null || true
-for s in cronie rsyncd nginx; do sudo rc-service \$s restart >/dev/null 2>&1 || true; done
+for s in cronie rsyncd nginx node_exporter; do sudo rc-service \$s restart >/dev/null 2>&1 || true; done
 rm -rf '${tmp}'
 "
 
 say "完成"
 echo "站点内容由 deploy/site-sync.sh 自己拉，五分钟内会出现。"
-echo "还要手工配：/etc/binhost/alert.conf、TLS 证书。"
+echo "还要手工配：/etc/binhost/alert.conf、TLS 证书、防火墙 monitor_hosts 集合（监控机 IP）。"
