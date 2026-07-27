@@ -13,7 +13,6 @@
 app-i18n/fcitx-kkc		依赖 libkkc 的 configure 需要 XML::Parser，基础镜像补 perl-cleaner 后复查
 app-misc/crush			许可证 FSL-1.1-MIT 不允许再分发
 app-text/wiki2man_on_rust	唯一带 L10N 标志的包，语言设置不同就用不上二进制包
-dev-lang/quickjs		与 dev-libs/quickjs-ng 争夺 /usr/bin/qjs，装上它 media-gfx/open-wallpaper-engine 就 merge 不进去
 dev-libs/libdatrie		::gentoo 有同版本的 -r1，portage 不会选 overlay 这份
 dev-libs/libthai		::gentoo 有同版本的 -r1，portage 不会选 overlay 这份
 media-gfx/scangearmp		许可证 Canon-IJ 只准搭配 Canon 喷墨机使用，不在 @BINARY-REDISTRIBUTABLE

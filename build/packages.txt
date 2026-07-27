@@ -172,7 +172,7 @@ sys-apps/pacman
 sys-fs/ssdfs-tools
 sys-libs/libsolv
 sys-power/tlpui
-www-apps/dufs
+www-servers/dufs
 www-servers/miniserve
 x11-libs/glbinding
 x11-misc/extramaus
