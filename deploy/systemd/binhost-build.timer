@@ -2,8 +2,10 @@
 Description=每日构建并发布 binhost
 
 [Timer]
-# 深夜跑。一轮增量通常远快于首次全量，但仍可能几个小时。
-OnCalendar=*-*-* 02:00:00
+# 时刻按 UTC+8 写。机器的系统时区是 UTC，只写 02:00 会落在当地上午十点，
+# 构建要跑两个多小时，正好压在白天。systemd 支持在 OnCalendar 后面直接指定
+# 时区，比在注释里换算可靠。
+OnCalendar=*-*-* 02:00:00 Asia/Shanghai
 # 机器关过机时补跑，别静默跳过一天
 Persistent=true
 RandomizedDelaySec=15m

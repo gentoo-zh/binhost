@@ -2,8 +2,8 @@
 Description=每日运行 binhost 健康检查
 
 [Timer]
-# 排在构建之后几小时，查的是构建发布上去的结果。
-OnCalendar=*-*-* 06:41:00
+# 排在构建之后：构建 02:00 起跑约两个半小时，08:20 查到的是刚发布的结果。
+OnCalendar=*-*-* 08:20:00 Asia/Shanghai
 Persistent=true
 
 [Install]
