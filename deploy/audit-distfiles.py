@@ -13,8 +13,10 @@ RESTRICT=mirror 的判定按文件而不是按包：一个 crate 可能同时被
 """
 
 import pathlib
+import json
 import re
 import sys
+import time
 
 
 def scan(overlay):
@@ -35,7 +37,47 @@ def scan(overlay):
     return users
 
 
+GRACE_SECONDS = 7 * 24 * 3600
+STATE = "/var/lib/emirrordist/orphans.json"
+
 MARKERS = {"layout.conf", "README.txt"}
+
+
+def reap(orphan, distdir, grace=GRACE_SECONDS):
+    """删掉过了回收期的孤儿文件，返回这一轮删掉的。
+
+    版本 bump 之后旧的源码文件就没人引用了，emirrordist --delete 按它这一轮
+    取过的清单删，删不到这些。留着只是占磁盘。
+
+    不立刻删：先记下第一次发现的时间，过了回收期才动手。误判时还有一周可以
+    发现，和 emirrordist 自己的 --deletion-delay 同一个思路。
+    """
+    state = pathlib.Path(STATE)
+    try:
+        seen = json.loads(state.read_text())
+    except (OSError, ValueError):
+        seen = {}
+
+    now = int(time.time())
+    seen = {f: t for f, t in seen.items() if f in orphan}   # 又被引用了就忘掉
+    deleted = []
+    for f in orphan:
+        first = seen.setdefault(f, now)
+        if now - first < grace:
+            continue
+        for path in distdir.rglob(f):
+            path.unlink(missing_ok=True)
+            deleted.append(f)
+            break
+    for f in deleted:
+        seen.pop(f, None)
+
+    try:
+        state.parent.mkdir(parents=True, exist_ok=True)
+        state.write_text(json.dumps(seen, indent=1, sort_keys=True))
+    except OSError as e:                                   # noqa: BLE001
+        print(f"!! 无法写入 {state}: {e}")
+    return deleted
 
 
 def main(overlay, dest):
@@ -67,20 +109,23 @@ def main(overlay, dest):
     # 布局标记不是 distfile：layout.conf 告诉 portage 这里用两级哈希而不是
     # 平铺目录，官方 distfiles 根下也有同一份。没有它客户端会到错误的路径去取。
     orphan = sorted(have - set(users) - MARKERS)
+    deleted = reap(orphan, dest)
 
     print(f"overlay 引用 {len(users)}，其中可镜像 {len(mirrorable)}，"
           f"不可镜像 {len(never)}，无法取得 {len(unfetchable)}")
     print(f"镜像上 {len(have)}，缺 {len(missing)}，多 {len(extra)}，"
-          f"已无人引用 {len(orphan)}")
+          f"已无人引用 {len(orphan)}，本轮清理 {len(deleted)}")
 
     for f in missing[:20]:
         print(f"  缺 {f}  <- {[p for p, _ in users[f]]}")
     for f in extra[:20]:
         print(f"  多 {f}  <- {[p for p, _ in users[f]]}（所有引用方都 RESTRICT=mirror）")
-    for f in orphan[:20]:
-        print(f"  已无人引用 {f}")
+    for f in deleted[:20]:
+        print(f"  清理 {f}")
 
-    return 1 if (missing or extra or orphan) else 0
+    # 无人引用的文件由 reap 按回收期处理，是版本 bump 的常态，不判失败。
+    # 每小时为同一批文件推一次告警只会让人学会忽略告警。
+    return 1 if (missing or extra) else 0
 
 
 if __name__ == "__main__":
