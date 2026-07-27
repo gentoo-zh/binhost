@@ -53,27 +53,26 @@
   <div class="step">
     <p class="step-title"><span class="n">1</span><span data-i18n="step1">导入签名公钥</span>
       <code class="fpr">6A07 26AF 1476 A2F3 82C6  AC66 38A0 234E C16A D42E</code></p>
-    <p class="note" data-i18n-html="keyPkg">
-      公钥也在 overlay 里：<code>emerge sec-keys/openpgp-keys-gentoozh</code>
-      把它装到 <code>/usr/share/openpgp-keys/gentoozh.asc</code>，
-      密钥跟着已经受信任的同步通道过来，轮替时随 overlay 更新。
-      下面第一条命令可换成读那个文件。
-    </p>
     <div class="code">
       <div class="code-head">
         <span class="path">shell</span>
-        <button class="copy-chip" data-copy="curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc
-gpg --homedir /etc/portage/gnupg --import gentoo-zh-binhost.asc
+        <button class="copy-chip" data-copy="emerge sec-keys/openpgp-keys-gentoozh
+gpg --homedir /etc/portage/gnupg --import /usr/share/openpgp-keys/gentoozh.asc
 gpg --homedir /etc/portage/gnupg --batch --yes --pinentry-mode loopback --passphrase-file /etc/portage/gnupg/pass --lsign-key binhost@gentoozh.org
 gpg --homedir /etc/portage/gnupg --check-trustdb" data-i18n="copy">复制</button>
       </div>
-<pre><span class="prompt"># </span><span class="key">curl</span> <span class="flag">-O</span> <span class="val">https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</span>
-<span class="prompt"># </span><span class="key">gpg</span> <span class="flag">--homedir</span> /etc/portage/gnupg <span class="flag">--import</span> gentoo-zh-binhost.asc
+<pre><span class="prompt"># </span><span class="key">emerge</span> <span class="val">sec-keys/openpgp-keys-gentoozh</span>
+<span class="prompt"># </span><span class="key">gpg</span> <span class="flag">--homedir</span> /etc/portage/gnupg <span class="flag">--import</span> /usr/share/openpgp-keys/gentoozh.asc
 <span class="prompt"># </span><span class="key">gpg</span> <span class="flag">--homedir</span> /etc/portage/gnupg <span class="flag">--batch --yes --pinentry-mode loopback</span> \
     <span class="flag">--passphrase-file</span> /etc/portage/gnupg/pass <span class="flag">--lsign-key</span> <span class="val">binhost@gentoozh.org</span>
 <span class="prompt"># </span><span class="key">gpg</span> <span class="flag">--homedir</span> /etc/portage/gnupg <span class="flag">--check-trustdb</span></pre>
     </div>
   </div>
+
+  <p class="note" data-i18n-html="keyAlt">
+    不想装这个包也可以直接取：<code>curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</code>，
+    然后把上面第二条命令的路径换成下载到的文件。
+  </p>
 
   <p class="note" data-i18n-html="keyNote">
     签名用的是 getuto 建立的 Portage Local Trust Key，口令在
@@ -183,7 +182,7 @@ window.MIRROR_I18N = {
     distNote: '這裡只有 overlay 的原始碼，不能替代官方來源，因此是追加而非替換。位址不寫 <code>distfiles/</code>，portage 會自己補上。中國大陸的使用者可換成<a href="/mirror">鏡像</a>頁列出的節點，例如南京大學。',
     distOptOut: '因版權等原因不希望某個套件被鏡像時，在其 ebuild 中加入 <code>RESTRICT="mirror"</code>，同步工具會跳過。',
     step1: '匯入簽章公鑰', step2: '加入倉庫', step3: '打開 getbinpkg（附加）',
-    keyPkg: '公鑰也在 overlay 裡：<code>emerge sec-keys/openpgp-keys-gentoozh</code> 會把它裝到 <code>/usr/share/openpgp-keys/gentoozh.asc</code>，密鑰跟著已經受信任的同步通道過來，輪替時隨 overlay 更新。下面第一條命令可換成讀那個檔案。',
+    keyAlt: '不想裝這個套件也可以直接取：<code>curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</code>，然後把上面第二條命令的路徑換成下載到的檔案。',
     keyNote: '簽章用的是 getuto 建立的 Portage Local Trust Key，口令在 <code>/etc/portage/gnupg/pass</code>，因此要用 <code>--passphrase-file</code> 讀。驗簽以 <code>portage</code> 使用者執行，該使用者對 trustdb 沒有寫入權限，所以 trustdb 要預先算好。',
     factPkgs: ' 個二進位套件', factDist: ' 個 distfiles', factTime: '更新於 ',
     h2contact: '聯絡', ctForum: '論壇'
@@ -195,7 +194,7 @@ window.MIRROR_I18N = {
     distNote: 'Only overlay sources live here, so this adds a mirror rather than replacing the official ones. Leave <code>distfiles/</code> off the address; portage appends it. Users in China can switch to a node listed on the <a href="/mirror">mirrors</a> page, such as Nanjing University.',
     distOptOut: 'When a maintainer does not want a package mirrored — licensing or otherwise — they add <code>RESTRICT="mirror"</code> to its ebuild and the sync tool skips it.',
     step1: 'Import the signing key', step2: 'Add the repository', step3: 'Enable getbinpkg (append)',
-    keyPkg: 'The key is also in the overlay: <code>emerge sec-keys/openpgp-keys-gentoozh</code> installs it to <code>/usr/share/openpgp-keys/gentoozh.asc</code>, so it arrives over the sync you already trust and rotates with the overlay. The first command below can read that file instead.',
+    keyAlt: 'You can also fetch it directly instead of installing the package: <code>curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</code>, then point the second command below at the downloaded file.',
     keyNote: 'The signature is made with the Portage Local Trust Key getuto created. Its passphrase is in <code>/etc/portage/gnupg/pass</code>, hence <code>--passphrase-file</code>. Verification runs as the <code>portage</code> user, which has no write access to the trustdb, so the trustdb must be computed beforehand.',
     factPkgs: ' binary packages', factDist: ' distfiles', factTime: 'updated ',
     h2contact: 'Contact', ctForum: 'Forum'
