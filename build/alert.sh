@@ -39,8 +39,23 @@ alert() {
         return 0
     fi
 
-    curl -fsS --max-time 20 -o /dev/null \
+    # Telegram rejects a message over 4096 characters with a 400, curl -f then
+    # exits non-zero, and the whole send used to be swallowed by `|| true`. The
+    # message grows with the number of failures, so the alert disappeared exactly
+    # when the round had gone worst.
+    local text=$1
+    if (( ${#text} > 3500 )); then
+        text="${text:0:3500}
+…（超过 3500 字，已截断，完整内容见构建日志）"
+    fi
+
+    if ! curl -fsS --max-time 20 -o /dev/null \
         "https://api.telegram.org/bot${token}/sendMessage" \
         --data-urlencode "chat_id=${chat}" \
-        --data-urlencode "text=$1" || true
+        --data-urlencode "text=${text}"
+    then
+        # Say so rather than return quietly: a failed alert and no trace of it is
+        # the same as no monitoring.
+        echo "!! 告警发送失败（${#text} 字）" >&2
+    fi
 }

@@ -69,7 +69,7 @@ STATE = "/var/lib/emirrordist/orphans.json"
 MARKERS = {"layout.conf", "README.txt"}
 
 
-def reap(orphan, distdir, grace=GRACE_SECONDS):
+def reap(orphan, paths, grace=GRACE_SECONDS):
     """Delete orphans past the grace period; return what this round removed.
 
     After a bump nothing references the old source file any more, and
@@ -79,6 +79,12 @@ def reap(orphan, distdir, grace=GRACE_SECONDS):
     Not deleted on sight: the time it was first seen is recorded and the file
     goes only once the grace period has passed. A wrong call still leaves a week
     to notice, the same idea as emirrordist's own --deletion-delay.
+
+    Takes the paths the caller already listed rather than searching by name.
+    rglob treats its argument as a pattern, so a filename holding [ ] or ?
+    matched something else or nothing at all -- one deletes the wrong file, the
+    other leaves the orphan there for good. No distfile carries those characters
+    today, which is exactly why it would have gone unnoticed.
     """
     state = pathlib.Path(STATE)
     try:
@@ -93,10 +99,11 @@ def reap(orphan, distdir, grace=GRACE_SECONDS):
         first = seen.setdefault(f, now)
         if now - first < grace:
             continue
-        for path in distdir.rglob(f):
-            path.unlink(missing_ok=True)
-            deleted.append(f)
-            break
+        path = paths.get(f)
+        if path is None:
+            continue
+        path.unlink(missing_ok=True)
+        deleted.append(f)
     for f in deleted:
         seen.pop(f, None)
 
@@ -114,7 +121,8 @@ def main(overlay, dest):
         sys.exit(f"不是 ebuild 仓库：{overlay}")
 
     users = scan(overlay)
-    have = {p.name for p in dest.rglob("*") if p.is_file() and p.name != "layout.conf"}
+    paths = {p.name: p for p in dest.rglob("*") if p.is_file() and p.name != "layout.conf"}
+    have = set(paths)
 
     # A fetch-restricted package has no URL in SRC_URI at all, so nobody can
     # mirror it and it does not count as missing.
@@ -142,7 +150,7 @@ def main(overlay, dest):
     # distfiles root carries the same file. Without it clients fetch from the
     # wrong path.
     orphan = sorted(have - set(users) - MARKERS)
-    deleted = reap(orphan, dest)
+    deleted = reap(orphan, paths)
 
     print(f"overlay 引用 {len(users)}，其中可镜像 {len(mirrorable)}，"
           f"不可镜像 {len(never)}，无法取得 {len(unfetchable)}")

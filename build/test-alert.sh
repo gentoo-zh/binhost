@@ -82,6 +82,31 @@ else
     echo "  ✗ 正文没有传出"; fail=$((fail + 1))
 fi
 
+# A message longer than Telegram accepts must still go out, truncated. It used
+# to be dropped whole, and the message grows with the number of failures, so the
+# alert vanished exactly when the round had gone worst.
+: > "${tmp}/curl.log"
+long=$(printf 'x%.0s' $(seq 1 6000))
+out=$(CURL_LOG="${tmp}/curl.log" ALERT_CONF="${tmp}/full.conf" \
+      bash -euo pipefail -c '
+        . "'"${HERE}"'/alert.sh"
+        alert "'"${long}"'"
+        echo REACHED_END
+      ' 2>/dev/null); rc=$?
+check "超长消息不影响调用者" "0 REACHED_END" "${rc} ${out}"
+sent=$(grep -c "^text=" "${tmp}/curl.log" || true)
+if [[ ${sent} -ge 1 ]]; then
+    echo "  ✓ 超长消息仍然发出去了"; pass=$((pass + 1))
+else
+    echo "  ✗ 超长消息一条都没发"; fail=$((fail + 1))
+fi
+len=$(awk '/^text=/{print length($0)}' "${tmp}/curl.log" | head -1)
+if [[ -n ${len} && ${len} -le 3700 ]]; then
+    echo "  ✓ 发出去的是截断过的（${len} 字）"; pass=$((pass + 1))
+else
+    echo "  ✗ 没有截断（${len:-?} 字）"; fail=$((fail + 1))
+fi
+
 # Credentials must not survive the call: a later `set -x` or an env dump in the
 # caller would otherwise print the token.
 out=$(CURL_LOG="${tmp}/curl.log" ALERT_CONF="${tmp}/full.conf" \
