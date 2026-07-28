@@ -14,6 +14,10 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+if not (ROOT / "deploy").is_dir() or not (ROOT / "site").is_dir():
+    # Only build/ is installed on the build machine. Repository-level test, runs in CI.
+    print("  跳过：本机没有完整仓库")
+    sys.exit(0)
 
 # 40 hex characters, optionally in groups of four the way gpg prints them.
 FPR = re.compile(r"\b((?:[0-9A-F]{4}[  ]?){9}[0-9A-F]{4})\b")

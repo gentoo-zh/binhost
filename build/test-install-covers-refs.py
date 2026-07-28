@@ -13,6 +13,11 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 INSTALL = ROOT / "deploy" / "install.sh"
+if not INSTALL.exists():
+    # Only build/ is installed on the build machine; deploy/ is not there.
+    # Repository-level test, runs in CI.
+    print(f"  跳过：{INSTALL} 不存在，本机没有完整仓库")
+    sys.exit(0)
 
 # Where install.sh puts things -> which prefix scripts refer to it by
 DIRS = {

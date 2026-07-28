@@ -12,9 +12,14 @@ import sys
 import tempfile
 import time
 
-spec = importlib.util.spec_from_file_location(
-    "audit_distfiles",
-    pathlib.Path(__file__).resolve().parent.parent / "deploy" / "audit-distfiles.py")
+TARGET = pathlib.Path(__file__).resolve().parent.parent / "deploy" / "audit-distfiles.py"
+if not TARGET.exists():
+    # Only build/ is installed on the build machine; deploy/ is not there.
+    # This is a repository-level test and runs in CI.
+    print(f"  跳过：{TARGET} 不存在，本机没有完整仓库")
+    sys.exit(0)
+
+spec = importlib.util.spec_from_file_location("audit_distfiles", TARGET)
 audit = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(audit)
 
@@ -75,7 +80,8 @@ case("又被引用了就从状态里忘掉", lambda: (
 case("删完之后状态里不再留着它", lambda: (
     "a.tar.gz" not in reap(["a.tar.gz"], {"a.tar.gz": "x"}, seen={"a.tar.gz": OLD})[2]))
 
-# 文件名里的 [ ] ? 曾经被当成 glob 模式：一种匹配到别的文件，一种一个都匹配不到。
+# [ ] and ? in a filename used to be read as a glob pattern: one form matched
+# nothing at all, the other matched some other file and deleted it.
 case("文件名带方括号也能删掉", lambda: (
     lambda r: r[0] == ["a-[1.0].tar.gz"] and r[1] == []
 )(reap(["a-[1.0].tar.gz"], {"a-[1.0].tar.gz": "x"}, seen={"a-[1.0].tar.gz": OLD})))
