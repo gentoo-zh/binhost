@@ -98,7 +98,9 @@ def keywords_of(text):
     Takes the last assignment, the way bash would. Matches leading whitespace
     because plenty of ebuilds set it inside a conditional.
     """
-    kw = re.findall(r'^\s*KEYWORDS="([^"\n]*)"', text, re.M)
+    # 和 RESTRICT 同样允许跨行。留着单行版会让多行写法的 KEYWORDS 解析成
+    # None，而 validate.py 对 None 是跳过——没有 amd64 的包会因此过关。
+    kw = re.findall(r'^\s*KEYWORDS="([^"]*)"', text, re.M)
     return kw[-1] if kw else None
 
 

@@ -90,7 +90,9 @@ def published(index):
         cpv = line[5:].strip()
         cp = re.sub(r"-[0-9][^-]*(-r[0-9]+)?$", "", cpv)
         ver = cpv[len(cp) + 1:]
-        if cp not in out or vercmp(ver, out[cp]) > 0:
+        # vercmp 解析不了时回 None，直接比大小会抛 TypeError。ebuilds.py 里
+        # 同样的地方写的是 (vercmp(...) or 0)，这里漏了。
+        if cp not in out or (vercmp(ver, out[cp]) or 0) > 0:
             out[cp] = ver
     return out
 
