@@ -63,9 +63,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      # classify-failures.py 只在一次全量构建的末尾跑，语法错要等几个小时才发现
+      # classify-failures.py 只在一次全量构建的末尾跑，语法错要等几个小时才发现。
+      # deploy/ 下的也要：audit-distfiles.py 每小时跑一次，而且是全仓库唯一会
+      # 删 distfiles 的程序。
       - name: Compile
-        run: python3 -m py_compile build/*.py
+        run: python3 -m py_compile build/*.py deploy/*.py
       - name: Classifier against real log shapes
         run: |
           d=$(mktemp -d)
@@ -94,6 +96,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      # check-i18n.js 只加载 strings.js，check-css.py 把 js 当纯文本读。178 行的
+      # i18n 引擎本体有语法错时三个 site 检查全绿，而语言切换整个失效。
+      - name: Parse the scripts
+        run: |
+          for f in site/assets/*.js; do node --check "$f" || exit 1; done
+          echo "  $(ls site/assets/*.js | wc -l) 个脚本可解析"
       - name: Check i18n tables
         run: node build/check-i18n.js site
       # 写作规范见 site/design.html 的「文字」一节
@@ -192,3 +200,40 @@ jobs:
             || fail "页面没有发 HSTS"
 
           echo "  全部通过"
+
+  deploy:
+    runs-on: ubuntu-latest
+    # 这些文件只在 install.sh 正式套用的那一刻才被解析，而 nftables.conf 带
+    # flush ruleset：那时发现写错，防火墙已经空了。
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Parse the firewall rules
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq nftables
+          sudo nft -c -f deploy/nftables.conf
+          echo "  nftables.conf 可解析"
+
+      - name: Parse logrotate
+        run: |
+          sudo apt-get install -y -qq logrotate
+          sudo logrotate -d deploy/logrotate-binhost 2>&1 | grep -q "reading config file" \
+            || { echo "!! logrotate 读不了这份配置"; exit 1; }
+          echo "  logrotate-binhost 可解析"
+
+      - name: Verify the systemd units
+        run: |
+          cp deploy/systemd/binhost-*.service deploy/systemd/binhost-*.timer /tmp/
+          # ExecStart 指向的路径在 runner 上不存在，那是部署期的事，不是语法问题
+          systemd-analyze verify /tmp/binhost-*.service /tmp/binhost-*.timer 2>&1 |
+            grep -v "Command .* is not executable" | grep -v "^$" > /tmp/verify.txt || true
+          if [ -s /tmp/verify.txt ]; then cat /tmp/verify.txt; exit 1; fi
+          echo "  systemd 单元可解析"
+
+      - name: Parse the cron table
+        run: |
+          # crontab -T 要 root 的 crontab 语法（带用户字段），/etc/cron.d 就是这种
+          awk 'NF && $1 !~ /^#/ {
+                 if (NF < 7) { print "!! 字段不足: " $0; bad=1 }
+               } END { exit bad }' deploy/cron.d-binhost
+          echo "  cron.d-binhost 字段完整"
