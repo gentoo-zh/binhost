@@ -43,6 +43,10 @@ jobs:
       - name: Staging filter keeps only what is ours
         run: python3 build/test-stage-index.py
 
+      # 这是仓库里唯一会删 distfiles 的代码，而 distfiles 是取不回来的原件。
+      - name: Reaping orphans deletes the right file
+        run: python3 build/test-audit-distfiles.py
+
       # 脚本引用的东西必须真的被 install.sh 装过去。alert.sh 就出过这个问题：
       # 抽成共用文件、daily.sh 改成 source 它，而 install.sh 只 rsync 没安装。
       - name: install.sh covers what the scripts reach for
@@ -133,7 +137,7 @@ jobs:
         run: shellcheck build/*.sh deploy/*.sh deploy-site.sh
 
       # 告警是出事时唯一的出口。它自己崩掉的话，问题和「没人告诉你」会同时发生，
-      # 而这正是 alert.conf 写坏时曾经的行为。
+      # 而这正是 alert.conf 写坏、以及消息超过 Telegram 长度上限时曾经的行为。
       - name: Alerting survives a broken alert.conf
         run: bash build/test-alert.sh
 

@@ -24,6 +24,9 @@ HEARTBEAT_MAX_H="${HEARTBEAT_MAX_H:-26}"
 # did not follow the timer, which meant a stopped build went unnoticed for two
 # weeks.
 INDEX_MAX_AGE_D="${INDEX_MAX_AGE_D:-2}"
+# The distfiles sync runs hourly; six hours is late enough to mean something is
+# wrong rather than one slow round.
+DIST_MAX_AGE_H="${DIST_MAX_AGE_H:-6}"
 # The two expiries are different in kind. Rotating the signing key needs an
 # overlap so users who have not picked up the new public key do not suddenly
 # fail verification, hence half a year of warning. The TLS certificate renews
@@ -112,6 +115,32 @@ if [[ -n ${head:-} ]]; then
             note "package fetch" "ok"
         else
             bad "package fetch" "HTTP ${code}"
+        fi
+    fi
+fi
+
+# --- distfiles ----------------------------------------------------------------
+# The hourly sync is the only thing that keeps distfiles current, and until now
+# nothing outside it looked at the result: with the cron entry gone or the
+# machine wedged, neither host would have noticed. distfiles-status.json is
+# written at the end of each sync, so its age answers whether the sync still
+# runs.
+dist=$(curl -fsS --max-time 15 "${SITE}/distfiles-status.json" 2>/dev/null)
+if [[ -z ${dist} ]]; then
+    bad "distfiles" "取不到 distfiles-status.json"
+else
+    dts=$(grep -o '"generated":[0-9]*' <<< "${dist}" | cut -d: -f2)
+    dn=$(grep -o '"files":[0-9]*' <<< "${dist}" | cut -d: -f2)
+    if [[ ! ${dts} =~ ^[0-9]+$ || ! ${dn} =~ ^[0-9]+$ ]]; then
+        bad "distfiles" "status 读不出来"
+    elif (( dn == 0 )); then
+        bad "distfiles" "一个文件都没有"
+    else
+        dage=$(( ( $(date +%s) - dts ) / 3600 ))
+        if (( dage > DIST_MAX_AGE_H )); then
+            bad "distfiles" "${dage}h 未同步（超过 ${DIST_MAX_AGE_H}h）"
+        else
+            note "distfiles" "${dn} files, ${dage}h old"
         fi
     fi
 fi
