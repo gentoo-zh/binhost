@@ -155,6 +155,9 @@
 
   applyTheme(themeMode);
   applyLang(curLang);
+  /* lang-early.js 为了不让访客看见换语言前那一屏，先把正文挡住了。换完揭开。
+     它自己也有个 1.5 秒的兜底，那是留给本脚本没跑起来的情形。 */
+  document.documentElement.classList.remove('lang-swap');
 
   /* 点击复制。提示条是可选的：整段逻辑原来包在 if (toast) 里，于是 faq 页
      加了一个复制按钮却没有那个 div，按钮按下去毫无反应也毫无报错。功能不该

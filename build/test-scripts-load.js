@@ -15,7 +15,8 @@ const path = require("path");
 
 const DIR = process.argv[2] || "site/assets";
 // Order matters: strings.js and util.js define what the others reach for.
-const ORDER = ["strings.js", "util.js", "i18n.js", "source-switch.js"];
+// lang-early.js 排最前：页面把它放在 <head>，在其余脚本之前同步执行。
+const ORDER = ["lang-early.js", "strings.js", "util.js", "i18n.js", "source-switch.js"];
 
 const store = {};
 
