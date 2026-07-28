@@ -17,14 +17,14 @@ cd "$(dirname "$0")"
 # stylesheet URL is no longer rewritten here: the path that normally applies is
 # the cron pull, which syncs the HTML as written, and rewriting on only one of
 # the two paths just creates the impression that a hash is doing something.
-rsync -a --delete site/assets/ "${REMOTE}:/srv/mirrors/assets/"
+rsync -a --safe-links --delete site/assets/ "${REMOTE}:/srv/mirrors/assets/"
 # The signing public key is not pushed from here. site-sync.sh installs it only
 # when its fingerprint matches the one recorded on the mirror, and that check is
 # the only thing standing between the repository and the trust anchor users
 # import. Pushing it from a second path would walk around the check.
-rsync -a site/*.html "${REMOTE}:/srv/mirrors/"
+rsync -a --safe-links site/*.html "${REMOTE}:/srv/mirrors/"
 
-rsync -a nginx/ "${REMOTE}:/tmp/nginx-conf/"
+rsync -a --safe-links nginx/ "${REMOTE}:/tmp/nginx-conf/"
 # Back up before overwriting: by the time nginx -t fails the broken config is
 # already on disk, and without a backup the only way out is editing by hand.
 ssh "${REMOTE}" '
