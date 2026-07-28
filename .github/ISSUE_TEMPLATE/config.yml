@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 包本身的问题
+    url: https://github.com/gentoo-zh/overlay/issues
+    about: ebuild 缺陷与版本更新请提交至 overlay 仓库
+  - name: 使用问题与讨论
+    url: https://forum.gentoozh.org/
+    about: 社区论坛
