@@ -16,7 +16,8 @@
 	copytruncate
 }
 
-# daily.sh 每天往 run.log 追加一轮的输出，emirrordist 自己写另外几份。
+# daily.sh 每小时往 run.log 追加一轮的输出，emirrordist 自己写另外几份。
+# 一轮只有几行，实测 run.log 长期在 10 KB 量级，按周轮转足够，不设大小上限。
 /var/log/emirrordist/*.log {
 	weekly
 	rotate 8
