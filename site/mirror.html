@@ -61,7 +61,7 @@
         <tr>
           <td data-i18n="nju">南京大学</td>
           <td><a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a></td>
-          <td class="mark no">—</td>
+          <td class="mark yes">✓</td>
           <td class="mark yes">✓</td>
         </tr>
       </tbody>
@@ -71,17 +71,19 @@
   <h2 data-i18n="h2use">用镜像</h2>
 
   <p class="note" data-i18n-html="useNote">
-    二进制包与 distfiles 分开配置，可以来自不同的镜像。
-    下面以本站的二进制包配南京大学的 distfiles 为例。
+    二进制包与 distfiles 分开配置，两边可以来自不同的镜像。
+    下面两处都用南京大学，国内取用更快；其余步骤与
+    <a href="/">首页</a>相同，验签也照旧——各镜像上的包与源站逐字节一致，
+    签名是同一份。
   </p>
 
   <div class="step">
     <div class="code">
       <div class="code-head">
         <span class="path">/etc/portage/binrepos.conf/gentoo-zh.conf</span>
-        <button class="copy-chip" data-copy="sync-uri = https://distfiles.gentoozh.org/binpkgs/x86-64" data-i18n="copy">复制</button>
+        <button class="copy-chip" data-copy="sync-uri = https://mirror.nju.edu.cn/gentoo-zh/binpkgs/x86-64" data-i18n="copy">复制</button>
       </div>
-<pre><span class="key">sync-uri</span> = <span class="val">https://distfiles.gentoozh.org/binpkgs/x86-64</span></pre>
+<pre><span class="key">sync-uri</span> = <span class="val">https://mirror.nju.edu.cn/gentoo-zh/binpkgs/x86-64</span></pre>
     </div>
   </div>
 
@@ -148,7 +150,7 @@ window.MIRROR_I18N = {
     h2list: '現有鏡像', h2use: '用鏡像', h2run: '自己開鏡像',
     thSite: '站點', thAddr: '位址', thBin: '二進位套件', thDist: 'Distfiles',
     origin: '來源站', nju: '南京大學',
-    useNote: '二進位套件與 distfiles 分開設定，可以來自不同的鏡像。下面以本站的二進位套件配南京大學的 distfiles 為例。',
+    useNote: '二進位套件與 distfiles 分開設定，兩邊可以來自不同的鏡像。下面兩處都用南京大學，中國大陸取用更快；其餘步驟與<a href="/">首頁</a>相同，驗簽也照舊——各鏡像上的套件與來源站逐位元組一致，簽章是同一份。',
     runNote: 'rsync 公開開放，無需申請。一個模組裡就是 <code>binpkgs/</code> 與 <code>distfiles/</code>。同步到本機後用 HTTP 提供即構成一個完整的鏡像，因為索引中的 <code>PATH</code> 是相對路徑，不依賴主機名稱。',
     freq: '每日同步一次。因為套件名含版本與 build id，內容不再變化，所以已有的檔案不會重複傳輸。<code>--delay-updates</code> 讓這一批檔案在末尾一次換入：不加則索引可能先落地，而它引用的套件尚未傳完，這段時間下游回傳 404。',
     addYours: '鏡像建成後在 <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issues</a> 提出，加入上表。'
@@ -158,7 +160,7 @@ window.MIRROR_I18N = {
     h2list: 'Existing mirrors', h2use: 'Using a mirror', h2run: 'Running a mirror',
     thSite: 'Site', thAddr: 'Address', thBin: 'Binaries', thDist: 'Distfiles',
     origin: 'Origin', nju: 'Nanjing University',
-    useNote: 'Binary packages and distfiles are configured separately and may come from different mirrors. The example below takes binaries from this site and distfiles from Nanjing University.',
+    useNote: 'Binary packages and distfiles are configured separately and may come from different mirrors. The example below takes both from Nanjing University, which is faster from within China. Everything else matches the <a href="/">front page</a>, signature verification included — packages on a mirror are byte-identical to the origin and carry the same signature.',
     runNote: 'rsync is open and needs no application. One module carries <code>binpkgs/</code> and <code>distfiles/</code>. Sync it locally, serve it over HTTP, and it is a complete mirror — <code>PATH</code> in the index is relative and does not depend on the hostname.',
     freq: 'Sync once a day. Package names carry the version and build id, so their content never changes and existing files are not transferred again. <code>--delay-updates</code> swaps the batch in at the end: without it the index can land before the packages it names, and the mirror answers 404 in between.',
     addYours: 'Once your mirror is running, open a <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issue</a> to have it added to the table above.'
