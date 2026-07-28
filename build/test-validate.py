@@ -56,7 +56,7 @@ if len(sys.argv) > 1:
     hits = [eb for eb in overlay.glob("*/*/*.ebuild")
             if validate.restricts_bindist(eb.read_text(errors="ignore"))]
     ok = len(hits) > 0
-    print(f"  {'✓' if ok else '✗'} {'真实 overlay 里认得出 bindist':<28} {'>0':<6} {len(hits)}")
+    print(f"  {'✓' if ok else '✗'} {'真实 overlay 中可识别 bindist':<28} {'>0':<6} {len(hits)}")
     bad += not ok
 
 sys.exit(1 if bad else 0)

@@ -74,6 +74,23 @@ build/publish.sh
 `.asc` 里带撤销证书时，用户导入后 gpg 会把旧钥匙标成 revoked，
 用它签的包立刻验不过——这是有意的。
 
+## 指纹写在哪几处
+
+轮替时这些都要跟着换，漏一处就是签名与用户核对的对不上。
+`build/test-fingerprint-consistent.py` 在 CI 里比对它们是否一致，
+所以漏改会红，但它只保证一致，不保证是新的那一把。
+
+| 位置 | 作用 |
+|---|---|
+| `deploy/systemd/binhost-build.service` 的 `Environment=SIGNING_KEY=` | 构建时用哪把钥匙签 |
+| `site/index.html` 的指纹与复制按钮 | 用户导入后核对的依据 |
+| `docs/key-rotation.md` 开头 | 本文自己记的当前指纹 |
+| 镜像机的 `/etc/binhost/signing-key.fpr` | `site-sync.sh` 据它决定要不要同步仓库里的公钥 |
+
+最后一处不在版本库里，是每台机器自己的记录：让检查从被检查的东西里读取
+预期值，这个检查就没有意义。它由 `install.sh` 的 `SIGNING_FPR` 写入。
+轮替时先改它，再推站点，否则公钥同步会因指纹对不上而停住——那是预期行为。
+
 ## 当前欠缺的
 
 - 私钥在构建期间对容器可读。容器跑的是 180 个第三方 ebuild 的 root 阶段，

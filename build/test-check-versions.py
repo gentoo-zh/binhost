@@ -66,16 +66,16 @@ NOW = "1.2.0"
 
 CASES = [
     # shape                                      index          list     overlay        masked  expected
-    ("add+drop 后已跟上",                        [f"{PKG}-{NOW}"], [PKG], {PKG: NOW},    (),     "无问题"),
-    ("add+drop 后没跟上",                        [f"{PKG}-0.0.1"], [PKG], {PKG: NOW},    (),     "落后"),
-    ("索引比 overlay 还新（不该发生，也要报）",   [f"{PKG}-99.0"],  [PKG], {PKG: NOW},    (),     "落后"),
-    ("只 add，索引还没有",                       [],               [PKG], {PKG: NOW},    (),     "缺"),
-    ("只 drop，索引留着旧版",                    [f"{PKG}-0.9"],   [PKG], {PKG: NOW},    (),     "落后"),
-    ("mask 之后清单没清",                        [],               [PKG], {PKG: NOW},    (PKG,), "已屏蔽"),
-    ("move 之后清单没跟",                        [],               [PKG], {},            (),     "已移除"),
+    ("add+drop 后索引已跟上",                        [f"{PKG}-{NOW}"], [PKG], {PKG: NOW},    (),     "无问题"),
+    ("add+drop 后索引未跟上",                        [f"{PKG}-0.0.1"], [PKG], {PKG: NOW},    (),     "落后"),
+    ("索引版本高于 overlay，同样报出",   [f"{PKG}-99.0"],  [PKG], {PKG: NOW},    (),     "落后"),
+    ("仅 add，索引尚无该版本",                       [],               [PKG], {PKG: NOW},    (),     "缺"),
+    ("仅 drop，索引仍为旧版本",                    [f"{PKG}-0.9"],   [PKG], {PKG: NOW},    (),     "落后"),
+    ("mask 后清单未更新",                        [],               [PKG], {PKG: NOW},    (PKG,), "已屏蔽"),
+    ("改分类后清单未更新",                        [],               [PKG], {},            (),     "已移除"),
     # A deleted package looks the same from the list as a moved category: not
     # found in the overlay
-    ("包被删除，清单还留着",                     [],               [PKG], {},            (),     "已移除"),
+    ("包已删除，清单未更新",                     [],               [PKG], {},            (),     "已移除"),
 ]
 
 
@@ -114,7 +114,7 @@ lines = [l.strip() for l in out.splitlines() if l.strip().startswith("新包")]
 # A newcomer is reported but does not fail the round, so the exit code is 0.
 ok = len(lines) == 1 and rc == 0
 print(f"  {'✓' if ok else '✗'} {'新包上线未收录':<22} {'新包':<8} "
-      f"{'报出 %d 个' % len(lines) if lines else '没报出来'}  (退出码 {rc}，应为 0)")
+      f"{'报出 %d 个' % len(lines) if lines else '未报出'}  (退出码 {rc}，应为 0)")
 if not ok:
     bad += 1
 

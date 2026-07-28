@@ -16,6 +16,9 @@
 # stay out of the repository:
 #   /etc/binhost/alert.conf   Telegram token and chat id
 #   certbot                   TLS certificate
+#
+# SIGNING_FPR sets /etc/binhost/signing-key.fpr, which decides whether the
+# signing public key gets synced at all. Pass it on the first install.
 
 set -euo pipefail
 
@@ -25,6 +28,12 @@ REMOTE="${REMOTE:-mirror}"
 # are created and owned here; otherwise the sync fails every five minutes on a
 # fresh machine, and cron's mail has nowhere to go.
 SITE_USER="${SITE_USER:-zakk}"
+# The signing key fingerprint the mirror will accept. site-sync.sh installs the
+# public key only when the file in the repository matches this, so without it the
+# key is never synced and the site serves whatever was there before. It is
+# recorded on the machine rather than in the repository on purpose: a check that
+# reads its expected value from the thing it checks is not a check.
+SIGNING_FPR="${SIGNING_FPR:-}"
 MONITORS="${MONITORS:-}"
 cd "$(dirname "$0")/.."
 
@@ -82,6 +91,14 @@ sudo install -m644 logrotate-binhost /etc/logrotate.d/binhost
 sudo logrotate -d /etc/logrotate.d/binhost >/dev/null
 
 echo '--- 定时任务'
+if [ -n '${SIGNING_FPR}' ]; then
+  sudo install -dm755 /etc/binhost
+  printf '%s\n' '${SIGNING_FPR}' | sudo tee /etc/binhost/signing-key.fpr >/dev/null
+  echo '    signing-key.fpr 已写入'
+elif [ ! -r /etc/binhost/signing-key.fpr ]; then
+  echo '    /etc/binhost/signing-key.fpr 还没有，公钥不会同步（传 SIGNING_FPR= 设定它）'
+fi
+
 sudo install -m644 cron.d-binhost /etc/cron.d/binhost
 # The site sync line's user must match the one the directories were created
 # for, or it cannot write /srv/mirrors.
