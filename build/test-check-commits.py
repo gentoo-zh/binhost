@@ -42,6 +42,12 @@ CASES = [
     ("一族文件用横线前那段", "test: change two cases together", "",
      ("build/test-validate.py", "build/test-stage-index.py"), True),
     (".github 用 ci", "ci: add a job", "", (".github/workflows/validate.yml",), True),
+    # 根目录的文件原来一个可用的写法都没有：主题必须小写开头，而候选集里只有
+    # 原样大小写的文件名。纯文档的 PR 因此合不进来。
+    ("根目录文件用小写文件名", "readme: fix a typo", "", ("README.md",), True),
+    ("根目录文件用 docs", "docs: fix a typo", "", ("README.md",), True),
+    ("点开头的文件", "gitignore: ignore pyc", "", (".gitignore",), True),
+    ("根目录文件仍不能乱认 scope", "nginx: fix a typo", "", ("README.md",), False),
     ("没有 scope", "decide by version without a scope", "",
      ("build/stage-index.py",), False),
     ("scope 指不到改动的部分", "nginx: decide by version", "",

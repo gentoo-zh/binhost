@@ -15,7 +15,17 @@ set -uo pipefail
 # -n rather than waiting: a queued round would fire the moment the first
 # finished, against the same overlay commit, with nothing to do.
 LOCK="${LOCK:-/run/lock/binhost-daily.lock}"
-exec 9>"${LOCK}"
+# 打不开锁文件与「上一轮还在跑」要分开。exec 重导向失败不会中止 bash，flock
+# 接着报 Bad file descriptor，原来这两种都走同一个分支 exit 0——锁路径写错时
+# 镜像每小时安静跳过、退出 0，而此时 alert.sh 还没 source，没有任何人会知道。
+if ! exec 9>"${LOCK}"; then
+    echo "!! 打不开锁文件 ${LOCK}" >&2
+    exit 1
+fi
+if ! command -v flock >/dev/null; then
+    echo "!! 没有 flock，无法保证一轮只跑一次" >&2
+    exit 1
+fi
 if ! flock -n 9; then
     echo "上一轮还在跑（${LOCK}），这一轮跳过" >&2
     exit 0

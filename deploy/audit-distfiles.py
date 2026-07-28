@@ -14,9 +14,11 @@ logic.
 A non-zero exit means the two disagree; daily.sh turns that into an alert.
 """
 
+import errno
 import pathlib
 import json
 import re
+import shutil
 import sys
 import time
 
@@ -66,12 +68,16 @@ def scan(overlay):
 GRACE_SECONDS = 7 * 24 * 3600
 STATE = "/var/lib/emirrordist/orphans.json"
 
-# Deleted files go here first, the same idea as emirrordist's --recycle-dir and
-# the same two weeks. A distfile cannot be fetched again once upstream drops the
-# release, so the grace period alone is not a safety net -- it only delays a
-# decision that is still final.
-RECYCLE = "/var/lib/emirrordist/audit-recycle"
-RECYCLE_SECONDS = 14 * 24 * 3600
+# Deleted files go into emirrordist's own recycle directory, the one
+# distfiles-sync.sh already configures with --recycle-dir and --recycle-db.
+#
+# Not a separate bin of our own with an mtime-based sweep: rename() keeps the
+# original mtime, and a distfile's mtime is when it was fetched, not when it was
+# recycled. Anything older than the window was therefore swept in the same round
+# it arrived -- the earlier attempt at this was an unlink with extra steps.
+# emirrordist records the time in recycle.db instead, and adopts files it finds
+# there that it did not put there itself, so one bin and one clock serve both.
+RECYCLE = "/var/lib/emirrordist/recycle"
 
 # The largest share of the mirror one round may retire. Reaping is driven by
 # what the overlay references, so anything that makes the overlay read as empty
@@ -86,7 +92,31 @@ RECYCLE_SECONDS = 14 * 24 * 3600
 # tree that read as empty or half-empty, and that lands far above a third.
 MAX_REAP_SHARE = 1 / 3
 
+# 累计窗口。跨轮记账放在这里而不是 orphans.json，因为它记的是「已经做过什么」
+# 而不是「打算做什么」。
+LEDGER = "/var/lib/emirrordist/reaped.json"
+WINDOW_HOURS = 24
+
 MARKERS = {"layout.conf", "README.txt"}
+
+
+def recent_deletions(add_count, now=None):
+    """记下这一轮清掉多少，返回窗口内的累计值。"""
+    now = int(time.time()) if now is None else now
+    f = pathlib.Path(LEDGER)
+    try:
+        rows = json.loads(f.read_text())
+    except (OSError, ValueError):
+        rows = []
+    rows = [r for r in rows if now - r[0] < WINDOW_HOURS * 3600]
+    if add_count:
+        rows.append([now, add_count])
+    try:
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps(rows))
+    except OSError as e:                                   # noqa: BLE001
+        print(f"!! 无法写入 {f}: {e}", file=sys.stderr)
+    return sum(n for _, n in rows)
 
 
 def recycle(path):
@@ -99,28 +129,26 @@ def recycle(path):
     bin_ = pathlib.Path(RECYCLE)
     try:
         bin_.mkdir(parents=True, exist_ok=True)
-        path.rename(bin_ / path.name)
+        dst = bin_ / path.name
+        # 不覆盖同名的那一份。rename 在 POSIX 上直接盖掉目标，而桶里那一份是
+        # 更早回收的，也就是更可能有人要回头找的那一份。
+        n = 0
+        while dst.exists():
+            n += 1
+            dst = bin_ / f"{path.name}.{n}"
+        try:
+            path.rename(dst)
+        except OSError as e:
+            # 跨文件系统时 rename 报 EXDEV。搬不动就复制再删，别因为布局
+            # 换了就退回不可恢复的删除。
+            if e.errno != errno.EXDEV:
+                raise
+            shutil.copy2(path, dst)
+            path.unlink()
         return True
     except OSError as e:                                   # noqa: BLE001
         print(f"!! 无法回收 {path.name}: {e}", file=sys.stderr)
         return False
-
-
-def sweep_recycle(now=None):
-    """Drop recycled files older than the recycle window. Returns how many."""
-    bin_ = pathlib.Path(RECYCLE)
-    if not bin_.is_dir():
-        return 0
-    now = int(time.time()) if now is None else now
-    gone = 0
-    for p in bin_.iterdir():
-        try:
-            if p.is_file() and now - int(p.stat().st_mtime) >= RECYCLE_SECONDS:
-                p.unlink()
-                gone += 1
-        except OSError:
-            continue
-    return gone
 
 
 def reap(orphan, paths, grace=None):
@@ -154,6 +182,7 @@ def reap(orphan, paths, grace=None):
     now = int(time.time())
     seen = {f: t for f, t in seen.items() if f in orphan}   # referenced again, so forget it
     deleted = []
+    failed = []
     for f in orphan:
         first = seen.setdefault(f, now)
         if now - first < grace:
@@ -163,6 +192,8 @@ def reap(orphan, paths, grace=None):
             continue
         if recycle(path):
             deleted.append(f)
+        else:
+            failed.append(f)
     for f in deleted:
         seen.pop(f, None)
 
@@ -170,8 +201,9 @@ def reap(orphan, paths, grace=None):
         state.parent.mkdir(parents=True, exist_ok=True)
         state.write_text(json.dumps(seen, indent=1, sort_keys=True))
     except OSError as e:                                   # noqa: BLE001
-        print(f"!! 无法写入 {state}: {e}")
-    return deleted
+        print(f"!! 无法写入 {state}: {e}", file=sys.stderr)
+        failed.append(str(state))
+    return deleted, failed
 
 
 def main(overlay, dest):
@@ -222,15 +254,23 @@ def main(overlay, dest):
         refused = (f"本轮 {len(orphan)}/{len(have)} 个文件无人引用，"
                    f"超过 {MAX_REAP_SHARE:.0%}")
 
-    deleted = [] if refused else reap(orphan, paths)
-    swept = sweep_recycle()
+    deleted, failed = ([], []) if refused else reap(orphan, paths)
+
+    # 按轮计的上限拦不住连着来的几轮：每轮 30% 两轮就是一半个镜像，一次都不会
+    # 被拒绝。所以再核对最近这段时间总共清掉了多少。
+    recent = recent_deletions(len(deleted))
+    if not refused and recent > len(have) * MAX_REAP_SHARE:
+        refused = (f"最近 {WINDOW_HOURS} 小时累计清理 {recent} 个，"
+                   f"超过镜像的 {MAX_REAP_SHARE:.0%}，后续暂停")
 
     print(f"overlay 引用 {len(users)}，其中可镜像 {len(mirrorable)}，"
           f"不可镜像 {len(never)}，无法取得 {len(unfetchable)}")
     print(f"镜像上 {len(have)}，缺 {len(missing)}，多 {len(extra)}，"
           f"已无人引用 {len(orphan)}，本轮清理 {len(deleted)}")
-    if swept:
-        print(f"回收目录清掉 {swept} 个过期文件")
+    if failed:
+        # 回收不成等于清理永远失效，而原来它只印一行 stderr、退出码不变，
+        # daily.sh 于是每小时报一次成功。
+        print(f"!! {len(failed)} 个没能回收，本轮清理没有完成", file=sys.stderr)
     if refused:
         print(f"!! 拒绝清理：{refused}", file=sys.stderr)
 
@@ -247,7 +287,7 @@ def main(overlay, dest):
     #
     # A refused round is a failure: it means the input could not be trusted, and
     # that is exactly the case nobody would otherwise hear about.
-    return 1 if (missing or extra or refused) else 0
+    return 1 if (missing or extra or refused or failed) else 0
 
 
 if __name__ == "__main__":

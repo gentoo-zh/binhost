@@ -128,15 +128,17 @@ function crumbs() {
   crumbEl.hidden = atRoot;
   if (atRoot) return;
 
-  let acc = "";
-  const links = path.split("/").filter(Boolean).map(function (p) {
+  // 从 ROOT 之下开始切，不是从整个路径。path 的第一段就是 files，而下面又
+  // 会补一节指向 ROOT 的，于是相邻两节标签不同、地址相同。
+  let acc = ROOT.replace(/\/$/, "");
+  const links = path.slice(ROOT.length).split("/").filter(Boolean).map(function (p) {
     acc += "/" + p;
     return '<a href="' + encodeURI(acc) + '/">' + esc(p) + "</a>";
   });
   // 第一节回文件浏览器的根，不是站点首页——原来它连到 /，点下去就离开了这个
-  // 页面。名字用导航里已有的那一个，全站叫法一致，也跟着语言走；原来写死的
-  // mirrors 在别处从未出现过，也没有翻译。
-  // atRoot 那个三元是死码：上面第 127 行已经在 atRoot 时提前返回了。
+  // 页面。名字用导航里已有的那一个，全站叫法一致；原来写死的 mirrors 在别处
+  // 从未出现过，也没有翻译。
+  // atRoot 那个三元是死码：上面已经在 atRoot 时提前返回了。
   document.getElementById("crumbs").innerHTML =
     ['<a href="' + ROOT + '">' + t("navFiles") + "</a>"].concat(links).join(" / ");
 }
@@ -195,6 +197,9 @@ fetch("/_ls" + lsPath)
 
 // 切语言时 i18n.js 会改写 #strings，表格是我们自己画的，得跟着重画一次。
 new MutationObserver(function () {
+  // 面包屑与标题也要重画。它们原来只在载入时算一次，于是把标签换成可翻译的
+  // 之后，切语言时那一节仍停在首屏那种语言——写死 mirrors 的时候看不出来。
+  crumbs();
   if (Array.isArray(loaded)) render(loaded);
   else if (loaded !== null) fail(loaded);
 }).observe(document.getElementById("strings"), { subtree: true, characterData: true, childList: true });

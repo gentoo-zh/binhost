@@ -54,7 +54,16 @@ def scopes_for(sha):
         parts = f.split("/")
         if len(parts) > 1:
             out.add(parts[0])
-        stem = parts[-1].split(".")[0]
+        else:
+            # 根目录的文件：小写它自己的名字，另外一律接受 docs。README.md、
+            # CONTRIBUTING.md、LICENSE、.gitignore 原来一个可用的写法都没有
+            # ——主题必须小写开头，而候选集里只有原样大小写的文件名，于是
+            # 只改这些文件的提交无论怎么写都过不了，纯文档的 PR 合不进来。
+            out.add("docs")
+        stem = parts[-1].split(".")[0].lower()
+        if not stem:
+            # .gitignore 这种全是后缀的，用去掉点的那一段
+            stem = parts[-1].lstrip(".").split(".")[0].lower()
         if not stem:
             continue
         out.add(stem)

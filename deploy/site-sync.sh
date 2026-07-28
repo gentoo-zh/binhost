@@ -53,19 +53,28 @@ rsync -a --safe-links --delete "${WORK}/site/assets/" "${DEST}/assets/"
 # it is synced only when its fingerprint matches the one recorded on the server,
 # which is read from the machine and not from the repository.
 #
-# 认文件里的任何一把，不是只认第一把。轮替时那份 .asc 会同时装着新旧两把公钥
-# ——重叠期的整个要点就在于此。原来只比对第一个 fpr，于是旧钥排在前面时比对
-# 失败，公钥从此静默停止同步，而那正是重叠期要保护的窗口。失败只写 stderr，
-# 这台的 cron 邮件没有出口。
+# 文件里的每一把都要在记录里，有一把对上并不足够。轮替时那份 .asc 会同时装着
+# 新旧两把，所以记录这一侧允许列多个指纹，一行一个。
+#
+# 「有一把对上就放行」是错的，而且比只看第一把更糟：能改仓库的人只要把自己
+# 的公钥连同我们的一起放进去，那份文件就照样通过，镜像照样发布，而站点第 1 步
+# 的 --lsign-key binhost@gentoozh.org 会签到排在前面的那一把——也就是他的。
+# 实测确认过。这道门守的就是这件事。
 FPR_FILE="${FPR_FILE:-/etc/binhost/signing-key.fpr}"
 if [[ -r ${FPR_FILE} ]]; then
-    want=$(tr -d ' \n' < "${FPR_FILE}")
+    mapfile -t want < <(tr -d ' \r' < "${FPR_FILE}" | grep -oE '[0-9A-Fa-f]{40}' | tr 'a-f' 'A-F')
     mapfile -t got < <(gpg --with-colons --show-keys "${WORK}/site/gentoo-zh-binhost.asc" 2>/dev/null |
                        awk -F: '/^fpr:/{print $10}')
-    if [[ " ${got[*]} " == *" ${want} "* ]]; then
+    unexpected=()
+    for g in "${got[@]}"; do
+        [[ " ${want[*]} " == *" ${g} "* ]] || unexpected+=("${g}")
+    done
+    # 记录为空、文件里一把钥匙都读不出来，都要拦住。原来这两种情形下
+    # 比对的是两个空串，反而放行。
+    if (( ${#want[@]} && ${#got[@]} && ${#unexpected[@]} == 0 )); then
         rsync -a --safe-links "${WORK}/site/gentoo-zh-binhost.asc" "${DEST}/"
     else
-        echo "!! 公钥指纹对不上，没有同步：仓库里是 ${got[*]:-空}，本机记录是 ${want}" >&2
+        echo "!! 公钥没有同步：仓库里是 ${got[*]:-空}，本机记录是 ${want[*]:-空}，其中不认得 ${unexpected[*]:-无}" >&2
     fi
 else
     echo "!! ${FPR_FILE} 不存在，公钥未同步" >&2

@@ -7,6 +7,7 @@ cannot be fetched again once upstream drops a release. It had no test at all.
 
 import importlib.util
 import json
+import os
 import pathlib
 import sys
 import tempfile
@@ -45,7 +46,7 @@ def reap(orphans, files, seen=None, grace=audit.GRACE_SECONDS):
         audit.STATE = str(state)
         audit.RECYCLE = str(d / "recycle")
         try:
-            deleted = audit.reap(set(orphans), paths, grace=grace)
+            deleted, _failed = audit.reap(set(orphans), paths, grace=grace)
         finally:
             audit.STATE, audit.RECYCLE = old_state, old_bin
         left = sorted(p.name for p in dist.iterdir())
@@ -125,8 +126,13 @@ def build_overlay(root, packages):
     return root
 
 
-def run_main(packages, on_mirror):
-    """跑完整的 main()，回传 (退出码, 镜像上剩下的文件, 回收目录里的文件)。"""
+def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False):
+    """跑完整的 main()，回传 (退出码, 镜像上剩下的文件, 回收目录里的文件)。
+
+    aged 把某个文件的 mtime 往前拨，模拟它很久以前就被抓下来了。
+    preload 先在回收桶里放一份同名的。
+    bin_readonly 让回收桶建不起来，模拟搬不动的情形。
+    """
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
         ov = build_overlay(d / "overlay", packages)
@@ -134,10 +140,23 @@ def run_main(packages, on_mirror):
         dist.mkdir(parents=True)
         for name in on_mirror:
             (dist / name).write_text("x")
+        now = int(time.time())
+        for name, age in (aged or {}).items():
+            os.utime(dist / name, (now - age, now - age))
         old = (audit.STATE, audit.RECYCLE, audit.GRACE_SECONDS)
         audit.STATE = str(d / "state.json")
         audit.RECYCLE = str(d / "recycle")
         audit.GRACE_SECONDS = 0          # 立即到期，好在一轮里看到结果
+        if preload:
+            (d / "recycle").mkdir(parents=True, exist_ok=True)
+            for name, content in preload.items():
+                (d / "recycle" / name).write_text(content)
+        if bin_readonly:
+            # 回收桶的父目录不可写，mkdir 与 rename 都会失败
+            blocked = d / "blocked"
+            blocked.mkdir()
+            blocked.chmod(0o500)
+            audit.RECYCLE = str(blocked / "recycle")
         try:
             rc = audit.main(str(ov), str(d / "dist"))
         finally:
@@ -146,27 +165,6 @@ def run_main(packages, on_mirror):
         binned = sorted(p.name for p in (d / "recycle").iterdir()) \
             if (d / "recycle").is_dir() else []
         return rc, left, binned
-
-
-def sweep_case():
-    """回收目录里放一新一旧，跑一次 sweep，回传清掉几个。"""
-    with tempfile.TemporaryDirectory() as tmp:
-        d = pathlib.Path(tmp) / "recycle"
-        d.mkdir()
-        old_file, new_file = d / "old.tar.gz", d / "new.tar.gz"
-        old_file.write_text("x")
-        new_file.write_text("x")
-        now = int(time.time())
-        import os
-        os.utime(old_file, (now - audit.RECYCLE_SECONDS - 1,) * 2)
-        os.utime(new_file, (now, now))
-        prev = audit.RECYCLE
-        audit.RECYCLE = str(d)
-        try:
-            gone = audit.sweep_recycle(now=now)
-        finally:
-            audit.RECYCLE = prev
-        return gone if new_file.exists() and not old_file.exists() else -1
 
 
 # overlay 读不出任何 Manifest：整个镜像都会算成孤儿，必须一个都不动并且报错
@@ -199,11 +197,45 @@ case("layout.conf 不算孤儿", lambda: (
 )(run_main({f"app-misc/p{i}": {"1": [f"p{i}.tar.gz"]} for i in range(20)},
            [f"p{i}.tar.gz" for i in range(20)] + ["layout.conf"])))
 
-# 回收目录里过了保留期的才清掉，没过的留着
-case("回收目录按保留期清理", lambda: (
-    lambda got: got == 1
-)(sweep_case()))
 
+
+
+# 回收桶里的文件不能因为原文件很旧就当场消失。上一版用 mtime 判到期，而
+# rename 保留原 mtime，distfile 的 mtime 是它被抓下来的时间——在镜像上待过两周
+# 的文件，回收的同一轮就被扫掉了，等于没有回收窗口。
+case("原文件很旧时回收仍然留得住", lambda: (
+    lambda r: r[0] == 0 and r[2] == ["old.tar.gz"]
+)(run_main({f"app-misc/p{i}": {"1": [f"p{i}.tar.gz"]} for i in range(20)},
+           [f"p{i}.tar.gz" for i in range(20)] + ["old.tar.gz"],
+           aged={"old.tar.gz": 90 * 86400})))
+
+# 回收桶里已经有同名的一份时不能覆盖：桶里那份是更早回收的，也就是更可能
+# 有人要回头找的
+case("同名不覆盖回收桶里已有的", lambda: (
+    lambda r: sorted(r[2]) == ["dup.tar.gz", "dup.tar.gz.1"]
+)(run_main({f"app-misc/p{i}": {"1": [f"p{i}.tar.gz"]} for i in range(20)},
+           [f"p{i}.tar.gz" for i in range(20)] + ["dup.tar.gz"],
+           preload={"dup.tar.gz": "早先回收的那一份"})))
+
+# 回收不成不能算清理成功，否则清理永远失效而退出码一直是 0
+case("回收失败要反映在退出码上", lambda: (
+    lambda r: r[0] == 1
+)(run_main({f"app-misc/p{i}": {"1": [f"p{i}.tar.gz"]} for i in range(20)},
+           [f"p{i}.tar.gz" for i in range(20)] + ["old.tar.gz"],
+           bin_readonly=True)))
+
+# overlay 一个 Manifest 都读不到那一支，要在比例闸门够不着的地方测：镜像上
+# 只有 MARKERS 时孤儿数是 0，比例是 0%，闸门放行，只有这一支能拦住它。
+# 否则把那一支整个删掉，用例照样全过——比例闸门顺手替它接住了。
+case("空 overlay 那一支单独成立", lambda: (
+    lambda r: r[0] == 1
+)(run_main({}, ["layout.conf"])))
+
+# README.txt 只有 MARKERS 一道防线，layout.conf 有两道
+case("README.txt 不算孤儿", lambda: (
+    lambda r: "README.txt" in r[1]
+)(run_main({f"app-misc/p{i}": {"1": [f"p{i}.tar.gz"]} for i in range(20)},
+           [f"p{i}.tar.gz" for i in range(20)] + ["README.txt"])))
 
 print(f"  {'用例':<44} 结果")
 bad = 0

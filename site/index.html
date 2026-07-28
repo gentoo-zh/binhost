@@ -69,25 +69,25 @@
         <button class="copy-chip" data-copy="emerge sec-keys/openpgp-keys-gentoozh
 getuto
 gpg --homedir /etc/portage/gnupg --import /usr/share/openpgp-keys/gentoozh.asc
-gpg --homedir /etc/portage/gnupg --batch --yes --pinentry-mode loopback --passphrase-file /etc/portage/gnupg/pass --lsign-key binhost@gentoozh.org
+gpg --homedir /etc/portage/gnupg --batch --yes --pinentry-mode loopback --passphrase-file /etc/portage/gnupg/pass --lsign-key 6A0726AF1476A2F382C6AC6638A0234EC16AD42E
 gpg --homedir /etc/portage/gnupg --check-trustdb" data-i18n="copy">复制</button>
       </div>
 <pre><span class="prompt"># </span><span class="key">emerge</span> <span class="val">sec-keys/openpgp-keys-gentoozh</span>
 <span class="prompt"># </span><span class="key">getuto</span>
 <span class="prompt"># </span><span class="key">gpg</span> <span class="flag">--homedir</span> /etc/portage/gnupg <span class="flag">--import</span> /usr/share/openpgp-keys/gentoozh.asc
 <span class="prompt"># </span><span class="key">gpg</span> <span class="flag">--homedir</span> /etc/portage/gnupg <span class="flag">--batch --yes --pinentry-mode loopback</span> \
-    <span class="flag">--passphrase-file</span> /etc/portage/gnupg/pass <span class="flag">--lsign-key</span> <span class="val">binhost@gentoozh.org</span>
+    <span class="flag">--passphrase-file</span> /etc/portage/gnupg/pass <span class="flag">--lsign-key</span> <span class="val">6A0726AF1476A2F382C6AC6638A0234EC16AD42E</span>
 <span class="prompt"># </span><span class="key">gpg</span> <span class="flag">--homedir</span> /etc/portage/gnupg <span class="flag">--check-trustdb</span></pre>
     </div>
   </div>
 
   <p class="note" data-i18n-html="keyAlt">
     不想装这个包也可以直接下载：<code>curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</code>，
-    然后把上面第二条命令的路径换成下载到的文件。
+    然后把上面 <code>--import</code> 那条命令的路径换成下载到的文件。
   </p>
 
   <p class="note" data-i18n-html="keyNote">
-    <code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。没有它，下面三条
+    <code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。没有它，上面三条
     gpg 命令会以 <code>no writable keyring found</code> 失败——gpg 不会自己建这个目录，
     而 portage 只在第一次取二进制包时才会调用它，那已经是第 2、3 步之后了。
     签名用的是 getuto 建立的 Portage Local Trust Key，口令在
@@ -231,8 +231,8 @@ window.MIRROR_I18N = {
     distNote: '這裡只有 overlay 的原始碼，不能替代官方來源，因此是追加而非替換。位址不寫 <code>distfiles/</code>，portage 會自己補上。這裡兩個都列出：<code>GENTOO_MIRRORS</code> 是按順序嘗試的列表，南京大學取不到時會落到來源站。',
     distOptOut: '因版權等原因不希望某個套件被鏡像時，在其 ebuild 中加入 <code>RESTRICT="mirror"</code>，同步工具會跳過。',
     step1: '匯入簽章公鑰', step2: '加入倉庫', step3: '打開 getbinpkg（附加）',
-    keyAlt: '不想裝這個套件也可以直接下載：<code>curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</code>，然後把上面第二條命令的路徑換成下載到的檔案。',
-    keyNote: '<code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。沒有它，下面三條 gpg 命令會以 <code>no writable keyring found</code> 失敗——gpg 不會自己建這個目錄，而 portage 只在第一次取二進位套件時才會呼叫它，那已經是第 2、3 步之後了。簽章用的是 getuto 建立的 Portage Local Trust Key，口令在 <code>/etc/portage/gnupg/pass</code>，因此要用 <code>--passphrase-file</code> 讀。驗簽以 <code>portage</code> 使用者執行，該使用者對 trustdb 沒有寫入權限，所以 trustdb 要預先算好。',
+    keyAlt: '不想裝這個套件也可以直接下載：<code>curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</code>，然後把上面 <code>--import</code> 那條命令的路徑換成下載到的檔案。',
+    keyNote: '<code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。沒有它，上面三條 gpg 命令會以 <code>no writable keyring found</code> 失敗——gpg 不會自己建這個目錄，而 portage 只在第一次取二進位套件時才會呼叫它，那已經是第 2、3 步之後了。簽章用的是 getuto 建立的 Portage Local Trust Key，口令在 <code>/etc/portage/gnupg/pass</code>，因此要用 <code>--passphrase-file</code> 讀。驗簽以 <code>portage</code> 使用者執行，該使用者對 trustdb 沒有寫入權限，所以 trustdb 要預先算好。',
     factPkgs: ' 個二進位套件', factDist: ' 個 distfiles', factTime: '更新於 ',
     h2contact: '聯絡', ctForum: '論壇'
   },
@@ -246,8 +246,8 @@ window.MIRROR_I18N = {
     distNote: 'Only overlay sources live here, so this adds a mirror rather than replacing the official ones. Leave <code>distfiles/</code> off the address; portage appends it. Both are listed: <code>GENTOO_MIRRORS</code> is a list portage tries in order, so it falls through to the origin when Nanjing University does not have a file.',
     distOptOut: 'When a maintainer does not want a package mirrored — licensing or otherwise — they add <code>RESTRICT="mirror"</code> to its ebuild and the sync tool skips it.',
     step1: 'Import the signing key', step2: 'Add the repository', step3: 'Enable getbinpkg (append)',
-    keyAlt: 'You can also fetch it directly instead of installing the package: <code>curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</code>, then point the second command below at the downloaded file.',
-    keyNote: '<code>getuto</code> creates <code>/etc/portage/gnupg</code>. Without it the three gpg commands below fail with <code>no writable keyring found</code>: gpg does not create the directory itself, and portage only invokes getuto when it first fetches a binary package, which is after steps 2 and 3. The signature is made with the Portage Local Trust Key getuto created. Its passphrase is in <code>/etc/portage/gnupg/pass</code>, hence <code>--passphrase-file</code>. Verification runs as the <code>portage</code> user, which has no write access to the trustdb, so the trustdb must be computed beforehand.',
+    keyAlt: 'You can also fetch it directly instead of installing the package: <code>curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</code>, then point the <code>--import</code> command above at the file you downloaded.',
+    keyNote: '<code>getuto</code> creates <code>/etc/portage/gnupg</code>. Without it the three gpg commands above fail with <code>no writable keyring found</code>: gpg does not create the directory itself, and portage only invokes getuto when it first fetches a binary package, which is after steps 2 and 3. The signature is made with the Portage Local Trust Key getuto created. Its passphrase is in <code>/etc/portage/gnupg/pass</code>, hence <code>--passphrase-file</code>. Verification runs as the <code>portage</code> user, which has no write access to the trustdb, so the trustdb must be computed beforehand.',
     factPkgs: ' binary packages', factDist: ' distfiles', factTime: 'updated ',
     h2contact: 'Contact', ctForum: 'Forum'
   }
