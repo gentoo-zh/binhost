@@ -457,8 +457,20 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 @media (max-width: 52rem) {
   .pkgs td.ver, .pkgs th.ver { display: none; }
 }
+/* 靠说明命中的那一句。说明列看得见时它是多余的，藏起来。 */
+.pkgs .hit-desc { display: none; }
+.pkgs mark {
+  background: var(--accent-weak); color: var(--fg);
+  border-radius: 0.15rem; padding: 0 0.1em;
+}
 @media (max-width: 44rem) {
   .pkgs td.desc, .pkgs th.desc { display: none; }
+  /* 说明列没了，搜索却还在比对说明，得让这一行自己说明白为什么被搜出来 */
+  .pkgs .hit-desc {
+    display: block; margin-top: 0.2rem;
+    font-size: 0.78rem; line-height: 1.35;
+    color: var(--fg-soft); white-space: normal;
+  }
 }
 
 /* 指纹放在步骤标题旁，导入完可以直接对一眼 */

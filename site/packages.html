@@ -227,6 +227,14 @@ function fmtTime(unix) {
     .toISOString().slice(0, 16).replace("T", " ") + " UTC+8";
 }
 
+// 把命中的那一段圈出来。先转义再拼标签，反过来就等于把说明当 HTML 送进页面。
+function mark(text, q) {
+  const i = text.toLowerCase().indexOf(q);
+  if (i < 0) return esc(text);
+  return esc(text.slice(0, i)) + '<mark>' + esc(text.slice(i, i + q.length)) +
+         '</mark>' + esc(text.slice(i + q.length));
+}
+
 function render() {
   const q = document.getElementById("q").value.trim().toLowerCase();
   let hit = rows;
@@ -261,7 +269,13 @@ function render() {
       // 那边给的是 404。
       const url = "https://github.com/gentoo-zh/overlay/tree/master/" + r.cp;
       return '<tr>' +
-        '<td class="name"><a href="' + esc(url) + '">' + esc(r.cp).replace("/", "/<wbr>") + '</a></td>' +
+        '<td class="name"><a href="' + esc(url) + '">' + esc(r.cp).replace("/", "/<wbr>") + '</a>' +
+          // 窄屏把说明那一列整列藏了，而搜索照样比对说明。名字里没有这个词的包
+          // 就这样出现在结果里，没有任何线索说明为什么。只在「靠说明命中」的
+          // 行补一句，命中的词标出来；说明列看得见的宽度上由 CSS 藏掉。
+          (q && r.cp.toLowerCase().indexOf(q) < 0
+            ? '<span class="hit-desc">' + mark(r.desc, q) + '</span>' : '') +
+        '</td>' +
         // 排除的包把原因直接写在说明后面。原来只挂 title，浏览器原生提示要停
         // 一两秒才出来，样式也改不了，手机上根本没有 hover。
         // 排除原因跟在说明后面。不再写「不构建：」前缀——右边那一列的标签
