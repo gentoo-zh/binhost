@@ -38,6 +38,9 @@
   --shadow: none;
 }
 
+/* 深色调色板写两份：一份跟随系统，一份对应手动选择。纯 CSS 里合并不了——
+   其中一份在 media query 内。check-css.py 会比对两份是否一致，改一处漏一处
+   会红，不必靠人记得。 */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
@@ -421,9 +424,6 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 /* 不收录的类别标签。压得比「待构建」更暗——那是等得到的，这是等不到的。 */
 .pkgs td.mark .why-tag { color: var(--fg-soft); font-style: normal; opacity: 0.75; }
 .pkgs td.ver, .pkgs th.ver { text-align: right; white-space: nowrap; }
-/* 还没构建的行压暗，一眼能看出哪些现在拿不到 */
-.pkgs tr.pending td { opacity: 0.55; }
-.pkgs tr.pending td.ver { font-style: italic; }
 
 @media (max-width: 62rem) {
   /* 状态列才是这张表的重点，先牺牲体积再牺牲版本 */
@@ -434,8 +434,6 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 }
 @media (max-width: 44rem) {
   .pkgs td.desc, .pkgs th.desc { display: none; }
-}
-@media (max-width: 30rem) {
 }
 
 /* 指纹放在步骤标题旁，导入完可以直接对一眼 */
@@ -457,7 +455,6 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
   .fpr-box { margin-left: 0; width: 100%; }
   .fpr { white-space: normal; }
 }
-h2[id] { scroll-margin-top: 4.5rem; }
 
 /* 对勾列。窄到只放得下一个符号，别让它抢名称列的宽度 */
 .listing th.mark, .listing td.mark { text-align: center; width: 1%; white-space: nowrap; }

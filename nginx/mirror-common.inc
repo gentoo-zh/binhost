@@ -74,6 +74,15 @@ location ^~ /binpkgs/ {
 		add_header Strict-Transport-Security "max-age=31536000" always;
 	}
 
+	# 首页读它取包数与时间。^~ 命中之后外层那条按扩展名发缓存头的规则不再被
+	# 考虑，所以这里要再写一次——不然浏览器按启发式规则自己决定缓存多久，
+	# 首页显示的包数可能停在几天前。
+	location = /binpkgs/x86-64/status.json {
+		root /srv/pub;
+		add_header Cache-Control "no-cache";
+		add_header Strict-Transport-Security "max-age=31536000" always;
+	}
+
 	# 索引会变。缓存久了用户会拿着旧索引去要新文件，只能拿到 404。
 	location ~ /Packages(\.gz)?$ {
 		root /srv/pub;

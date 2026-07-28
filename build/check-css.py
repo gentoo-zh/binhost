@@ -64,6 +64,29 @@ def main(site):
         if not re.search(r'class="[^"]*\b' + re.escape(c) + r'\b|[\'"]' + re.escape(c) + r'[\'"]', src):
             bad.append(f"类 .{c} 在页面与脚本里都找不到")
 
+    # 深色调色板写两份：一份在 prefers-color-scheme 里，一份对应手动选择。
+    # 纯 CSS 里合并不了，只能盯着两份别走散——改一处漏一处，就是「跟随系统的
+    # 深色」和「手动选的深色」变成两套配色，而且不会有任何报错。
+    def palette(sel):
+        i = css.find(sel)
+        if i < 0:
+            return None
+        body = css[css.index("{", i) + 1:]
+        body = body[:body.index("}")]
+        return dict(re.findall(r"(--[\w-]+)\s*:\s*([^;]+);", body))
+
+    auto = palette(':root:not([data-theme="light"]) {')
+    manual = palette('[data-theme="dark"] {')
+    if auto and manual:
+        for k in sorted(set(auto) | set(manual)):
+            a, m = auto.get(k), manual.get(k)
+            if a is None:
+                bad.append(f"深色变量 {k} 只在手动选择那份里有")
+            elif m is None:
+                bad.append(f"深色变量 {k} 只在跟随系统那份里有")
+            elif a.strip() != m.strip():
+                bad.append(f"深色变量 {k} 两份不一致：{a.strip()} / {m.strip()}")
+
     if bad:
         print(f"!!! {css_path}")
         for b in bad:
