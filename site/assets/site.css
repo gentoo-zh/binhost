@@ -283,6 +283,23 @@ h2:first-of-type { margin-top: 2rem; }
   margin: 0; padding: 0.9rem 1rem; overflow-x: auto; background: var(--panel);
   font-family: var(--mono); font-size: 0.8rem; line-height: 1.8; color: var(--fg-body);
 }
+/* 代码块与地址栏横向滚动时会露出滚动条，而浏览器给的是系统默认样式：深色主题下
+   一条浅灰的粗条横在代码块底下，全站只有这一处不跟主题走。条子本身要留着——它是
+   「这里还能往右看」的唯一提示，像 .desc 那样整个藏掉，长命令就没人知道没读完。
+   所以是调细、调成主题色，不是藏起来。 */
+.code pre, .uri code {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.code pre::-webkit-scrollbar, .uri code::-webkit-scrollbar { height: 6px; }
+.code pre::-webkit-scrollbar-track, .uri code::-webkit-scrollbar-track { background: transparent; }
+.code pre::-webkit-scrollbar-thumb, .uri code::-webkit-scrollbar-thumb {
+  background: var(--border); border-radius: 3px;
+}
+.code pre::-webkit-scrollbar-thumb:hover, .uri code::-webkit-scrollbar-thumb:hover {
+  background: var(--fg-soft);
+}
+
 /* 配置片段是静态的，用几个 span 上色就够，不值得为此引入高亮库 */
 .code .sec { color: var(--c-sec); font-weight: 600; }
 .code .key { color: var(--c-key); }
