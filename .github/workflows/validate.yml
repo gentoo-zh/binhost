@@ -224,8 +224,10 @@ jobs:
             sudo logrotate -d deploy/logrotate-binhost
             exit 1
           }
-          # 再确认它对写坏的配置确实会红——抓不住东西的检查比没有更糟
-          printf '/var/log/x {\n  not-a-directive\n}\n' > /tmp/bad.conf
+          # 再确认它对写坏的配置确实会红——抓不住东西的检查比没有更糟。
+          # 用未闭合的块，不用未知指令：Ubuntu 这版接受未知指令并退出 0，
+          # Gentoo 的 3.22 会拒绝，各版本行为不一致。
+          printf '/var/log/x {\n  daily\n' > /tmp/bad.conf
           if sudo logrotate -d /tmp/bad.conf >/dev/null 2>&1; then
             echo "!! 写坏的配置也通过了，这条检查没有意义"; exit 1
           fi
