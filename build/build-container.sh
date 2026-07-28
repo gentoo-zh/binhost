@@ -177,70 +177,11 @@ INNER
 rm -rf "${STAGE}.new"
 install -dm755 "${STAGE}.new"
 
-PKGDIR="${PKGDIR}" STAGE="${STAGE}.new" \
+# The filter that decides what leaves this machine lives in its own file, with
+# its own cases: it is the last thing standing between the build cache and what
+# users install.
 OVERLAY_REV="$(git -C "${OVERLAY}" rev-parse HEAD 2>/dev/null || echo '')" \
-python3 - <<'PY'
-import os, re, shutil, sys, time
-
-pkgdir, stage = (os.environ[k] for k in ("PKGDIR", "STAGE"))
-stanzas = open(os.path.join(pkgdir, "Packages")).read().split("\n\n")
-header, keep, skipped = stanzas[0], [], 0
-best = {}   # cpv -> (build_id, fields, stanza)
-
-for s in stanzas[1:]:
-    if not s.strip():
-        continue
-    f = dict(re.findall(r"^(\w+): (.*)$", s, re.M))
-    cpv = f.get("CPV")
-    if not cpv:
-        continue
-    # 按 REPO 判断，不按 overlay 里有没有同名目录。目录判断挡不住两种情况：
-    # overlay 只有 -9999 而实际编的是 ::gentoo 的发行版（fcitx、librime 这些），
-    # 以及 overlay 的版本比 ::gentoo 低、portage 选了 ::gentoo 那个
-    # （libdatrie、libthai）。两种情况交付的都是 ::gentoo 的构建物。
-    if f.get("REPO") != "gentoo-zh":
-        skipped += 1
-        continue
-    # ACCEPT_LICENSE should have stopped these at build time. Check again
-    # rather than let one gate stand between us and a licensing problem.
-    if "bindist" in f.get("RESTRICT", ""):
-        sys.exit(f"refusing to stage RESTRICT=bindist package: {cpv}")
-    # binpkg-multi-instance 会给同一版本的每次重建一个新的 BUILD_ID，旧的留在
-    # PKGDIR 的索引里。两个都发出去会让索引里同一个 CPV 有两条，清理段也删不掉
-    # （它按索引判断该留什么）。只留 BUILD_ID 最大的那个实例。
-    bid = int(f.get("BUILD_ID", 0))
-    prev = best.get(cpv)
-    if prev and prev[0] >= bid:
-        skipped += 1
-        continue
-    if prev:
-        skipped += 1
-    best[cpv] = (bid, f, s)
-
-for bid, f, s in best.values():
-    src = os.path.join(pkgdir, f["PATH"])
-    dst = os.path.join(stage, f["PATH"])
-    os.makedirs(os.path.dirname(dst), exist_ok=True)
-    shutil.copy(src, dst)
-    keep.append(s)
-
-# 头部照抄会让 PACKAGES 仍是构建缓存里的总数（含依赖），比实际发布的多数倍。
-# TIMESTAMP 同理，要的是这一代的时间而不是缓存上次写入的时间。
-header = re.sub(r"^PACKAGES: .*$", f"PACKAGES: {len(keep)}", header, flags=re.M)
-header = re.sub(r"^TIMESTAMP: .*$", f"TIMESTAMP: {int(time.time())}", header, flags=re.M)
-
-# 这批包建自 overlay 的哪个提交。portage 只在自己 sync 过仓库时才填这一项，
-# 我们是只读挂载，它写出来的是空的 {}。补上之后索引能自证建自哪一版，
-# 版本核对也有了准确的基准——不然构建期间 overlay 又动了就会误报。
-rev = os.environ.get("OVERLAY_REV", "")
-if rev:
-    header = re.sub(r"^REPO_REVISIONS: .*$",
-                    'REPO_REVISIONS: {"gentoo-zh": "%s"}' % rev, header, flags=re.M)
-
-open(os.path.join(stage, "Packages"), "w").write(
-    header + "\n\n" + "\n\n".join(keep) + "\n")
-print(f">>> staged {len(keep)}, skipped {skipped} not from the overlay")
-PY
+    python3 "$(dirname "$0")/stage-index.py" "${PKGDIR}" "${STAGE}.new" "${OVERLAY}"
 
 # Packages are already signed -- portage did that during the build. Only the
 # gzipped index is left; the official binhost ships Packages and Packages.gz
