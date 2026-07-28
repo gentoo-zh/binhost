@@ -92,6 +92,7 @@ ${DOCKER} run --rm -i --privileged \
     -v "${SIGNING_GNUPGHOME}:/root/.gnupg" \
     -v "${LOGDIR}:/var/log/binhost" \
     -e "SIGNING_KEY=${SIGNING_KEY}" \
+    -e "OVERLAY_REV=$(git -C "${OVERLAY}" rev-parse HEAD 2>/dev/null || echo '')" \
     "${BASE}" /bin/bash -euo pipefail -s <<'INNER'
 
 # The signing command is flock /run/lock/portage-binpkg-gpg.lock ...; the image
@@ -166,7 +167,9 @@ INNER
 rm -rf "${STAGE}.new"
 install -dm755 "${STAGE}.new"
 
-PKGDIR="${PKGDIR}" STAGE="${STAGE}.new" python3 - <<'PY'
+PKGDIR="${PKGDIR}" STAGE="${STAGE}.new" \
+OVERLAY_REV="$(git -C "${OVERLAY}" rev-parse HEAD 2>/dev/null || echo '')" \
+python3 - <<'PY'
 import os, re, shutil, sys, time
 
 pkgdir, stage = (os.environ[k] for k in ("PKGDIR", "STAGE"))
@@ -215,6 +218,14 @@ for bid, f, s in best.values():
 # TIMESTAMP 同理，要的是这一代的时间而不是缓存上次写入的时间。
 header = re.sub(r"^PACKAGES: .*$", f"PACKAGES: {len(keep)}", header, flags=re.M)
 header = re.sub(r"^TIMESTAMP: .*$", f"TIMESTAMP: {int(time.time())}", header, flags=re.M)
+
+# 这批包建自 overlay 的哪个提交。portage 只在自己 sync 过仓库时才填这一项，
+# 我们是只读挂载，它写出来的是空的 {}。补上之后索引能自证建自哪一版，
+# 版本核对也有了准确的基准——不然构建期间 overlay 又动了就会误报。
+rev = os.environ.get("OVERLAY_REV", "")
+if rev:
+    header = re.sub(r"^REPO_REVISIONS: .*$",
+                    'REPO_REVISIONS: {"gentoo-zh": "%s"}' % rev, header, flags=re.M)
 
 open(os.path.join(stage, "Packages"), "w").write(
     header + "\n\n" + "\n\n".join(keep) + "\n")
