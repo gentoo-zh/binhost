@@ -23,6 +23,11 @@ OVERLAY="${OVERLAY:-/var/lib/binhost/overlay}"
 TREE="${TREE:-/var/db/repos/gentoo}"
 DISTDIR="${DISTDIR:-/var/cache/distfiles}"
 PKGDIR="${PKGDIR:-/var/cache/binhost/${TAG}}"
+# Where portage lands what it fetches from the official binhost. The path comes
+# from binrepos.conf inside the image; mounting it keeps the download across
+# runs. Without the mount the container starts with an empty one and pulls the
+# same ~1 GB of ::gentoo binaries again every round.
+GENTOO_BINPKGS="${GENTOO_BINPKGS:-/var/cache/binhost/gentoo}"
 STAGE="${STAGE:-/var/lib/binhost/stage/${TAG}}"
 LOGDIR="${LOGDIR:-/var/lib/binhost/logs/${TAG}}"
 LIST="${LIST:-$(dirname "$0")/packages.txt}"
@@ -71,7 +76,7 @@ if (( stale )); then
 fi
 
 sudo install -dm755 -o "$(id -u)" -g "$(id -g)" \
-    "${PKGDIR}" "$(dirname "${STAGE}")" "${LOGDIR}"
+    "${PKGDIR}" "$(dirname "${STAGE}")" "${LOGDIR}" "${GENTOO_BINPKGS}"
 rm -f "${LOGDIR}"/*.log "${LOGDIR}"/failed.txt
 
 # 磁盘写满或构建被打断会在缓存里留下 0 字节的 gpkg。portage 每轮都要为它们
@@ -88,6 +93,7 @@ ${DOCKER} run --rm -i --privileged \
     -v "${OVERLAY}:/var/db/repos/gentoo-zh:ro" \
     -v "${DISTDIR}:/var/cache/distfiles" \
     -v "${PKGDIR}:/var/cache/binpkgs" \
+    -v "${GENTOO_BINPKGS}:/var/cache/binhost/gentoo" \
     -v "${LIST}:/tmp/packages.txt:ro" \
     -v "${SIGNING_GNUPGHOME}:/root/.gnupg" \
     -v "${LOGDIR}:/var/log/binhost" \
