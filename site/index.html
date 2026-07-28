@@ -43,10 +43,18 @@
 
   <h2 data-i18n="h2bin">二进制包</h2>
 
+  <div class="src-pick" data-src-switch="top" role="group" aria-label="镜像">
+    <span class="src-label" data-i18n="srcLabel">镜像</span>
+    <button type="button" class="src-opt on" data-i18n="srcNju"
+            data-uri="https://mirror.nju.edu.cn/gentoo-zh/binpkgs/x86-64">南京大学</button>
+    <button type="button" class="src-opt" data-i18n="srcOrigin"
+            data-uri="https://distfiles.gentoozh.org/binpkgs/x86-64">源站</button>
+  </div>
+
   <div class="uri">
     <span class="k">sync-uri</span>
-    <code data-src-slot="repo">https://mirror.nju.edu.cn/gentoo-zh/binpkgs/x86-64</code>
-    <button class="copy-chip" data-src-copy="repo" data-i18n="copy">复制</button>
+    <code data-src-slot="top">https://mirror.nju.edu.cn/gentoo-zh/binpkgs/x86-64</code>
+    <button class="copy-chip" data-src-copy="top" data-i18n="copy">复制</button>
   </div>
 
   <div class="step">
