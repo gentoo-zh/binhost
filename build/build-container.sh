@@ -131,26 +131,36 @@ EOF
 mapfile -t atoms < <(grep -E '^[a-z0-9-]+/[A-Za-z0-9._+-]+$' /tmp/packages.txt)
 echo ">>> ${#atoms[@]} packages"
 
-# One emerge per package: a single emerge of the whole list aborts everything
-# on the first unsatisfiable dependency. This way one broken package costs one
-# package.
-# 每个包单独留一份日志。全量构建的失败会有一批，只有整体日志时无法
-# 逐个定位——而且判断「是 ebuild 的问题还是取源失败」必须看它自己的输出。
+# --changed-use：依赖的 USE 变了就重建，不然会把 PKGDIR 里按旧 USE 编的那份
+# 原样再发一遍。ebuild 内容改了但版本未动时 portage 无法察觉，那种要靠 revbump。
+EMERGE=(emerge --usepkg --changed-use --with-bdeps=y --quiet-build)
+
+# 先整体来一次。portage 解析一遍就知道谁要重编，实测 183 个包解析 171 秒，
+# 而逐包跑要各解析一次，中位数 19 秒、合计一个半小时——那一个半小时算的是
+# 同一棵依赖树，算 183 遍。
+#
+# 整体跑的代价是第一个解不开的依赖会中止全部，所以它失败时退回逐包，保住
+# 「一个坏包只损失一个包」和每包一份日志。正常情况下退回不会发生。
+echo "::: 整体解析"
 failed=()
-for atom in "${atoms[@]}"; do
-    echo "::: ${atom}"
-    log=/var/log/binhost/${atom//\//_}.log
-    # --changed-use：依赖的 USE 变了就重建，不然会把 PKGDIR 里按旧 USE 编的
-    # 那份原样再发一遍。ebuild 内容改了但版本未动时 portage 无法察觉，
-    # 那种要靠 revbump。
-    if ! emerge --usepkg --changed-use --with-bdeps=y --quiet-build "${atom}" > "${log}" 2>&1; then
-        failed+=("${atom}")
-        echo "${atom}" >> /var/log/binhost/failed.txt
-        tail -3 "${log}" | sed 's/^/    /'
-    else
-        rm -f "${log}"    # 成功的不留，否则 186 份日志里找不到重点
-    fi
-done
+if "${EMERGE[@]}" "${atoms[@]}" > /var/log/binhost/whole.log 2>&1; then
+    echo ">>> 整体一次完成，未逐包重跑"
+    rm -f /var/log/binhost/whole.log
+else
+    echo "!!! 整体失败，退回逐包（每包一份日志）"
+    tail -5 /var/log/binhost/whole.log | sed 's/^/    /'
+    for atom in "${atoms[@]}"; do
+        echo "::: ${atom}"
+        log=/var/log/binhost/${atom//\//_}.log
+        if ! "${EMERGE[@]}" "${atom}" > "${log}" 2>&1; then
+            failed+=("${atom}")
+            echo "${atom}" >> /var/log/binhost/failed.txt
+            tail -3 "${log}" | sed 's/^/    /'
+        else
+            rm -f "${log}"    # 成功的不留，否则一百多份日志里找不到重点
+        fi
+    done
+fi
 
 emaint binhost --fix
 
