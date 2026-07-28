@@ -44,6 +44,8 @@
   var CN = {};                                  // 简体 = 文档原文
   document.querySelectorAll('[data-i18n]').forEach(function (el) { CN[el.dataset.i18n] = el.textContent; });
   document.querySelectorAll('[data-i18n-html]').forEach(function (el) { CN[el.dataset.i18nHtml] = el.innerHTML; });
+  /* 链接地址也分语言：gentoozh.org 按语言分路径。 */
+  document.querySelectorAll('[data-i18n-href]').forEach(function (el) { CN[el.dataset.i18nHref] = el.getAttribute('href'); });
   function val(l, key) {
     if (l === 'zh-cn') return CN[key];
     var tbl = T[l] || {};
@@ -139,6 +141,7 @@
     document.documentElement.lang = l;
     document.querySelectorAll('[data-i18n]').forEach(function (el) { el.textContent = val(l, el.dataset.i18n); });
     document.querySelectorAll('[data-i18n-html]').forEach(function (el) { el.innerHTML = val(l, el.dataset.i18nHtml); });
+    document.querySelectorAll('[data-i18n-href]').forEach(function (el) { el.setAttribute('href', val(l, el.dataset.i18nHref)); });
     document.querySelectorAll('[data-langblock]').forEach(function (el) { el.hidden = (el.getAttribute('data-langblock') !== l); });
     document.querySelectorAll('[data-langblock-inline]').forEach(function (el) { el.hidden = (el.getAttribute('data-langblock-inline') !== l); });
     Object.keys(langBtns).forEach(function (k) { langBtns[k].classList.toggle('active', k === l); });

@@ -25,7 +25,7 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
   const s = fs.readFileSync(path.join(dir, f), 'utf8');
   // Underscores have to be included: keys like why_prebuilt used to fall
   // outside the character class entirely.
-  const keysInPage = [...s.matchAll(/data-i18n(?:-html)?="([A-Za-z0-9_]+)"/g)];
+  const keysInPage = [...s.matchAll(/data-i18n(?:-html|-href)?="([A-Za-z0-9_]+)"/g)];
   // Keys the script takes through t("...") have no data-i18n on the page, so
   // scanning attributes alone does not see them.
   // 两种引号都认。check-copy.py 那边的注解自己记着这个专案的 JS 用户字串
