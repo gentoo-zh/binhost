@@ -111,6 +111,7 @@ distfiles {d} 个</span>
   <span data-i18n="ph">搜索包名或说明</span>
 </div>
 
+<script src="/assets/util.js"></script>
 <script src="/assets/strings.js"></script>
 <script>
 window.MIRROR_I18N = {
@@ -166,25 +167,12 @@ window.MIRROR_I18N = {
 
 // 路径和文件名都进 innerHTML。路径来自 URL，任何以斜杠结尾的地址 nginx 都
 // 回这个页面；文件名来自 ebuild 的 Manifest。两者都不是我们能约束的内容。
-function esc(s) {
-  return String(s).replace(/[&<>"']/g, function (c) {
-    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
-  });
-}
 
 function t(key) {
   const el = document.querySelector('#strings [data-i18n="' + key + '"]');
   return el ? el.textContent : key;
 }
 
-function human(n) {
-  if (!n) return "";
-  if (n < 1024) return n + " B";
-  const unit = ["K", "M", "G"];
-  let i = -1;
-  do { n /= 1024; i++; } while (n >= 1024 && i < unit.length - 1);
-  return n.toFixed(n < 10 ? 1 : 0) + " " + unit[i];
-}
 
 // CPV 拆成 category/name 和版本。版本从第一个「-数字」开头的段起。
 function splitCPV(cpv) {
@@ -244,7 +232,10 @@ function fmtTime(unix) {
 function render() {
   const q = document.getElementById("q").value.trim().toLowerCase();
   let hit = rows;
-  if (filter === "bin") hit = hit.filter(function (r) { return r.binhost; });
+  // 按 r.ver 筛，和下面 counts() 里的 b 同一个口径：这个筛选问的是「现在能装
+  // 什么」，不是「我们打算构建什么」。按 r.binhost 筛的话，行数会比标题上那个
+  // 数字多出待构建的那些。
+  if (filter === "bin") hit = hit.filter(function (r) { return r.ver; });
   else if (filter === "dist") hit = hit.filter(function (r) { return r.dist; });
   if (q) hit = hit.filter(function (r) {
     return r.cp.toLowerCase().indexOf(q) >= 0 || r.desc.toLowerCase().indexOf(q) >= 0;

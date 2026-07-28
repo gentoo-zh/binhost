@@ -222,10 +222,11 @@ window.MIRROR_I18N = {
    160 KB、distfiles 索引有一千多个文件名，为四个数字传这些不值得。 */
 (function () {
   var langTable = window.MIRROR_I18N || {};
+  /* 语言从 i18n.js 广播的事件拿，不自己读 localStorage：localStorage 被禁用时
+     i18n.js 会退回按 navigator 判定，两边就会得出不同的语言。 */
+  var curLang = null;
   function s(key, fallback) {
-    var lang = null;
-    try { lang = localStorage.getItem('mirror-lang'); } catch (e) {}
-    var t = lang && langTable[lang];
+    var t = curLang && langTable[curLang];
     return (t && key in t) ? t[key] : fallback;
   }
 
@@ -245,15 +246,26 @@ window.MIRROR_I18N = {
   }
 
   var el = document.getElementById('facts');
+  var data = null;
+
+  function render() {
+    if (!data) return;
+    var bin = data[0], dist = data[1], html = '';
+    if (bin && bin.packages) html += fact(bin.packages, s('factPkgs', ' 个二进制包'), bin.generated);
+    if (dist && dist.files) html += fact(dist.files, s('factDist', ' 个 distfiles'), dist.generated);
+    el.innerHTML = html;
+  }
+
+  /* 数据只取一次，切语言时重画。原先在 then 里直接写 innerHTML，切了语言这一行
+     还是原来那句。 */
+  document.addEventListener('langchange', function (e) { curLang = e.detail; render(); });
+
   Promise.allSettled([
     fetch('/binpkgs/x86-64/status.json').then(function (r) { return r.ok ? r.json() : null; }),
     fetch('/distfiles-status.json').then(function (r) { return r.ok ? r.json() : null; })
   ]).then(function (rs) {
-    var bin = rs[0].value, dist = rs[1].value;
-    var html = '';
-    if (bin && bin.packages) html += fact(bin.packages, s('factPkgs', ' 个二进制包'), bin.generated);
-    if (dist && dist.files) html += fact(dist.files, s('factDist', ' 个 distfiles'), dist.generated);
-    el.innerHTML = html;
+    data = [rs[0].value, rs[1].value];
+    render();
   });
 })();
 </script>
