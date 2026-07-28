@@ -95,17 +95,27 @@ def rewrite_header(header, count, rev):
     written.
 
     REPO_REVISIONS records which overlay commit these packages were built from.
-    Portage fills it only for repositories it synced itself, and ours is a
-    read-only mount, so what it writes is an empty {}. With it filled in the
-    index says for itself which revision it came from, and the version check has
-    an accurate baseline -- otherwise an overlay that moved during the build
-    reads as a mismatch.
+    Portage writes it per package, not in the header, and only for repositories
+    it synced itself; ours is a read-only mount, so what lands there is an empty
+    {}. With it in the header the index says for itself which revision it came
+    from.
+
+    It is inserted when absent rather than substituted. A substitution against a
+    line that is not there does nothing and says nothing, and the published
+    header carried no REPO_REVISIONS for exactly that reason.
     """
     header = re.sub(r"^PACKAGES: .*$", f"PACKAGES: {count}", header, flags=re.M)
     header = re.sub(r"^TIMESTAMP: .*$", f"TIMESTAMP: {int(time.time())}", header, flags=re.M)
     if rev:
-        header = re.sub(r"^REPO_REVISIONS: .*$",
-                        'REPO_REVISIONS: {"gentoo-zh": "%s"}' % rev, header, flags=re.M)
+        line = 'REPO_REVISIONS: {"gentoo-zh": "%s"}' % rev
+        if re.search(r"^REPO_REVISIONS: ", header, re.M):
+            header = re.sub(r"^REPO_REVISIONS: .*$", line, header, flags=re.M)
+        else:
+            # The header is sorted, so keep it that way rather than appending.
+            lines = header.splitlines()
+            at = next((i for i, l in enumerate(lines) if l > line), len(lines))
+            lines.insert(at, line)
+            header = "\n".join(lines)
     return header
 
 
