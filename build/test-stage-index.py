@@ -16,7 +16,12 @@ spec = importlib.util.spec_from_file_location(
 stage_index = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(stage_index)
 
-HEADER = "ACCEPT_KEYWORDS: ~amd64\nPACKAGES: 999\nTIMESTAMP: 1\nREPO_REVISIONS: {}"
+# The header portage actually writes has no REPO_REVISIONS line -- it puts that
+# per package. The fixture used to include one, which is why a substitution that
+# silently does nothing when the line is absent passed the tests while the
+# published index carried no revision at all.
+HEADER = "ACCEPT_KEYWORDS: ~amd64\nPACKAGES: 999\nTIMESTAMP: 1\nVERSION: 0"
+HEADER_WITH_REV = HEADER + '\nREPO_REVISIONS: {}'
 
 
 def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None):
@@ -99,11 +104,25 @@ case("头部的 PACKAGES 改成实际数量", lambda: (
 case("头部的 TIMESTAMP 不再是缓存里那个", lambda: (
     "TIMESTAMP: 1\n" not in stage_index.rewrite_header(HEADER, 7, "") + "\n"))
 
-case("给了 rev 就写进 REPO_REVISIONS", lambda: (
+case("头部本来没有这一行时也要写进去", lambda: (
     '"gentoo-zh": "abc123"' in stage_index.rewrite_header(HEADER, 7, "abc123")))
 
-case("没给 rev 就不动那一行", lambda: (
-    "REPO_REVISIONS: {}" in stage_index.rewrite_header(HEADER, 7, "")))
+case("头部本来有这一行时覆盖它", lambda: (
+    '"gentoo-zh": "abc123"' in stage_index.rewrite_header(HEADER_WITH_REV, 7, "abc123")
+    and "REPO_REVISIONS: {}" not in stage_index.rewrite_header(HEADER_WITH_REV, 7, "abc123")))
+
+case("写进去之后头部仍然只有一行 REPO_REVISIONS", lambda: (
+    stage_index.rewrite_header(HEADER, 7, "abc").count("REPO_REVISIONS") == 1))
+
+case("没给 rev 就不凭空加一行", lambda: (
+    "REPO_REVISIONS" not in stage_index.rewrite_header(HEADER, 7, "")))
+
+case("没给 rev 时原有的那一行也不动", lambda: (
+    "REPO_REVISIONS: {}" in stage_index.rewrite_header(HEADER_WITH_REV, 7, "")))
+
+case("插入之后头部仍然按字母序", lambda: (
+    (lambda ls: ls == sorted(ls))(stage_index.rewrite_header(
+        "ACCEPT_KEYWORDS: ~amd64\nPACKAGES: 1\nTIMESTAMP: 1\nVERSION: 0", 7, "abc").splitlines())))
 
 print(f"  {'用例':<40} 结果")
 bad = 0
