@@ -62,32 +62,32 @@ def case(name, fn):
     CASES.append((name, fn))
 
 
-case("我们的包留下", lambda: (
+case("本仓库的产物保留", lambda: (
     cpvs(run([stanza("app-misc/a-1")])[0]) == ["app-misc/a-1"]))
 
-case("::gentoo 的产物滤掉", lambda: (
+case("::gentoo 的产物被过滤", lambda: (
     run([stanza("dev-libs/b-1", repo="gentoo")])[0] == []))
 
-case("两边混在一起时只留我们的", lambda: (
+case("混合输入时仅保留本仓库的产物", lambda: (
     cpvs(run([stanza("app-misc/a-1"), stanza("dev-libs/b-1", repo="gentoo")])[0])
     == ["app-misc/a-1"]))
 
-case("RESTRICT=bindist 中止整轮", lambda: (
+case("RESTRICT=bindist 中止本轮", lambda: (
     run([stanza("app-misc/a-1", restrict="bindist mirror")])[2] is not None))
 
-case("RESTRICT 有别的值不中止", lambda: (
+case("RESTRICT 为其他值时不中止", lambda: (
     run([stanza("app-misc/a-1", restrict="mirror strip")])[2] is None))
 
-case("同一版本多个实例只留 BUILD_ID 最大的", lambda: (
+case("同一版本多实例仅保留 BUILD_ID 最大者", lambda: (
     len(run([stanza("app-misc/a-1", build_id=1),
              stanza("app-misc/a-1", build_id=3),
              stanza("app-misc/a-1", build_id=2)])[0]) == 1))
 
-case("留下的确实是最大那个", lambda: (
+case("保留的实例 BUILD_ID 为最大值", lambda: (
     run([stanza("app-misc/a-1", build_id=1),
          stanza("app-misc/a-1", build_id=3)])[0][0][0] == 3))
 
-case("BUILD_ID 顺序颠倒也一样", lambda: (
+case("BUILD_ID 输入顺序不影响结果", lambda: (
     run([stanza("app-misc/a-1", build_id=3),
          stanza("app-misc/a-1", build_id=1)])[0][0][0] == 3))
 
@@ -95,48 +95,48 @@ case("excluded.txt 里的包不发布", lambda: (
     run([stanza("app-text/wiki2man_on_rust-0.5.1-r1")],
         excluded={"app-text/wiki2man_on_rust"})[0] == []))
 
-case("只是不在收录清单不算排除（依赖带出来的照发）", lambda: (
+case("不在收录清单不等于排除，依赖引入的产物照常发布", lambda: (
     cpvs(run([stanza("acct-group/aptly-0")], excluded={"app-misc/other"})[0])
     == ["acct-group/aptly-0"]))
 
-case("带 revision 的版本号也能对上排除清单", lambda: (
+case("带 revision 的版本号可匹配排除清单", lambda: (
     run([stanza("app-misc/a-1.2.3-r4")], excluded={"app-misc/a"})[0] == []))
 
-case("overlay 里已经没有的包滤掉", lambda: (
+case("overlay 中已不存在的包被过滤", lambda: (
     run([stanza("dev-libs/libratbag-0.18")], overlay_has=["app-misc/a"])[0] == []))
 
-case("overlay 里还在的包留下", lambda: (
+case("overlay 中仍存在的包保留", lambda: (
     cpvs(run([stanza("app-misc/a-1")], overlay_has=["app-misc/a"])[0]) == ["app-misc/a-1"]))
 
-case("不传 overlay 时不按 overlay 过滤", lambda: (
+case("未提供 overlay 时不做该项过滤", lambda: (
     cpvs(run([stanza("dev-libs/gone-1")])[0]) == ["dev-libs/gone-1"]))
 
-case("带 revision 的版本号也能取出 cp", lambda: (
+case("带 revision 的版本号可解析出 cp", lambda: (
     run([stanza("app-misc/a-1.2.3-r4")], overlay_has=["app-misc/a"])[0] != []))
 
-case("头部的 PACKAGES 改成实际数量", lambda: (
+case("头部 PACKAGES 重写为实际数量", lambda: (
     "PACKAGES: 7" in stage_index.rewrite_header(HEADER, 7, "")))
 
-case("头部的 TIMESTAMP 不再是缓存里那个", lambda: (
+case("头部 TIMESTAMP 重写为本代时间", lambda: (
     "TIMESTAMP: 1\n" not in stage_index.rewrite_header(HEADER, 7, "") + "\n"))
 
-case("头部本来没有这一行时也要写进去", lambda: (
+case("头部缺少该行时插入", lambda: (
     '"gentoo-zh": "abc123"' in stage_index.rewrite_header(HEADER, 7, "abc123")))
 
-case("头部本来有这一行时覆盖它", lambda: (
+case("头部已有该行时覆盖", lambda: (
     '"gentoo-zh": "abc123"' in stage_index.rewrite_header(HEADER_WITH_REV, 7, "abc123")
     and "REPO_REVISIONS: {}" not in stage_index.rewrite_header(HEADER_WITH_REV, 7, "abc123")))
 
-case("写进去之后头部仍然只有一行 REPO_REVISIONS", lambda: (
+case("写入后头部仅有一行 REPO_REVISIONS", lambda: (
     stage_index.rewrite_header(HEADER, 7, "abc").count("REPO_REVISIONS") == 1))
 
-case("没给 rev 就不凭空加一行", lambda: (
+case("未提供 rev 时不新增该行", lambda: (
     "REPO_REVISIONS" not in stage_index.rewrite_header(HEADER, 7, "")))
 
-case("没给 rev 时原有的那一行也不动", lambda: (
+case("未提供 rev 时保留原有该行", lambda: (
     "REPO_REVISIONS: {}" in stage_index.rewrite_header(HEADER_WITH_REV, 7, "")))
 
-case("插入之后头部仍然按字母序", lambda: (
+case("插入后头部保持字母序", lambda: (
     (lambda ls: ls == sorted(ls))(stage_index.rewrite_header(
         "ACCEPT_KEYWORDS: ~amd64\nPACKAGES: 1\nTIMESTAMP: 1\nVERSION: 0", 7, "abc").splitlines())))
 

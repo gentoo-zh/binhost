@@ -48,6 +48,11 @@ jobs:
       - name: install.sh covers what the scripts reach for
         run: python3 build/test-install-covers-refs.py
 
+      # 指纹写在三个文件里，轮替时漏改一处，签名与用户核对的依据就对不上，
+      # 而两边都不会报错。
+      - name: The signing fingerprint agrees everywhere
+        run: python3 build/test-fingerprint-consistent.py
+
       # 两份清单互斥、排除项必须写原因。漏掉的话被排除的包会被重新构建，
       # 而每轮都以同样的方式失败。
       - name: Exclusion list is enforced

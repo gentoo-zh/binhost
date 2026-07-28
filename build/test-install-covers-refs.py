@@ -53,7 +53,7 @@ for d in DIRS:
     missing = sorted(refs[d] - inst[d])
     print(f"  {d}: 引用 {len(refs[d])} 个，安装 {len(inst[d])} 个")
     for name in missing:
-        print(f"    ✗ {name} 被引用但 install.sh 没有安装它")
+        print(f"    ✗ {name} 被引用但 install.sh 未安装")
         bad += 1
 
 # Something install.sh installs that nothing reads is not an error: status.sh

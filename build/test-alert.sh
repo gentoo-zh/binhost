@@ -51,35 +51,35 @@ check "没有 alert.conf 时不影响调用者" "0 REACHED_END" "${rc} ${out}"
 
 printf 'TELEGRAM_CHAT=123\n' > "${tmp}/no-token.conf"
 out=$(caller "${tmp}/no-token.conf"); rc=$?
-check "conf 缺 TELEGRAM_TOKEN 时调用者活下来" "0 REACHED_END" "${rc} ${out}"
+check "conf 缺 TELEGRAM_TOKEN 时调用者不受影响" "0 REACHED_END" "${rc} ${out}"
 if grep -q "缺 TELEGRAM_TOKEN" "${tmp}/err.txt"; then
     echo "  ✓ 缺变量时有提示"; pass=$((pass + 1))
 else
-    echo "  ✗ 缺变量时没有提示"; fail=$((fail + 1))
+    echo "  ✗ 缺变量时无提示"; fail=$((fail + 1))
 fi
 
 printf 'TELEGRAM_TOKEN=t\n' > "${tmp}/no-chat.conf"
 out=$(caller "${tmp}/no-chat.conf"); rc=$?
-check "conf 缺 TELEGRAM_CHAT 时调用者活下来" "0 REACHED_END" "${rc} ${out}"
+check "conf 缺 TELEGRAM_CHAT 时调用者不受影响" "0 REACHED_END" "${rc} ${out}"
 
 : > "${tmp}/curl.log"
 printf 'TELEGRAM_TOKEN=tok\nTELEGRAM_CHAT=42\n' > "${tmp}/full.conf"
 out=$(caller "${tmp}/full.conf"); rc=$?
-check "凭据齐全时调用者继续往下走" "0 REACHED_END" "${rc} ${out}"
+check "凭据完整时调用者继续执行" "0 REACHED_END" "${rc} ${out}"
 if grep -q "bot tok/sendMessage\|bottok/sendMessage" "${tmp}/curl.log"; then
-    echo "  ✓ 用的是 conf 里的 token"; pass=$((pass + 1))
+    echo "  ✓ 使用 conf 中的 token"; pass=$((pass + 1))
 else
-    echo "  ✗ token 没有传给 curl"; fail=$((fail + 1))
+    echo "  ✗ token 未传给 curl"; fail=$((fail + 1))
 fi
 if grep -q "chat_id=42" "${tmp}/curl.log"; then
-    echo "  ✓ 用的是 conf 里的 chat"; pass=$((pass + 1))
+    echo "  ✓ 使用 conf 中的 chat"; pass=$((pass + 1))
 else
-    echo "  ✗ chat 没有传给 curl"; fail=$((fail + 1))
+    echo "  ✗ chat 未传给 curl"; fail=$((fail + 1))
 fi
 if grep -q "text=test message" "${tmp}/curl.log"; then
     echo "  ✓ 正文原样传出"; pass=$((pass + 1))
 else
-    echo "  ✗ 正文没有传出"; fail=$((fail + 1))
+    echo "  ✗ 正文未传出"; fail=$((fail + 1))
 fi
 
 # Credentials must not survive the call: a later `set -x` or an env dump in the
@@ -90,21 +90,21 @@ out=$(CURL_LOG="${tmp}/curl.log" ALERT_CONF="${tmp}/full.conf" \
         alert "x"
         echo "${TELEGRAM_TOKEN:-unset}"
       ' 2>/dev/null)
-check "调用之后凭据不留在环境里" "unset" "${out}"
+check "调用后凭据不残留在环境中" "unset" "${out}"
 
 chmod 000 "${tmp}/full.conf"
 if [[ $(id -u) -eq 0 ]]; then
-    echo "  - 跳过「conf 读不到」：root 无视权限位"
+    echo "  - 跳过 conf 不可读一项：root 不受权限位限制"
 else
     out=$(caller "${tmp}/full.conf"); rc=$?
-    check "conf 读不到时调用者活下来" "0 REACHED_END" "${rc} ${out}"
+    check "conf 不可读时调用者不受影响" "0 REACHED_END" "${rc} ${out}"
     if grep -q "读不到" "${tmp}/err.txt"; then
-        echo "  ✓ 读不到时有提示"; pass=$((pass + 1))
+        echo "  ✓ 不可读时有提示"; pass=$((pass + 1))
     else
-        echo "  ✗ 读不到时没有提示"; fail=$((fail + 1))
+        echo "  ✗ 不可读时无提示"; fail=$((fail + 1))
     fi
 fi
 chmod 644 "${tmp}/full.conf"
 
-echo "  ${pass} 过，${fail} 不过"
+echo "  通过 ${pass}，未通过 ${fail}"
 exit $(( fail > 0 ))
