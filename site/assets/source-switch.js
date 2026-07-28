@@ -33,10 +33,14 @@
   }
 
   function refreshCopy(group) {
-    /* The block this picker sits above. */
-    var code = group.parentNode.querySelector('.code');
-    var pre = code && code.querySelector('pre');
-    var chip = code && code.querySelector('.copy-chip');
+    /* Only the block directly below this picker. Searching the parent for any
+       .code reaches the wrong one when the picker sits in the page body rather
+       than inside a step -- the heading's picker would have rewritten step 1's
+       copy payload, which is a shell command, not a config. */
+    var code = group.nextElementSibling;
+    if (!code || !code.classList.contains('code')) return;
+    var pre = code.querySelector('pre');
+    var chip = code.querySelector('.copy-chip');
     if (pre && chip) chip.setAttribute('data-copy', payload(pre));
   }
 
