@@ -12,7 +12,6 @@
 
 app-i18n/fcitx-kkc		依赖 libkkc 的 configure 需要 XML::Parser，基础镜像补 perl-cleaner 后复查
 app-misc/crush			许可证 FSL-1.1-MIT 不允许再分发
-app-text/wiki2man_on_rust	唯一带 L10N 标志的包，语言设置不同就用不上二进制包
 media-gfx/scangearmp		许可证 Canon-IJ 只准搭配 Canon 喷墨机使用，不在 @BINARY-REDISTRIBUTABLE
 media-plugins/osdlyrics	configure 需要 XML::Parser，基础镜像补 perl-cleaner 后复查
 net-proxy/proxy-server		ebuild 没有 KEYWORDS 声明，任何架构都装不上

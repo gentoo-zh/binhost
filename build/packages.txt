@@ -5,7 +5,6 @@ app-backup/restic-rest-server
 app-backup/snapper-gui
 app-containers/bubblejail
 app-crypt/cotp
-app-doc/reeknote
 app-editors/edit
 app-emulation/looking-glass
 app-emulation/winetricks-zh
@@ -30,8 +29,6 @@ app-shells/gitstatus
 app-text/goldendict
 app-text/imewlconverter
 app-text/lektra
-app-text/tre
-app-text/wik
 dev-cpp/cppcoro
 dev-cpp/nameof
 dev-cpp/reproc
@@ -57,7 +54,6 @@ dev-python/conda-package-handling
 dev-python/conda-package-streaming
 dev-python/daff
 dev-python/edalize
-dev-python/exifread
 dev-python/feeluown-bilibili
 dev-python/fluent-runtime
 dev-python/fluent-syntax
@@ -66,13 +62,11 @@ dev-python/fuo-netease
 dev-python/fuo-qqmusic
 dev-python/fuo-ytmusic
 dev-python/fusesoc
-dev-python/iptcinfo3
 dev-python/janus
 dev-python/menuinst
 dev-python/microfs2
 dev-python/microrepl
 dev-python/mw2fcitx
-dev-python/mwparserfromhell
 dev-python/nudatus
 dev-python/nvchecker
 dev-python/okonomiyaki
@@ -81,7 +75,6 @@ dev-python/pycosat
 dev-python/pypinyin
 dev-python/pyqt6-charts
 dev-python/pyrime
-dev-python/pywikibot
 dev-python/qasync
 dev-python/simplesat
 dev-qt/qtgrpc
