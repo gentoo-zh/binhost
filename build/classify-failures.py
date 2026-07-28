@@ -13,13 +13,20 @@ import re
 import sys
 
 # (类别, 是不是 ebuild 的问题, 正则)
+#
+# 顺序有讲究：先看确凿的，再看可能指向别人的。
+#
+# 「ERROR: … failed (xxx phase)」说的一定是本包，而「masked by: … license」
+# emerge 会为依赖图里任何被许可证挡住的包打印，不限于失败的那一个。许可证
+# 那条原先排在最前又比对整份日志，于是一个依赖被许可证挡住，就能让真正的
+# 构建失败被归成「许可证不允许再分发」——而这一类会直接印成可以写进
+# excluded.txt 的成品行，照抄就是用错误理由永久排除一个包。
 RULES = [
-    ("许可证不允许再分发", False,
-     re.compile(r"masked by:.*license", re.I)),
-    ("取源失败", True,
-     re.compile(r"Unable to fetch|Couldn't download|unable to fetch", re.I)),
     ("构建失败", True,
      re.compile(r"^\s*\*\s*ERROR:.*failed \(\w+ phase\)", re.M)),
+    ("取源失败", True,
+     re.compile(r"Unable to fetch|Couldn't download", re.I)),
+    ("许可证不允许再分发", False, None),   # 见 classify()，要指向本包才算
     ("被掩码或缺关键字", True,
      re.compile(r"have been masked|missing keyword", re.I)),
     # 下面两类是我们这边的环境，不是 ebuild 写错
@@ -50,9 +57,22 @@ def evidence(text, kind):
     return []
 
 
-def classify(text):
+# 许可证那条要求被挡的原子就是本包，形如：
+#   - app-misc/crush-1.0::gentoo-zh (masked by: FSL-1.1-MIT license(s))
+def license_blocks(text, cp):
+    if cp is None:
+        return bool(re.search(r"masked by:.*license", text, re.I))
+    return bool(re.search(
+        r"^\s*-\s*" + re.escape(cp) + r"-[^\s:]*::[^\s(]*\s*\(masked by:.*license",
+        text, re.I | re.M))
+
+
+def classify(text, cp=None):
     for kind, is_ebuild, pat in RULES:
-        if pat.search(text):
+        if pat is None:
+            if license_blocks(text, cp):
+                return kind, is_ebuild
+        elif pat.search(text):
             return kind, is_ebuild
     return "未归类", True
 
@@ -67,8 +87,8 @@ def main(logdir):
     groups = {}
     for p in logs:
         text = p.read_text(errors="replace")
-        kind, is_ebuild = classify(text)
         atom = p.stem.replace("_", "/", 1)
+        kind, is_ebuild = classify(text, atom)
         groups.setdefault((is_ebuild, kind), []).append((atom, evidence(text, kind)))
 
     print(f"失败 {len(logs)} 个\n")

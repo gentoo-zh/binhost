@@ -27,6 +27,15 @@ except ImportError:  # 没有 portage 就没法正确比版本，宁可停下也
     sys.exit("需要 sys-apps/portage：版本比较用 portage.versions.vercmp")
 import time
 
+# 同目录的共用模块。镜像机上只装了这一个和几个脚本，所以它不依赖别的东西。
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from ebuilds import (                                       # noqa: E402
+    ATOM, BUILD_ECLASS, PREBUILT_ECLASS,
+    accepts_amd64, inherits, keywords_of, newest_ebuild,
+    read_mask, restricts_bindist, version_of, vercmp,
+)
+
+
 # 路径可以覆盖：这个脚本在仓库里和在镜像机上的布局不同，不该假设自己被放在哪。
 HERE = pathlib.Path(__file__).resolve().parent
 LIST = pathlib.Path(os.environ.get("LIST", HERE / "packages.txt"))
@@ -34,7 +43,6 @@ EXCLUDED = pathlib.Path(os.environ.get("EXCLUDED", HERE / "excluded.txt"))
 OUT = pathlib.Path(os.environ.get("OUT", HERE.parent / "site" / "packages.json"))
 INDEX = os.environ.get("INDEX", "")
 
-ATOM = re.compile(r"^[a-z0-9-]+/[A-Za-z0-9._+-]+$")
 CPV = re.compile(r"^CPV: (\S+)", re.M)
 
 
@@ -50,25 +58,6 @@ BUILD_ECLASS = {
 }
 # 出现这些 eclass 即为解包上游产物，无编译过程
 PREBUILT_ECLASS = {"unpacker", "rpm", "java-pkg-simple"}
-
-
-def accepts_amd64(keywords):
-    """KEYWORDS 是否涵盖 amd64。
-
-    通配符要算进去：`*` 是全部架构稳定，`~*` 是全部架构测试，两者都含 amd64；
-    `-*` 关闭全部。按出现顺序从左到右求值，后面的覆盖前面的。
-    """
-    ok = False
-    for k in keywords.split():
-        if k in ("*", "~*"):
-            ok = True
-        elif k == "-*":
-            ok = False
-        elif k.lstrip("~") == "amd64":
-            ok = not k.startswith("-")
-        elif k == "-amd64":
-            ok = False
-    return ok
 
 
 def why_not_listed(cp, text, masked):
@@ -97,41 +86,6 @@ def why_not_listed(cp, text, masked):
     if inherits & BUILD_ECLASS:
         return "candidate"
     return "nobuild"
-
-
-def read_mask(overlay):
-    """profiles/package.mask 里被屏蔽的包。只取包名，不管版本限制。"""
-    f = overlay / "profiles" / "package.mask"
-    if not f.exists():
-        return set()
-    out = set()
-    for raw in f.read_text(errors="ignore").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        m = re.search(r"[a-z0-9-]+/[A-Za-z0-9._+-]+", line.lstrip("<>=~!"))
-        if m:
-            out.add(re.sub(r"-[0-9][^/]*$", "", m.group(0)))
-    return out
-
-
-def newest_ebuild(pkgdir):
-    """目录里版本最高的非 live ebuild。
-
-    用 portage 自己的 vercmp，不按文件名排序：字符串序会把 1.10 排在 1.9
-    前面，读到的就是错的那个 ebuild，许可证和 RESTRICT 也就查错了。
-    """
-    ebuilds = [e for e in pkgdir.glob("*.ebuild") if "9999" not in e.name]
-    if not ebuilds:
-        return None
-    pn = pkgdir.name
-    best = ebuilds[0]
-    for e in ebuilds[1:]:
-        a = e.name[len(pn) + 1:-len(".ebuild")]
-        b = best.name[len(pn) + 1:-len(".ebuild")]
-        if (vercmp(a, b) or 0) > 0:
-            best = e
-    return best
 
 
 def read_excluded():

@@ -14,66 +14,15 @@ import pathlib
 import re
 import sys
 
-try:
-    from portage.versions import vercmp
-except ImportError:
-    sys.exit("需要 sys-apps/portage：版本比较用 portage.versions.vercmp")
-
-ATOM = re.compile(r"^[a-z0-9-]+/[A-Za-z0-9._+-]+$")
-
-
-def read_mask(overlay):
-    """profiles/package.mask 里被屏蔽的 category/package。"""
-    f = overlay / "profiles" / "package.mask"
-    if not f.exists():
-        return set()
-    out = set()
-    for raw in f.read_text(errors="ignore").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        m = re.search(r"[a-z0-9-]+/[A-Za-z0-9._+-]+", line.lstrip("<>=~!"))
-        if m:
-            out.add(re.sub(r"-[0-9][^/]*$", "", m.group(0)))
-    return out
+# 同目录的共用模块。镜像机上只装了这一个和几个脚本，所以它不依赖别的东西。
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from ebuilds import (                                       # noqa: E402
+    ATOM, BUILD_ECLASS, PREBUILT_ECLASS,
+    accepts_amd64, inherits, keywords_of, newest_ebuild,
+    read_mask, restricts_bindist, version_of, vercmp,
+)
 
 
-def newest_ebuild(pkgdir):
-    """目录里版本最高的非 live ebuild 的版本号。"""
-    ebuilds = [e for e in pkgdir.glob("*.ebuild") if "9999" not in e.name]
-    if not ebuilds:
-        return None
-    pn = pkgdir.name
-    best = ebuilds[0]
-    for e in ebuilds[1:]:
-        a = e.name[len(pn) + 1:-len(".ebuild")]
-        b = best.name[len(pn) + 1:-len(".ebuild")]
-        if (vercmp(a, b) or 0) > 0:
-            best = e
-    return best.name[len(pn) + 1:-len(".ebuild")]
-
-
-# 有真正编译过程的 eclass。判定与 gen-packages.py 一致。
-BUILD_ECLASS = {
-    "cmake", "meson", "go-module", "cargo", "autotools", "gnome2",
-    "distutils-r1", "dotnet-pkg", "qmake-utils", "waf-utils", "scons-utils",
-}
-PREBUILT_ECLASS = {"unpacker", "rpm", "java-pkg-simple"}
-
-
-def accepts_amd64(keywords):
-    """KEYWORDS 是否涵盖 amd64。`*` 与 `~*` 算涵盖，`-*` 关闭全部。"""
-    ok = False
-    for k in keywords.split():
-        if k in ("*", "~*"):
-            ok = True
-        elif k == "-*":
-            ok = False
-        elif k.lstrip("~") == "amd64":
-            ok = not k.startswith("-")
-        elif k == "-amd64":
-            ok = False
-    return ok
 
 
 def newcomers(overlay, wanted, masked):
@@ -92,20 +41,20 @@ def newcomers(overlay, wanted, masked):
             continue
         if cp.startswith(("acct-", "virtual/", "app-alternatives/")) or cp.endswith("-bin"):
             continue
-        ver = newest_ebuild(pkgdir)
-        if ver is None:
+        eb = newest_ebuild(pkgdir)
+        if eb is None:
             continue
-        text = (pkgdir / f"{pkgdir.name}-{ver}.ebuild").read_text(errors="ignore")
-        kw = re.findall(r'^\s*KEYWORDS="([^"]*)"', text, re.M)
-        if kw and not accepts_amd64(kw[-1]):
+        ver = version_of(eb, pkgdir.name)
+        text = eb.read_text(errors="ignore")
+        kw = keywords_of(text)
+        if kw is not None and not accepts_amd64(kw):
             continue
-        restrict = re.findall(r'^\s*RESTRICT="([^"]*)"', text, re.M)
-        if restrict and "bindist" in restrict[-1]:
+        if restricts_bindist(text):
             continue
-        inherits = set(" ".join(re.findall(r"^inherit (.+)$", text, re.M)).split())
-        if inherits & PREBUILT_ECLASS:
+        eclasses = inherits(text)
+        if eclasses & PREBUILT_ECLASS:
             continue
-        if inherits & BUILD_ECLASS:
+        if eclasses & BUILD_ECLASS:
             out.append((cp, ver))
     return out
 
@@ -153,9 +102,10 @@ def main(overlay, index, listfile):
         if cp in masked:
             blocked.append(cp)
             continue
-        cur = newest_ebuild(pkgdir)
-        if cur is None:
+        eb = newest_ebuild(pkgdir)
+        if eb is None:
             continue
+        cur = version_of(eb, pkgdir.name)
         got = have.get(cp)
         if got is None:
             absent.append((cp, cur))

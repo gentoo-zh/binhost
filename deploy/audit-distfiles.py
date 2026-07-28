@@ -20,20 +20,40 @@ import time
 
 
 def scan(overlay):
-    """文件名 -> [(包, 该包是否 RESTRICT=mirror)]"""
+    """文件名 -> [(包, 该文件所属的 ebuild 是否 RESTRICT=mirror)]
+
+    按文件归属，不按整个包目录取或。一个包的两个版本可以有不同的 RESTRICT：
+    dev-java/oraclejdk-bin 的 21.0.1 是 bindist mirror，8.391 是 fetch。按目录
+    取或的话，两个版本的源码文件会互相污染，一个被当成不可镜像，另一个被当成
+    取不到，而两者都不对。
+
+    Manifest 不说哪一行 DIST 属于哪个 ebuild，所以按版本号匹配文件名——overlay
+    里的源码文件绝大多数带版本号。匹配不上时退回按目录取或：宁可沿用旧行为，
+    也不要凭猜测放行一个上游不许镜像的文件。
+    """
     users = {}
     for man in overlay.glob("*/*/Manifest"):
         d = man.parent
         ebuilds = list(d.glob("*.ebuild"))
         if not ebuilds:
             continue
-        restricted = any(
-            re.search(r"RESTRICT=.*\bmirror\b", e.read_text(errors="replace"))
-            for e in ebuilds)
+        pn = d.name
+        by_version = {}
+        for e in ebuilds:
+            ver = e.name[len(pn) + 1:-len(".ebuild")]
+            by_version[ver] = bool(
+                re.search(r"RESTRICT=.*\bmirror\b", e.read_text(errors="replace")))
+        fallback = any(by_version.values())
+
         for line in man.read_text(errors="replace").splitlines():
-            if line.startswith("DIST "):
-                users.setdefault(line.split()[1], []).append(
-                    (str(d.relative_to(overlay)), restricted))
+            if not line.startswith("DIST "):
+                continue
+            name = line.split()[1]
+            # 最长的版本号优先：1.2 与 1.2.3 并存时，别把 1.2.3 的文件算到 1.2 上
+            hit = [v for v in by_version if v in name]
+            restricted = by_version[max(hit, key=len)] if hit else fallback
+            users.setdefault(name, []).append(
+                (str(d.relative_to(overlay)), restricted))
     return users
 
 
