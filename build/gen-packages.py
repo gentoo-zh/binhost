@@ -27,7 +27,7 @@ except ImportError:  # 没有 portage 就没法正确比版本，宁可停下也
     sys.exit("需要 sys-apps/portage：版本比较用 portage.versions.vercmp")
 import time
 
-# 同目录的共用模块。镜像机上只装了这一个和几个脚本，所以它不依赖别的东西。
+# 同目录的共用模块。镜像机上只装了它和几个脚本，所以它不引入额外依赖。
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ebuilds import (                                       # noqa: E402
     ATOM, BUILD_ECLASS, PREBUILT_ECLASS,

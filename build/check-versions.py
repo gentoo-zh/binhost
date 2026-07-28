@@ -14,7 +14,7 @@ import pathlib
 import re
 import sys
 
-# 同目录的共用模块。镜像机上只装了这一个和几个脚本，所以它不依赖别的东西。
+# 同目录的共用模块。镜像机上只装了它和几个脚本，所以它不引入额外依赖。
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ebuilds import (                                       # noqa: E402
     ATOM, BUILD_ECLASS, PREBUILT_ECLASS,
