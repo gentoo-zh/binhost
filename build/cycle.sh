@@ -17,21 +17,8 @@ LOGDIR="${LOGDIR:-/var/lib/binhost/logs/x86-64}"
 STAGE="${STAGE:-/var/lib/binhost/stage/x86-64}"
 ALERT_CONF="${ALERT_CONF:-/etc/binhost/alert.conf}"
 
-alert() {
-    # 文件在却读不到，和没配过是两回事：前者说明属主与跑它的用户对不上，
-    # 告警会一直发不出去而没有任何迹象。这条要出现在构建日志里。
-    if [[ -e ${ALERT_CONF} && ! -r ${ALERT_CONF} ]]; then
-        echo "!! ${ALERT_CONF} 读不到（当前用户 $(id -un)），告警发不出去" >&2
-        return 0
-    fi
-    [[ -r ${ALERT_CONF} ]] || return 0
-    # shellcheck source=/dev/null
-    . "${ALERT_CONF}"
-    curl -fsS --max-time 20 -o /dev/null \
-        "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
-        --data-urlencode "chat_id=${TELEGRAM_CHAT}" \
-        --data-urlencode "text=$1" || true
-}
+# shellcheck source=build/alert.sh
+. "$(dirname "$0")/alert.sh"
 
 # set -e 之下任何一步失败都直接退出。没有这个 trap，git fetch 半夜取不到就是
 # 悄无声息地结束，第二天才发现索引还停在前一天。下面几处 if ! 有各自更具体的

@@ -25,7 +25,7 @@ say() { printf '\n=== %s ===\n' "$1"; }
 say "上传"
 tmp=$(ssh "${REMOTE}" 'mktemp -d')
 # shellcheck disable=SC2029  # tmp 要在本地展开
-rsync -a deploy/ build/gen-packages.py build/packages.txt build/excluded.txt build/status.sh \
+rsync -a deploy/ build/gen-packages.py build/packages.txt build/excluded.txt build/status.sh build/alert.sh \
     nginx/ site/ "${REMOTE}:${tmp}/"
 
 # shellcheck disable=SC2029  # 同上

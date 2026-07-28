@@ -15,21 +15,8 @@ FAILURES="${FAILURES:-/var/log/emirrordist/failures.log}"
 
 rc=0
 
-alert() {
-    # 文件在却读不到，和没配过是两回事：前者说明属主与跑它的用户对不上，
-    # 告警会一直发不出去而没有任何迹象。
-    if [[ -e ${ALERT_CONF} && ! -r ${ALERT_CONF} ]]; then
-        echo "!! ${ALERT_CONF} 读不到（当前用户 $(id -un)），告警发不出去" >&2
-        return 0
-    fi
-    [[ -r ${ALERT_CONF} ]] || return 0
-    # shellcheck source=/dev/null
-    . "${ALERT_CONF}"
-    curl -fsS --max-time 20 -o /dev/null \
-        "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
-        --data-urlencode "chat_id=${TELEGRAM_CHAT}" \
-        --data-urlencode "text=$1" || true
-}
+# shellcheck source=build/alert.sh
+. "${LIB}/alert.sh"
 
 step() {
     local name=$1; shift
