@@ -1,12 +1,14 @@
-// 校验每个页面的 i18n 表：能否解析，以及是否覆盖了页面用到的全部 key。
-// 表里一个引号写错，整个页面的语言切换就没了，而页面本身看起来正常。
+// Validate each page's i18n table: that it parses, and that it covers every key
+// the page uses. One misplaced quote in the table takes language switching off
+// the page entirely while the page itself still looks fine.
 const fs = require('fs');
 const path = require('path');
 
 const dir = process.argv[2] || 'site';
 
-// 引擎把共用串和页面表合起来用，检查也得按同样的方式合，
-// 否则每页都会被报成缺导航和页脚的翻译。
+// The engine merges the shared strings with the page table, so the check has to
+// merge them the same way or every page reads as missing the nav and footer
+// translations.
 const COMMON = (() => {
   const f = path.join(dir, 'assets', 'strings.js');
   if (!fs.existsSync(f)) return {};
@@ -14,20 +16,25 @@ const COMMON = (() => {
   new Function('window', fs.readFileSync(f, 'utf8'))(w);
   return w.MIRROR_I18N_COMMON || {};
 })();
-// 页面用哪几种语言是固定的。少一种就是表被删了或写坏了，不能当成「没有表」放过。
+// The set of languages is fixed. A missing one means the table was deleted or
+// broken, which must not pass as having no table at all.
 const LANGS = ['zh-tw', 'en'];
 let bad = 0;
 
 for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
   const s = fs.readFileSync(path.join(dir, f), 'utf8');
-  // 下划线要收进来：why_prebuilt 这类 key 原来整个漏在字符类之外。
+  // Underscores have to be included: keys like why_prebuilt used to fall
+  // outside the character class entirely.
   const keysInPage = [...s.matchAll(/data-i18n(?:-html)?="([A-Za-z0-9_]+)"/g)];
-  // 脚本里 t("...") 拿的 key 页面上没有 data-i18n，静态扫属性看不见。
+  // Keys the script takes through t("...") have no data-i18n on the page, so
+  // scanning attributes alone does not see them.
   const keysInScript = [...s.matchAll(/\bt\("([A-Za-z0-9_]+)"\)/g)];
-    // 页面里的 t() 只在 #strings 里找 key。图例那种放在正文里的 data-i18n
-    // 它看不到——两处用途不同：一处给 applyLang 换文案，一处给动态生成的行
-    // 取字符串。把后者当成重复删掉，会让上百行显示成 key 本身，三种语言都是，
-    // 扫页面很容易漏。
+    // t() on the page looks for keys only inside #strings. A data-i18n placed
+    // in the body, as in the legend, is invisible to it -- the two serve
+    // different purposes: one lets applyLang swap the text, the other supplies
+    // strings to dynamically generated rows. Deleting the second as a duplicate
+    // makes hundreds of rows show the key itself, in all three languages, which
+    // is easy to miss when scanning the page.
     const strings = s.match(/<div id="strings"[\s\S]*?<\/div>/);
     if (strings) {
       const inStrings = new Set(
@@ -38,7 +45,8 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
           bad++;
         }
       }
-      // t("why_" + r.why) 这种拼出来的：页面上出现过的同前缀 key 都得在里面
+      // For keys built up as t("why_" + r.why): every key with that prefix
+      // appearing on the page has to be in there
       for (const [, pre] of s.matchAll(/\bt\("([A-Za-z0-9_]+_)"\s*\+/g)) {
         const all = new Set([...s.matchAll(
           new RegExp('data-i18n="(' + pre + '[A-Za-z0-9_]+)"', 'g'))].map(x => x[1]));
@@ -52,8 +60,8 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
     }
   const m = s.match(/window\.MIRROR_I18N = (\{[\s\S]*?\n\};)/);
   if (!m) {
-    // 页面有 data-i18n 却没有表，说明整段被删掉了。原来这里直接 continue，
-    // CI 照样绿。
+    // data-i18n on the page with no table means the whole block was deleted.
+    // This used to continue, and CI stayed green.
     if (keysInPage.length) {
       console.error(`!!! ${f}: 有 ${keysInPage.length} 个 data-i18n 但找不到 i18n 表`);
       bad++;
@@ -70,16 +78,17 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
     continue;
   }
 
-  // 页面的表覆盖共用串，和引擎一致
+  // The page table overrides the shared strings, as the engine does
   for (const lang of Object.keys(COMMON)) {
     T[lang] = Object.assign({}, COMMON[lang], T[lang] || {});
   }
 
   const keys = new Set([...keysInPage, ...keysInScript].map(x => x[1]));
 
-  // t("why_" + r.why) 这种拼出来的 key，静态扫描给不出完整清单。表里出现了
+  // Keys built up as t("why_" + r.why) cannot be listed by static scanning. Once
 
-  // 一个前缀，就要求所有语言都齐——少一个就是切换语言时露出原文。
+  // a prefix appears in the table, every language must carry it; one missing
+  // shows the untranslated text when the language is switched.
 
   const prefixes = new Set();
 

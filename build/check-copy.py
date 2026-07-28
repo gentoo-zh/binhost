@@ -27,15 +27,15 @@ PHRASES = [
 ]
 
 WORDS = [
-    # 互联网黑话
+    # startup jargon
     "赋能", "抓手", "闭环", "底层逻辑", "认知升级", "长期主义", "颗粒度",
     "护城河", "组合拳", "打法", "破圈", "沉淀", "生态位",
-    # 公文腔
+    # bureaucratic register
     "不断深化", "持续推动", "有力支撑", "彰显", "诠释", "擘画",
     "注入新的活力", "迈上新台阶",
-    # 繁体那份另加
+    # additionally for the Traditional text
     "至关重要", "至關重要", "深入探讨", "深入探討", "版图", "版圖",
-    # 口语
+    # colloquial
     "的话", "的話", "就行", "拉下来", "拉下來", "装上", "裝上", "搞定",
     "直接跑", "直接给", "直接給", "白跑", "一下就",
     "写不了", "寫不了", "不能省", "读不了", "讀不了", "认不出", "認不出",
@@ -43,7 +43,8 @@ WORDS = [
     "省得", "免得", "干脆", "乾脆", "好几", "好幾", "一大堆", "没啥", "沒啥",
 ]
 
-# 「进行 / 通过 / 作为」这类空转词在技术文里有正当用法，只在明显冗余时报
+# Filler verbs have legitimate uses in technical writing, so report only where
+# they are plainly redundant
 FILLER = [
     (r"进行[了]?(构建|同步|下载|安装|验证|检查)", "「进行」多余"),
     (r"通过[^，。]{0,8}的方式", "「通过…的方式」空转"),
@@ -52,7 +53,7 @@ FILLER = [
 
 
 def visible_text(html):
-    """页面上会被读到的文字：正文 + i18n 表里的串。
+    """Text a reader sees: the body plus the strings in the i18n tables.
 
     排除三处：<title> 里的分隔符是排版惯例；设计语言页的规则表本身要列出
     这些禁止项；代码块里是命令与配置，不是文案。
@@ -60,7 +61,8 @@ def visible_text(html):
     body = re.sub(r"<(script|style)\b[\s\S]*?</\1>", "", html)
     body = re.sub(r"<title>[\s\S]*?</title>", "", body)
     body = re.sub(r'<table class="spec"[\s\S]*?</table>', "", body)
-    # 设计语言页把违规写法列成反例展示，rule-dont 里的就是那些例子本身
+    # The design page lists disallowed phrasing as counter-examples; what sits
+    # in rule-dont is those examples themselves
     body = re.sub(r'<[^>]*class="rule-dont"[^>]*>[\s\S]*?</[a-z]+>', "", body)
     body = re.sub(r"<pre[\s\S]*?</pre>", "", body)
     body = re.sub(r"<[^>]+>", " ", body)
@@ -69,8 +71,9 @@ def visible_text(html):
     return body + "\n" + tables
 
 
-# 注释里只查这一组。技术注释免不了出现「不断」「通过」这类词的正当用法，
-# 拿全套规则去套只会把人训练成忽略告警。
+# Only this set is checked in comments. Technical comments legitimately use
+# words the full rules would flag, and applying all of them only trains people
+# to ignore the warnings.
 COLLOQUIAL = [
     "的话", "的話", "就行", "拉下来", "拉下來", "装上", "裝上", "搞定",
     "直接跑", "直接给", "直接給", "白跑", "白做", "一下就", "就这么", "就這麼",
@@ -93,7 +96,8 @@ COMMENT = {
 
 
 def check_comments(root):
-    """代码注释里的口语词。文件名后缀决定注释怎么起头。"""
+    """Colloquial words in code comments. The suffix decides how a comment
+    starts."""
     bad = 0
     for f in sorted(pathlib.Path(root).rglob("*")):
         if not f.is_file() or ".git" in f.parts:
@@ -101,7 +105,7 @@ def check_comments(root):
         pat = COMMENT.get(f.suffix)
         if pat is None:
             continue
-        # 这个脚本自己列着这些词，跳过
+        # This script lists the words itself, so skip it
         if f.name == "check-copy.py":
             continue
         try:
@@ -111,7 +115,8 @@ def check_comments(root):
         hits = []
         for i, line in enumerate(lines, 1):
             m = re.match(pat, line)
-            # 注释之外，输出给人看的中文串同样要查：告警和日志是用户读到的文字。
+            # Beyond comments, Chinese strings printed for people are checked
+            # too: alerts and logs are text a user reads.
             texts = [m.group(1)] if m else re.findall(r'"([^"]*[\u4e00-\u9fff][^"]*)"', line)
             for chunk in texts:
                 for w in COLLOQUIAL:
@@ -142,12 +147,12 @@ def main(dirname):
             for m in re.finditer(pat, text):
                 hits.append(f"{why}: {m.group(0)[:20]}")
 
-        # 破折号每千字不超过 1 次
+        # At most one em dash per thousand characters
         chars = len(re.sub(r"\s", "", text))
         dashes = text.count("——")
         if chars and dashes > max(1, chars // 1000):
             hits.append(f"破折号 {dashes} 处，{chars} 字，超过每千字 1 次")
-        # 只查中文串。英文里 em dash 加空格是正常写法。
+        # Chinese text only. In English an em dash with spaces is normal.
         for line in text.split("\n"):
             if re.search(r"[\u4e00-\u9fff]", line) and re.search(r"\S — \S", line):
                 hits.append("中文里出现 em dash 加空格，改用全角——")

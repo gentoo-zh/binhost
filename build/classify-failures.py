@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""把构建失败分成「ebuild 要修」和「构建环境要调」两类。
+"""Sort build failures into ones an ebuild must fix and ones the build
+environment must.
 
 判定顺序是有意的，日志里常常几种迹象同时出现：
   - 许可证被挡的包，日志里也写着 "have been masked"
@@ -12,15 +13,18 @@ import pathlib
 import re
 import sys
 
-# (类别, 是不是 ebuild 的问题, 正则)
+# (category, is it the ebuild's problem, pattern)
 #
-# 顺序有讲究：先看确凿的，再看可能指向别人的。
+# The order matters: what is certain first, what may point at someone else
+# after.
 #
-# 「ERROR: … failed (xxx phase)」说的一定是本包，而「masked by: … license」
-# emerge 会为依赖图里任何被许可证挡住的包打印，不限于失败的那一个。许可证
-# 那条原先排在最前又比对整份日志，于是一个依赖被许可证挡住，就能让真正的
-# 构建失败被归成「许可证不允许再分发」——而这一类会直接印成可以写进
-# excluded.txt 的成品行，照抄就是用错误理由永久排除一个包。
+# `ERROR: ... failed (xxx phase)` always concerns this package, while
+# `masked by: ... license` is printed by emerge for any package in the
+# dependency graph a licence blocks, not only the one that failed. The licence
+# rule used to come first and match the whole log, so one blocked dependency
+# was enough to file a real build failure under a licence problem -- and that
+# category is printed as a line ready to paste into excluded.txt, which would
+# exclude a package permanently for the wrong reason.
 RULES = [
     ("构建失败", True,
      re.compile(r"^\s*\*\s*ERROR:.*failed \(\w+ phase\)", re.M)),
@@ -29,15 +33,16 @@ RULES = [
     ("许可证不允许再分发", False, None),   # 见 classify()，要指向本包才算
     ("被掩码或缺关键字", True,
      re.compile(r"have been masked|missing keyword", re.I)),
-    # 下面两类是我们这边的环境，不是 ebuild 写错
+    # The next two are our environment, not a mistake in the ebuild
     ("依赖需要调整 USE", False,
      re.compile(r"The following USE changes are necessary", re.I)),
     ("依赖冲突", False,
      re.compile(r"slot conflict|Multiple package instances|REQUIRED_USE", re.I)),
 ]
 
-# 需要调 USE 时，portage 把要求写成「原子 + 空格 + USE 名」，
-# 前面几行是 "# required by ..."。取这一行当证据，比截 ERROR 行有用。
+# For a USE change portage writes the requirement as atom, space, USE name,
+# with "# required by ..." on the lines above. That line makes better evidence
+# than the ERROR line.
 USE_REQ = re.compile(r"^(>=?[a-z0-9-]+/\S+)\s+([a-z0-9_ -]+)$", re.M)
 
 
@@ -50,14 +55,15 @@ def evidence(text, kind):
     if kind == "构建失败":
         m = re.search(r"^\s*\*\s*(ERROR:.*failed \(\w+ phase\))", text, re.M)
         out = [m.group(1)] if m else []
-        # configure/编译的真正原因通常在 ERROR 之前
+        # The real reason for a configure or compile failure is usually above
+        # the ERROR line
         why = re.findall(r"^.*(?:configure: error|fatal error|No such file"
                          r"|command not found|is required).*$", text, re.M)
         return out + [w.strip()[:110] for w in why[:2]]
     return []
 
 
-# 许可证那条要求被挡的原子就是本包，形如：
+# The licence rule requires the blocked atom to be this package, as in:
 #   - app-misc/crush-1.0::gentoo-zh (masked by: FSL-1.1-MIT license(s))
 def license_blocks(text, cp):
     if cp is None:
@@ -93,13 +99,14 @@ def main(logdir):
 
     print(f"失败 {len(logs)} 个\n")
 
-    # 结论稳定的那几类每轮都会以同样的方式失败。把可以直接贴进 excluded.txt
-    # 的行打出来，避免每次翻日志重新判断一遍。
+    # The categories whose conclusion is stable fail the same way every round.
+    # Print the line ready to paste into excluded.txt so nobody has to read the
+    # logs and decide again.
     permanent = {
         "许可证不允许再分发": "许可证不允许再分发",
         "被掩码或缺关键字": "在树里被掩码",
     }
-    # ebuild 的问题排前面：那些才需要有人去改
+    # Ebuild problems first: those are the ones somebody has to act on
     for is_ebuild in (True, False):
         for (e, kind), items in sorted(groups.items()):
             if e != is_ebuild:
