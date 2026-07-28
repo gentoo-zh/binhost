@@ -64,8 +64,12 @@ def main(site):
         classes.update(re.findall(r"\.([a-zA-Z][\w-]*)", sel))
     for c in sorted(classes):
         # 边界不能用 \b：连字号是非单字字符，于是 .tag 会被 class="tag-list"
-        # 当成用到了。类名之间用空格分隔，所以边界是空格或引号本身。
-        used = (re.search(r'class="[^"]*(?:^|\s)' + re.escape(c) + r'(?:\s|")', src)
+        # 当成用到了。类名之间用空格分隔，所以边界是引号或空格。
+        #
+        # 开头那个位置要写成 class=" 紧接着，不能写 (?:^|\s)：^ 在模式中间而且
+        # 没有 re.M，那一支永远不成立，于是 class="foo bar" 里的 foo 匹配不到。
+        used = (re.search(r'class="' + re.escape(c) + r'(?:\s|")', src)
+                or re.search(r'class="[^"]*\s' + re.escape(c) + r'(?:\s|")', src)
                 or re.search(r'[\'"]' + re.escape(c) + r'[\'"]', src)
                 or re.search(r'classList\.[a-z]+\([^)]*[\'"]' + re.escape(c) + r'[\'"]', src))
         if not used:
@@ -91,9 +95,15 @@ def main(site):
     # 上面那段注解在防的事。
     if auto is None:
         bad.append('找不到跟随系统那份深色调色盘（:root:not([data-theme="light"]) {）')
+    elif not auto:
+        bad.append('跟随系统那份深色调色盘是空的')
     if manual is None:
         bad.append('找不到手动选择那份深色调色盘（[data-theme="dark"] {）')
-    if auto and manual:
+    elif not manual:
+        bad.append('手动选择那份深色调色盘是空的')
+    # is not None，不是 truthy：空 dict 两者都不是 None，上面报不出来，这里
+    # 又因为 falsy 而整段跳过——变量全没了照样绿。
+    if auto is not None and manual is not None:
         for k in sorted(set(auto) | set(manual)):
             a, m = auto.get(k), manual.get(k)
             if a is None:

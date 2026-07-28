@@ -19,14 +19,34 @@ const ORDER = ["strings.js", "util.js", "i18n.js", "source-switch.js"];
 
 const store = {};
 
+// A NodeList, not an Array. The browser's has forEach and length and nothing
+// else -- no map, no filter, no reduce. Handing back an Array lets code that
+// would die in a browser run clean here.
+function nodeList(items = []) {
+  const list = Object.create(null);
+  list.length = items.length;
+  items.forEach((it, i) => { list[i] = it; });
+  list.forEach = Array.prototype.forEach.bind(items);
+  list.item = (i) => (i < items.length ? items[i] : null);
+  list[Symbol.iterator] = items[Symbol.iterator].bind(items);
+  return list;
+}
+
+
 function element() {
+  // lastChild 跟着 innerHTML 走，和浏览器一样：新建的元素没有子节点，赋过
+  // innerHTML 之后才有。原来无条件给一个对象，于是「忘记先塞子元素就读
+  // lastChild」这种在浏览器上必崩的写法在这里静静通过。
+  let html = "";
   const el = {
     style: {},
     dataset: {},
     hidden: false,
     textContent: "",
-    innerHTML: "",
-    lastChild: { textContent: "" },
+    get innerHTML() { return html; },
+    set innerHTML(v) { html = String(v); },
+    get lastChild() { return html ? { textContent: "" } : null; },
+
     classList: {
       add() {}, remove() {}, toggle() {}, contains: () => false,
     },
@@ -42,7 +62,7 @@ function element() {
     closest: () => null,
     cloneNode: () => element(),
     querySelector: () => null,
-    querySelectorAll: () => [],
+    querySelectorAll: () => nodeList(),
     getBoundingClientRect: () => ({ width: 0, height: 0, top: 0, right: 0 }),
   };
   return el;
@@ -65,7 +85,7 @@ global.document = {
   body: element(),
   getElementById: () => null,
   querySelector: () => null,
-  querySelectorAll: () => [],
+  querySelectorAll: () => nodeList(),
   createElement: element,
   addEventListener() {},
   dispatchEvent() {},
@@ -79,7 +99,10 @@ for (const name of ORDER) {
     process.exit(1);
   }
   try {
-    new Function(fs.readFileSync(file, "utf8"))();
+    // indirect eval，不是 new Function：后者把顶层的 function 声明关在自己的
+    // 作用域里，而浏览器里 util.js 的 esc/human 是全局的。用 new Function 时
+    // 一个引用了 esc 的脚本会在这里失败，而在浏览器上完全正常。
+    (0, eval)(fs.readFileSync(file, "utf8"));
   } catch (e) {
     console.error(`!!! ${file} 载入时失败: ${e.message}`);
     process.exit(1);
