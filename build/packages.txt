@@ -176,6 +176,5 @@ x11-libs/glbinding
 x11-misc/extramaus
 x11-misc/flatpak-xdg-utils
 x11-misc/picom-jonaburg
-x11-misc/snapd-xdg-open
 x11-terms/blackbox-terminal
 x11-wm/hypr
