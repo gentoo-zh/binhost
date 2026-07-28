@@ -81,7 +81,7 @@ retired=$(printf '%s\n' "${paths[@]}" | ssh "${REMOTE}" "
     find . -name '*.gpkg.tar' -printf '%P\n' |
         grep -vxF -f /tmp/binhost-keep-${TAG}.txt |
         tee /tmp/binhost-retire-${TAG}.txt |
-        xargs -r rm -f
+        tr '\\n' '\\0' | xargs -0r rm -f
     find . -mindepth 1 -type d -empty -delete
     wc -l < /tmp/binhost-retire-${TAG}.txt
     rm -f /tmp/binhost-keep-${TAG}.txt /tmp/binhost-retire-${TAG}.txt")

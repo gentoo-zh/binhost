@@ -46,8 +46,12 @@ LOCK="${LOCK:-/var/lib/binhost/stage/build.lock}"
 mkdir -p "$(dirname "${LOCK}")"
 exec 9>"${LOCK}"
 if ! flock -n 9; then
+    # 撞锁要出声。改动前这是 build-container.sh 的 die，一路非零传到 alert；
+    # 静默 exit 0 会让 systemd 看到成功，而 binhost-build.service 的注解写的
+    # 怕的正是「下一次定时触发被锁挡在门外，而没有任何人知道」。
     echo "另一轮构建正在进行（${LOCK}），这一轮跳过" >&2
-    exit 0
+    alert "binhost 这一轮被上一轮挡住（$(hostname)）：上一轮跑了超过一个调度间隔"
+    exit 1
 fi
 
 # Build against the overlay as it is now, so take the newest first.
