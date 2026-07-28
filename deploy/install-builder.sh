@@ -24,6 +24,24 @@ cd "$(dirname "$0")/.."
 
 say() { printf '\n=== %s ===\n' "$1"; }
 
+# Deploying into a running build is not safe. bash reads a script by byte offset
+# as it executes, and the round also copies build/ into its container at the
+# start, so a mid-round replacement leaves the two disagreeing about which
+# version is running. One round published a package that the new filter excludes
+# because of exactly this.
+#
+# build-container.sh takes this lock for the length of a round. No lock file at
+# all means the machine has never built, which is not a reason to refuse.
+say "确认没有构建在跑"
+if ${REMOTE} "[ -e '${ROOT}/stage/build.lock' ] && ! flock -n '${ROOT}/stage/build.lock' -c true"; then
+    echo "有一轮构建正在进行（${ROOT}/stage/build.lock）。" >&2
+    echo "等它结束再部署；确实要现在覆盖就传 FORCE=1。" >&2
+    [ "${FORCE:-}" = 1 ] || exit 1
+    echo "FORCE=1，照样部署。" >&2
+else
+    echo "  没有"
+fi
+
 say "上传构建脚本"
 tmp=$(${REMOTE} 'mktemp -d')
 rsync -a -e "${REMOTE% *}" build/ "${REMOTE##* }:${tmp}/"

@@ -100,7 +100,9 @@ if [[ ${sent} -ge 1 ]]; then
 else
     echo "  ✗ 超长消息一条都没发"; fail=$((fail + 1))
 fi
-len=$(awk '/^text=/{print length($0)}' "${tmp}/curl.log" | head -1)
+# awk stops itself rather than being cut off by head: under pipefail a head that
+# exits first leaves awk killed by SIGPIPE, and the assignment fails the run.
+len=$(awk '/^text=/{print length($0); exit}' "${tmp}/curl.log")
 if [[ -n ${len} && ${len} -le 3700 ]]; then
     echo "  ✓ 发出去的是截断过的（${len} 字）"; pass=$((pass + 1))
 else
