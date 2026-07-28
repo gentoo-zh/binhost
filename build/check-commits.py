@@ -18,7 +18,8 @@ import sys
 import unicodedata
 
 
-SUBJECT = re.compile(r"^([a-z0-9][a-z0-9._-]*): (\S.*)$")
+# 首字符也允许下划线：仓库里有 site/_app.html，它的 scope 就是 _app。
+SUBJECT = re.compile(r"^([a-z0-9_][a-z0-9._-]*): (\S.*)$")
 # GLEP 66, the same limit the overlay holds its own subjects to.
 SUBJECT_LEN = 69
 BODY_WIDTH = 78
