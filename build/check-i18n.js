@@ -24,6 +24,32 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
   const keysInPage = [...s.matchAll(/data-i18n(?:-html)?="([A-Za-z0-9_]+)"/g)];
   // 脚本里 t("...") 拿的 key 页面上没有 data-i18n，静态扫属性看不见。
   const keysInScript = [...s.matchAll(/\bt\("([A-Za-z0-9_]+)"\)/g)];
+    // 页面里的 t() 只在 #strings 里找 key。图例那种放在正文里的 data-i18n
+    // 它看不到——两处用途不同：一处给 applyLang 换文案，一处给动态生成的行
+    // 取字符串。把后者当成重复删掉，会让上百行显示成 key 本身，三种语言都是，
+    // 扫页面很容易漏。
+    const strings = s.match(/<div id="strings"[\s\S]*?<\/div>/);
+    if (strings) {
+      const inStrings = new Set(
+        [...strings[0].matchAll(/data-i18n="([A-Za-z0-9_]+)"/g)].map(x => x[1]));
+      for (const [, key] of keysInScript) {
+        if (!inStrings.has(key)) {
+          console.error(`!!! ${f}: t("${key}") 取不到，#strings 里没有这个 key`);
+          bad++;
+        }
+      }
+      // t("why_" + r.why) 这种拼出来的：页面上出现过的同前缀 key 都得在里面
+      for (const [, pre] of s.matchAll(/\bt\("([A-Za-z0-9_]+_)"\s*\+/g)) {
+        const all = new Set([...s.matchAll(
+          new RegExp('data-i18n="(' + pre + '[A-Za-z0-9_]+)"', 'g'))].map(x => x[1]));
+        for (const k of all) {
+          if (!inStrings.has(k)) {
+            console.error(`!!! ${f}: ${k} 只在正文里，t("${pre}...") 取不到它`);
+            bad++;
+          }
+        }
+      }
+    }
   const m = s.match(/window\.MIRROR_I18N = (\{[\s\S]*?\n\};)/);
   if (!m) {
     // 页面有 data-i18n 却没有表，说明整段被删掉了。原来这里直接 continue，
