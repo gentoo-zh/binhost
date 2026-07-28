@@ -86,7 +86,11 @@ sudo rc-service nftables save
 echo '--- nginx'
 # 套件与 distfiles 的根。rsyncd 的模块指着它且 use chroot=yes，nginx 的三个
 # location 也以它为 root，两者都在下面被启动，而目录到第一次同步才会出现。
-sudo install -dm755 /srv/pub /srv/pub/binpkgs /srv/pub/distfiles
+# binpkgs 与 distfiles 归发布用户：publish.sh 用普通用户 ssh 过来，直接
+# install -d 建架构子目录、rsync 写包，都不经过 sudo。属主是 root 时
+# 新机器第一次发布即 Permission denied。/srv/pub 自身留给 root。
+sudo install -dm755 /srv/pub
+sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/pub/binpkgs /srv/pub/distfiles
 sudo install -dm755 /etc/nginx/conf.d
 sudo install -m644 nginx.conf         /etc/nginx/nginx.conf
 sudo install -m644 mirror-common.inc  /etc/nginx/conf.d/mirror-common.inc
@@ -97,14 +101,25 @@ sudo install -m644 mirror-common.inc  /etc/nginx/conf.d/mirror-common.inc
 # 这是个先有鸡还是先有蛋：certbot 的 HTTP-01 需要 nginx 先跑起来提供 acme 的
 # location。所以证书不在就跳过 HTTPS 那份配置，先把 HTTP 立起来，签发之后再
 # 跑一次这个脚本。
-if sudo test -r /etc/letsencrypt/live/distfiles.gentoozh.org/fullchain.pem; then
+CERT=/etc/letsencrypt/live/distfiles.gentoozh.org
+# 两个文件都要在。只测 fullchain 时，续期中断留下的半套证书会让这里判定
+# 证书齐全，于是配上 HTTPS 那一份，nginx -t 再以 cannot load certificate 失败。
+if sudo test -r \"\${CERT}/fullchain.pem\" && sudo test -r \"\${CERT}/privkey.pem\"; then
     sudo install -m644 distfiles.conf /etc/nginx/conf.d/distfiles.conf
 else
-    echo '    证书还没有，先只配 HTTP；签发之后重跑本脚本'
-    # 整个第二个 server 块一起去掉。从 listen 443 那一行删起会把它的
-    # server { 留在原地，大括号不配对，nginx -t 一样失败。
-    awk '/^server \{/{n++} n<2' distfiles.conf |
-        sudo install -m644 /dev/stdin /etc/nginx/conf.d/distfiles.conf
+    # 机器上已经在跑 HTTPS 时不要降级。证书临时读不到（续期把目录换掉的一瞬、
+    # sudo 规则变了）就把 443 从配置里删掉，等于用一次例行安装把站点打回明文，
+    # 而且 HSTS 已经发出去的浏览器会直接连不上。
+    if sudo grep -qs 'listen 443' /etc/nginx/conf.d/distfiles.conf; then
+        echo '    !! 读不到证书，但现有配置在监听 443；保持原样不动' >&2
+        echo '       证书确实没了就先修证书，再重跑本脚本' >&2
+    else
+        echo '    证书还没有，先只配 HTTP；签发之后重跑本脚本'
+        # 整个第二个 server 块一起去掉。从 listen 443 那一行删起会把它的
+        # server { 留在原地，大括号不配对，nginx -t 一样失败。
+        awk '/^server \{/{n++} n<2' distfiles.conf |
+            sudo install -m644 /dev/stdin /etc/nginx/conf.d/distfiles.conf
+    fi
 fi
 sudo nginx -t
 
