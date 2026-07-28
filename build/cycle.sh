@@ -14,6 +14,7 @@ cd "$(dirname "$0")/.."
 
 OVERLAY="${OVERLAY:-/var/lib/binhost/overlay}"
 LOGDIR="${LOGDIR:-/var/lib/binhost/logs/x86-64}"
+STAGE="${STAGE:-/var/lib/binhost/stage/x86-64}"
 ALERT_CONF="${ALERT_CONF:-/etc/binhost/alert.conf}"
 
 alert() {
@@ -60,6 +61,18 @@ fi
 if ! ./build/publish.sh; then
     alert "binhost 发布阶段失败（$(hostname)）：包已构建，未同步到镜像机"
     exit 1
+fi
+
+# 发布之后核对版本：overlay bump 了新版就该编出新版，drop 了旧版索引里也不该
+# 再留着。对不上说明这个包这一轮没编出来，或者被按 REPO 过滤掉了——后一种
+# 单看失败清单发现不了。
+if ! python3 ./build/check-versions.py \
+        "${OVERLAY}" "${STAGE}/Packages" ./build/packages.txt > "${LOGDIR}/versions.txt" 2>&1; then
+    cat "${LOGDIR}/versions.txt"
+    alert "binhost 版本核对对不上（$(hostname)）:
+$(head -20 "${LOGDIR}/versions.txt")"
+else
+    cat "${LOGDIR}/versions.txt"
 fi
 
 # 单包失败不影响本轮其余部分，但需要通知。分类报告区分了
