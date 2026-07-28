@@ -8,6 +8,7 @@ version, what must stop the round, and what the index header ends up saying.
 
 import importlib.util
 import pathlib
+import re
 import sys
 import tempfile
 
@@ -37,17 +38,22 @@ def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None):
 def run(stanzas, overlay_has=None, excluded=frozenset()):
     """Parse and select.
 
-    overlay_has is the list of cp that exist in the overlay; excluded is passed
-    explicitly so the cases do not depend on what build/excluded.txt happens to
-    hold today.
+    overlay_has lists the cpv the overlay carries, as ebuilds rather than bare
+    directories: the filter asks per version, so a fixture that only made
+    directories would pass no matter which versions were named. excluded is
+    passed explicitly so the cases do not depend on what build/excluded.txt
+    happens to hold today.
     """
     _, entries = stage_index.parse(HEADER + "\n\n" + "\n\n".join(stanzas) + "\n")
     if overlay_has is None:
         return stage_index.select(entries, excluded=excluded)
     with tempfile.TemporaryDirectory() as tmp:
         ov = pathlib.Path(tmp)
-        for cp in overlay_has:
-            (ov / cp).mkdir(parents=True)
+        for cpv in overlay_has:
+            cp = re.match(r"^([a-z0-9-]+/.+?)-[0-9]", cpv).group(1)
+            d = ov / cp
+            d.mkdir(parents=True, exist_ok=True)
+            (d / (cpv.split("/", 1)[1] + ".ebuild")).write_text("EAPI=8\n")
         return stage_index.select(entries, ov, excluded=excluded)
 
 
@@ -103,16 +109,33 @@ case("带 revision 的版本号可匹配排除清单", lambda: (
     run([stanza("app-misc/a-1.2.3-r4")], excluded={"app-misc/a"})[0] == []))
 
 case("overlay 中已不存在的包被过滤", lambda: (
-    run([stanza("dev-libs/libratbag-0.18")], overlay_has=["app-misc/a"])[0] == []))
+    run([stanza("dev-libs/libratbag-0.18")], overlay_has=["app-misc/a-1"])[0] == []))
 
 case("overlay 中仍存在的包保留", lambda: (
-    cpvs(run([stanza("app-misc/a-1")], overlay_has=["app-misc/a"])[0]) == ["app-misc/a-1"]))
+    cpvs(run([stanza("app-misc/a-1")], overlay_has=["app-misc/a-1"])[0]) == ["app-misc/a-1"]))
 
 case("未提供 overlay 时不做该项过滤", lambda: (
     cpvs(run([stanza("dev-libs/gone-1")])[0]) == ["dev-libs/gone-1"]))
 
 case("带 revision 的版本号可解析出 cp", lambda: (
-    run([stanza("app-misc/a-1.2.3-r4")], overlay_has=["app-misc/a"])[0] != []))
+    run([stanza("app-misc/a-1.2.3-r4")], overlay_has=["app-misc/a-1.2.3-r4"])[0] != []))
+
+# 一次 bump 的实况：新版加进 overlay，旧版的 ebuild 被删掉，目录还在。
+# 只看目录时旧版会一直发下去，dev-util/gitea-cli 就这样带着 0.14.2 发了很久。
+case("bump 之后旧版本退场", lambda: (
+    cpvs(run([stanza("dev-util/gitea-cli-0.14.2"), stanza("dev-util/gitea-cli-0.15.0")],
+             overlay_has=["dev-util/gitea-cli-0.15.0"])[0]) == ["dev-util/gitea-cli-0.15.0"]))
+
+case("目录还在但这个版本没了，照样过滤", lambda: (
+    run([stanza("app-misc/a-1")], overlay_has=["app-misc/a-2"])[0] == []))
+
+case("同一个包的多个版本都在 overlay 里就都保留", lambda: (
+    cpvs(run([stanza("app-misc/a-1"), stanza("app-misc/a-2")],
+             overlay_has=["app-misc/a-1", "app-misc/a-2"])[0]) == ["app-misc/a-1", "app-misc/a-2"]))
+
+# portage 写 CPV 时会去掉 -r0，ebuild 文件名里却可能留着
+case("ebuild 带 -r0 而 CPV 不带时仍然匹配", lambda: (
+    run([stanza("app-misc/a-1")], overlay_has=["app-misc/a-1-r0"])[0] != []))
 
 case("头部 PACKAGES 重写为实际数量", lambda: (
     "PACKAGES: 7" in stage_index.rewrite_header(HEADER, 7, "")))
