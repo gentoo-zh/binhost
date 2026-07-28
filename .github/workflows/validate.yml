@@ -36,6 +36,11 @@ jobs:
       - name: bindist detection handles every RESTRICT shape
         run: python3 build/test-validate.py /tmp/overlay
 
+      # 暂存段决定哪些包会被发布出去。它筛错一次，要么少发一批，要么把不属于
+      # 我们的产物发出去，而两者在索引里都看不出异常。
+      - name: Staging filter keeps only what is ours
+        run: python3 build/test-stage-index.py
+
       # 两份清单互斥、排除项必须写原因。漏掉的话被排除的包会被重新构建，
       # 而每轮都以同样的方式失败。
       - name: Exclusion list is enforced
