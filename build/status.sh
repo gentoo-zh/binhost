@@ -34,6 +34,7 @@ DIST_MAX_AGE_H="${DIST_MAX_AGE_H:-6}"
 # the renewal cycle or it alerts every day.
 KEY_WARN_DAYS="${KEY_WARN_DAYS:-180}"
 CERT_WARN_DAYS="${CERT_WARN_DAYS:-14}"
+EXPORTER_PORT="${EXPORTER_PORT:-9100}"
 
 problems=0
 failures=()
@@ -143,6 +144,39 @@ else
             note "distfiles" "${dn} files, ${dage}h old"
         fi
     fi
+fi
+
+# --- node_exporter --------------------------------------------------------------
+# The node once dropped off Grafana and nothing here said so. /etc/nftables.conf
+# had been reapplied from a copy that predated the port 9100 rule, scrapes were
+# refused from then on, and every other check stayed green. Grafana showed it;
+# nobody was watching Grafana.
+#
+# Scraping comes from another machine, so this cannot test it end to end. It
+# tests the two things that were wrong: the exporter answers, and the firewall
+# names somewhere for it to answer to.
+if command -v node_exporter >/dev/null 2>&1; then
+    # Read the chain once and match against the text. Piping it into grep -q
+    # races: grep exits on the first match, nft dies of SIGPIPE, and pipefail
+    # reports the pipeline as failed. Measured at one run in ten here, which for
+    # a nightly check is a false alarm every couple of weeks.
+    rules=$(sudo -n nft list chain inet filter input 2>/dev/null)
+    monitors=$(sudo -n nft list set inet filter monitor_hosts 2>/dev/null |
+               grep -Eo '[0-9]+(\.[0-9]+){3}' | wc -l)
+    if ! curl -fsS --max-time 10 -o /dev/null "http://127.0.0.1:${EXPORTER_PORT}/metrics"; then
+        bad "node_exporter" "本机 ${EXPORTER_PORT} 没有回应"
+    elif [[ ${rules} != *"dport ${EXPORTER_PORT}"* ]]; then
+        bad "node_exporter" "防火墙没有放行 ${EXPORTER_PORT} 的规则"
+    elif (( monitors == 0 )); then
+        # The set is emptied by nftables.conf's flush ruleset, and install.sh
+        # refills it from MONITORS. Install without MONITORS and the port is
+        # open to nobody -- the rule is there and nothing gets through.
+        bad "node_exporter" "monitor_hosts 是空的，没有抓取源连得上"
+    else
+        note "node_exporter" "ok，放行 ${monitors} 个抓取源"
+    fi
+else
+    note "node_exporter" "not on this host"
 fi
 
 # --- heartbeat ----------------------------------------------------------------
