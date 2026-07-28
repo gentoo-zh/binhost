@@ -73,13 +73,6 @@
 
   var controls = document.getElementById('controls');
 
-  /* 语言按钮只在正文确实有翻译时才画。design.html 是单语文档，按钮画出来点了
-     只会改 localStorage：正文一个字都不变，而别的页跟着换语言。
-     原来这个判断看的是「页面上有没有 data-i18n」。导航栏和页脚是全站共用的，
-     该跟着语言走，一旦给它们标上 data-i18n，这个判断就把单语页也算成可翻译的。
-     所以改成由页面自己声明 window.MIRROR_LANG_UI = false。 */
-  var translatable = window.MIRROR_LANG_UI !== false;
-
   /* 语言按钮（数据驱动） */
   var langWrap = document.createElement('div'); langWrap.className = 'lang';
   var langBtns = {};
@@ -111,7 +104,7 @@
   /* 没有 #controls 的页面也要应用主题与语言。这两步原先排在提前 return 之后，
      一旦有页面不放控件，用户存的深色偏好就静默失效。 */
   if (controls) {
-    if (translatable) controls.appendChild(langWrap);
+    controls.appendChild(langWrap);
     controls.appendChild(themeWrap);
   }
 
