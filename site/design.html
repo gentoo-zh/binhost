@@ -32,12 +32,12 @@
   <div class="nav-inner">
     <a class="nav-brand" href="/">
       <img src="/assets/logo.webp" alt="">
-      <span class="nav-title">distfiles.gentoozh.org</span>
+      <span class="nav-title" data-i18n="brand">distfiles.gentoozh.org</span>
     </a>
     <nav class="nav-links" aria-label="页面">
-      <a class="nav-link" href="/">配置</a>
-      <a class="nav-link" href="/packages">包列表</a>
-      <a class="nav-link" href="/files/">文件</a>
+      <a class="nav-link" href="/" data-i18n="navSetup">配置</a>
+      <a class="nav-link" href="/packages" data-i18n="navPkgs">包列表</a>
+      <a class="nav-link" href="/files/" data-i18n="navFiles">文件</a>
       <a class="nav-link" href="/faq">FAQ</a>
     </nav>
     <div class="nav-tools" id="controls"></div>
@@ -254,9 +254,9 @@
   <div class="foot-inner">
     <span class="foot-brand">distfiles.gentoozh.org</span>
     <nav class="foot-links">
-      <a href="https://github.com/gentoo-zh/binhost">源码</a>
-      <a href="/design">设计语言</a>
-      <a href="https://gentoozh.org/">Gentoo 中文社区</a>
+      <a href="https://github.com/gentoo-zh/binhost" data-i18n="fSrc">源码</a>
+      <a href="/design" data-i18n="fDesign">设计语言</a>
+      <a href="https://gentoozh.org/" data-i18n="fCommunity">Gentoo 中文社区</a>
     </nav>
   </div>
 </footer>
@@ -264,6 +264,11 @@
 <div id="copy-toast" aria-hidden="true"></div>
 
 <script src="/assets/strings.js"></script>
+<script>
+// 正文只有中文一种，语言按钮点了只会换掉导航栏和页脚，正文纹丝不动——那比不给
+// 按钮更让人困惑。导航栏与页脚仍跟着别处选定的语言走。
+window.MIRROR_LANG_UI = false;
+</script>
 <script src="/assets/i18n.js"></script>
 <script>
 /* 色板从当前生效的 CSS 变量读。另抄一份数值的话，早晚会和样式表走散。 */
