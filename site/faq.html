@@ -62,13 +62,15 @@
     <h2 data-i18n="q5">怎么确认安装的包没被修改？</h2>
     <p data-i18n-html="a5">
       签名内嵌在每个 gpkg 包里（<code>image.tar.zst.sig</code>），和官方 binhost 一样。
-      配置里的 <code>binpkg-request-signature</code> 会让 portage 拒绝任何验签不过的包。
+      配置里的 <code>verify-signature = true</code> 让 portage 拒绝本源里验签不过的包，
+      它写在 <code>binrepos.conf</code> 里，只作用于本源。
     </p>
     <p data-i18n-html="a5b">
-      这个开关作用于全部来源，不只是我们的源。如果你同时用 <code>FEATURES=buildpkg</code>
-      留着自己编的包，那些包默认没有签名，也会被一并拒绝，报
-      <code>GnuPG verification failed</code>。要么按 Gentoo Wiki 的
-      <i>Binary package guide</i> 给本地包也配上签名，要么不要打开这个开关。
+      另有一个全局开关 <code>FEATURES=binpkg-request-signature</code>，它对所有来源生效
+      并覆盖上面那条。因为它同样要求你自己用 <code>FEATURES=buildpkg</code> 编出来的包
+      带签名，而那些包默认没有签名，所以打开之后每次本地构建都会在合并时报
+      <code>GnuPG verification failed</code>。要用它就得同时配好
+      <code>binpkg-signing</code>、本机签名密钥，以及让 gpg 读到 getuto 存的口令。
     </p>
 
     <h2 data-i18n="q6">如何停用？</h2>
@@ -111,8 +113,8 @@ window.MIRROR_I18N = {
     q4: '二進位套件會不會在我的 CPU 上跑不起來？',
     a4: '不會。建置在容器裡，<code>CFLAGS</code> 是通用的，不帶 <code>-march=native</code>。因為 portage 接受二進位套件時不比較 <code>CFLAGS</code>，所以這一點只能在建置端保證。',
     q5: '怎麼確認安裝的套件沒被竄改？',
-    a5: '簽章內嵌在每個 gpkg 套件裡（<code>image.tar.zst.sig</code>），和官方 binhost 一樣。設定裡的 <code>binpkg-request-signature</code> 會讓 portage 拒絕任何驗簽不過的套件。',
-    a5b: '這個開關作用於全部來源，不只是本站。若你同時用 <code>FEATURES=buildpkg</code> 留著自己編的套件，那些套件預設沒有簽章，也會被一併拒絕，並報 <code>GnuPG verification failed</code>。要麼依 Gentoo Wiki 的 <i>Binary package guide</i> 為本機套件也配上簽章，要麼不要開這個開關。',
+    a5: '簽章內嵌在每個 gpkg 套件裡（<code>image.tar.zst.sig</code>），和官方 binhost 一樣。設定裡的 <code>verify-signature = true</code> 讓 portage 拒絕本站驗簽不過的套件，它寫在 <code>binrepos.conf</code> 裡，只作用於本站。',
+    a5b: '另有一個全域開關 <code>FEATURES=binpkg-request-signature</code>，它對所有來源生效並覆蓋上面那條。因為它同樣要求你自己用 <code>FEATURES=buildpkg</code> 建出來的套件帶簽章，而那些套件預設沒有簽章，所以開啟之後每次本機建置都會在合併時報 <code>GnuPG verification failed</code>。要用它就得同時配好 <code>binpkg-signing</code>、本機簽章金鑰，以及讓 gpg 讀到 getuto 存的密碼。',
     q6: '如何停用？',
     a6: '刪除 <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code>。已安裝的套件不受影響。',
     q7: '都收錄了哪些套件？',
@@ -128,8 +130,8 @@ window.MIRROR_I18N = {
     q4: 'Could a binary package fail to run on my CPU?',
     a4: 'No. Everything is built in a container with generic <code>CFLAGS</code>, never <code>-march=native</code>. It has to be guaranteed at build time, because portage does not compare <code>CFLAGS</code> when it accepts a binary package.',
     q5: 'How do I know nothing has been modified?',
-    a5: 'The signature is embedded in each gpkg package (<code>image.tar.zst.sig</code>), the same way the official binhost does it. <code>binpkg-request-signature</code> makes portage refuse anything that fails verification.',
-    a5b: 'The switch applies to every source, not just this one. If you also keep your own packages with <code>FEATURES=buildpkg</code>, those are unsigned by default and get refused too, with <code>GnuPG verification failed</code>. Either sign local packages as well, following the Gentoo Wiki <i>Binary package guide</i>, or leave the switch off.',
+    a5: 'The signature is embedded in each gpkg package (<code>image.tar.zst.sig</code>), the same way the official binhost does it. <code>verify-signature = true</code> makes portage refuse anything from this repository whose signature does not check out; it lives in <code>binrepos.conf</code> and applies to this repository only.',
+    a5b: 'There is also a global switch, <code>FEATURES=binpkg-request-signature</code>, which applies to every source and overrides the above. Because it equally demands a signature on the packages you build yourself with <code>FEATURES=buildpkg</code>, and those are unsigned by default, turning it on makes every local build fail to merge with <code>GnuPG verification failed</code>. Using it means setting up <code>binpkg-signing</code>, a local signing key, and a way for gpg to read the passphrase getuto stored.',
     q6: 'How do I stop using it?',
     a6: 'Delete <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code>. Packages that are already installed are unaffected.',
     q7: 'Which packages are included?',
