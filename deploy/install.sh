@@ -17,6 +17,10 @@
 set -euo pipefail
 
 REMOTE="${REMOTE:-mirror}"
+# 站点同步以普通用户身份跑（见 cron.d-binhost），它要写 /srv/mirrors，
+# 也要把仓库 clone 到 /var/lib/binhost-site。两处都由这里建好并设属主，
+# 否则全新机器上站点同步每五分钟失败一次，而 cron 的邮件没有出口。
+SITE_USER="${SITE_USER:-zakk}"
 MONITORS="${MONITORS:-}"
 cd "$(dirname "$0")/.."
 
@@ -33,7 +37,8 @@ ssh "${REMOTE}" "set -euo pipefail
 cd '${tmp}'
 
 echo '--- 脚本'
-sudo install -dm755 /usr/local/lib/binhost /srv/mirrors /var/log/emirrordist
+sudo install -dm755 /usr/local/lib/binhost /var/log/emirrordist
+sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/mirrors /var/lib/binhost-site
 sudo install -m755 daily.sh            /usr/local/bin/binhost-daily
 sudo install -m755 distfiles-sync.sh   /usr/local/bin/binhost-distfiles-sync
 sudo install -m755 distfiles-index.sh  /usr/local/bin/binhost-distfiles-index
@@ -73,6 +78,8 @@ sudo logrotate -d /etc/logrotate.d/binhost >/dev/null
 
 echo '--- 定时任务'
 sudo install -m644 cron.d-binhost /etc/cron.d/binhost
+# 站点同步那一行的用户要和上面建目录时用的一致，否则它写不进 /srv/mirrors
+sudo sed -i 's|^\(\*/5 \* \* \* \* \)[^ ]*|\1${SITE_USER}|' /etc/cron.d/binhost
 
 echo '--- 监控'
 # node_exporter 供两套 Prometheus 抓取。9100 只放行 monitor_hosts 集合。

@@ -134,7 +134,7 @@ INNER
 previous=$(${DOCKER} image inspect "${BASE}-prev" --format '{{.Id}}' 2>/dev/null || true)
 
 # @world 没对齐就不要盖掉现有的镜像：宁可继续用上一代（顶多旧一点），
-# 也不要拿一个链到旧库的根去编 186 个包。
+# 也不要拿一个链到旧库的根去编 180 个包。
 # 容器此时已经停止，只能 cp 不能 exec
 if ${DOCKER} cp "${container}:/tmp/world-incomplete" - >/dev/null 2>&1; then
     ${DOCKER} rm -f "${container}" >/dev/null
