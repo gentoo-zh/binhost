@@ -80,7 +80,7 @@ gpg --homedir /etc/portage/gnupg --check-trustdb" data-i18n="copy">复制</butto
   </div>
 
   <p class="note" data-i18n-html="keyAlt">
-    不想装这个包也可以直接取：<code>curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</code>，
+    不想装这个包也可以直接下载：<code>curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</code>，
     然后把上面第二条命令的路径换成下载到的文件。
   </p>
 
@@ -226,7 +226,7 @@ window.MIRROR_I18N = {
     distNote: '這裡只有 overlay 的原始碼，不能替代官方來源，因此是追加而非替換。位址不寫 <code>distfiles/</code>，portage 會自己補上。這裡兩個都列出：<code>GENTOO_MIRRORS</code> 是按順序嘗試的列表，南京大學取不到時會落到來源站。',
     distOptOut: '因版權等原因不希望某個套件被鏡像時，在其 ebuild 中加入 <code>RESTRICT="mirror"</code>，同步工具會跳過。',
     step1: '匯入簽章公鑰', step2: '加入倉庫', step3: '打開 getbinpkg（附加）',
-    keyAlt: '不想裝這個套件也可以直接取：<code>curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</code>，然後把上面第二條命令的路徑換成下載到的檔案。',
+    keyAlt: '不想裝這個套件也可以直接下載：<code>curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</code>，然後把上面第二條命令的路徑換成下載到的檔案。',
     keyNote: '簽章用的是 getuto 建立的 Portage Local Trust Key，口令在 <code>/etc/portage/gnupg/pass</code>，因此要用 <code>--passphrase-file</code> 讀。驗簽以 <code>portage</code> 使用者執行，該使用者對 trustdb 沒有寫入權限，所以 trustdb 要預先算好。',
     factPkgs: ' 個二進位套件', factDist: ' 個 distfiles', factTime: '更新於 ',
     h2contact: '聯絡', ctForum: '論壇'
