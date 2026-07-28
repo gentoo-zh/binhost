@@ -243,6 +243,24 @@ h2:first-of-type { margin-top: 2rem; }
   font-family: var(--mono); font-size: 0.74rem; color: var(--fg-soft);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+/* 镜像选择。sync-uri 只接受一个地址，用户必须挑一个，并排写两块等于让人自己
+   判断该抄哪一块，所以就地切换。
+   放在代码框上方而不是标题栏里：标题栏是一行 flex，镜像多起来会和路径挤在
+   一起；这里可以换行，加一个镜像就是加一个 button。 */
+.src-pick {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem;
+  margin: 0 0 0.5rem;
+}
+.src-pick .src-label {
+  font-size: 0.78rem; color: var(--fg-soft); margin-right: 0.15rem;
+}
+.src-opt {
+  border: 1px solid var(--border); border-radius: 0.3rem; background: transparent;
+  color: var(--fg-soft); cursor: pointer; font: inherit; font-size: 0.76rem;
+  padding: 0.16rem 0.6rem;
+}
+.src-opt:hover { color: var(--fg); }
+.src-opt.on { background: var(--panel-head); border-color: var(--fg-soft); color: var(--fg); }
 .code-head .copy-chip {
   flex: none; border: 0; border-radius: 0.3rem; background: transparent;
   color: var(--fg-soft); cursor: pointer; font: inherit; font-size: 0.72rem;
@@ -466,8 +484,6 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 .listing td.mark.no { color: var(--fg-soft); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .listing td.mark.yes { color: #4ade80; } }
 [data-theme="dark"] .listing td.mark.yes { color: #4ade80; }
-.mirrors td, .mirrors th { white-space: nowrap; }
-.table-wrap { overflow-x: auto; }
 
 /* 过滤按钮 */
 .filters { display: flex; gap: 0.4rem; margin: 0 0 0.6rem; flex-wrap: wrap; }
@@ -513,14 +529,6 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 @media (max-width: 34rem) {
   .wrap { padding: 2.25rem 1rem 2.5rem; }
 
-  /* 镜像表四栏：站点、地址、两个状态。地址最长，让它换行而不是把表撑出屏幕。
-     地址栏要声明 width:100%：break-all 把这栏的最小内容宽度降到一个字符，
-     浏览器会照最小值分配，把宽度全让给别的栏，地址就成了一字一行。 */
-  .mirrors td, .mirrors th { padding-left: 0.4rem; padding-right: 0.4rem; }
-  .mirrors th:first-child { width: auto; }
-  .mirrors td:nth-child(2), .mirrors th:nth-child(2) { width: 100%; }
-  .mirrors td:nth-child(2) { white-space: normal; word-break: break-all; }
-  .mirrors th.mark, .mirrors td.mark { font-size: 0.72rem; }
   .title { font-size: 1.45rem; }
 
   /* 顶栏压成两行：品牌与语言/主题一行，导航链接一行。

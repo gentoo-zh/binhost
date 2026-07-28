@@ -133,6 +133,11 @@ location = /_app.html {
 location = /index.html { return 301 /; }
 location ~ ^/(.+)\.html$ { return 301 /$1; }
 
+# /mirror 曾经是一个页面：镜像列表、怎么用镜像、怎么自己开一个。用镜像那部分
+# 首页的镜像选择器已经取代，剩下两部分并进了 FAQ。这个地址在 issue 和聊天记录里
+# 发出去过，留一条跳转。精确匹配，别把 /mirrors 之类的一起卷走。
+location = /mirror { return 301 /faq; }
+
 # 站点资源每次都要回源校验。不发 Cache-Control 时浏览器按启发式规则自己
 # 决定缓存多久，改了样式用户看不到。no-cache 不是不缓存，是必须先问一次；
 # 内容没变 ETag 会让它只回一个 304。
