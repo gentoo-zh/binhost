@@ -155,28 +155,37 @@ fi
 # Scraping comes from another machine, so this cannot test it end to end. It
 # tests the two things that were wrong: the exporter answers, and the firewall
 # names somewhere for it to answer to.
-if command -v node_exporter >/dev/null 2>&1; then
+#
+# The firewall half applies only where the firewall is ours. deploy/nftables.conf
+# is the mirror's; the build machine runs iptables that came with it, and asking
+# nft about a table that is not there returns nothing -- which reads exactly like
+# a missing rule. That cost a false alarm on a healthy host.
+if ! command -v node_exporter >/dev/null 2>&1; then
+    note "node_exporter" "not on this host"
+elif ! curl -fsS --max-time 10 -o /dev/null "http://127.0.0.1:${EXPORTER_PORT}/metrics"; then
+    bad "node_exporter" "本机 ${EXPORTER_PORT} 没有回应"
+else
     # Read the chain once and match against the text. Piping it into grep -q
     # races: grep exits on the first match, nft dies of SIGPIPE, and pipefail
     # reports the pipeline as failed. Measured at one run in ten here, which for
     # a nightly check is a false alarm every couple of weeks.
     rules=$(sudo -n nft list chain inet filter input 2>/dev/null)
-    monitors=$(sudo -n nft list set inet filter monitor_hosts 2>/dev/null |
-               grep -Eo '[0-9]+(\.[0-9]+){3}' | wc -l)
-    if ! curl -fsS --max-time 10 -o /dev/null "http://127.0.0.1:${EXPORTER_PORT}/metrics"; then
-        bad "node_exporter" "本机 ${EXPORTER_PORT} 没有回应"
+    if [[ -z ${rules} ]]; then
+        note "node_exporter" "应答正常（防火墙不由这里管）"
     elif [[ ${rules} != *"dport ${EXPORTER_PORT}"* ]]; then
         bad "node_exporter" "防火墙没有放行 ${EXPORTER_PORT} 的规则"
-    elif (( monitors == 0 )); then
-        # The set is emptied by nftables.conf's flush ruleset, and install.sh
-        # refills it from MONITORS. Install without MONITORS and the port is
-        # open to nobody -- the rule is there and nothing gets through.
-        bad "node_exporter" "monitor_hosts 是空的，没有抓取源连得上"
     else
-        note "node_exporter" "ok，放行 ${monitors} 个抓取源"
+        monitors=$(sudo -n nft list set inet filter monitor_hosts 2>/dev/null |
+                   grep -Eo '[0-9]+(\.[0-9]+){3}' | wc -l)
+        if (( monitors == 0 )); then
+            # The set is emptied by nftables.conf's flush ruleset, and install.sh
+            # refills it from MONITORS. Install without MONITORS and the port is
+            # open to nobody -- the rule is there and nothing gets through.
+            bad "node_exporter" "monitor_hosts 是空的，没有抓取源连得上"
+        else
+            note "node_exporter" "ok，放行 ${monitors} 个抓取源"
+        fi
     fi
-else
-    note "node_exporter" "not on this host"
 fi
 
 # --- heartbeat ----------------------------------------------------------------
