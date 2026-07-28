@@ -1,0 +1,19 @@
+# 不收录的包，连同原因。
+#
+# 和 packages.txt 互斥：validate.py 会拒绝同时出现在两份文件里的包。
+# 写在这里的不会被构建，站点上标成不收录并显示原因。
+#
+# 两类：
+#   一是结论稳定的——许可证、profile 不兼容、上游禁止再分发，不会自己变好；
+#   二是一直编不过的——写清楚试过几轮，环境侧的原因排除掉之后要回来复查，
+#     别让它就这么烂在清单外面。
+#
+# 格式：category/package  <TAB>  原因
+
+app-i18n/fcitx-kkc		依赖 libkkc 的 configure 需要 XML::Parser，基础镜像补 perl-cleaner 后复查
+app-misc/crush			许可证 FSL-1.1-MIT 不允许再分发
+media-gfx/scangearmp		许可证 Canon-IJ 只准搭配 Canon 喷墨机使用，不在 @BINARY-REDISTRIBUTABLE
+media-plugins/osdlyrics	configure 需要 XML::Parser，基础镜像补 perl-cleaner 后复查
+net-proxy/proxy-server		ebuild 没有 KEYWORDS 声明，任何架构都装不上
+sys-kernel/mkinitcpio		需要 dbus[systemd]，与我们的 OpenRC profile 不兼容
+sys-kernel/xanmod-kernel	内核配置因人而异，发预编译的等于把我们的配置强加给用户
