@@ -129,10 +129,10 @@ function crumbs() {
   crumbEl.hidden = atRoot;
   if (atRoot) return;
 
-  // 从 ROOT 之下开始切，不是从整个路径。path 的第一段就是 files，而下面又
-  // 会补一节指向 ROOT 的，于是相邻两节标签不同、地址相同。
-  let acc = ROOT.replace(/\/$/, "");
-  const links = path.slice(ROOT.length).split("/").filter(Boolean).map(function (p) {
+  // 按整个路径切。深层地址是 /binpkgs/、/distfiles/，不在 ROOT 底下，
+  // 按 ROOT 的长度切会把 "/binpkgs/" 切成 "s"。
+  let acc = "";
+  const links = path.split("/").filter(Boolean).map(function (p) {
     acc += "/" + p;
     return '<a href="' + encodeURI(acc) + '/">' + esc(p) + "</a>";
   });
