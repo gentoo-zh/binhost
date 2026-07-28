@@ -180,7 +180,11 @@ def main(overlay, index, listfile):
     for cp, ver in fresh:
         print(f"    新包   {cp}  {ver}  有构建系统却不在清单，要人决定收不收")
 
-    return 1 if (stale or absent or gone or blocked or fresh) else 0
+    # 新包不计入退出码。它不是「对不上」，是「有一个包等人决定收不收」，
+    # 而 cycle.sh 每轮都会据此推一条告警——同一件事每天推一次，只会让人
+    # 学会忽略告警。审计里 audit-distfiles.py 已经因为同样的理由改过一次。
+    # 它仍然打印出来，读日志的人看得到。
+    return 1 if (stale or absent or gone or blocked) else 0
 
 
 if __name__ == "__main__":

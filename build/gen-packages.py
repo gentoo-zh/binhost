@@ -234,7 +234,11 @@ def main(overlay):
         print(f"!!! {len(missing)} listed but not in {overlay}:")
         for cp in missing:
             print(f"      {cp}")
+        # 退出码要带出去。镜像机上这一步由 daily.sh 的 step 包着，而 step 只在
+        # 非零退出时告警，所以只打印的话，清单与 overlay 脱节永远不会有人知道。
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "/var/db/repos/gentoo-zh")
+    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else "/var/db/repos/gentoo-zh"))
