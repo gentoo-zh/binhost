@@ -31,6 +31,11 @@ jobs:
       - name: Version check handles every commit shape
         run: python3 build/test-check-versions.py /tmp/overlay build/packages.txt
 
+      # RESTRICT=bindist 是唯一挡住不可再分发产物进入清单的检查。它在 ebuild
+      # 里的写法有好几种形状，判错一种就等于没有这道闸门，而且不会有任何迹象。
+      - name: bindist detection handles every RESTRICT shape
+        run: python3 build/test-validate.py /tmp/overlay
+
       # 两份清单互斥、排除项必须写原因。漏掉的话被排除的包会被重新构建，
       # 而每轮都以同样的方式失败。
       - name: Exclusion list is enforced
