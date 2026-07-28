@@ -234,7 +234,7 @@ window.MIRROR_I18N = {
     step1: '匯入簽章公鑰', step2: '加入倉庫', step3: '打開 getbinpkg（附加）',
     keyAlt: '不想裝這個套件也可以直接下載：<code>curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</code>，然後把上面 <code>--import</code> 那條命令的路徑換成下載到的檔案。',
     keyNote: '<code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。沒有它，上面三條 gpg 命令會以 <code>no writable keyring found</code> 失敗——gpg 不會自己建這個目錄，而 portage 只在第一次取二進位套件時才會呼叫它，那已經是第 2、3 步之後了。簽章用的是 getuto 建立的 Portage Local Trust Key，口令在 <code>/etc/portage/gnupg/pass</code>，因此要用 <code>--passphrase-file</code> 讀。驗簽以 <code>portage</code> 使用者執行，該使用者對 trustdb 沒有寫入權限，所以 trustdb 要預先算好。',
-    factPkgs: ' 個二進位套件', factDist: ' 個 distfiles', factTime: '更新於 ',
+    factPkgs: ' 個二進位套件', factDist: ' 個 distfiles 檔案', factTime: '更新於 ',
     h2contact: '聯絡', ctForum: '論壇'
   },
   'en': {
@@ -299,7 +299,7 @@ window.MIRROR_I18N = {
     if (!data) return;
     var bin = data[0], dist = data[1], html = '';
     if (bin && bin.packages) html += fact(bin.packages, s('factPkgs', ' 个二进制包'), bin.generated);
-    if (dist && dist.files) html += fact(dist.files, s('factDist', ' 个 distfiles'), dist.generated);
+    if (dist && dist.files) html += fact(dist.files, s('factDist', ' 个 distfiles 文件'), dist.generated);
     el.innerHTML = html;
   }
 
