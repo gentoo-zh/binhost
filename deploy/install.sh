@@ -97,6 +97,12 @@ if [ -n '${SIGNING_FPR}' ]; then
   echo '    signing-key.fpr 已写入'
 elif [ ! -r /etc/binhost/signing-key.fpr ]; then
   echo '    /etc/binhost/signing-key.fpr 还没有，公钥不会同步（传 SIGNING_FPR= 设定它）'
+else
+  # Say which fingerprint is being kept. Rotating the key without passing
+  # SIGNING_FPR leaves the old one here, and the public key then stops syncing
+  # because it no longer matches -- correct behaviour, but silent.
+  echo '    沿用已有的 signing-key.fpr:'
+  sed 's/^/      /' /etc/binhost/signing-key.fpr
 fi
 
 sudo install -m644 cron.d-binhost /etc/cron.d/binhost
