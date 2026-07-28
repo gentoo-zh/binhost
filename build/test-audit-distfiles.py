@@ -42,13 +42,14 @@ def reap(orphans, files, seen=None, grace=audit.GRACE_SECONDS):
         state = d / "state.json"
         if seen is not None:
             state.write_text(json.dumps(seen))
-        old_state, old_bin = audit.STATE, audit.RECYCLE
+        old_state, old_bin, old_led = audit.STATE, audit.RECYCLE, audit.LEDGER
         audit.STATE = str(state)
         audit.RECYCLE = str(d / "recycle")
+        audit.LEDGER = str(d / "reaped.json")
         try:
             deleted, _failed = audit.reap(set(orphans), paths, grace=grace)
         finally:
-            audit.STATE, audit.RECYCLE = old_state, old_bin
+            audit.STATE, audit.RECYCLE, audit.LEDGER = old_state, old_bin, old_led
         left = sorted(p.name for p in dist.iterdir())
         written = json.loads(state.read_text()) if state.exists() else {}
         return sorted(deleted), left, written
@@ -143,24 +144,30 @@ def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False):
         now = int(time.time())
         for name, age in (aged or {}).items():
             os.utime(dist / name, (now - age, now - age))
-        old = (audit.STATE, audit.RECYCLE, audit.GRACE_SECONDS)
+        old = (audit.STATE, audit.RECYCLE, audit.GRACE_SECONDS, audit.LEDGER)
         audit.STATE = str(d / "state.json")
         audit.RECYCLE = str(d / "recycle")
         audit.GRACE_SECONDS = 0          # 立即到期，好在一轮里看到结果
+        # 跨轮账本也要指到临时目录。原来没换，以 root 跑测试时它落在真实的
+        # /var/lib/emirrordist/reaped.json：用例之间互相污染，前一个用例清理
+        # 的 138 个把后一个撑过上限；跑完还会让当晚真正的对帐拒绝清理。
+        audit.LEDGER = str(d / "reaped.json")
         if preload:
             (d / "recycle").mkdir(parents=True, exist_ok=True)
             for name, content in preload.items():
                 (d / "recycle" / name).write_text(content)
         if bin_readonly:
-            # 回收桶的父目录不可写，mkdir 与 rename 都会失败
+            # 让回收桶建不起来。原来是把父目录 chmod 0o500，而权限位挡不住
+            # root：CI 在容器里以 root 跑，mkdir 照样成功，回收成功于是这条
+            # 用例反过来失败。改成把父路径做成一个普通文件，mkdir 得到
+            # NotADirectoryError，跟跑测试的是谁无关。
             blocked = d / "blocked"
-            blocked.mkdir()
-            blocked.chmod(0o500)
+            blocked.write_text("不是目录")
             audit.RECYCLE = str(blocked / "recycle")
         try:
             rc = audit.main(str(ov), str(d / "dist"))
         finally:
-            audit.STATE, audit.RECYCLE, audit.GRACE_SECONDS = old
+            audit.STATE, audit.RECYCLE, audit.GRACE_SECONDS, audit.LEDGER = old
         left = sorted(p.name for p in dist.iterdir())
         binned = sorted(p.name for p in (d / "recycle").iterdir()) \
             if (d / "recycle").is_dir() else []
