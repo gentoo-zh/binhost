@@ -1,8 +1,10 @@
 #!/bin/bash
-# 把镜像上实际存在的 distfile 文件名导出成一个 JSON 数组，供包列表页判断齐全与否。
+# Export the distfile names actually present on the mirror as a JSON array, so
+# the package list page can tell what is complete.
 #
-# 文件散在两级哈希目录里，页面自己遍历要几百个请求；这里在服务器上一次算完。
-# 每次同步之后跑。
+# The files sit in two levels of hash directories; walking them from the page
+# would take hundreds of requests, so it is done once here. Runs after each
+# sync.
 
 set -euo pipefail
 
@@ -18,7 +20,8 @@ mv -f "${OUT}.new" "${OUT}"
 
 n=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["files"]))' "${OUT}")
 
-# 首页只需要数量与时间。让它去读上面那份索引，一次要传一千多个文件名。
+# The front page needs only the count and the time. Reading the index above for
+# that would transfer a thousand-odd filenames.
 STATUS="${STATUS:-/srv/mirrors/distfiles-status.json}"
 printf '{"files":%s,"generated":%s}\n' "${n}" "$(date +%s)" > "${STATUS}.new"
 mv -f "${STATUS}.new" "${STATUS}"

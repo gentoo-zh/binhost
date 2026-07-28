@@ -1,11 +1,12 @@
 #!/bin/bash
-# 全量构建：跑 packages.txt 里的每个包，产物暂存待发布。
+# Full build: every package in packages.txt, staged for publication.
 #
-# 基础镜像已就绪时不会再做 @world 对齐，那一步在 base-image.sh 里，按镜像
-# 年龄触发。
+# No @world alignment happens here when the base image is current; that step
+# lives in base-image.sh and is triggered by the image's age.
 #
-# JOBS 比 base-image.sh 那边高：清单里的包彼此独立，能吃满并行；@world 对齐
-# 那段是 perl 的依赖链，串行，给再多也用不上。
+# JOBS and MAKEOPTS reach base-image.sh only. build-container.sh does not pass
+# them into the build container, which uses the make.conf baked into the image,
+# so what is set here governs how the base image is built and nothing else.
 
 set -euo pipefail
 

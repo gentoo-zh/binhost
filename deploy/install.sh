@@ -1,25 +1,29 @@
 #!/bin/bash
-# 把这个仓库装到镜像机上。在本机执行，通过 ssh 作用于目标。
+# Install this repository onto the mirror. Runs locally, acts over ssh.
 #
-#   ./deploy/install.sh            # 装到 ssh 别名 mirror
+#   ./deploy/install.sh            # to the ssh alias `mirror`
 #   REMOTE=root@1.2.3.4 ./deploy/install.sh
-#   MONITORS='a.b.c.d e.f.g.h' ./deploy/install.sh   # 允许抓 9100 的监控机 IP
+#   MONITORS='a.b.c.d e.f.g.h' ./deploy/install.sh   # hosts allowed to scrape 9100
 #
-# MONITORS 空格分隔，不入库。nftables.conf 带 flush ruleset，套用会清空
-# monitor_hosts 集合，故每次装都要带上，由 install.sh 重填。漏传则 9100 全关。
+# MONITORS is space separated and stays out of the repository. nftables.conf
+# carries flush ruleset, so applying it empties the monitor_hosts set; pass it
+# on every install and install.sh refills it. Leave it out and 9100 is closed to
+# everyone.
 #
-# 在此之前先跑 deploy/provision.sh（建账号、locale、内核调优、日志轮转）。
+# Run deploy/provision.sh first: accounts, locale, kernel tuning, log rotation.
 #
-# 装完之后还要手工做两件事，因为它们涉及不入库的凭据：
-#   /etc/binhost/alert.conf   Telegram 的 token 与 chat id
-#   certbot                   TLS 证书
+# Two things remain manual afterwards because they involve credentials that
+# stay out of the repository:
+#   /etc/binhost/alert.conf   Telegram token and chat id
+#   certbot                   TLS certificate
 
 set -euo pipefail
 
 REMOTE="${REMOTE:-mirror}"
-# 站点同步以普通用户身份跑（见 cron.d-binhost），它要写 /srv/mirrors，
-# 也要把仓库 clone 到 /var/lib/binhost-site。两处都由这里建好并设属主，
-# 否则全新机器上站点同步每五分钟失败一次，而 cron 的邮件没有出口。
+# The site sync runs as an ordinary user (see cron.d-binhost) and has to write
+# /srv/mirrors as well as clone the repository into /var/lib/binhost-site. Both
+# are created and owned here; otherwise the sync fails every five minutes on a
+# fresh machine, and cron's mail has nowhere to go.
 SITE_USER="${SITE_USER:-zakk}"
 MONITORS="${MONITORS:-}"
 cd "$(dirname "$0")/.."
@@ -28,11 +32,11 @@ say() { printf '\n=== %s ===\n' "$1"; }
 
 say "上传"
 tmp=$(ssh "${REMOTE}" 'mktemp -d')
-# shellcheck disable=SC2029  # tmp 要在本地展开
+# shellcheck disable=SC2029  # tmp is meant to expand locally
 rsync -a deploy/ build/gen-packages.py build/ebuilds.py build/packages.txt build/excluded.txt build/status.sh build/alert.sh \
     nginx/ site/ "${REMOTE}:${tmp}/"
 
-# shellcheck disable=SC2029  # 同上
+# shellcheck disable=SC2029  # as above
 ssh "${REMOTE}" "set -euo pipefail
 cd '${tmp}'
 
@@ -46,7 +50,7 @@ sudo install -m755 site-sync.sh        /usr/local/bin/binhost-site-sync
 sudo install -m755 status.sh           /usr/local/bin/binhost-status
 sudo install -m644 alert.sh            /usr/local/lib/binhost/alert.sh
 sudo install -m644 gen-packages.py     /usr/local/lib/binhost/gen-packages.py
-# gen-packages.py 从同目录 import ebuilds
+# gen-packages.py imports ebuilds from the same directory
 sudo install -m644 ebuilds.py          /usr/local/lib/binhost/ebuilds.py
 sudo install -m644 packages.txt        /usr/local/lib/binhost/packages.txt
 sudo install -m644 excluded.txt        /usr/local/lib/binhost/excluded.txt
@@ -56,9 +60,10 @@ echo '--- rsync'
 sudo install -m644 rsyncd.conf /etc/rsyncd.conf
 
 echo '--- 防火墙'
-# 先 -c 检查再套用：这份文件带 flush ruleset，语法错会把机器关在门外。
-# nftables 服务从 /var/lib/nftables/rules-save 还原，套用之后要 save 一次，
-# 否则重启回到旧规则。
+# Check with -c before applying: this file carries flush ruleset, and a syntax
+# error would lock the machine out. The nftables service restores from
+# /var/lib/nftables/rules-save, so save once after applying or a reboot returns
+# to the old rules.
 sudo nft -c -f nftables.conf
 sudo install -m644 nftables.conf /etc/nftables.conf
 sudo nft -f /etc/nftables.conf
@@ -78,14 +83,17 @@ sudo logrotate -d /etc/logrotate.d/binhost >/dev/null
 
 echo '--- 定时任务'
 sudo install -m644 cron.d-binhost /etc/cron.d/binhost
-# 站点同步那一行的用户要和上面建目录时用的一致，否则它写不进 /srv/mirrors
+# The site sync line's user must match the one the directories were created
+# for, or it cannot write /srv/mirrors.
 sudo sed -i 's|^\(\*/5 \* \* \* \* \)[^ ]*|\1${SITE_USER}|' /etc/cron.d/binhost
 
 echo '--- 监控'
-# node_exporter 供两套 Prometheus 抓取。9100 只放行 monitor_hosts 集合。
+# node_exporter is scraped by two Prometheus instances. Port 9100 admits only
+# the monitor_hosts set.
 command -v node_exporter >/dev/null || sudo emerge -q app-metrics/node_exporter
 sudo rc-update add node_exporter default 2>/dev/null || true
-# '防火墙' 那步 flush 清空了 monitor_hosts，据 MONITORS 重填并存盘。
+# The firewall step's flush emptied monitor_hosts; refill it from MONITORS and
+# save.
 if [ -n '${MONITORS}' ]; then
     sudo nft flush set inet filter monitor_hosts
     for ip in ${MONITORS}; do sudo nft add element inet filter monitor_hosts { \$ip }; done
@@ -94,7 +102,8 @@ if [ -n '${MONITORS}' ]; then
 fi
 
 echo '--- overlay 副本'
-# distfiles 按它的 Manifest 取，包列表按它的目录生成
+# distfiles are fetched by its Manifests, the package list generated from its
+# directories
 [ -d /var/lib/binhost-overlay/.git ] ||
     sudo git clone --quiet --depth=1 https://github.com/gentoo-zh/overlay /var/lib/binhost-overlay
 

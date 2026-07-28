@@ -74,9 +74,10 @@ MAKEOPTS="${MAKEOPTS}"
 ACCEPT_KEYWORDS="~amd64"
 ACCEPT_LICENSE="-* @BINARY-REDISTRIBUTABLE"
 
-# 签名配置不写在这里。写进基础镜像会让这个镜像只有持有密钥的人能用，
-# 而它对 autobump 的试构建、overlay 的 CI 同样有价值。签名是发布环节的事，
-# 由 build-container.sh 在构建时追加。
+# Signing configuration does not belong here. Baking it into the base image
+# would make the image usable only by whoever holds the key, and the image is
+# just as useful for autobump trial builds and the overlay's CI. Signing is part
+# of publishing, so build-container.sh appends it at build time.
 FEATURES="buildpkg getbinpkg binpkg-multi-instance parallel-fetch -news"
 
 EMERGE_DEFAULT_OPTS="--jobs=${JOBS} --load-average=$(nproc) --quiet-build"
@@ -92,25 +93,29 @@ gpg --homedir /root/.gnupg --armor --export "${SIGNING_KEY}" > /tmp/binhost.asc
 gpg --homedir /etc/portage/gnupg --batch --import /tmp/binhost.asc
 echo "${SIGNING_KEY}:6:" | gpg --homedir /etc/portage/gnupg --batch --import-ownertrust
 
-# 导入之后必须重算 trustdb 并让它可读，getuto 对自己的密钥做的就是这两步。
-# 验签以 portage 用户执行，该用户对 trustdb 没有写入权限；算不出信任链时即使 GOODSIG
-# 也只报 [unknown]，portage 照样拒收。
+# After importing, the trustdb has to be recomputed and left readable -- the two
+# steps getuto performs for its own key. Verification runs as the portage user,
+# which cannot write the trustdb; with no trust chain to compute, even a GOODSIG
+# comes back as [unknown] and portage refuses the package.
 gpg --homedir /etc/portage/gnupg --batch --check-trustdb
 chmod ugo+r /etc/portage/gnupg/trustdb.gpg
 
 echo ">>> aligning @world with the tree"
-# --keep-going 会跳过装不上的包继续走，所以退出码非零不代表整轮无效，但也不能
-# 当没事：对齐没做完的根编出来的包会链到旧库上。记一个标记，宿主那边据此决定
-# 要不要 commit。
+# --keep-going skips what cannot be installed and carries on, so a non-zero exit
+# does not mean the round was worthless -- but it cannot be waved off either:
+# packages built against a root that was never fully aligned link to the old
+# libraries. Leave a marker so the host side can decide whether to commit.
 if ! emerge --update --deep --newuse --usepkg --keep-going --quiet-build @world; then
     echo "!!! @world 未能完全对齐"
     touch /tmp/world-incomplete
 fi
 
-# perl 大版本一升，装在旧 vendor_perl/<旧版本>/<arch>/ 里的 XS 模块就落在
-# @INC 之外，包还在、模块却载入不了。configure 检测得到 intltool-update 却
-# 找不到 XML::Parser，报的错和缺依赖一模一样。实测 5.42 升 5.44 后
-# app-i18n/libkkc 就是这样挂的，perl-cleaner 之后 XML::Parser 立刻能载入。
+# A perl major upgrade leaves XS modules installed under the old
+# vendor_perl/<version>/<arch>/ outside @INC: the package is still there but the
+# module will not load. configure finds intltool-update and then fails to find
+# XML::Parser, with an error indistinguishable from a missing dependency. This
+# is how app-i18n/libkkc broke across 5.42 to 5.44; after perl-cleaner
+# XML::Parser loaded immediately.
 echo ">>> perl-cleaner"
 perl-cleaner --all -- --quiet-build || echo "!!! perl-cleaner 未跑完"
 
@@ -118,40 +123,47 @@ perl-cleaner --all -- --quiet-build || echo "!!! perl-cleaner 未跑完"
 # cache only ever grows, and a stale version could still be published.
 eclean-pkg --deep 2>/dev/null || true
 
-# getuto 会生成一把 "Portage Local Trust Key" 并把口令明文写在 pass 里，用来
-# 本地签名它导入的 Gentoo 发行密钥。那一步已经做完、结果落在 trustdb.gpg 里，
-# 之后验签只读 pubring 和 trustdb，私钥再也用不到（实测删掉后
-# gpg --verify 仍然 Good signature [ultimate]）。
+# getuto generates a "Portage Local Trust Key" and writes its passphrase in
+# clear text into pass, to locally sign the Gentoo release keys it imports. That
+# step is already done and its result lives in trustdb.gpg; verification
+# afterwards reads only pubring and trustdb, and the private key is never needed
+# again -- with it removed, gpg --verify still reports Good signature
+# [ultimate].
 #
-# 不删除时，PUBLISH=1 推到 ghcr 的镜像会带着一把私钥和它的明文口令。
+# Left in place, an image pushed to ghcr with PUBLISH=1 would carry a private
+# key and its clear-text passphrase.
 rm -rf /etc/portage/gnupg/private-keys-v1.d \
        /etc/portage/gnupg/pass \
        /etc/portage/gnupg/openpgp-revocs.d
 INNER
 
-# commit 之前记下上上代的 ID：下面会把当前这代 tag 成 -prev，
-# 再上一代就没有名字了。
+# Record the generation before last before committing: the current one is about
+# to be tagged -prev, which leaves the one before it without a name.
 previous=$(${DOCKER} image inspect "${BASE}-prev" --format '{{.Id}}' 2>/dev/null || true)
 
-# @world 没对齐就不要盖掉现有的镜像：宁可继续用上一代（顶多旧一点），
-# 也不要拿一个链到旧库的根去编 180 个包。
-# 容器此时已经停止，只能 cp 不能 exec
+# Do not overwrite the existing image when @world was not aligned: better to
+# keep using the previous generation, at worst a little stale, than to build 180
+# packages against a root that links to the old libraries.
+#
+# The container has stopped by now, so this can only cp, not exec.
 if ${DOCKER} cp "${container}:/tmp/world-incomplete" - >/dev/null 2>&1; then
     ${DOCKER} rm -f "${container}" >/dev/null
     die "@world 未能对齐，保留原有的 ${BASE} 不动"
 fi
 
 echo ">>> committing ${BASE}"
-# 上一代保留成 -prev：新镜像万一有问题，不用再花一个多小时重建。
+# Keep the previous generation as -prev, so a problem with the new image does
+# not cost another hour of rebuilding.
 if ${DOCKER} image inspect "${BASE}" >/dev/null 2>&1; then
     ${DOCKER} tag "${BASE}" "${BASE}-prev"
 fi
 ${DOCKER} commit "${container}" "${BASE}" >/dev/null
 ${DOCKER} rm -f "${container}" >/dev/null
 
-# 再上一代（被 -prev 顶掉的那个）成了悬空镜像。每周刷新一次、一次约 4 GB，
-# 不清理会堆着。按 ID 删这一个，不用 image prune——那会连这台机器上别人的
-# 悬空镜像一起清掉。
+# The generation before that, displaced from -prev, is now dangling. At roughly
+# 4 GB a week it accumulates. Remove that one by ID rather than running image
+# prune, which would also take away anyone else's dangling images on this
+# machine.
 if [[ -n ${previous} ]]; then
     current=$(${DOCKER} image inspect "${BASE}" --format '{{.Id}}')
     if [[ ${previous} != "${current}" ]]; then
@@ -166,9 +178,11 @@ echo ">>> ${BASE} ready"
 # hour to rebuild, and it lets anyone see exactly what the packages were built
 # in.
 #
-# 可以公开：docker commit 不收录挂载点，签名密钥在 /root/.gnupg，不在镜像里。
-# getuto 生成的本地信任密钥在上面已经删掉。镜像里剩下的是对齐好的 @world、
-# 验签用的公钥环和指纹，本来就是公开的。都是查过的，不是假设的。
+# Safe to publish: docker commit does not capture mount points, so the signing
+# key under /root/.gnupg is not in the image, and the local trust key getuto
+# generated was removed above. What remains is an aligned @world plus the public
+# keyring and fingerprints used for verification, all of which are public
+# already. Each of those was checked, not assumed.
 
 if [[ -n ${PUBLISH:-} ]]; then
     remote="${REGISTRY:-ghcr.io/gentoo-zh}/binhost-base:${TAG}"
