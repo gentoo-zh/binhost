@@ -50,6 +50,26 @@ def read_excluded():
             if l.strip() and not l.strip().startswith("#")}
 
 
+def has_ebuild(overlay, cpv):
+    """Whether the overlay still carries an ebuild for exactly this version.
+
+    The file name needs no version parsing: CPV is category/name-version and the
+    ebuild is name-version.ebuild, so everything after the category is the file
+    name. Only the directory has to be worked out, and that is the same split
+    the excluded check uses.
+    """
+    m = re.match(r"^([a-z0-9-]+/.+?)-[0-9]", cpv)
+    if not m:
+        return False
+    d = overlay / m.group(1)
+    name = cpv.split("/", 1)[1]
+    if (d / f"{name}.ebuild").exists():
+        return True
+    # portage leaves -r0 out of CPV, so a foo-1.0-r0.ebuild reaches here as
+    # foo-1.0. Rare, but it would drop a package that is genuinely still there.
+    return (d / f"{name}-r0.ebuild").exists()
+
+
 def select(entries, overlay=None, excluded=None):
     """Which entries to publish. Returns (kept, skipped, error).
 
@@ -72,14 +92,16 @@ def select(entries, overlay=None, excluded=None):
             skipped += 1
             continue
 
-        # A package treecleaned from the overlay stays in PKGDIR forever, and
-        # the publisher deletes by what the index names, so without this it
-        # would be served indefinitely.
-        if overlay is not None:
-            cp = re.match(r"^([a-z0-9-]+/.+?)-[0-9]", cpv)
-            if cp and not (overlay / cp.group(1)).is_dir():
-                skipped += 1
-                continue
+        # Anything built once stays in PKGDIR forever, and the publisher deletes
+        # by what the index names, so without this it would be served
+        # indefinitely. The question is asked per version, not per package: a
+        # bump adds the new ebuild and drops the old one while the directory
+        # stays, and asking only about the directory left the dropped version
+        # published with no ebuild behind it. dev-util/gitea-cli was served at
+        # 0.14.2 that way for as long as it had been bumped to 0.15.0.
+        if overlay is not None and not has_ebuild(overlay, cpv):
+            skipped += 1
+            continue
 
         # Never publish what excluded.txt rules out, whenever that decision was
         # made. Being in PKGDIR only says it built once.
