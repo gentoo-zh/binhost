@@ -42,6 +42,40 @@
 
   <p class="facts" id="facts"></p>
 
+  <h2 data-i18n="h2dist">Distfiles</h2>
+
+  <p class="note" data-i18n-html="distNote">
+    这里只有 overlay 的源码，不能替代官方源，因此是追加而非替换。
+    地址不写 <code>distfiles/</code>，portage 会自己补上。
+    这里两个都列出：<code>GENTOO_MIRRORS</code> 是按顺序尝试的列表，
+    南京大学取不到时会落到源站。
+  </p>
+
+  <div class="step">
+    <!-- data-src-list：两个都留在列表里，选中的排到最前面。%s 换成排好序的地址 -->
+    <div class="src-pick" data-src-switch="dist" data-src-list='"${GENTOO_MIRRORS} %s"'
+         role="group" aria-label="优先取用的镜像">
+      <span class="src-label" data-i18n="srcLabelFirst">优先</span>
+      <button type="button" class="src-opt on" data-i18n="srcNju"
+              data-uri="https://mirror.nju.edu.cn/gentoo-zh">南京大学</button>
+      <button type="button" class="src-opt" data-i18n="srcOrigin"
+              data-uri="https://distfiles.gentoozh.org">源站</button>
+    </div>
+
+    <div class="code">
+      <div class="code-head">
+        <span class="path">/etc/portage/make.conf</span>
+        <button class="copy-chip" data-i18n="copy">复制</button>
+      </div>
+<pre><span class="key">GENTOO_MIRRORS</span>=<span class="val" data-src-slot="dist">"${GENTOO_MIRRORS} https://mirror.nju.edu.cn/gentoo-zh https://distfiles.gentoozh.org"</span></pre>
+    </div>
+  </div>
+
+  <p class="note" data-i18n-html="distOptOut">
+    因版权等原因不希望某个包被镜像时，在其 ebuild 中加入
+    <code>RESTRICT="mirror"</code>，同步工具会跳过。
+  </p>
+
   <h2 data-i18n="h2bin">二进制包</h2>
 
   <div class="src-pick" data-src-switch="top" role="group" aria-label="镜像">
@@ -145,40 +179,6 @@ gpg --homedir /etc/portage/gnupg --check-trustdb" data-i18n="copy">复制</butto
     用 <code>FEATURES=buildpkg</code> 编出来的包带签名——那些包默认没有签名，于是每个
     本地构建都会在合并时报 <code>GnuPG verification failed</code>。要开它就得同时配好
     <code>binpkg-signing</code> 与本机签名密钥。
-  </p>
-
-  <h2 data-i18n="h2dist">Distfiles</h2>
-
-  <p class="note" data-i18n-html="distNote">
-    这里只有 overlay 的源码，不能替代官方源，因此是追加而非替换。
-    地址不写 <code>distfiles/</code>，portage 会自己补上。
-    这里两个都列出：<code>GENTOO_MIRRORS</code> 是按顺序尝试的列表，
-    南京大学取不到时会落到源站。
-  </p>
-
-  <div class="step">
-    <!-- data-src-list：两个都留在列表里，选中的排到最前面。%s 换成排好序的地址 -->
-    <div class="src-pick" data-src-switch="dist" data-src-list='"${GENTOO_MIRRORS} %s"'
-         role="group" aria-label="优先取用的镜像">
-      <span class="src-label" data-i18n="srcLabelFirst">优先</span>
-      <button type="button" class="src-opt on" data-i18n="srcNju"
-              data-uri="https://mirror.nju.edu.cn/gentoo-zh">南京大学</button>
-      <button type="button" class="src-opt" data-i18n="srcOrigin"
-              data-uri="https://distfiles.gentoozh.org">源站</button>
-    </div>
-
-    <div class="code">
-      <div class="code-head">
-        <span class="path">/etc/portage/make.conf</span>
-        <button class="copy-chip" data-i18n="copy">复制</button>
-      </div>
-<pre><span class="key">GENTOO_MIRRORS</span>=<span class="val" data-src-slot="dist">"${GENTOO_MIRRORS} https://mirror.nju.edu.cn/gentoo-zh https://distfiles.gentoozh.org"</span></pre>
-    </div>
-  </div>
-
-  <p class="note" data-i18n-html="distOptOut">
-    因版权等原因不希望某个包被镜像时，在其 ebuild 中加入
-    <code>RESTRICT="mirror"</code>，同步工具会跳过。
   </p>
 
   <h2 data-i18n="h2contact">联系</h2>
