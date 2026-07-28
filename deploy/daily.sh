@@ -10,7 +10,6 @@ main() {
 ALERT_CONF="${ALERT_CONF:-/etc/binhost/alert.conf}"
 LIB="${LIB:-/usr/local/lib/binhost}"
 OVERLAY="${OVERLAY:-/var/lib/binhost-overlay}"
-MODE="${MODE:-upstream}"
 DISTDIR="${DISTDIR:-/srv/pub/distfiles}"
 FAILURES="${FAILURES:-/var/log/emirrordist/failures.log}"
 
@@ -54,7 +53,7 @@ step "overlay 更新" git -C "${OVERLAY}" fetch --quiet origin master &&
 # 每次跑之前清空，否则判断不出这一轮有没有新失败
 : > "${FAILURES}"
 
-if step "distfiles 同步" env MODE="${MODE}" /usr/local/bin/binhost-distfiles-sync; then
+if step "distfiles 同步" /usr/local/bin/binhost-distfiles-sync; then
     step "distfiles 索引" /usr/local/bin/binhost-distfiles-index
     # INDEX 让生成器认得构建时被依赖带出来的包（acct-user、virtual 这类），
     # 它们不在清单里也没有源码文件，不提供索引则页面上查不到。
@@ -69,7 +68,7 @@ fi
 
 # emirrordist 取不到某个文件时不会让整条命令失败，只写进 failure-log。
 # 不单独查这份日志，镜像会逐渐缺失内容而无人知晓。
-if [[ ${MODE} == upstream && -s ${FAILURES} ]]; then
+if [[ -s ${FAILURES} ]]; then
     n=$(wc -l < "${FAILURES}")
     echo "!! ${n} 个文件取不到"
     sed 's/^/   /' "${FAILURES}"
