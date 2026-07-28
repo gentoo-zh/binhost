@@ -108,6 +108,12 @@ body {
 
 /* --- 顶栏 --- */
 
+/* 顶栏高度。util.js 量出实际值写回来，这里是它跑起来之前的初值，也是
+   没有脚本时的取值——顶栏单行时就是这个高度。 */
+:root {
+  --nav-h: 3.2rem;
+}
+
 .nav {
   position: sticky; top: 0; z-index: 40; border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg) 82%, transparent);
@@ -320,6 +326,15 @@ a { color: var(--primary); text-decoration: none; }
 }
 /* 名称列吃掉剩余宽度，否则「大小」这种两字表头会被挤成竖排 */
 .listing th:first-child { width: 100%; }
+/* 表头留在视口里。四百多行的表格滚下去之后，那几列 ✓ 与 — 没有表头就认不出
+   是哪一列。top 要让开顶栏——顶栏自己也是 sticky，不让开就滚到它底下去了；
+   顶栏在窄屏会折成两行，高度由 util.js 量出来写进 --nav-h。
+   border-collapse 下 sticky 元素的边框不跟着走，那条分隔线改用 inset 阴影画。 */
+.listing thead th {
+  position: sticky; top: var(--nav-h, 3.2rem); z-index: 5;
+  background: var(--bg); border-bottom: 0;
+  box-shadow: inset 0 -1px 0 var(--border);
+}
 .listing td { padding: 0.36rem 0.6rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .listing tr:hover td { background: var(--hover); }
 .listing td.name { white-space: normal; word-break: break-all; width: 100%; }
