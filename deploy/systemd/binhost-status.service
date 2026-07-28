@@ -1,0 +1,13 @@
+[Unit]
+Description=binhost 健康检查（站外观察 + 签名密钥有效期）
+# 脚本自己只在检查未通过时告警。它崩掉时（set -u、curl 不在、sudo 卡住）
+# systemd 记为 failed 而没有任何人收到，所以这一条也要挂。
+OnFailure=binhost-alert@%N.service
+
+[Service]
+Type=oneshot
+# 和构建同一个用户：脚本里读签名密钥用的是 sudo gpg，本来就不是给 root 写的。
+# 装的时候按实际用户改。
+User=adminc3b9c6
+Group=adminc3b9c6
+ExecStart=/usr/local/bin/binhost-status

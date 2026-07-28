@@ -1,0 +1,12 @@
+# 两台机器的系统时区都是 UTC，下面的时刻也是 UTC。括号里是 UTC+8，
+# 也就是使用者所在的时区——排班按那个看才有意义。
+
+# 每 5 分钟看仓库有没有新提交，有才同步站点
+*/5 * * * * zakk /usr/local/bin/binhost-site-sync
+# 健康检查排在构建之后：构建 18:00 UTC（02:00+8）起跑约两个半小时，
+# 00:20 UTC（08:20+8）查到的是刚发布的结果，而不是前一天的。
+20 0 * * * root /usr/local/bin/binhost-status
+# distfiles 每小时同步。overlay 的提交散布在一天里，一天一次会让下午合并的
+# 版本等到次日才镜像，最长差 24 小时。这一步很便宜：没有新文件时 1 秒，
+# 取两个新文件 5 秒，因为等的是上游网络而不是这台的单核。
+17 * * * * root /usr/local/bin/binhost-daily >> /var/log/emirrordist/run.log 2>&1
