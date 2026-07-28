@@ -32,11 +32,21 @@ function human(n) {
   var nav = document.querySelector('.nav');
   if (!nav) return;
   function measure() {
-    document.documentElement.style.setProperty('--nav-h', nav.offsetHeight + 'px');
+    /* 向上取整。顶栏高度常带小数（96.98），截断会让表头压在顶栏底下一像素。 */
+    var h = Math.ceil(nav.getBoundingClientRect().height);
+    document.documentElement.style.setProperty('--nav-h', h + 'px');
   }
   measure();
-  /* 换语言会改动导航文字，窄屏下可能因此多折一行；字体载入完也会变。
-     ResizeObserver 两种都覆盖得到，没有它就退回窗口尺寸变化。 */
-  if (window.ResizeObserver) new ResizeObserver(measure).observe(nav);
-  else window.addEventListener('resize', measure);
+  /* 顶栏高度在首次测量之后还会变：i18n.js 把导航文字换成另一门语言，窄屏下
+     可能因此多折一行；网页字体载入完也会变。实测过一次 90 与 97 的差——量早了
+     七个像素，表头就有七个像素压在顶栏底下。
+     ResizeObserver 默认看 content-box，顶栏的内边距变化它报不出来，要指明
+     border-box。langchange 与 load 各自再补一次，不指望单一信号。 */
+  if (window.ResizeObserver) {
+    new ResizeObserver(measure).observe(nav, { box: 'border-box' });
+  } else {
+    window.addEventListener('resize', measure);
+  }
+  document.addEventListener('langchange', measure);
+  window.addEventListener('load', measure);
 })();

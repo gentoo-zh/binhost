@@ -323,7 +323,11 @@ a { color: var(--primary); text-decoration: none; }
 
 .crumbs { font-family: var(--mono); font-size: 0.82rem; color: var(--fg-soft); margin: 0 0 1rem; word-break: break-all; }
 /* 表格宽过视口时让它自己横向滚，不要把整个页面撑出横向滚动条 */
-#out { overflow-x: auto; }
+/* 这里原来是 overflow-x: auto。overflow-x 一旦不是 visible，overflow-y 的
+   visible 就会被算成 auto，#out 因此成了滚动容器，表头的 sticky 黏的是它而不是
+   视口——滚下去表头照样跟着跑掉。实测七个宽度（320 到 1280），媒体查询会按宽度
+   收起体积、版本、说明三列，表格本来就不会撑破视口，这个 overflow 用不上。 */
+#out { overflow-x: visible; }
 .listing { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.84rem; }
 .listing th {
   text-align: left; font-weight: 600; color: var(--fg-soft); font-size: 0.74rem;
