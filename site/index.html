@@ -103,6 +103,11 @@ location = /var/cache/binhost/gentoo-zh" data-i18n="copy">复制</button>
     </div>
   </div>
 
+  <p class="note" data-i18n-html="repoNote">
+    国内用户可把 <code>sync-uri</code> 换成<a href="/mirror">镜像</a>页列出的节点，
+    例如南京大学。镜像上的包与本站逐字节一致，签名是同一份，验签照常。
+  </p>
+
   <div class="step">
     <p class="step-title"><span class="n">3</span><span data-i18n="step3">打开 getbinpkg（追加）</span></p>
     <div class="code">
@@ -191,6 +196,7 @@ window.MIRROR_I18N = {
     lead: 'gentoo-zh overlay 的二進位套件與 distfiles 鏡像。兩者相互獨立，按需分別設定。::gentoo 的部分用 <a href="https://gentoozh.org/mirrorlist/">社群鏡像列表</a>裡的節點。',
     h2bin: '二進位套件', h2dist: 'Distfiles',
     sigNote: '驗簽由第 2 步的 <code>verify-signature = true</code> 提供，只作用於本站。<code>FEATURES=binpkg-request-signature</code> 是全域的，會覆蓋它，也會要求你自己用 <code>FEATURES=buildpkg</code> 建出來的套件帶簽章——那些套件預設沒有簽章，於是每次本機建置都會在合併時報 <code>GnuPG verification failed</code>。要開它就得同時配好 <code>binpkg-signing</code> 與本機簽章金鑰。',
+    repoNote: '中國大陸的使用者可把 <code>sync-uri</code> 換成<a href="/mirror">鏡像</a>頁列出的節點，例如南京大學。鏡像上的套件與本站逐位元組一致，簽章是同一份，驗簽照常。',
     distNote: '這裡只有 overlay 的原始碼，不能替代官方來源，因此是追加而非替換。位址不寫 <code>distfiles/</code>，portage 會自己補上。中國大陸的使用者可換成<a href="/mirror">鏡像</a>頁列出的節點，例如南京大學。',
     distOptOut: '因版權等原因不希望某個套件被鏡像時，在其 ebuild 中加入 <code>RESTRICT="mirror"</code>，同步工具會跳過。',
     step1: '匯入簽章公鑰', step2: '加入倉庫', step3: '打開 getbinpkg（附加）',
@@ -204,6 +210,7 @@ window.MIRROR_I18N = {
     lead: 'Binary package and distfiles mirror for the gentoo-zh overlay. The two are independent and configured separately. For ::gentoo, use a node from the <a href="https://gentoozh.org/mirrorlist/">community mirror list</a>.',
     h2bin: 'Binary packages', h2dist: 'Distfiles',
     sigNote: 'Verification comes from <code>verify-signature = true</code> in step 2 and applies to this repository only. <code>FEATURES=binpkg-request-signature</code> is global, overrides that, and also demands a signature on the packages you build yourself with <code>FEATURES=buildpkg</code>. Those are unsigned by default, so every local build fails to merge with <code>GnuPG verification failed</code>. Enabling it means setting up <code>binpkg-signing</code> and a local signing key as well.',
+    repoNote: 'Users in China can point <code>sync-uri</code> at a node listed on the <a href="/mirror">mirrors</a> page, such as Nanjing University. Packages on a mirror are byte-identical to this site and carry the same signature, so verification works unchanged.',
     distNote: 'Only overlay sources live here, so this adds a mirror rather than replacing the official ones. Leave <code>distfiles/</code> off the address; portage appends it. Users in China can switch to a node listed on the <a href="/mirror">mirrors</a> page, such as Nanjing University.',
     distOptOut: 'When a maintainer does not want a package mirrored — licensing or otherwise — they add <code>RESTRICT="mirror"</code> to its ebuild and the sync tool skips it.',
     step1: 'Import the signing key', step2: 'Add the repository', step3: 'Enable getbinpkg (append)',
