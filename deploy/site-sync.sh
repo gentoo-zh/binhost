@@ -67,4 +67,16 @@ fi
 # distfiles.
 rsync -a --include='*.html' --exclude='*' "${WORK}/site/" "${DEST}/"
 
+# A page deleted from the repository used to stay served for good: rsync without
+# --delete only ever adds. /mirror went on answering 200 with the old table for
+# as long as nobody looked. Compare the two sets by name instead -- only the
+# top-level .html files DEST got from here, never a directory, so the published
+# packages are out of reach of this.
+for f in "${DEST}"/*.html; do
+    [ -e "${f}" ] || continue
+    [ -e "${WORK}/site/$(basename "${f}")" ] && continue
+    echo "  移除已从仓库删掉的页面：$(basename "${f}")"
+    rm -f "${f}"
+done
+
 echo "site updated ${before:0:7} -> ${after:0:7}"
