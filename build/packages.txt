@@ -106,7 +106,6 @@ gnome-extra/resources
 gui-apps/crystal-dock
 gui-apps/tux-manager
 gui-apps/waywallen
-gui-libs/libdecor
 kde-misc/plasma-applet-netspeed-widget
 kde-misc/plasma-ions-china
 media-gfx/open-wallpaper-engine

@@ -26,6 +26,11 @@ jobs:
       - name: Check packages.txt
         run: python3 build/validate.py /tmp/overlay
 
+      # 版本核对要认得 overlay 提交的每种型态：add+drop、只 add、只 drop、
+      # mask、改分类、删包、新包上线。改错一处判定就会漏报，靠人复查发现不了。
+      - name: Version check handles every commit shape
+        run: python3 build/test-check-versions.py /tmp/overlay build/packages.txt
+
       # 两份清单互斥、排除项必须写原因。漏掉的话被排除的包会被重新构建，
       # 而每轮都以同样的方式失败。
       - name: Exclusion list is enforced
