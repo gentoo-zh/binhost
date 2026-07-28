@@ -212,7 +212,7 @@ def main(overlay, dest):
         sys.exit(f"不是 ebuild 仓库：{overlay}")
 
     users = scan(overlay)
-    paths = {p.name: p for p in dest.rglob("*") if p.is_file() and p.name != "layout.conf"}
+    paths = {p.name: p for p in dest.rglob("*") if p.is_file() and p.name not in MARKERS}
     have = set(paths)
 
     # A fetch-restricted package has no URL in SRC_URI at all, so nobody can
@@ -240,7 +240,7 @@ def main(overlay, dest):
     # uses two levels of hashing rather than a flat directory, and the official
     # distfiles root carries the same file. Without it clients fetch from the
     # wrong path.
-    orphan = sorted(have - set(users) - MARKERS)
+    orphan = sorted(have - set(users))
 
     # Refuse the round rather than act on an overlay that reads as empty or
     # half-read. An overlay with no Manifests at all passes the repo_name check

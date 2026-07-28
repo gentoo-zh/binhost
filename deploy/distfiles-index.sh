@@ -11,7 +11,9 @@ set -euo pipefail
 DIST="${DIST:-/srv/pub/distfiles}"
 OUT="${OUT:-/srv/mirrors/distfiles-index.json}"
 
-find "${DIST}" -type f ! -name layout.conf -printf '%f\n' \
+# 两个标记文件都不是 distfile。原来只排 layout.conf，README.txt 被算进去，
+# 站上的数字比实际多一个，而对帐脚本两个都排，两边长期差一。
+find "${DIST}" -type f ! -name layout.conf ! -name README.txt -printf '%f\n' \
   | sort -u \
   | python3 -c 'import json,sys,time; json.dump({"generated": int(time.time()), "files": [l.strip() for l in sys.stdin if l.strip()]}, sys.stdout, ensure_ascii=False, separators=(",",":"))' \
   > "${OUT}.new"
