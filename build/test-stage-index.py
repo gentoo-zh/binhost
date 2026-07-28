@@ -34,16 +34,21 @@ def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None):
     return "\n".join(lines)
 
 
-def run(stanzas, overlay_has=None):
-    """Parse and select. overlay_has is the list of cp that exist in the overlay."""
+def run(stanzas, overlay_has=None, excluded=frozenset()):
+    """Parse and select.
+
+    overlay_has is the list of cp that exist in the overlay; excluded is passed
+    explicitly so the cases do not depend on what build/excluded.txt happens to
+    hold today.
+    """
     _, entries = stage_index.parse(HEADER + "\n\n" + "\n\n".join(stanzas) + "\n")
     if overlay_has is None:
-        return stage_index.select(entries)
+        return stage_index.select(entries, excluded=excluded)
     with tempfile.TemporaryDirectory() as tmp:
         ov = pathlib.Path(tmp)
         for cp in overlay_has:
             (ov / cp).mkdir(parents=True)
-        return stage_index.select(entries, ov)
+        return stage_index.select(entries, ov, excluded=excluded)
 
 
 def cpvs(kept):
@@ -85,6 +90,17 @@ case("留下的确实是最大那个", lambda: (
 case("BUILD_ID 顺序颠倒也一样", lambda: (
     run([stanza("app-misc/a-1", build_id=3),
          stanza("app-misc/a-1", build_id=1)])[0][0][0] == 3))
+
+case("excluded.txt 里的包不发布", lambda: (
+    run([stanza("app-text/wiki2man_on_rust-0.5.1-r1")],
+        excluded={"app-text/wiki2man_on_rust"})[0] == []))
+
+case("只是不在收录清单不算排除（依赖带出来的照发）", lambda: (
+    cpvs(run([stanza("acct-group/aptly-0")], excluded={"app-misc/other"})[0])
+    == ["acct-group/aptly-0"]))
+
+case("带 revision 的版本号也能对上排除清单", lambda: (
+    run([stanza("app-misc/a-1.2.3-r4")], excluded={"app-misc/a"})[0] == []))
 
 case("overlay 里已经没有的包滤掉", lambda: (
     run([stanza("dev-libs/libratbag-0.18")], overlay_has=["app-misc/a"])[0] == []))

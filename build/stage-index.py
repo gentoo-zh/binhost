@@ -34,12 +34,29 @@ def parse(text):
     return stanzas[0], out
 
 
-def select(entries, overlay=None):
+def read_excluded():
+    """category/package that excluded.txt says outright not to collect.
+
+    PKGDIR keeps whatever was ever built. A package that was built once and only
+    later excluded stays there and is republished every round, because nothing
+    downstream reads the list: the publisher deletes by what the index names,
+    and the index is what this file produces. app-text/wiki2man_on_rust was
+    served that way for as long as it had been excluded.
+    """
+    f = pathlib.Path(__file__).with_name("excluded.txt")
+    if not f.exists():
+        return set()
+    return {l.split()[0] for l in f.read_text().splitlines()
+            if l.strip() and not l.strip().startswith("#")}
+
+
+def select(entries, overlay=None, excluded=None):
     """Which entries to publish. Returns (kept, skipped, error).
 
     error is a string when something must stop the whole round rather than be
     quietly dropped.
     """
+    excluded = read_excluded() if excluded is None else excluded
     best = {}       # cpv -> (build_id, fields, stanza)
     skipped = 0
 
@@ -63,6 +80,13 @@ def select(entries, overlay=None):
             if cp and not (overlay / cp.group(1)).is_dir():
                 skipped += 1
                 continue
+
+        # Never publish what excluded.txt rules out, whenever that decision was
+        # made. Being in PKGDIR only says it built once.
+        cp = re.match(r"^([a-z0-9-]+/.+?)-[0-9]", cpv)
+        if cp and cp.group(1) in excluded:
+            skipped += 1
+            continue
 
         # ACCEPT_LICENSE should have stopped these at build time. Check again
         # rather than let one gate stand between us and a licensing problem.

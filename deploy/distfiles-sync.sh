@@ -24,18 +24,35 @@ STATE="${STATE:-/var/lib/emirrordist}"
 # network. Six streams aggregate to about 15 MB/s, low enough that hosts like
 # GitHub do not rate-limit us.
 JOBS="${JOBS:-6}"
-# A week. Once an ebuild leaves the overlay its distfile waits this long before
-# deletion, which leaves room to roll back.
-DELETION_DELAY="${DELETION_DELAY:-604800}"
+# A day. Once an ebuild leaves the overlay its distfile waits this long before
+# it is moved out of the mirror.
+DELETION_DELAY="${DELETION_DELAY:-86400}"
+# Where those files wait before they are gone for good, and for how long. This
+# is the layer that matters: with the trigger at one day, a wrong call reaches
+# here within a day, and this window is the only chance to notice it. Two weeks
+# is two of the weekly checks.
+RECYCLE="${RECYCLE:-/var/lib/emirrordist/recycle}"
+RECYCLE_DELAY="${RECYCLE_DELAY:-1209600}"
 
-install -dm755 "${DEST}" "${STATE}" "${STATE}/tmp" /var/log/emirrordist
+install -dm755 "${DEST}" "${STATE}" "${STATE}/tmp" "${RECYCLE}" /var/log/emirrordist
 
 # DELETE=0 fetches without deleting. Useful when the overlay has just dropped a
 # batch of versions and the old files should stay until someone has looked.
 delete=(--delete
         --deletion-db "${STATE}/deletion.db"
         --deletion-delay "${DELETION_DELAY}"
-        --scheduled-deletion-log /var/log/emirrordist/deletions.log)
+        --scheduled-deletion-log /var/log/emirrordist/deletions.log
+        # Deleted files move here first and are only removed for good after
+        # RECYCLE_DELAY. emirrordist decides what to delete from what it managed
+        # to read this round, and it exits 0 whether or not it read anything: if
+        # the main tree is missing or unsynced, every ebuild fails aux_get, no
+        # file has an owner, and the whole mirror is scheduled for deletion with
+        # an empty failure log and nothing to alert on. The header of this file
+        # says these are originals that cannot be fetched again, so the delay
+        # alone is not enough of a guard.
+        --recycle-dir "${RECYCLE}"
+        --recycle-db "${STATE}/recycle.db"
+        --recycle-deletion-delay "${RECYCLE_DELAY}")
 [[ ${DELETE:-1} == 0 ]] && delete=()
 
 # The overlay copy is updated by daily.sh, not here: the package list step reads
