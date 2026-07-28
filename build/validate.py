@@ -22,6 +22,21 @@ EXCLUDED = HERE / "excluded.txt"
 ATOM = re.compile(r"^[a-z0-9-]+/[A-Za-z0-9._+-]+$")
 
 
+def restricts_bindist(text):
+    """Whether any RESTRICT assignment in an ebuild carries bindist.
+
+    The closing quote is anchored to the same line. [^"]* spans newlines, so a
+    pattern that lets the opening quote float runs past the end of the line and
+    captures whatever sits between there and the next quote in the file: every
+    ebuild in the overlay carrying bindist yielded '\\n\\nRDEPEND='.
+
+    Any assignment counts, not the last one. A missed bindist ships something we
+    may not redistribute; a false positive costs one look.
+    """
+    return any("bindist" in r
+               for r in re.findall(r'^\s*RESTRICT="([^"\n]*)"', text, re.M))
+
+
 def read_mask(overlay):
     """profiles/package.mask 里被屏蔽的 category/package。
 
@@ -154,9 +169,7 @@ def main(overlay):
         # RESTRICT=bindist means upstream forbids redistributing what we build.
         # ACCEPT_LICENSE also gates this at build time, but by then someone has
         # already spent review effort on the pull request.
-        restrict = re.search(r'^RESTRICT=(?:.*")([^"]*)"', text, re.M) or \
-                   re.search(r'^RESTRICT="([^"]*)"', text, re.M)
-        if restrict and "bindist" in restrict.group(1):
+        if restricts_bindist(text):
             errors.append(f"{LIST.name}:{lineno}: RESTRICT=bindist, cannot be redistributed: {cp}")
 
         lic = re.search(r'^LICENSE="([^"]*)"', text, re.M)
