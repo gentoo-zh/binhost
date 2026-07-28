@@ -47,9 +47,11 @@ say "locale"
 # ssh carries the client LANG/LC_* across, and without the matching locale on
 # the server every command reports a setlocale failure. The system itself stays
 # on C.UTF-8.
+# shellcheck disable=SC2016  # $lg 是远端的变量，故意不在本地展开
 on 'printf "en_US.UTF-8 UTF-8\nen_GB.UTF-8 UTF-8\nzh_CN.UTF-8 UTF-8\nzh_TW.UTF-8 UTF-8\n" > /etc/locale.gen
-    locale-gen > /tmp/lg.log 2>&1 || echo "  !! locale-gen 没跑完"
-    tail -1 /tmp/lg.log | sed "s/^/  /"; rm -f /tmp/lg.log'
+    lg=$(mktemp)
+    locale-gen > "$lg" 2>&1 || echo "  !! locale-gen 没跑完"
+    tail -1 "$lg" | sed "s/^/  /"; rm -f "$lg"'
 
 say "网络：确认开机不会失联"
 # shellcheck disable=SC2016  # as above, expands on the remote
@@ -88,8 +90,10 @@ EOF
     # 追加到既有的值里，不是再写一行。OpenRC 是 source 这个文件，后面的赋值
     # 盖前面的：原来那一行会让机器上本来有的 modules= 下次开机全部不再加载。
     if [ -f /etc/conf.d/modules ] && ! grep -q tcp_bbr /etc/conf.d/modules; then
-        if grep -q "^modules=" /etc/conf.d/modules; then
-            sed -i "s/^modules=\"\(.*\)\"/modules=\"\1 tcp_bbr\"/" /etc/conf.d/modules
+        # 值可能没引号或用单引号。原来只认双引号，另外两种写法会走到 else，
+        # 于是文件里出现第二个 modules=，后一个盖掉前一个——正是这段要避免的。
+        if grep -qE "^modules=" /etc/conf.d/modules; then
+            sed -i -E "s/^modules=(\"|'\''|)(.*)\1\s*$/modules=\"\2 tcp_bbr\"/" /etc/conf.d/modules
         else
             echo "modules=\"tcp_bbr\"" >> /etc/conf.d/modules
         fi
