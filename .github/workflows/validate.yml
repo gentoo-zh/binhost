@@ -110,6 +110,11 @@ jobs:
       - name: shellcheck
         run: shellcheck build/*.sh deploy/*.sh deploy-site.sh
 
+      # 告警是出事时唯一的出口。它自己崩掉的话，问题和「没人告诉你」会同时发生，
+      # 而这正是 alert.conf 写坏时曾经的行为。
+      - name: Alerting survives a broken alert.conf
+        run: bash build/test-alert.sh
+
   nginx:
     runs-on: ubuntu-latest
     # 用官方镜像而不是 runner 自带的 nginx：配置里的 http2 指令要 1.25 以上，
