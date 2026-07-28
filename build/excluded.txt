@@ -15,6 +15,7 @@ app-misc/crush			许可证 FSL-1.1-MIT 不允许再分发
 app-text/wiki2man_on_rust	唯一带 L10N 标志的包，语言设置不同就用不上二进制包
 dev-libs/libdatrie		::gentoo 有同版本的 -r1，portage 不会选 overlay 这份
 dev-libs/libthai		::gentoo 有同版本的 -r1，portage 不会选 overlay 这份
+gui-libs/libdecor		::gentoo 有同版本，portage 不会选 overlay 这份
 media-gfx/scangearmp		许可证 Canon-IJ 只准搭配 Canon 喷墨机使用，不在 @BINARY-REDISTRIBUTABLE
 media-plugins/osdlyrics	configure 需要 XML::Parser，基础镜像补 perl-cleaner 后复查
 sys-kernel/mkinitcpio		需要 dbus[systemd]，与我们的 OpenRC profile 不兼容
