@@ -28,8 +28,10 @@ jobs:
 
       # 版本核对要认得 overlay 提交的每种型态：add+drop、只 add、只 drop、
       # mask、改分类、删包、新包上线。改错一处判定就会漏报，靠人复查发现不了。
+      # 用固定样本，不读真实 overlay：原先拿 net-misc/biliup-rs 当「已屏蔽」的
+      # 例子，它被 treeclean 之后这个用例就变成报「已移除」。
       - name: Version check handles every commit shape
-        run: python3 build/test-check-versions.py /tmp/overlay build/packages.txt
+        run: python3 build/test-check-versions.py
 
       # RESTRICT=bindist 是唯一挡住不可再分发产物进入清单的检查。它在 ebuild
       # 里的写法有好几种形状，判错一种就等于没有这道闸门，而且不会有任何迹象。
