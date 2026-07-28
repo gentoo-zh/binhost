@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""用 overlay 真实提交的型态验证 check-versions 的判定。
+"""Check check-versions against the shapes real overlay commits take.
 
 overlay 的提交主要是这几种：`add X, drop Y`、只 add、只 drop、package.mask、
 以及改分类。每种对索引的影响不同，这里各构造一个索引状态，看检测器给出的
@@ -19,7 +19,8 @@ OVERLAY = sys.argv[1] if len(sys.argv) > 1 else "/var/db/repos/gentoo-zh"
 
 
 def run(index_lines, list_lines, overlay=OVERLAY):
-    """把索引与清单写进临时文件，跑一次检测器，返回输出。
+    """Write the index and the list to temporary files, run the checker once,
+    return its output.
 
     用上下文管理器而不是 mkdtemp：这个测试一跑就是九个用例，mkdtemp 留下的
     目录没人收，跑几轮机器的 /tmp 里就是几十个空壳。
@@ -40,7 +41,8 @@ def stanza(cpv):
 
 
 def cur_version(cp):
-    """overlay 里这个包当前的版本。测试数据不能写死——overlay 一 bump 就失效。"""
+    """The version this package currently has in the overlay. The test data
+    cannot be hard-coded: one bump and it is wrong."""
     d = pathlib.Path(OVERLAY) / cp
     ebs = [e for e in d.glob("*.ebuild") if "9999" not in e.name]
     if not ebs:
@@ -52,7 +54,7 @@ NAUT = "gnome-extra/nautilus-open-any-terminal"
 NOW = cur_version(NAUT) or "0.0"
 
 CASES = [
-    # 型态                    索引里的版本                            清单            预期
+    # shape                   version in the index                    list            expected
     ("add+drop 后已跟上", [f"{NAUT}-{NOW}"], [NAUT], "无问题"),
     ("add+drop 后没跟上", [f"{NAUT}-0.0.1"], [NAUT], "落后"),
     ("索引比 overlay 还新（不该发生，也要报）", [f"{NAUT}-99.0"], [NAUT], "落后"),
@@ -68,14 +70,15 @@ CASES = [
     ("move 之后清单没跟",
      [],
      ["www-apps/dufs"], "已移除"),
-    # 包被整个删掉，和改分类在清单这边表现一样：overlay 里找不到了
+    # A deleted package looks the same from the list as a moved category: not
+    # found in the overlay
     ("包被删除，清单还留着",
      [],
      ["net-misc/no-such-package"], "已移除"),
 ]
 
 def newcomer_case():
-    """新包上线：overlay 里有构建系统、能装在 amd64 上、又不在清单里。
+    """A new package: has a build system, installable on amd64, not on the list.
 
     造一棵只有这一个包的 overlay，不看真实 overlay。看真实的话，清单一旦
     整理干净就再没有这类包，这一项会在系统状态最正确的时候失败。
@@ -91,8 +94,9 @@ print(f"  {'型态':<24} {'预期':<8} 实际")
 bad = 0
 for name, idx, lst, expect in CASES:
     rc, out = run([stanza(c) for c in idx], lst)
-    # 只看提到被测包的那一行。摘要行里的字段名会误配，而未收录的新包
-    # 每次都会列一大批，不筛就会盖住本例的结论。
+    # Look only at the line naming the package under test. Field names in the
+    # summary line would match by accident, and the uncollected newcomers are
+    # listed in bulk every time, which would bury this case's conclusion.
     target = lst[0]
     hit = [l.strip() for l in out.splitlines()
            if l.startswith("    ") and target in l]

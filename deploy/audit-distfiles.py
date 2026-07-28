@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""对镜像上的 distfiles 与 overlay 逐项核对。
+"""Reconcile the distfiles on the mirror against the overlay, item by item.
 
-两个方向：
-  缺失  overlay 引用、允许镜像、我们却没有的
-  多余  所有引用方都 RESTRICT=mirror、不该出现却出现在镜像上的
+Two directions:
+  missing  referenced by the overlay, mirrorable, and not here
+  extra    every referrer has RESTRICT=mirror, yet the file is on the mirror
 
-RESTRICT=mirror 的判定按文件而不是按包：一个 crate 可能同时被限制的和不限制的
-包引用，只要有一个允许镜像，这个文件就是可以镜像的。emirrordist 就是这么做的，
-这里是独立复核它，而不是重复它的逻辑。
+RESTRICT=mirror is decided per file rather than per package: one crate can be
+referenced by both a restricted and an unrestricted package, and a single
+referrer that allows mirroring makes the file mirrorable. That is what
+emirrordist does; this checks it independently rather than repeating its
+logic.
 
-退出码非零表示对不上，由 daily.sh 转成告警。
+A non-zero exit means the two disagree; daily.sh turns that into an alert.
 """
 
 import pathlib
@@ -20,16 +22,19 @@ import time
 
 
 def scan(overlay):
-    """文件名 -> [(包, 该文件所属的 ebuild 是否 RESTRICT=mirror)]
+    """filename -> [(package, whether its own ebuild has RESTRICT=mirror)]
 
-    按文件归属，不按整个包目录取或。一个包的两个版本可以有不同的 RESTRICT：
-    dev-java/oraclejdk-bin 的 21.0.1 是 bindist mirror，8.391 是 fetch。按目录
-    取或的话，两个版本的源码文件会互相污染，一个被当成不可镜像，另一个被当成
-    取不到，而两者都不对。
+    Attributed per file rather than or-ed across the whole package directory.
+    Two versions of one package can carry different RESTRICT:
+    dev-java/oraclejdk-bin 21.0.1 is bindist mirror while 8.391 is fetch. Or-ing
+    across the directory lets the two contaminate each other, one taken for
+    unmirrorable and the other for unfetchable, and neither is right.
 
-    Manifest 不说哪一行 DIST 属于哪个 ebuild，所以按版本号匹配文件名——overlay
-    里的源码文件绝大多数带版本号。匹配不上时退回按目录取或：宁可沿用旧行为，
-    也不要凭猜测放行一个上游不许镜像的文件。
+    The Manifest does not say which DIST line belongs to which ebuild, so the
+    version is matched against the filename -- nearly every source file in the
+    overlay carries its version. With no match it falls back to the directory-
+    wide or: better to keep the old behaviour than to guess a file past an
+    upstream that forbids mirroring.
     """
     users = {}
     for man in overlay.glob("*/*/Manifest"):
@@ -49,7 +54,8 @@ def scan(overlay):
             if not line.startswith("DIST "):
                 continue
             name = line.split()[1]
-            # 最长的版本号优先：1.2 与 1.2.3 并存时，别把 1.2.3 的文件算到 1.2 上
+            # Longest version wins: with 1.2 and 1.2.3 both present, do not
+            # attribute the 1.2.3 file to 1.2.
             hit = [v for v in by_version if v in name]
             restricted = by_version[max(hit, key=len)] if hit else fallback
             users.setdefault(name, []).append(
@@ -64,13 +70,15 @@ MARKERS = {"layout.conf", "README.txt"}
 
 
 def reap(orphan, distdir, grace=GRACE_SECONDS):
-    """删掉过了回收期的孤儿文件，返回这一轮删掉的。
+    """Delete orphans past the grace period; return what this round removed.
 
-    版本 bump 之后旧的源码文件就没人引用了，emirrordist --delete 按它这一轮
-    取过的清单删，删不到这些。留着只是占磁盘。
+    After a bump nothing references the old source file any more, and
+    emirrordist --delete works from the list it fetched this round, so it never
+    reaches them. Keeping them only costs disk.
 
-    不立刻删：先记下第一次发现的时间，过了回收期才动手。误判时还有一周可以
-    发现，和 emirrordist 自己的 --deletion-delay 同一个思路。
+    Not deleted on sight: the time it was first seen is recorded and the file
+    goes only once the grace period has passed. A wrong call still leaves a week
+    to notice, the same idea as emirrordist's own --deletion-delay.
     """
     state = pathlib.Path(STATE)
     try:
@@ -79,7 +87,7 @@ def reap(orphan, distdir, grace=GRACE_SECONDS):
         seen = {}
 
     now = int(time.time())
-    seen = {f: t for f, t in seen.items() if f in orphan}   # 又被引用了就忘掉
+    seen = {f: t for f, t in seen.items() if f in orphan}   # referenced again, so forget it
     deleted = []
     for f in orphan:
         first = seen.setdefault(f, now)
@@ -108,7 +116,8 @@ def main(overlay, dest):
     users = scan(overlay)
     have = {p.name for p in dest.rglob("*") if p.is_file() and p.name != "layout.conf"}
 
-    # fetch 限制的包连 SRC_URI 都没有 URL，谁也镜像不了，不算缺失
+    # A fetch-restricted package has no URL in SRC_URI at all, so nobody can
+    # mirror it and it does not count as missing.
     unfetchable = set()
     for man in overlay.glob("*/*/Manifest"):
         d = man.parent
@@ -124,10 +133,14 @@ def main(overlay, dest):
 
     missing = sorted(mirrorable - have)
     extra = sorted(never & have)
-    # overlay 已经完全不再引用的。版本 bump 之后旧的源码文件就是这一类，
-    # emirrordist --delete 只按它这一轮取过的清单删，删不到这些。
-    # 布局标记不是 distfile：layout.conf 告诉 portage 这里用两级哈希而不是
-    # 平铺目录，官方 distfiles 根下也有同一份。没有它客户端会到错误的路径去取。
+    # No longer referenced by the overlay at all. Old source files after a bump
+    # are this, and emirrordist --delete works from the list it fetched this
+    # round so it never reaches them.
+    #
+    # The layout marker is not a distfile: layout.conf tells portage this tree
+    # uses two levels of hashing rather than a flat directory, and the official
+    # distfiles root carries the same file. Without it clients fetch from the
+    # wrong path.
     orphan = sorted(have - set(users) - MARKERS)
     deleted = reap(orphan, dest)
 
@@ -143,8 +156,9 @@ def main(overlay, dest):
     for f in deleted[:20]:
         print(f"  清理 {f}")
 
-    # 无人引用的文件由 reap 按回收期处理，是版本 bump 的常态，不判失败。
-    # 每小时为同一批文件推一次告警只会让人学会忽略告警。
+    # Unreferenced files are handled by reap on its grace period. They are what
+    # a bump normally leaves behind, so they are not a failure. Alerting hourly
+    # about the same set of files only teaches people to ignore alerts.
     return 1 if (missing or extra) else 0
 
 

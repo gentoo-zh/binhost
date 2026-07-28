@@ -27,7 +27,8 @@ except ImportError:  # 没有 portage 就没法正确比版本，宁可停下也
     sys.exit("需要 sys-apps/portage：版本比较用 portage.versions.vercmp")
 import time
 
-# 同目录的共用模块。镜像机上只装了它和几个脚本，所以它不引入额外依赖。
+# Shared module in the same directory. Only it and a couple of scripts are
+# installed on the mirror, so it pulls in nothing extra.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ebuilds import (                                       # noqa: E402
     ATOM, BUILD_ECLASS, PREBUILT_ECLASS,
@@ -36,7 +37,8 @@ from ebuilds import (                                       # noqa: E402
 )
 
 
-# 路径可以覆盖：这个脚本在仓库里和在镜像机上的布局不同，不该假设自己被放在哪。
+# The paths are overridable: the layout differs between the repository and the
+# mirror, so this must not assume where it was put.
 HERE = pathlib.Path(__file__).resolve().parent
 LIST = pathlib.Path(os.environ.get("LIST", HERE / "packages.txt"))
 EXCLUDED = pathlib.Path(os.environ.get("EXCLUDED", HERE / "excluded.txt"))
@@ -51,27 +53,32 @@ def field(text, name):
     return m.group(1).strip() if m else ""
 
 
-# 有真正编译过程的 eclass。收录清单当初就是按这个分的第一梯队。
+# Eclasses that mean something is actually compiled. The collection list was
+# first drawn along this line.
 BUILD_ECLASS = {
     "cmake", "meson", "go-module", "cargo", "autotools", "gnome2",
     "distutils-r1", "dotnet-pkg", "qmake-utils", "waf-utils", "scons-utils",
 }
-# 出现这些 eclass 即为解包上游产物，无编译过程
+# These eclasses mean unpacking an upstream artifact, with no compilation
 PREBUILT_ECLASS = {"unpacker", "rpm", "java-pkg-simple"}
 
 
 def why_not_listed(cp, text, masked):
-    """不在收录清单的包，为什么不在。
+    """Why a package is not on the collection list.
 
     返回一个代号而不是句子：页面要按语言翻译，服务器这边不该决定用词。
     顺序就是判定的优先级——被 mask 的包连 keyword 都不用看。
     """
     if cp in masked:
         return "masked"
-    # KEYWORDS 常写在 if 块里而带缩进，也可能整个来自 eclass（acct-group 这些）。
-    # 锚行首会把它们全判成没有 keyword。找不到就别猜，交给后面的判断。
-    # 同一个 ebuild 里出现多次时后一次生效，和 bash 一致。liblol-glibc 先写了
-    # 一长串架构，随后又被 -* ~loong 覆盖。
+    # KEYWORDS is often indented inside an if block, and can come entirely from
+    # an eclass, as with acct-group. Anchoring at the line start would take all
+    # of those for having no keywords. When none is found, do not guess: leave
+    # it to the checks below.
+    #
+    # The last assignment wins when one ebuild has several, as in bash.
+    # liblol-glibc writes a long list of arches and then overrides it with
+    # -* ~loong.
     kw = re.findall(r'^\s*KEYWORDS="([^"]*)"', text, re.M)
     if kw and not accepts_amd64(kw[-1]):
         return "nokeyword"
@@ -89,7 +96,8 @@ def why_not_listed(cp, text, masked):
 
 
 def read_excluded():
-    """category/package -> 原因。构建不出来或不能分发的包，站点上要说明为什么。"""
+    """category/package -> reason. A package that cannot be built or
+    redistributed needs a stated reason on the site."""
     out = {}
     if not EXCLUDED.exists():
         return out
@@ -103,7 +111,8 @@ def read_excluded():
 
 
 def read_built():
-    """Packages 索引里出现过的 category/package。索引不存在就当成空。
+    """category/package seen in the Packages index. A missing index counts as
+    empty.
 
     刚部署、还没发布过第一批包的时候索引本来就没有，那不是错误。
     """
@@ -148,9 +157,10 @@ def main(overlay):
         if manifest.exists():
             dist = re.findall(r"^DIST (\S+)", manifest.read_text(errors="ignore"), re.M)
 
-        # 既没有源码文件、又不在 binhost 清单、也没被构建出来的包，这个镜像
-        # 完全不涵盖（acct-group/acct-user 这类只是用户与组的定义）。列出来
-        # 只会让人以为镜像有遗漏。
+        # A package with no source files, not on the binhost list and never
+        # built is not covered by this mirror at all -- acct-group and
+        # acct-user only define users and groups. Listing it would suggest the
+        # mirror is incomplete.
         if not dist and cp not in wanted and cp not in built:
             continue
 
@@ -164,11 +174,13 @@ def main(overlay):
             "binhost": cp in wanted,
             "dist": sorted(set(dist)),
         }
-        # 不在清单也不在排除清单的包，页面上原本只有一个破折号，什么都不说。
-        # 四百多行里这样的占一大半，算出类别来。
+        # A package on neither list used to show a bare dash on the page, which
+        # says nothing. That is most of the four hundred-odd rows, so work out
+        # the category.
         if cp not in wanted and cp not in excluded:
             row["why"] = why_not_listed(cp, text, masked)
-        # 明确排除的包要说明为什么，否则页面上和「没人提过它」看着一样
+        # An explicitly excluded package needs its reason, or the page cannot
+        # be told apart from one nobody ever mentioned.
         if cp in excluded:
             row["excluded"] = excluded[cp]
         out.append(row)
@@ -178,7 +190,8 @@ def main(overlay):
     tmp.write_text(json.dumps(
         {"generated": int(time.time()), "packages": out},
         ensure_ascii=False, separators=(",", ":")))
-    # 就地覆写时页面可能读到写了一半的 JSON。写临时文件再改名。
+    # Overwriting in place lets the page read half-written JSON. Write a
+    # temporary file and rename.
     os.replace(tmp, OUT)
 
     with_dist = sum(1 for p in out if p["dist"])
@@ -188,8 +201,10 @@ def main(overlay):
         print(f"!!! {len(missing)} listed but not in {overlay}:")
         for cp in missing:
             print(f"      {cp}")
-        # 退出码要带出去。镜像机上这一步由 daily.sh 的 step 包着，而 step 只在
-        # 非零退出时告警。只打印不返回，清单与 overlay 脱节就没有人知道。
+        # The exit code has to carry out. On the mirror this step is wrapped by
+        # daily.sh's step, which alerts only on a non-zero exit. Printing
+        # without returning leaves a list that has drifted from the overlay
+        # unnoticed.
         return 1
     return 0
 

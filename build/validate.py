@@ -10,7 +10,8 @@ import pathlib
 import re
 import sys
 
-# 同目录的共用模块。镜像机上只装了它和几个脚本，所以它不引入额外依赖。
+# Shared module in the same directory. Only it and a couple of scripts are
+# installed on the mirror, so it pulls in nothing extra.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ebuilds import (                                       # noqa: E402
     ATOM, BUILD_ECLASS, PREBUILT_ECLASS,
@@ -26,7 +27,8 @@ EXCLUDED = HERE / "excluded.txt"
 
 
 def read_excluded():
-    """category/package -> 原因。缺原因就是错误：写下来是为了给后来的人看。"""
+    """category/package -> reason. A missing reason is an error: it is written
+    down for whoever comes next."""
     out = {}
     if not EXCLUDED.exists():
         return out
@@ -56,15 +58,18 @@ def main(overlay):
         elif not reason:
             errors.append(f"{EXCLUDED.name}:{lineno}: {cp} 没写原因")
         elif not (overlay / cp).is_dir():
-            # 包已经从 overlay 移除了，这条也该删掉，否则清单只会越积越长
+            # The package is gone from the overlay, so this entry should go
+            # too, or the list only grows.
             notes.append(f"{EXCLUDED.name}:{lineno}: {cp} 已不在 overlay 里，可以删掉这条")
 
     for lineno, raw in enumerate(LIST.read_text().splitlines(), 1):
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
-        # 构建脚本按原始行匹配（grep -E '^…$'），这里按 strip 后匹配。
-        # 尾部有空白时 CI 会过而构建会静默少一个包，所以原始行也要严格。
+        # The build script matches the raw line (grep -E '^...$') while this
+        # matches after stripping. Trailing whitespace would pass CI and then
+        # silently drop a package from the build, so be strict about the raw
+        # line too.
         if raw != line:
             errors.append(f"{LIST.name}:{lineno}: 行首或行尾有多余空白: {raw!r}")
             continue
@@ -85,8 +90,8 @@ def main(overlay):
             errors.append(f"{LIST.name}:{lineno}: duplicate of line {seen[cp]}: {cp}")
         seen[cp] = lineno
 
-    # 不分大小写地比。net-proxy/Xray 和 net-proxy/v2rayA 在 ASCII 序里
-    # 大写会排到小写前面，但清单是按人眼顺序排的。
+    # Compare case-insensitively. In ASCII order net-proxy/Xray sorts before
+    # net-proxy/v2rayA, but the list is kept in the order a reader expects.
     names = [cp.lower() for _, cp in atoms]
     if names != sorted(names):
         for i in range(1, len(names)):
@@ -103,8 +108,9 @@ def main(overlay):
             errors.append(f"{LIST.name}:{lineno}: not in the overlay: {cp}")
             continue
 
-        # overlay 自己 mask 掉的包大多写着 masked for removal，收进来只会在
-        # 构建时报「所有版本都被屏蔽」，然后包被删掉，清单里留一条死条目。
+        # A package the overlay masks itself usually says masked for removal.
+        # Taking it on only produces all ebuilds masked at build time, and then
+        # the package is deleted and the list keeps a dead entry.
         if cp in masked:
             errors.append(f"{LIST.name}:{lineno}: overlay 的 package.mask 屏蔽了它: {cp}")
             continue

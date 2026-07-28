@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""检查样式表里的残留。
+"""Check the stylesheet for leftovers.
 
 三类问题，都在这个项目里真出现过：
   死规则      组件换掉了，样式忘了删
@@ -16,7 +16,7 @@ from collections import Counter, defaultdict
 
 
 def rules(css):
-    """[(行号, 选择器, 所属 @media 或 None)]"""
+    """[(line number, selector, enclosing @media or None)]"""
     out, media = [], None
     for lineno, line in enumerate(css.split("\n"), 1):
         if re.match(r"\s*@media", line):
@@ -43,8 +43,10 @@ def main(site):
     for v in sorted(declared - used):
         bad.append(f"变量 {v} 声明了没人用")
 
-    # 反过来也要查：写错变量名不会报错，那条属性整个不生效，页面上看是
-    # 「边框没了」而不是「样式坏了」。图例块的 --line/--bg-soft 就是这样失效的。
+    # The other direction matters too: a misspelt variable name raises nothing,
+    # the declaration simply does not apply, and what shows on the page is a
+    # missing border rather than a broken stylesheet. The legend block's --line
+    # and --bg-soft failed exactly that way.
     for v in sorted(set(re.findall(r"var\((--[a-z0-9-]+)", css)) - declared):
         bad.append(f"变量 {v} 被引用但没有声明")
 
@@ -56,7 +58,7 @@ def main(site):
             where = media or "顶层"
             bad.append(f"选择器 {sel} 在{where}出现 {len(lines)} 次：行 {lines}")
 
-    # 类名在页面与脚本里都找不到
+    # Class name appears in neither the pages nor the scripts
     classes = set()
     for _, sel, _ in rules(css):
         classes.update(re.findall(r"\.([a-zA-Z][\w-]*)", sel))
@@ -64,9 +66,11 @@ def main(site):
         if not re.search(r'class="[^"]*\b' + re.escape(c) + r'\b|[\'"]' + re.escape(c) + r'[\'"]', src):
             bad.append(f"类 .{c} 在页面与脚本里都找不到")
 
-    # 深色调色板写两份：一份在 prefers-color-scheme 里，一份对应手动选择。
-    # 纯 CSS 里合并不了，只能盯着两份别走散——改一处漏一处，就是「跟随系统的
-    # 深色」和「手动选的深色」变成两套配色，而且不会有任何报错。
+    # The dark palette is written twice: once inside prefers-color-scheme, once
+    # for the manual choice. Plain CSS cannot merge them, so the only option is
+    # to watch that the two do not drift. Changing one and missing the other
+    # gives system dark and chosen dark two different palettes, with nothing
+    # reported.
     def palette(sel):
         i = css.find(sel)
         if i < 0:

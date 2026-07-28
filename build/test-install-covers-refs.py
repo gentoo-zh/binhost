@@ -56,6 +56,6 @@ for d in DIRS:
         print(f"    ✗ {name} 被引用但 install.sh 没有安装它")
         bad += 1
 
-# install.sh 装了却没人用的不算错——status.sh 两台机器共用，
-# 而这里只读 deploy/ 下的脚本。
+# Something install.sh installs that nothing reads is not an error: status.sh
+# is shared by both machines, and only the scripts under deploy/ are read here.
 sys.exit(1 if bad else 0)
