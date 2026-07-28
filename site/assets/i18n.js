@@ -70,7 +70,10 @@
   var themeMode = read('mirror-theme') || 'system';
 
   var controls = document.getElementById('controls');
-  if (!controls) return;
+
+  /* 语言按钮只在页面确实有翻译时才画。design.html 是单语文档，按钮画出来点了
+     只会改 localStorage：本页一个字都不变，而别的页跟着换语言。 */
+  var translatable = !!document.querySelector('[data-i18n],[data-i18n-html]');
 
   /* 语言按钮（数据驱动） */
   var langWrap = document.createElement('div'); langWrap.className = 'lang';
@@ -100,8 +103,12 @@
   themeBtn.addEventListener('click', function (e) { e.stopPropagation(); if (menu.hidden) openMenu(); else closeMenu(); });
   themeWrap.appendChild(themeBtn); themeWrap.appendChild(menu);
 
-  controls.appendChild(langWrap);
-  controls.appendChild(themeWrap);
+  /* 没有 #controls 的页面也要应用主题与语言。这两步原先排在提前 return 之后，
+     一旦有页面不放控件，用户存的深色偏好就静默失效。 */
+  if (controls) {
+    if (translatable) controls.appendChild(langWrap);
+    controls.appendChild(themeWrap);
+  }
 
   function openMenu() { menu.hidden = false; themeBtn.setAttribute('aria-expanded', 'true'); }
   function closeMenu() { menu.hidden = true; themeBtn.setAttribute('aria-expanded', 'false'); }
@@ -141,6 +148,9 @@
     if (pageTitle) document.title = pageTitle + ' — distfiles.gentoozh.org';
     renderTheme();
     store('mirror-lang', l);
+    /* 页面里由脚本自绘的内容（首页那几个数字、包列表的表格）不带 data-i18n，
+       applyLang 遍历不到。广播一次，让它们自己重画。 */
+    document.dispatchEvent(new CustomEvent('langchange', { detail: l }));
   }
 
   applyTheme(themeMode);

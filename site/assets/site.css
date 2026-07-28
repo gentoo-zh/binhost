@@ -1,6 +1,10 @@
 /* distfiles.gentoozh.org */
 
-:root {
+/* [data-theme="light"] 一并声明：design.html 用带该属性的探针 div 读色值，
+   只有 :root 的话它读到的是继承来的当前主题，系统深色时浅色那组色块显示的
+   是深色值。写成选择器列表而不是再抄一份，两份浅色调色板要靠人盯着同步。 */
+:root,
+[data-theme="light"] {
   color-scheme: light dark;
 
   /* 强调色取自 gentoozh.org 的 hsl(255 55% 70%)，色相与 Gentoo 官方紫

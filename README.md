@@ -28,7 +28,7 @@ build/publish.sh
 build/status.sh                              # 密钥/证书/索引/取包
 ```
 
-两台机器分开装，没有共用的东西：
+两台机器分开装，没有共用的部分：
 
 ```bash
 REMOTE=mirror ./deploy/install.sh                       # 镜像机

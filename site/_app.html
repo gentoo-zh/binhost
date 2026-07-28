@@ -62,6 +62,7 @@
   </div>
 </footer>
 
+<script src="/assets/util.js"></script>
 <script src="/assets/strings.js"></script>
 <script>
 window.MIRROR_I18N = {
@@ -103,11 +104,6 @@ const lsPath = atRoot ? "/" : path;
 
 // 路径和文件名都进 innerHTML。路径来自 URL，任何以斜杠结尾的地址 nginx 都
 // 回这个页面；文件名来自 ebuild 的 Manifest。两者都不是我们能约束的内容。
-function esc(s) {
-  return String(s).replace(/[&<>"']/g, function (c) {
-    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
-  });
-}
 
 
 // i18n.js 已经把当前语言的串换进 #strings 了，直接读。
@@ -116,13 +112,6 @@ function t(key) {
   return el ? el.textContent : key;
 }
 
-function human(n) {
-  if (n < 1024) return n + " B";
-  const unit = ["K", "M", "G", "T"];
-  let i = -1;
-  do { n /= 1024; i++; } while (n >= 1024 && i < unit.length - 1);
-  return n.toFixed(n < 10 ? 1 : 0) + " " + unit[i];
-}
 
 function lang() {
   return document.documentElement.lang || 'zh-cn';

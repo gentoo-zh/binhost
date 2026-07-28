@@ -84,15 +84,22 @@ COLLOQUIAL = [
     "一大堆", "没啥", "沒啥",
 ]
 
+# How a comment starts, per file. The pattern is not anchored to the line start
+# so a trailing comment counts too: `rm -f "${log}"  # 成功的不留` used to slip
+# through, and that is where offhand wording collects.
 COMMENT = {
-    ".sh": r"^\s*#(.*)$",
-    ".py": r"^\s*#(.*)$",
-    ".js": r"^\s*//(.*)$",
-    ".service": r"^\s*#(.*)$",
-    ".timer": r"^\s*#(.*)$",
-    ".conf": r"^\s*#(.*)$",
-    ".inc": r"^\s*#(.*)$",
+    ".sh": r"#(.*)$",
+    ".py": r"#(.*)$",
+    ".js": r"//(.*)$",
+    ".service": r"#(.*)$",
+    ".timer": r"#(.*)$",
+    ".conf": r"#(.*)$",
+    ".inc": r"#(.*)$",
+    ".md": None,          # prose, checked whole
 }
+
+# Files with no suffix that are still configuration with comments.
+NO_SUFFIX = {"cron.d-binhost", "logrotate-binhost", "rsyncd.conf", "nftables.conf"}
 
 
 def check_comments(root):
@@ -102,8 +109,11 @@ def check_comments(root):
     for f in sorted(pathlib.Path(root).rglob("*")):
         if not f.is_file() or ".git" in f.parts:
             continue
-        pat = COMMENT.get(f.suffix)
-        if pat is None:
+        if f.suffix in COMMENT:
+            pat = COMMENT[f.suffix]
+        elif f.name in NO_SUFFIX:
+            pat = r"#(.*)$"
+        else:
             continue
         # This script lists the words itself, so skip it
         if f.name == "check-copy.py":
@@ -114,10 +124,17 @@ def check_comments(root):
             continue
         hits = []
         for i, line in enumerate(lines, 1):
-            m = re.match(pat, line)
-            # Beyond comments, Chinese strings printed for people are checked
-            # too: alerts and logs are text a user reads.
-            texts = [m.group(1)] if m else re.findall(r'"([^"]*[\u4e00-\u9fff][^"]*)"', line)
+            if pat is None:                     # .md: the whole line is prose
+                texts = [line]
+            else:
+                m = re.search(pat, line)
+                # Beyond comments, Chinese strings printed for people are checked
+                # too: alerts and logs are text a user reads. Both quote styles:
+                # assets/strings.js writes every user-visible string in single
+                # quotes, so a double-quote-only pattern covered none of it.
+                texts = [m.group(1)] if m else (
+                    re.findall(r'"([^"]*[\u4e00-\u9fff][^"]*)"', line)
+                    + re.findall(r"'([^']*[\u4e00-\u9fff][^']*)'", line))
             for chunk in texts:
                 for w in COLLOQUIAL:
                     if w in chunk:
