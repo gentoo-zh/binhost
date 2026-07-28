@@ -439,12 +439,24 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 }
 
 /* 指纹放在步骤标题旁，导入完可以直接对一眼 */
+.fpr-box { margin-left: auto; display: flex; align-items: center; gap: 0.35rem; }
 .fpr {
-  margin-left: auto; font-family: var(--mono); font-size: 0.68rem;
+  font-family: var(--mono); font-size: 0.68rem;
   color: var(--fg-soft); background: var(--chip);
   padding: 0.14rem 0.45rem; border-radius: 0.3rem; white-space: nowrap;
 }
-@media (max-width: 52rem) { .fpr { display: none; } }
+.fpr-copy {
+  flex: none; border: 1px solid var(--border); border-radius: 0.3rem;
+  background: transparent; color: var(--fg-soft); cursor: pointer;
+  font: inherit; font-size: 0.7rem; padding: 0.1rem 0.5rem;
+}
+.fpr-copy:hover { color: var(--fg); }
+/* 窄屏一行放不下四十位十六进制。指纹是核对公钥的唯一依据，不能隐藏，
+   改成占满一行按分组换行，复制键跟在后面。 */
+@media (max-width: 52rem) {
+  .fpr-box { margin-left: 0; width: 100%; }
+  .fpr { white-space: normal; }
+}
 h2[id] { scroll-margin-top: 4.5rem; }
 
 /* 对勾列。窄到只放得下一个符号，别让它抢名称列的宽度 */
@@ -500,8 +512,12 @@ h2[id] { scroll-margin-top: 4.5rem; }
 @media (max-width: 34rem) {
   .wrap { padding: 2.25rem 1rem 2.5rem; }
 
-  /* 镜像表四栏：站点、地址、两个状态。地址最长，让它换行而不是把表撑出屏幕。 */
+  /* 镜像表四栏：站点、地址、两个状态。地址最长，让它换行而不是把表撑出屏幕。
+     地址栏要声明 width:100%：break-all 把这栏的最小内容宽度降到一个字符，
+     浏览器会照最小值分配，把宽度全让给别的栏，地址就成了一字一行。 */
   .mirrors td, .mirrors th { padding-left: 0.4rem; padding-right: 0.4rem; }
+  .mirrors th:first-child { width: auto; }
+  .mirrors td:nth-child(2), .mirrors th:nth-child(2) { width: 100%; }
   .mirrors td:nth-child(2) { white-space: normal; word-break: break-all; }
   .mirrors th.mark, .mirrors td.mark { font-size: 0.72rem; }
   .title { font-size: 1.45rem; }
