@@ -12,9 +12,11 @@
 
 set -euo pipefail
 
-# 主体放进函数，最后一行才调用。bash 是按字节偏移边读边执行的，脚本在运行中
-# 被替换（例如 rsync 部署一次新版本）会让它从新文件的同一偏移继续读，
-# 执行路径因此错乱。包成函数之后 bash 先整体解析，运行中改文件不影响本次执行。
+# The body is a function so the last line is the only thing that runs it. bash
+# reads a script by byte offset as it executes, so replacing the file mid-run --
+# an rsync deploy, say -- makes it resume at the same offset in the new file.
+# Wrapped in a function, bash parses the whole thing first and editing the file
+# afterwards cannot affect the run in progress.
 main() {
 TAG="${TAG:-x86-64}"
 BASE="${BASE:-gentoo-zh/binhost-base:${TAG}}"
@@ -41,10 +43,12 @@ docker info >/dev/null 2>&1 || DOCKER="sudo docker"
 
 die() { echo "!!! $*" >&2; exit 1; }
 
-# 两轮同时跑会一起写同一个 PKGDIR 和 STAGE。锁放在这里而不是调用方，
-# 是因为手工调、定时器调、重跑某几个包，走的都是这一层。
+# Two rounds at once would write the same PKGDIR and STAGE. The lock lives here
+# rather than in the caller because a manual run, a timer run, and a rerun of a
+# few packages all go through this layer.
 #
-# 锁文件跟着 STAGE 走，不放 /var/lock：构建以普通用户执行，对那个目录没有写入权限。
+# The lock file follows STAGE instead of /var/lock: the build runs as an
+# ordinary user with no write access there.
 LOCK="${LOCK:-$(dirname "${STAGE}")/build.lock}"
 mkdir -p "$(dirname "${LOCK}")"
 exec 9>"${LOCK}"
@@ -79,8 +83,9 @@ sudo install -dm755 -o "$(id -u)" -g "$(id -g)" \
     "${PKGDIR}" "$(dirname "${STAGE}")" "${LOGDIR}" "${GENTOO_BINPKGS}"
 rm -f "${LOGDIR}"/*.log "${LOGDIR}"/failed.txt
 
-# 磁盘写满或构建被打断会在缓存里留下 0 字节的 gpkg。portage 每轮都要为它们
-# 报一次 Invalid binary package，然后当成没有缓存重新编一遍。实测留了 70 个。
+# A full disk or an interrupted build leaves zero-byte gpkg files in the cache.
+# Portage reports Invalid binary package for each of them every round and then
+# rebuilds as if there were no cache at all. Seventy of them accumulated once.
 empty=$(find "${PKGDIR}" -name '*.gpkg.tar' -size 0 -print -delete | wc -l)
 (( empty )) && echo ">>> 清掉 ${empty} 个 0 字节的缓存包" 
 
@@ -119,11 +124,13 @@ BINPKG_GPG_SIGNING_KEY="${SIGNING_KEY}"
 BINPKG_GPG_SIGNING_GPG_HOME="/root/.gnupg"
 EOF
 
-# 依赖上要开的 USE。全量跑第一次时这些包全都失败在 autounmask，portage 只
-# 是拒绝自动改配置，ebuild 本身没问题——每一条都是某个 ebuild 明写的依赖。
+# USE flags the dependencies need. On the first full run these all failed at
+# autounmask: portage refuses to change configuration on its own, and nothing is
+# wrong with the ebuilds -- every line here is a dependency some ebuild states
+# outright.
 #
-# 加在依赖上，不加在我们自己的包上：我们的包按默认 USE 构建，用户拿到的才
-# 和自己 emerge 出来的一致。
+# Set on the dependencies, never on our own packages: ours build with default
+# USE so that what users receive matches what they would emerge themselves.
 mkdir -p /etc/portage/package.use
 cat > /etc/portage/package.use/binhost-deps <<'EOF'
 dev-libs/marisa        python      # app-i18n/fcitx-kkc
@@ -137,16 +144,21 @@ EOF
 mapfile -t atoms < <(grep -E '^[a-z0-9-]+/[A-Za-z0-9._+-]+$' /tmp/packages.txt)
 echo ">>> ${#atoms[@]} packages"
 
-# --changed-use：依赖的 USE 变了就重建，不然会把 PKGDIR 里按旧 USE 编的那份
-# 原样再发一遍。ebuild 内容改了但版本未动时 portage 无法察觉，那种要靠 revbump。
+# --changed-use rebuilds when a dependency's USE changed; without it the copy in
+# PKGDIR built against the old USE would be published again as is. An ebuild
+# edited without a version change is invisible to portage -- that needs a
+# revbump.
 EMERGE=(emerge --usepkg --changed-use --with-bdeps=y --quiet-build)
 
-# 先整体来一次。portage 解析一遍就知道谁要重编，实测 183 个包解析 171 秒，
-# 而逐包跑要各解析一次，中位数 19 秒、合计一个半小时——那一个半小时算的是
-# 同一棵依赖树，算 183 遍。
+# One whole-list emerge first. Portage resolves once and knows what needs
+# rebuilding: 183 packages resolved in 171 seconds, against a median of 19
+# seconds each when run one at a time, an hour and a half in total. That hour
+# and a half is the same dependency tree, resolved 183 times.
 #
-# 整体跑的代价是第一个解不开的依赖会中止全部，所以它失败时退回逐包，保住
-# 「一个坏包只损失一个包」和每包一份日志。正常情况下退回不会发生。
+# The cost is that the first unsatisfiable dependency aborts everything, so a
+# failure falls back to one emerge per package, which keeps a broken package
+# costing one package and keeps a log per package. The fallback does not happen
+# in normal operation.
 echo "::: 整体解析"
 failed=()
 if "${EMERGE[@]}" "${atoms[@]}" > /var/log/binhost/whole.log 2>&1; then
@@ -199,7 +211,7 @@ rm -rf "${STAGE}.old"
 mv "${STAGE}.new" "${STAGE}"
 echo ">>> staged at ${STAGE} (previous generation kept at ${STAGE}.old)"
 
-# --- 失败分类 -----------------------------------------------------------------
+# --- classify failures -------------------------------------------------------
 if [[ -s ${LOGDIR}/failed.txt ]]; then
     python3 "$(dirname "$0")/classify-failures.py" "${LOGDIR}" | tee "${LOGDIR}/report.txt"
 fi

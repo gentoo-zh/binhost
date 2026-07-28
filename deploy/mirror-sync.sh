@@ -1,15 +1,17 @@
 #!/bin/bash
-# 供下游镜像站使用：将 gentoo-zh binhost 同步到本地目录。
+# For downstream mirrors: sync the gentoo-zh binhost into a local directory.
 #
-# 索引中的 PATH 为相对路径，因此将 Packages 与相同相对路径下的文件一并提供，
-# 即构成一个完整的 binhost，用户将 sync-uri 指向该地址即可。
+# PATH in the index is relative, so serving Packages together with the files at
+# those same relative paths constitutes a complete binhost; users point
+# sync-uri at that address.
 #
-# 需要 rsync 时用 rsync://distfiles.gentoozh.org/gentoo-zh/binpkgs，本脚本供只能
-# 走 HTTP 的场合使用。
+# Use rsync://distfiles.gentoozh.org/gentoo-zh/binpkgs where rsync is
+# available; this script is for the cases where only HTTP is.
 #
 #   DEST=/srv/mirror/gentoo-zh/binpkgs/x86-64 ./mirror-sync.sh
 #
-# 建议每日执行一次。已存在的文件不会重复下载：包名含版本与 build id，内容不变。
+# Once a day is enough. Files already present are not fetched again: a package
+# name carries its version and build id, so its content does not change.
 
 set -euo pipefail
 
@@ -35,7 +37,8 @@ failed=0
 for path in "${paths[@]}"; do
     [[ -f ${DEST}/${path} ]] && continue
     mkdir -p "${DEST}/$(dirname "${path}")"
-    # 先写临时文件再改名，中断时不会留下不完整的文件冒充完整包
+    # Write to a temporary name and rename, so an interruption cannot leave a
+    # partial file passing for a complete package.
     if curl -fsSL --max-time 900 "${BASE}/${path}" -o "${DEST}/${path}.part"; then
         mv -f "${DEST}/${path}.part" "${DEST}/${path}"
         new=$((new + 1))
@@ -46,20 +49,22 @@ for path in "${paths[@]}"; do
     fi
 done
 
-# 有包没取到就不换索引。换掉会让新索引指向本地不存在的文件，
-# 使用者 emerge 收到的是一片 404，而旧索引至少还是自洽的。
-# 上游临时 5xx、网络中断、磁盘满都会走到这里。
+# Do not swap the index while any package is missing. Swapping would point the
+# new index at files that are not here, and emerge would meet a wall of 404s,
+# whereas the old index is at least self-consistent. A transient upstream 5xx, a
+# dropped connection or a full disk all end up here.
 if (( failed )); then
     echo "!!! ${failed} 个包没取到，索引保持原样" >&2
     echo "    修好来源后重跑；已取到的 ${new} 个不会重复下载" >&2
     exit 1
 fi
 
-# 索引最后写入：此前它引用的文件均已就位。
+# The index is written last, once everything it refers to is in place.
 mv -f "${tmp}/Packages" "${DEST}/Packages"
 mv -f "${tmp}/Packages.gz" "${DEST}/Packages.gz"
 
-# 清理索引中已不存在的包。置于索引更新之后：在此之前它们仍然有效。
+# Remove packages the index no longer names. After the index update, because
+# until then they were still valid.
 removed=0
 while IFS= read -r -d '' f; do
     rel=${f#"${DEST}/"}

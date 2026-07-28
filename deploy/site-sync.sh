@@ -37,11 +37,15 @@ after=$(git -C "${WORK}" rev-parse HEAD)
 # --delete only inside assets/: everything else in DEST belongs to the package
 # publisher, and wiping it would take the repository down with the site.
 rsync -a --delete "${WORK}/site/assets/" "${DEST}/assets/"
-# packages.json 不在这里：它由镜像机上的 gen-packages.py 按 overlay 生成，
-# 内容跟着 overlay 走，不跟着本仓库的提交走。
-# 签名公钥是用户导入的信任锚。让它跟着这条五分钟一次的自动通道走，
-# 任何能改仓库的人换掉它，镜像机会自动照做，而用户看到的仍然是我们的域名。
-# 所以只在指纹与本机记录的一致时才同步——这份指纹写在服务器上，不从仓库读。
+# packages.json is not here: gen-packages.py on the mirror produces it from the
+# overlay, so its content follows the overlay rather than this repository's
+# commits.
+#
+# The signing public key is the trust anchor users import. Carried by this
+# five-minute automatic channel, anyone who can change the repository could
+# replace it and the mirror would follow, while users still see our domain. So
+# it is synced only when its fingerprint matches the one recorded on the server,
+# which is read from the machine and not from the repository.
 FPR_FILE="${FPR_FILE:-/etc/binhost/signing-key.fpr}"
 if [[ -r ${FPR_FILE} ]]; then
     want=$(tr -d ' \n' < "${FPR_FILE}")
@@ -56,9 +60,11 @@ else
     echo "!! ${FPR_FILE} 不存在，公钥未同步" >&2
 fi
 
-# 用 --include/--exclude 而不是逐个列文件名：漏掉一个新页面只是它不上线，
-# 而列一个已删除的文件会让 rsync 返回 23，在 set -e 下整个同步都不做。
-# 不能直接 site/*.html 加 --delete：DEST 下还有发布出去的包和 distfiles。
+# --include/--exclude rather than naming files one by one: missing a new page
+# only means it does not go live, while naming a deleted one makes rsync return
+# 23 and, under set -e, stops the whole sync. site/*.html with --delete is not
+# an option either, because DEST also holds the published packages and
+# distfiles.
 rsync -a --include='*.html' --exclude='*' "${WORK}/site/" "${DEST}/"
 
 echo "site updated ${before:0:7} -> ${after:0:7}"

@@ -1,20 +1,23 @@
 #!/bin/bash
-# 把构建这一侧装到构建机上。在本机执行，通过 ssh 作用于目标。
+# Install the build side onto the build machine. Runs locally, acts over ssh.
 #
 #   REMOTE="ssh -i ~/.ssh/gentoobuild -p 49887 user@host" ./deploy/install-builder.sh
 #
-# 构建机与镜像机分开装：前者要 docker、签名密钥、overlay 副本，
-# 后者只要 nginx 与同步脚本，两边没有共用的部分。
+# The build machine and the mirror are installed separately: the first needs
+# docker, the signing key and an overlay copy, the second only nginx and the
+# sync scripts.
 #
-# 装之前先确认：docker 可用、签名密钥在 SIGNING_GNUPGHOME、
-# 能免密 ssh 到镜像机（publish.sh 要往那边推）。
+# Before installing, confirm docker works, the signing key is in
+# SIGNING_GNUPGHOME, and passwordless ssh to the mirror is in place, since
+# publish.sh pushes there.
 
 set -euo pipefail
 
 REMOTE="${REMOTE:?用法: REMOTE=\"ssh ...\" $0}"
 ROOT="${ROOT:-/var/lib/binhost}"
 SIGNING_KEY="${SIGNING_KEY:?需要签名密钥指纹}"
-# 构建以谁的身份跑。overlay 副本、docker、到镜像机的 ssh 密钥都要属于它。
+# Who the build runs as. The overlay copy, docker access and the ssh key to the
+# mirror all have to belong to this user.
 BUILD_USER="${BUILD_USER:-adminc3b9c6}"
 
 cd "$(dirname "$0")/.."
@@ -25,7 +28,7 @@ say "上传构建脚本"
 tmp=$(${REMOTE} 'mktemp -d')
 rsync -a -e "${REMOTE% *}" build/ "${REMOTE##* }:${tmp}/"
 
-# shellcheck disable=SC2029  # 路径要在本地展开
+# shellcheck disable=SC2029  # the path is meant to expand locally
 ${REMOTE} "set -euo pipefail
 sudo install -dm755 '${ROOT}' '${ROOT}/logs' '${ROOT}/stage'
 sudo rsync -a --delete '${tmp}/' '${ROOT}/build/'
@@ -33,18 +36,21 @@ rm -rf '${tmp}'
 sudo install -m755 '${ROOT}/build/status.sh' /usr/local/bin/binhost-status
 
 echo '--- overlay 副本'
-# 属主要和跑它的用户一致：定时任务以 ${BUILD_USER} 跑，属主是别人时 git 报
-# dubious ownership，overlay 更新会一直失败而没有任何迹象
+# Ownership has to match the user that runs it. The timer runs as ${BUILD_USER},
+# and with a different owner git reports dubious ownership, so the overlay
+# update fails every time with nothing to show for it.
 [ -d '${ROOT}/overlay/.git' ] ||
     sudo git clone --quiet https://github.com/gentoo-zh/overlay '${ROOT}/overlay'
 sudo chown -R ${BUILD_USER}:${BUILD_USER} '${ROOT}'
 
 echo '--- 告警凭据'
-# 构建以 ${BUILD_USER} 执行，凭据为 root 0600 时读取失败，alert() 会一言不发
-# 地跳过，整台机器的告警就是哑的。
+# The build runs as ${BUILD_USER}. With the credentials owned by root at 0600
+# the read fails, alert() skips without a word, and the whole machine goes
+# silent.
 if sudo test -e /etc/binhost/alert.conf; then
-    # 目录也要能进：/etc/binhost 本身为 drwx------ root 时，把文件 chown
-    # 过去照样读不到，而 alert() 看到的只是「读不到」
+    # The directory has to be traversable too: with /etc/binhost itself
+    # drwx------ root, chowning the file changes nothing and all alert() sees
+    # is a file it cannot read.
     sudo chmod 755 /etc/binhost
     sudo chown ${BUILD_USER}:${BUILD_USER} /etc/binhost/alert.conf
     sudo chmod 600 /etc/binhost/alert.conf
@@ -63,9 +69,11 @@ ${REMOTE} "sudo install -m644 /tmp/systemd/binhost-*.service /tmp/systemd/binhos
 rm -rf /tmp/systemd
 sudo sed -i -e 's|^Environment=SIGNING_KEY=.*|Environment=SIGNING_KEY=${SIGNING_KEY}|' \
     /etc/systemd/system/binhost-build.service
-# 两个单元都跑在构建用户下，属主不一致时 git 与 ssh 都会失败
+# Every unit at once, not by name. Naming them missed binhost-alert@.service,
+# which cannot start under a user that does not exist -- and that unit is the
+# only layer left to speak on a timeout or an OOM.
 sudo sed -i -e 's|^User=.*|User=${BUILD_USER}|' -e 's|^Group=.*|Group=${BUILD_USER}|' \
-    /etc/systemd/system/binhost-build.service /etc/systemd/system/binhost-status.service
+    /etc/systemd/system/binhost-*.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now binhost-build.timer binhost-status.timer
 systemctl list-timers --all --no-pager | grep binhost || true"

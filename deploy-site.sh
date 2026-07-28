@@ -10,16 +10,19 @@ set -euo pipefail
 REMOTE="${REMOTE:-mirror}"
 cd "$(dirname "$0")"
 
-# packages.json 不在这里推：它的内容随 overlay 变化，由镜像机每天生成。
+# packages.json is not pushed here: its content follows the overlay and the
+# mirror generates it on its own schedule.
 
-# 缓存靠 nginx 发的 Cache-Control: no-cache 加 ETag。这里不再改写样式表地址：
-# 平时生效的是 cron 拉取那条路径，它同步的是原始 HTML，两边改写不一致只会
-# 让人以为哈希在起作用。
+# Caching relies on nginx sending Cache-Control: no-cache with an ETag. The
+# stylesheet URL is no longer rewritten here: the path that normally applies is
+# the cron pull, which syncs the HTML as written, and rewriting on only one of
+# the two paths just creates the impression that a hash is doing something.
 rsync -a --delete site/assets/ "${REMOTE}:/srv/mirrors/assets/"
 rsync -a site/*.html site/gentoo-zh-binhost.asc "${REMOTE}:/srv/mirrors/"
 
 rsync -a nginx/ "${REMOTE}:/tmp/nginx-conf/"
-# 先备份再覆盖：nginx -t 失败时坏配置已经在盘上了，没有备份就只能手改。
+# Back up before overwriting: by the time nginx -t fails the broken config is
+# already on disk, and without a backup the only way out is editing by hand.
 ssh "${REMOTE}" '
     bak=/etc/nginx.bak
     sudo rm -rf "${bak}"; sudo cp -a /etc/nginx "${bak}"

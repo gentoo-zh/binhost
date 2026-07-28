@@ -13,17 +13,22 @@ SIGNING_GNUPGHOME="${SIGNING_GNUPGHOME:-/var/lib/binhost/gnupg}"
 ALERT_CONF="${ALERT_CONF:-/etc/binhost/alert.conf}"
 HEARTBEAT="${HEARTBEAT:-/srv/mirrors/.health}"
 HEARTBEAT_MAX_H="${HEARTBEAT_MAX_H:-26}"
-# 索引多久没动就算不对劲。构建每晚一轮（binhost-build.timer），门槛取两轮：
-# 一轮失败会由 cycle.sh 自己告警，这一条兜的是构建机整个不动了——定时器被停、
-# 机器关机、systemd 起不来。心跳那一条只覆盖镜像机，构建机没有别的存活信号，
-# 索引的新鲜度就是它。
+# How long the index may sit still before something is wrong. The build runs
+# nightly (binhost-build.timer), so the threshold is two rounds. A failed round
+# alerts through cycle.sh; this one covers the build machine not running at all
+# -- timer disabled, machine off, systemd not coming up. The heartbeat check
+# covers only the mirror, and the build machine has no other liveness signal,
+# so the index's freshness is it.
 #
-# 原先是 14 天，注释还写着「全量构建目前是人工触发」。定时构建上线之后这个数
-# 没跟着改，意味着构建停摆两周才有人知道。
+# This was 14 days, from when the full build was triggered by hand. The number
+# did not follow the timer, which meant a stopped build went unnoticed for two
+# weeks.
 INDEX_MAX_AGE_D="${INDEX_MAX_AGE_D:-2}"
-# 两种到期性质不同。签名密钥轮替要新旧重叠一段，让还没同步到新公钥的用户
-# 不至于突然验签失败，所以提前半年提醒；TLS 证书是自动续期的，
-# Let's Encrypt 只签 90 天，门槛必须低于续期周期，否则天天在告警。
+# The two expiries are different in kind. Rotating the signing key needs an
+# overlap so users who have not picked up the new public key do not suddenly
+# fail verification, hence half a year of warning. The TLS certificate renews
+# itself and Let's Encrypt only signs 90 days, so the threshold has to sit below
+# the renewal cycle or it alerts every day.
 KEY_WARN_DAYS="${KEY_WARN_DAYS:-180}"
 CERT_WARN_DAYS="${CERT_WARN_DAYS:-14}"
 
@@ -79,8 +84,9 @@ else
     ts=$(grep -m1 '^TIMESTAMP: ' <<< "${head}" | awk '{print $2}')
     n=$(grep -m1 '^PACKAGES: ' <<< "${head}" | awk '{print $2}')
     if [[ ! ${ts} =~ ^[0-9]+$ ]]; then
-        # 算术展开碰上空值或非数字会静默当成 0，那样 age 会变成五十多年，
-        # 而下面只要不判就永远不会有人发现。
+        # Arithmetic expansion turns an empty or non-numeric value into 0
+        # without a word, which makes age come out as fifty-odd years. Without
+        # this test nobody would ever find out.
         bad "index" "TIMESTAMP 读不出来"
     else
         age=$(( ( $(date +%s) - ts ) / 86400 ))
@@ -93,8 +99,9 @@ else
 fi
 
 # --- a package actually resolves ----------------------------------------------
-# 索引说有的包，实际取一个回来。发布是分两步做的（先传包体再换索引），
-# 中途中断会让索引和包体对不上，只查索引发现不了。
+# Fetch one package the index claims to have. Publishing is two steps -- files
+# first, then the index -- and an interruption between them leaves the two
+# disagreeing, which reading the index alone cannot show.
 if [[ -n ${head:-} ]]; then
     path=$(curl -fsS --max-time 20 "${SITE}/binpkgs/${TAG}/Packages" 2>/dev/null |
            awk '/^PATH: /{print $2; exit}')

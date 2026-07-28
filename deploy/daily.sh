@@ -1,11 +1,14 @@
 #!/bin/bash
-# 镜像机每小时跑一次：更新 overlay 副本、同步 distfiles、重算索引与包列表。
+# Runs hourly on the mirror: update the overlay copy, sync distfiles, rebuild
+# the index and the package list.
 #
-# 每一步都判退出码。只写进日志不会有人主动去看。
+# Every step's exit code is checked. Writing to a log alone means nobody looks.
 
 set -uo pipefail
 
-# 主体放进函数：bash 按字节偏移边读边执行，脚本在运行中被替换会让执行路径错乱。
+# The body is a function so the last line is the only thing that runs it. bash
+# reads a script by byte offset as it executes, so replacing the file mid-run
+# makes it resume at the same offset in the new file.
 main() {
 ALERT_CONF="${ALERT_CONF:-/etc/binhost/alert.conf}"
 LIB="${LIB:-/usr/local/lib/binhost}"
@@ -32,29 +35,34 @@ ${out}"
     echo "${out}"
 }
 
-# overlay 副本要先更新，后面两步都读它：distfiles 按 Manifest 取，
-# 包列表按目录和 ebuild 生成。放进同步脚本会让它只在 upstream 模式下更新。
+# The overlay copy is updated first because both later steps read it: distfiles
+# are fetched by Manifest, and the package list is generated from directories
+# and ebuilds.
 step "overlay 更新" git -C "${OVERLAY}" fetch --quiet origin master &&
     step "overlay 切换" git -C "${OVERLAY}" reset --quiet --hard origin/master
 
-# 每次跑之前清空，否则判断不出这一轮有没有新失败
+# Truncate before each run, otherwise this round's failures cannot be told
+# apart from earlier ones.
 : > "${FAILURES}"
 
 if step "distfiles 同步" /usr/local/bin/binhost-distfiles-sync; then
     step "distfiles 索引" /usr/local/bin/binhost-distfiles-index
-    # INDEX 让生成器认得构建时被依赖带出来的包（acct-user、virtual 这类），
-    # 它们不在清单里也没有源码文件，不提供索引则页面上查不到。
+    # INDEX lets the generator see packages pulled in as dependencies during
+    # the build -- acct-user, virtual and the like. They are not on the list and
+    # have no source files, so without the index they do not appear on the page.
     step "包列表" env LIST="${LIB}/packages.txt" EXCLUDED="${LIB}/excluded.txt" \
         OUT=/srv/mirrors/packages.json INDEX=/srv/pub/binpkgs/x86-64/Packages \
         python3 "${LIB}/gen-packages.py" "${OVERLAY}"
 
-    # 独立复核 emirrordist 的结果：该有的都有，不该有的没有。
-    # 它自己不报这件事，出了偏差没有任何迹象。
+    # Check emirrordist's result independently: everything that should be here
+    # is, and nothing that should not. It does not report this itself, and a
+    # drift leaves no trace.
     step "distfiles 对账" python3 "${LIB}/audit-distfiles.py" "${OVERLAY}" "${DISTDIR}"
 fi
 
-# emirrordist 取不到某个文件时不会让整条命令失败，只写进 failure-log。
-# 不单独查这份日志，镜像会逐渐缺失内容而无人知晓。
+# A file emirrordist cannot fetch does not fail the command; it goes into the
+# failure log. Without checking that log separately the mirror loses content a
+# piece at a time with nobody the wiser.
 if [[ -s ${FAILURES} ]]; then
     n=$(wc -l < "${FAILURES}")
     echo "!! ${n} 个文件取不到"
