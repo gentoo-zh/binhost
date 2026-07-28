@@ -40,7 +40,6 @@ dev-debug/lldb-mi
 dev-go/gotests
 dev-go/staticcheck
 dev-libs/libpqmarble
-dev-libs/libratbag
 dev-libs/lunar-calendar
 dev-libs/lunar-date
 dev-libs/qml-material
