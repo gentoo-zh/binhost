@@ -10,70 +10,19 @@ import pathlib
 import re
 import sys
 
-try:
-    from portage.versions import vercmp
-except ImportError:  # 没有 portage 就没法正确比版本，宁可停下也不要读错 ebuild
-    sys.exit("需要 sys-apps/portage：版本比较用 portage.versions.vercmp")
+# 同目录的共用模块。镜像机上只装了这一个和几个脚本，所以它不依赖别的东西。
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from ebuilds import (                                       # noqa: E402
+    ATOM, BUILD_ECLASS, PREBUILT_ECLASS,
+    accepts_amd64, inherits, keywords_of, newest_ebuild,
+    read_mask, restricts_bindist, version_of, vercmp,
+)
+
 
 HERE = pathlib.Path(__file__).resolve().parent
 LIST = HERE / "packages.txt"
 EXCLUDED = HERE / "excluded.txt"
 
-ATOM = re.compile(r"^[a-z0-9-]+/[A-Za-z0-9._+-]+$")
-
-
-def restricts_bindist(text):
-    """Whether any RESTRICT assignment in an ebuild carries bindist.
-
-    The closing quote is anchored to the same line. [^"]* spans newlines, so a
-    pattern that lets the opening quote float runs past the end of the line and
-    captures whatever sits between there and the next quote in the file: every
-    ebuild in the overlay carrying bindist yielded '\\n\\nRDEPEND='.
-
-    Any assignment counts, not the last one. A missed bindist ships something we
-    may not redistribute; a false positive costs one look.
-    """
-    return any("bindist" in r
-               for r in re.findall(r'^\s*RESTRICT="([^"\n]*)"', text, re.M))
-
-
-def read_mask(overlay):
-    """profiles/package.mask 里被屏蔽的 category/package。
-
-    只取包名，不管版本限制：清单是按包收的，某个版本被屏蔽也说明这个包
-    现在不适合收进来。
-    """
-    p = overlay / "profiles" / "package.mask"
-    if not p.exists():
-        return set()
-    out = set()
-    for raw in p.read_text(errors="ignore").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        m = re.search(r"[a-z0-9-]+/[A-Za-z0-9._+-]+", line.lstrip("<>=~!"))
-        if m:
-            out.add(re.sub(r"-[0-9][^/]*$", "", m.group(0)))
-    return out
-
-
-def newest_ebuild(pkgdir):
-    """目录里版本最高的非 live ebuild。
-
-    用 portage 自己的 vercmp，不按文件名排序：字符串序会把 1.10 排在 1.9
-    前面，读到的就是错的那个 ebuild，许可证和 RESTRICT 也就查错了。
-    """
-    ebuilds = [e for e in pkgdir.glob("*.ebuild") if "9999" not in e.name]
-    if not ebuilds:
-        return None
-    pn = pkgdir.name
-    best = ebuilds[0]
-    for e in ebuilds[1:]:
-        a = e.name[len(pn) + 1:-len(".ebuild")]
-        b = best.name[len(pn) + 1:-len(".ebuild")]
-        if (vercmp(a, b) or 0) > 0:
-            best = e
-    return best
 
 
 def read_excluded():
