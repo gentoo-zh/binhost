@@ -284,7 +284,10 @@ h2:first-of-type { margin-top: 2rem; }
 .note code, p code, li code, td code {
   font-family: var(--mono); font-size: 0.86em; background: var(--chip);
   padding: 0.08rem 0.34rem; border-radius: 0.3rem; color: var(--fg-body);
-  white-space: nowrap;
+  /* 原来是 white-space: nowrap。短片段确实不该断行，但正文里也有整条 URL：
+     窄屏上它顶出容器，而 iOS Safari 对行内元素既不换行也不给滚动条，地址
+     后半截看不到也选不中。anywhere 只在放不下时才断，放得下的照旧一行。 */
+  overflow-wrap: anywhere;
 }
 a { color: var(--primary); text-decoration: none; }
 /* 一律不加 hover 下划线，链接靠颜色区分就够了 */
