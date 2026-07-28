@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>distfiles.gentoozh.org</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/assets/logo.webp">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+
+<header class="nav wide">
+  <div class="nav-inner">
+    <a class="nav-brand" href="/">
+      <img src="/assets/logo.webp" alt="">
+      <span class="nav-title" data-i18n="brand">distfiles.gentoozh.org</span>
+    </a>
+    <nav class="nav-links" aria-label="页面">
+      <a class="nav-link" href="/" data-i18n="navSetup">配置</a>
+      <a class="nav-link" href="/packages" data-i18n="navPkgs">包列表</a>
+      <a class="nav-link" href="/files/" data-i18n="navFiles">文件</a>
+      <a class="nav-link" href="/faq">FAQ</a>
+      <a class="icon-btn" href="https://github.com/gentoo-zh/binhost"
+         title="gentoo-zh/binhost" aria-label="GitHub">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.02-2.06-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.62-5.48 5.92.43.37.81 1.1.81 2.22 0 1.61-.01 2.9-.01 3.29 0 .32.21.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5z"/></svg>
+      </a>
+    </nav>
+    <div class="nav-tools" id="controls"></div>
+  </div>
+</header>
+
+<main class="wrap wide">
+  <h1 class="title" id="where"></h1>
+  <p class="crumbs" id="crumbs"></p>
+  <div id="out" class="msg" data-i18n="loading">加载中…</div>
+</main>
+
+<!-- 表格是 JS 生成的，但它的文案照样要能翻译。放在这里让 i18n.js 按常规流程处理，
+     渲染时再读回来——省得在脚本里复制一份语言判定逻辑。 -->
+<div id="strings" hidden>
+  <span data-i18n="title">文件</span>
+  <span data-i18n="thWhat">内容</span>
+  <span data-i18n="thName">名称</span>
+  <span data-i18n="thSize">大小</span>
+  <span data-i18n="thDate">修改时间</span>
+  <span data-i18n="notFound">这个路径不存在。</span>
+  <span data-i18n="failed">读取目录失败：</span>
+  <!-- 面包屑的第一节要用它。t() 只从这里取，导航栏上那一个它读不到。 -->
+  <span data-i18n="navFiles">文件</span>
+</div>
+
+<footer class="foot wide">
+  <div class="foot-inner">
+    <span class="foot-brand">distfiles.gentoozh.org</span>
+    <nav class="foot-links">
+      <a href="https://github.com/gentoo-zh/binhost" data-i18n="fSrc">源码</a>
+      <a href="/gentoo-zh-binhost.asc" data-i18n="fKey">签名公钥</a>
+      <a href="/design" data-i18n="fDesign">设计语言</a>
+      <a href="https://github.com/gentoo-zh/overlay">gentoo-zh/overlay</a>
+      <a href="https://gentoozh.org/" data-i18n="fCommunity">Gentoo 中文社区</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="/assets/util.js"></script>
+<script src="/assets/strings.js"></script>
+<script>
+window.MIRROR_I18N = {
+  'zh-tw': { loading: '載入中…',
+    title: '檔案', thWhat: '內容',
+    thName: '名稱', thSize: '大小', thDate: '修改時間',
+    notFound: '這個路徑不存在。', failed: '讀取目錄失敗：'
+  },
+  'en': { loading: 'Loading…',
+    title: 'Files', thWhat: 'Content',
+    thName: 'Name', thSize: 'Size', thDate: 'Modified',
+    notFound: 'No such path.', failed: 'Could not read directory: '
+  }
+};
+</script>
+<script src="/assets/i18n.js"></script>
+
+<script>
+// nginx 在 /_ls/ 下用 autoindex_format json 输出目录内容，这个页面只管渲染。
+// 文件本身由 nginx 直接发，不经过这里——portage 和 wget 拿到的路径跟 JS 无关。
+
+// 因为缺少结尾斜杠时页内相对链接会解析到上一级，所以先补齐再渲染。
+if (!location.pathname.endsWith("/")) location.replace(location.pathname + "/");
+
+const path = decodeURIComponent(location.pathname);
+
+// /files/ 是浏览入口，它对应的是被镜像内容的根。下面各项的真实地址是
+// /binpkgs/、/distfiles/ 这些，所以从这里出去的链接要写成绝对路径。
+const ROOT = "/files/";
+
+// 根层列的是两类内容，光看目录名不知道是什么。深层就是普通的目录列表，
+// 不需要说明。
+const ROOT_DESC = {
+  'binpkgs': { 'zh-cn': '二进制包', 'zh-tw': '二進位套件', 'en': 'Binary packages' },
+  'distfiles': { 'zh-cn': '软件包源码', 'zh-tw': '套件原始碼', 'en': 'Package sources' }
+};
+const atRoot = path === ROOT;
+const lsPath = atRoot ? "/" : path;
+
+// 路径和文件名都进 innerHTML。路径来自 URL，任何以斜杠结尾的地址 nginx 都
+// 回这个页面；文件名来自 ebuild 的 Manifest。两者都不是我们能约束的内容。
+
+
+// i18n.js 已经把当前语言的串换进 #strings 了，直接读。
+function t(key) {
+  const el = document.querySelector('#strings [data-i18n="' + key + '"]');
+  return el ? el.textContent : key;
+}
+
+
+function lang() {
+  return document.documentElement.lang || 'zh-cn';
+}
+
+function crumbs() {
+  // 标题写当前位置，和多数镜像站一样。根层没有路径可写，用页面名。
+  document.getElementById("where").textContent =
+    atRoot ? t("title") : path.replace(/\/$/, "");
+
+  // 根层标题已经写明位置，再放一个只有「mirrors」的面包屑是多余的
+  const crumbEl = document.getElementById("crumbs");
+  crumbEl.hidden = atRoot;
+  if (atRoot) return;
+
+  let acc = "";
+  const links = path.split("/").filter(Boolean).map(function (p) {
+    acc += "/" + p;
+    return '<a href="' + encodeURI(acc) + '/">' + esc(p) + "</a>";
+  });
+  // 第一节回文件浏览器的根，不是站点首页——原来它连到 /，点下去就离开了这个
+  // 页面。名字用导航里已有的那一个，全站叫法一致，也跟着语言走；原来写死的
+  // mirrors 在别处从未出现过，也没有翻译。
+  // atRoot 那个三元是死码：上面第 127 行已经在 atRoot 时提前返回了。
+  document.getElementById("crumbs").innerHTML =
+    ['<a href="' + ROOT + '">' + t("navFiles") + "</a>"].concat(links).join(" / ");
+}
+
+function render(items) {
+  // 目录排在前面，同类按名字排。浏览深层目录时不必在文件列表中查找子目录。
+  items.sort(function (a, b) {
+    if (a.type === b.type) return a.name.localeCompare(b.name);
+    return a.type === "directory" ? -1 : 1;
+  });
+
+  // 写成 ../ 而不是 ..：两个点落在基线上，加下划线后看着像被截掉了半行
+  const up = (path === "/" || atRoot) ? "" :
+    '<tr><td class="name"><a href="../">../</a></td><td class="size"></td><td class="date"></td></tr>';
+
+  const rows = items.map(function (it) {
+    const isDir = it.type === "directory";
+    const href = (atRoot ? "/" : "") + encodeURIComponent(it.name) + (isDir ? "/" : "");
+    // 服务端 autoindex 输出的是 GMT，转成 UTC+8 显示
+    const date = it.mtime
+      ? new Date(new Date(it.mtime).getTime() + 8 * 3600 * 1000)
+          .toISOString().slice(0, 16).replace("T", " ")
+      : "";
+    const d = ROOT_DESC[it.name];
+    return '<tr>' +
+      '<td class="name"><a class="' + (isDir ? "dir" : "") + '" href="' + href + '">' + esc(it.name) + '</a></td>' +
+      (atRoot ? '<td class="desc">' + (d ? esc(d[lang()] || d['zh-cn']) : '') + '</td>'
+              : '<td class="size">' + (isDir ? "" : human(it.size)) + '</td>') +
+      (atRoot ? '' : '<td class="date">' + date + '</td>') + '</tr>';
+  }).join("");
+
+  const out = document.getElementById("out");
+  out.className = "";
+  out.innerHTML =
+    '<table class="listing"><thead><tr>' +
+      '<th>' + t("thName") + '</th>' +
+      (atRoot ? '<th>' + t("thWhat") + '</th>'
+              : '<th class="size">' + t("thSize") + '</th>' +
+                '<th class="date">' + t("thDate") + '</th>') +
+    '</tr></thead><tbody>' + up + rows + '</tbody></table>';
+}
+
+function fail(e) {
+  const out = document.getElementById("out");
+  out.className = "msg";
+  out.textContent = e === 404 ? t("notFound") : t("failed") + e;
+}
+
+let loaded = null;   // 留一份，切语言时要用它重绘
+
+crumbs();
+fetch("/_ls" + lsPath)
+  .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+  .then(function (items) { loaded = items; render(items); })
+  .catch(function (e) { loaded = e; fail(e); });
+
+// 切语言时 i18n.js 会改写 #strings，表格是我们自己画的，得跟着重画一次。
+new MutationObserver(function () {
+  if (Array.isArray(loaded)) render(loaded);
+  else if (loaded !== null) fail(loaded);
+}).observe(document.getElementById("strings"), { subtree: true, characterData: true, childList: true });
+</script>
+</body>
+</html>
