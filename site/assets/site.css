@@ -333,16 +333,19 @@ h2:first-of-type { margin-top: 2rem; }
 .code .prompt::before { content: "# "; }
 .code .prompt { color: var(--c-prompt); user-select: none; }
 
-/* 配置块的两种写法就地切换，见 code-tabs.js */
-.tabs { display: flex; gap: 0.1rem; min-width: 0; }
-.code-head .tab {
-  border: 0; background: transparent; cursor: pointer; font: inherit;
-  font-family: var(--mono); font-size: 0.74rem; color: var(--fg-soft);
-  padding: 0.16rem 0.5rem; border-radius: 0.3rem;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+/* 手动配置 / 快速配置，见 mode-switch.js。放在大标题下面，因为它决定整段
+   长什么样，藏在某个代码框的角上没人会发现。 */
+.mode-pick {
+  display: flex; gap: 0.25rem; margin: -0.3rem 0 1.1rem;
 }
-.code-head .tab:hover { color: var(--fg); }
-.code-head .tab.on { background: var(--bg); color: var(--fg); }
+.mode {
+  border: 1px solid var(--border); border-radius: 0.35rem;
+  background: transparent; color: var(--fg-soft);
+  cursor: pointer; font: inherit; font-size: 0.78rem;
+  padding: 0.24rem 0.7rem;
+}
+.mode:hover { color: var(--fg); }
+.mode.on { background: var(--panel-head); border-color: var(--fg-soft); color: var(--fg); }
 /* 四个条目排 2×2。auto-fit 在这个宽度下会排成 3+1，落单一个不好看 */
 
 .note { font-size: 0.88rem; line-height: 1.8; color: var(--fg-soft); }
