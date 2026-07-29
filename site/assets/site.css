@@ -356,6 +356,9 @@ h2:first-of-type { margin-top: 2rem; }
 /* root / sudo。放在标题栏里而不是自己占一行：一个代码块上方原来叠着三排按钮，
    而它管的就是这一块，跟复制放在一起才是它该在的位置。 */
 .code-head .head-btn {
+  /* 标题栏是 space-between，三个孩子会摊开，sudo 落到正中间。推到右边跟复制
+     并排，左边留给路径。 */
+  margin-left: auto;
   flex: none; border: 0; border-radius: 0.3rem; background: transparent;
   color: var(--fg-soft); cursor: pointer; font-family: var(--mono);
   font-size: 0.72rem; padding: 0.16rem 0.5rem;
