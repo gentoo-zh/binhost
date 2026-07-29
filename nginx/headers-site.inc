@@ -3,7 +3,7 @@
 # nginx 的 add_header 是整块继承的：一个 location 里只要出现任何一条 add_header，
 # 上层的全部失效。所以每个用到 add_header 的 location 都要 include 这一份，
 # 而不是指望继承。手抄十五遍 HSTS 就是这么来的。
-add_header Strict-Transport-Security "max-age=31536000" always;
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 # 文件名和内容都来自 overlay，不是我们能约束的。禁止浏览器按内容猜类型。
 add_header X-Content-Type-Options "nosniff" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
