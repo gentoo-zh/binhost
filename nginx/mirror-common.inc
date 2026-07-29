@@ -185,6 +185,11 @@ location ~* \.json$ {
 location ~* \.(css|js)$ {
 	add_header Cache-Control "public, max-age=31536000, immutable";
 	include /etc/nginx/conf.d/headers-site.inc;
+	# open_file_cache 缓存的是文件描述子，同步换掉文件之后它还指着旧的那份。
+	# 对镜像树无所谓，对这里是错的：那两分钟里，新的页面引用新的指纹，取到的
+	# 却是旧的内容，还带一年的 immutable，于是旧内容按新指纹在浏览器里存一年。
+	# 站点资源只有几个文件，关掉这一项没有代价。
+	open_file_cache off;
 }
 
 # 只有以斜杠结尾的请求才是「浏览目录」，交给前端渲染。
