@@ -84,6 +84,15 @@ sudo rc-update add nftables default 2>/dev/null || true
 sudo rc-service nftables save
 
 echo '--- nginx'
+# HTTP/3 要 nginx 带 http_v3 模块编出来。这个 USE 不写进来，新机器装完
+# 配置里的 quic 监听会让 nginx -t 直接失败。
+sudo install -dm755 /etc/portage/package.use
+printf '%s\n' 'www-servers/nginx NGINX_MODULES_HTTP: v3' |
+    sudo install -m644 /dev/stdin /etc/portage/package.use/nginx
+if ! nginx -V 2>&1 | grep -q http_v3; then
+    echo '    nginx 没有 http_v3，重新编译'
+    sudo emerge --oneshot --quiet-build=y www-servers/nginx
+fi
 # 套件与 distfiles 的根。rsyncd 的模块指着它且 use chroot=yes，nginx 的三个
 # location 也以它为 root，两者都在下面被启动，而目录到第一次同步才会出现。
 # binpkgs 与 distfiles 归发布用户：publish.sh 用普通用户 ssh 过来，直接
