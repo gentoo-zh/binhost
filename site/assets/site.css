@@ -366,9 +366,9 @@ h2:first-of-type { margin-top: 2rem; }
 }
 .code-head .head-btn:hover { border-color: var(--fg-soft); color: var(--fg); }
 /* 按下去要一眼看得出来：它改的是复制出去的命令，看错了会以 root 跑一段以为
-   加了 sudo 的东西。所以用主色填实，不是换个灰度。 */
+   加了 sudo 的东西。用主色描边加淡底，填实那一块在这种小标题栏里太重。 */
 .code-head .head-btn[aria-pressed="true"] {
-  background: var(--accent); border-color: var(--accent); color: #fff;
+  background: var(--accent-weak); border-color: var(--accent); color: var(--accent);
 }
 /* 四个条目排 2×2。auto-fit 在这个宽度下会排成 3+1，落单一个不好看 */
 
