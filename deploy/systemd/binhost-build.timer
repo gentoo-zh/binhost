@@ -2,10 +2,13 @@
 Description=每日构建并发布 binhost
 
 [Timer]
-# 时刻按 UTC+8 写。机器的系统时区是 UTC，只写 02:00 会落在当地上午十点，
-# 构建要跑两个多小时，正好压在白天。systemd 支持在 OnCalendar 后面直接指定
-# 时区，比在注释里换算可靠。
-OnCalendar=*-*-* 02:00:00 Asia/Shanghai
+# 时刻按 UTC+8 写。机器的系统时区是 UTC，systemd 支持在 OnCalendar 后面直接
+# 指定时区，比在注释里换算可靠。
+#
+# 挑 16:00 是为了赶在下游镜像拉取之前跑完。rsyncd 日志里下游集中在 20 到 21 点
+# 拉，14 到 16 点还有一小波，来源多在 CERNET 网段。16:00 起跑、两三个小时跑完，
+# 也就是 18 到 19 点出结果，正好在主要那一波之前。
+OnCalendar=*-*-* 16:00:00 Asia/Shanghai
 # 机器关过机时补跑，别静默跳过一天
 Persistent=true
 RandomizedDelaySec=15m
