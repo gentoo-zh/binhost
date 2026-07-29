@@ -359,7 +359,12 @@ a { color: var(--primary); text-decoration: none; }
 
 /* --- 目录浏览 --- */
 
-.crumbs { font-family: var(--mono); font-size: 0.82rem; color: var(--fg-soft); margin: 0 0 1rem; word-break: break-all; }
+.crumbs {
+  font-family: var(--mono); font-size: 0.82rem; line-height: 1.65; color: var(--fg-soft);
+  margin: 0 0 1rem; word-break: break-all; min-height: calc(1.65 * 0.82rem);
+}
+/* 文件浏览器的标题也是脚本填的，留一行。 */
+#where { min-height: calc(1.35 * 1.6rem); }
 /* 表格宽过视口时让它自己横向滚，不要把整个页面撑出横向滚动条 */
 /* 这里原来是 overflow-x: auto。overflow-x 一旦不是 visible，overflow-y 的
    visible 就会被算成 auto，#out 因此成了滚动容器，表头的 sticky 黏的是它而不是
@@ -429,18 +434,20 @@ button:active, .copy-chip:active { transform: translateY(1px); }
 /* 数据带：包数、更新时间这类事实，放在标题下方一行 */
 /* 两列网格：一行一个来源，数量与时间各占一列，时间因此左对齐成一竖排。
    用 flex 换行的话两行的时间会错开。 */
+/* 内容是取回数据之后才填的，所以高度先按最终行数留出来：两行，行高由里面
+   那个大一档的数字决定。不留的话页面会在数据到达时整块往下扩。 */
 .facts {
   display: grid; grid-template-columns: auto auto;
   justify-content: start; gap: 0.35rem 1.75rem;
   margin: -0.75rem 0 2rem;
-  font-family: var(--mono); font-size: 0.78rem; color: var(--fg-soft);
+  font-family: var(--mono); font-size: 0.78rem; line-height: 1.75; color: var(--fg-soft);
+  min-height: calc(2 * 1.75 * 0.95rem + 0.35rem);
 }
 .facts span { display: inline-flex; align-items: baseline; gap: 0.3em; }
 /* 数量用强调色、字号大一档：这一行的信息量集中在两个数字上，
    全用次要色的话要逐字读才找得到。时间用正文色，说明文字保持次要色。 */
 .facts .num { color: var(--accent); font-size: 0.95rem; font-weight: 600; }
 .facts b { font-weight: 500; color: var(--fg-body); }
-.facts:empty { display: none; }
 
 /* 联系方式：一行一条，不用卡片网格 */
 .links { border-top: 1px solid var(--border); margin: 0.5rem 0 0; }
@@ -476,6 +483,9 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
   font-size: 0.82rem; color: var(--fg-soft); margin: 0 0 0.7rem;
   white-space: pre-line; line-height: 1.65;
 }
+/* 同样先留出行数：统计三行，更新时间两行。三种语言的行数一致。 */
+#count { min-height: calc(3 * 1.65 * 0.82rem); }
+#updated { min-height: calc(2 * 1.65 * 0.82rem); }
 
 /* 目录页让名称列吃满宽度，包列表要反过来：说明才是长的那列。
    包名不能断行——.listing 那边给文件名用的 break-all 会把
