@@ -128,9 +128,11 @@
 
     <h2 data-i18n="q8">有哪些镜像？</h2>
     <p data-i18n-html="a8">
-      源站 <a href="/">distfiles.gentoozh.org</a> 与南京大学
-      <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a>，
-      两者都提供二进制包与 distfiles。国内取南京大学更快，
+      源站 <a href="/">distfiles.gentoozh.org</a>、南京大学
+      <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a>
+      与南阳理工学院
+      <a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a>，
+      都提供二进制包与 distfiles。国内取校园镜像更快，
       在<a href="/">配置</a>页上可以直接切换。
       镜像上的包与源站逐字节相同，签名是同一份，换哪个都不影响验签。
     </p>
@@ -213,7 +215,7 @@ window.MIRROR_I18N = {
     q6: '如何停用？',
     a6: '刪除 <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code>。已安裝的套件不受影響。',
     q8: '有哪些鏡像？',
-    a8: '來源站 <a href="/">distfiles.gentoozh.org</a> 與南京大學 <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a>，兩者都提供二進位套件與 distfiles。中國大陸取南京大學較快，在<a href="/">設定</a>頁上可以直接切換。鏡像上的套件與來源站逐位元組相同，簽章是同一份，換哪個都不影響驗簽。',
+    a8: '來源站 <a href="/">distfiles.gentoozh.org</a>、南京大學 <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a> 與南陽理工學院 <a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a>，都提供二進位套件與 distfiles。中國大陸取校園鏡像較快，在<a href="/">設定</a>頁上可以直接切換。鏡像上的套件與來源站逐位元組相同，簽章是同一份，換哪個都不影響驗簽。',
     q9: '怎麼自己開一個鏡像？',
     a9: 'rsync 公開開放，無需申請。一個模組裡就是 <code>binpkgs/</code> 與 <code>distfiles/</code>。同步到本機後用 HTTP 提供即構成一個完整的鏡像，因為索引中的 <code>PATH</code> 是相對路徑，不依賴主機名稱。',
     a9b: '每日同步一次。因為套件名含版本與 build id，內容不再變化，所以已有的檔案不會重複傳輸。<code>--delay-updates</code> 讓這一批檔案在末尾一次換入。不加則索引可能先落地，而它引用的套件尚未傳完，這段時間下游回傳 404。鏡像建成後在 <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issues</a> 提出，加進上面那一條。',
@@ -239,7 +241,7 @@ window.MIRROR_I18N = {
     q6: 'How do I stop using it?',
     a6: 'Delete <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code>. Packages that are already installed are unaffected.',
     q8: 'Which mirrors are there?',
-    a8: 'The origin at <a href="/">distfiles.gentoozh.org</a> and Nanjing University at <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a>, both carrying binary packages and distfiles. Nanjing University is faster from within China and the <a href="/">setup</a> page switches between them. Packages on a mirror are byte-identical to the origin and carry the same signature, so the choice does not affect verification.',
+    a8: 'The origin at <a href="/">distfiles.gentoozh.org</a>, Nanjing University at <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a> and Nanyang Institute of Technology at <a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a>, all carrying binary packages and distfiles. Nanjing University is faster from within China and the <a href="/">setup</a> page switches between them. Packages on a mirror are byte-identical to the origin and carry the same signature, so the choice does not affect verification.',
     q9: 'How do I run a mirror of my own?',
     a9: 'rsync is open and needs no application. One module carries <code>binpkgs/</code> and <code>distfiles/</code>. Sync it locally, serve it over HTTP, and it is a complete mirror, because <code>PATH</code> in the index is relative and does not depend on the hostname.',
     a9b: 'Sync once a day. Package names carry the version and build id, so their content never changes and existing files are not transferred again. <code>--delay-updates</code> swaps the batch in at the end; without it the index can land before the packages it names, and the mirror answers 404 in between. Once it is running, open a <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issue</a> to have it added to the answer above.',
