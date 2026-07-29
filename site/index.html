@@ -112,7 +112,7 @@
     </div>
     <div class="code" data-pane="quick" hidden>
       <div class="code-head">
-        <span class="path" data-i18n="asRoot">以 root 执行</span>
+        <span class="path">shell</span>
         <button class="copy-chip" data-i18n="copy">复制</button>
       </div>
 <pre><span class="prompt"></span><span class="sudo" hidden></span>tee -a /etc/portage/make.conf &gt; /dev/null &lt;&lt;<span class="val">'EOF'</span>
@@ -149,7 +149,7 @@
 
   <div data-pane="quick" hidden>
     <p class="note" data-i18n="quickNote">
-      整段以 root 执行，三步一次做完。想知道每一步在做什么，切到手动配置。
+      这一段把三步一次做完。想知道每一步在做什么，切到手动配置。
     </p>
 
     <div class="opt-pick" role="group" aria-label="以什么身份执行">
@@ -158,7 +158,7 @@
     </div>
     <div class="code">
       <div class="code-head">
-        <span class="path" data-i18n="asRoot">以 root 执行</span>
+        <span class="path">shell</span>
         <button class="copy-chip" data-i18n="copy">复制</button>
       </div>
 <pre><span class="prompt"></span><span class="sudo" hidden></span>emerge sec-keys/openpgp-keys-gentoozh
@@ -336,8 +336,8 @@ window.MIRROR_I18N = {
 
     modeManual: '手動設定',
     modeQuick: '快速設定',
-    asRoot: '以 root 執行',
-    quickNote: '整段以 root 執行，三步一次做完。想知道每一步在做什麼，切到手動設定。',    title: '設定',
+    quickNote: '這一段把三步一次做完。想知道每一步在做什麼，切到手動設定。',
+    title: '設定',
     lead: 'gentoo-zh overlay 的二進位套件與 distfiles 鏡像。兩者相互獨立，按需分別設定。::gentoo 的部分用 <a href="https://gentoozh.org/zh-tw/mirrorlist/">社群鏡像列表</a>裡的節點。',
     h2bin: '二進位套件', h2dist: 'Distfiles',
     sigNote: '驗簽由第 2 步的 <code>verify-signature = true</code> 提供，只作用於本站。<code>FEATURES=binpkg-request-signature</code> 是全域的，會覆蓋它，也會要求你自己用 <code>FEATURES=buildpkg</code> 建出來的套件帶簽章——那些套件預設沒有簽章，於是每次本機建置都會在合併時報 <code>GnuPG verification failed</code>。要開它就得同時配好 <code>binpkg-signing</code> 與本機簽章金鑰。',
@@ -355,8 +355,8 @@ window.MIRROR_I18N = {
 
     modeManual: 'Step by step',
     modeQuick: 'Quick setup',
-    asRoot: 'run as root',
-    quickNote: 'Run the whole block as root; it does all three steps. Switch to step by step to see what each one does.',    title: 'Setup',
+    quickNote: 'One block, all three steps. Switch to step by step to see what each one does.',
+    title: 'Setup',
     lead: 'Binary package and distfiles mirror for the gentoo-zh overlay. The two are independent and configured separately. For ::gentoo, use a node from the <a href="https://gentoozh.org/en/mirrorlist/">community mirror list</a>.',
     h2bin: 'Binary packages', h2dist: 'Distfiles',
     sigNote: 'Verification comes from <code>verify-signature = true</code> in step 2 and applies to this repository only. <code>FEATURES=binpkg-request-signature</code> is global, overrides that, and also demands a signature on the packages you build yourself with <code>FEATURES=buildpkg</code>. Those are unsigned by default, so every local build fails to merge with <code>GnuPG verification failed</code>. Enabling it means setting up <code>binpkg-signing</code> and a local signing key as well.',
