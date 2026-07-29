@@ -109,12 +109,13 @@
   <table class="spec">
     <thead><tr><th>尺寸</th><th>用在哪</th></tr></thead>
     <tbody>
-      <tr><td>2rem / 600</td><td>页面标题，每页一个</td></tr>
-      <tr><td>1.05rem / 600</td><td>章节标题</td></tr>
-      <tr><td>1rem / 400</td><td>引导句</td></tr>
-      <tr><td>0.92rem / 400</td><td>正文与说明</td></tr>
+      <tr><td>1.6rem / 600</td><td>页面标题，每页一个。34rem 以下 1.45rem</td></tr>
+      <tr><td>0.95rem / 400</td><td>引导句</td></tr>
+      <tr><td>0.9rem / 600</td><td>章节标题、步骤标题</td></tr>
+      <tr><td>0.88rem / 400</td><td>正文与说明</td></tr>
       <tr><td>0.84rem / 400</td><td>表格数据</td></tr>
-      <tr><td>0.78rem / 400</td><td>表头、单位、时间戳</td></tr>
+      <tr><td>0.8rem / 400</td><td>代码块</td></tr>
+      <tr><td>0.74rem / 600</td><td>表头、状态标签</td></tr>
     </tbody>
   </table>
 
@@ -128,8 +129,24 @@
   <h2>移动端</h2>
 
   <p class="note">
-    断点只有一个：34rem。小于它按手机排，大于它按桌面排。多设几档会让每一档
-    都缺少验证。
+    一条列隐藏阶梯，加一个布局断点。表格宽度不够时逐列让位，让到只剩包名和状态
+    为止；布局本身只在 34rem 换一次。四档之外不再加，多设几档会让每一档都缺少
+    验证。
+  </p>
+
+  <table class="spec">
+    <thead><tr><th>断点</th><th>做什么</th></tr></thead>
+    <tbody>
+      <tr><td>62rem</td><td>藏体积列。宽于它时包名不断行</td></tr>
+      <tr><td>52rem</td><td>藏版本列。指纹改成占满一行按分组换行</td></tr>
+      <tr><td>44rem</td><td>藏说明列与文件浏览器的日期列，靠说明命中的行补一句说明</td></tr>
+      <tr><td>34rem</td><td>手机布局：顶栏折两行，内边距与代码字号收紧</td></tr>
+    </tbody>
+  </table>
+
+  <p class="note">
+    四块都写在基准规则之后。同权重下后面的赢，混在基准规则中间会被下面的基准
+    规则盖掉。指纹那条就这样失效过一次。
   </p>
 
   <table class="spec">
@@ -138,16 +155,18 @@
       <tr><td>顶栏两行</td><td>品牌与语言、主题一行，导航链接一行。品牌用 flex-basis 0 先缩，否则浏览器会换行成三行</td></tr>
       <tr><td>导航链接横向可滑</td><td>不换行，避免一个链接单独占一行</td></tr>
       <tr><td>表格逐列隐藏</td><td>体积、版本、说明按这个顺序让位，状态列留到最后</td></tr>
+      <tr><td>表头留在视口里</td><td>thead 用 position: sticky，top 取 --nav-h。顶栏也是 sticky，写 0 会滚到它底下；顶栏窄屏折两行，高度由 util.js 量出来写进变量</td></tr>
       <tr><td>包名在斜线处断行</td><td>用 &lt;wbr&gt; 标出断点。word-break: break-all 会把 app-admin/1password 切成认不出的三段</td></tr>
-      <tr><td>页面不横向滚动</td><td>宽内容（表格、代码块）在自己的容器里滚，body 不滚</td></tr>
+      <tr><td>页面不横向滚动</td><td>代码块与地址栏在自己的容器里滚，表格靠逐列隐藏塞进视口。表格外面不能套 overflow：overflow-x 一旦不是 visible，overflow-y 的 visible 会被算成 auto，表头的 sticky 就黏在那个容器上</td></tr>
       <tr><td>正文内边距 1rem</td><td>桌面 1.25rem。再小会贴边</td></tr>
     </tbody>
   </table>
 
   <p class="note">
-    改完在 360、390、430 三个宽度各看一遍，确认
-    <code>documentElement.scrollWidth</code> 不大于
-    <code>clientWidth</code>。
+    改完逐宽度实测，320 到 1280 都看：可见列、指纹换行、标题字号、顶栏折行、
+    表头吸顶、<code>documentElement.scrollWidth</code> 不大于
+    <code>clientWidth</code>。用指定宽度的 iframe 量，改
+    <code>html.style.width</code> 不触发媒体查询。
   </p>
 
   <h2>组件</h2>
@@ -164,6 +183,12 @@
     </table>
   </div>
 
+  <p class="note">
+    搜索同时比对包名和说明。说明列被藏起来的宽度上，靠说明命中的行在包名下面
+    补一句说明，命中的词用 <code>&lt;mark&gt;</code> 圈出来，底色 <code>--accent-weak</code>。
+    否则结果里会出现名字与搜索词无关的包，页面上找不到理由。
+  </p>
+
   <h3>代码块</h3>
   <div class="step" style="margin-bottom: 1.75rem;">
     <div class="code">
@@ -178,6 +203,36 @@
   <p class="note">
     路径写在标题栏，命令与配置在下方。值用强调色，键用正文色，注释与提示符用次要色。
     每一块都能整段复制，不需要用户自己选中。
+  </p>
+
+  <p class="note">
+    内容超宽时横向滚动，滚动条留着不藏——它是还能往右看的唯一提示。调细到 6px，
+    滑块用 <code>--border</code>，悬停 <code>--fg-soft</code>。系统默认样式在深色主题下是
+    一条浅灰粗条，全站只有那一处不跟主题。
+  </p>
+
+  <h2>语言</h2>
+
+  <p class="note">
+    简体是文档原文，直接写在 HTML 里；繁体与英文由 <code>i18n.js</code> 在 body 末尾换。
+    浏览器不保证等到那时才开始画，所以 <code>lang-early.js</code> 放在
+    <code>&lt;head&gt;</code> 同步判断访客要哪门语言：是简体就什么都不做，一帧都不必等；
+    不是简体才把正文挡到换完为止，并带一个 1.5 秒兜底。
+  </p>
+
+  <table class="spec">
+    <thead><tr><th>标记</th><th>换什么</th></tr></thead>
+    <tbody>
+      <tr><td>data-i18n</td><td>元素的文字</td></tr>
+      <tr><td>data-i18n-html</td><td>整段内容，含里面的标签与链接</td></tr>
+      <tr><td>data-i18n-href</td><td>链接地址。gentoozh.org 按语言分路径</td></tr>
+      <tr><td>data-langblock</td><td>整段多写几份，只显示当前语言那一份</td></tr>
+    </tbody>
+  </table>
+
+  <p class="note">
+    导航栏与页脚是全站共用的，每一页都跟着语言走，包括单语的这一页。语言按钮
+    每页都画：它决定的是全站偏好，少一个控制项读起来就是坏了。
   </p>
 
   <h2>文字</h2>
