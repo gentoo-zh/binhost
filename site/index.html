@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=1ec7607c">
+<link rel="stylesheet" href="/assets/site.css?v=2605a3c4">
 <script src="/assets/early.js?v=b8007afb"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -106,13 +106,10 @@
 <pre><span class="key">GENTOO_MIRRORS</span>=<span class="val" data-src-slot="dist">"${GENTOO_MIRRORS} https://mirror.nju.edu.cn/gentoo-zh https://distfiles.gentoozh.org"</span></pre>
     </div>
 
-    <div class="opt-pick" data-pane="quick" hidden role="group" aria-label="以什么身份执行">
-      <button type="button" class="opt on" data-sudo="off">root</button>
-      <button type="button" class="opt" data-sudo="on">sudo</button>
-    </div>
     <div class="code" data-pane="quick" hidden>
       <div class="code-head">
         <span class="path">shell</span>
+        <button type="button" class="head-btn sudo-btn" aria-pressed="false">sudo</button>
         <button class="copy-chip" data-i18n="copy">复制</button>
       </div>
 <pre><span class="prompt"></span><span class="sudo" hidden></span>tee -a /etc/portage/make.conf &gt; /dev/null &lt;&lt;<span class="val">'EOF'</span>
@@ -152,13 +149,10 @@
       这一段把三步一次做完。想知道每一步在做什么，切到手动配置。
     </p>
 
-    <div class="opt-pick" role="group" aria-label="以什么身份执行">
-      <button type="button" class="opt on" data-sudo="off">root</button>
-      <button type="button" class="opt" data-sudo="on">sudo</button>
-    </div>
     <div class="code">
       <div class="code-head">
         <span class="path">shell</span>
+        <button type="button" class="head-btn sudo-btn" aria-pressed="false">sudo</button>
         <button class="copy-chip" data-i18n="copy">复制</button>
       </div>
 <pre><span class="prompt"></span><span class="sudo" hidden></span>emerge sec-keys/openpgp-keys-gentoozh
@@ -190,13 +184,10 @@
         <code class="fpr">6A07 26AF 1476 A2F3 82C6  AC66 38A0 234E C16A D42E</code>
         <button class="copy-chip fpr-copy" data-copy="6A0726AF1476A2F382C6AC6638A0234EC16AD42E" data-i18n="copy">复制</button>
       </span></p>
-    <div class="opt-pick" role="group" aria-label="以什么身份执行">
-      <button type="button" class="opt on" data-sudo="off">root</button>
-      <button type="button" class="opt" data-sudo="on">sudo</button>
-    </div>
     <div class="code">
       <div class="code-head">
         <span class="path">shell</span>
+        <button type="button" class="head-btn sudo-btn" aria-pressed="false">sudo</button>
         <button class="copy-chip" data-i18n="copy">复制</button>
       </div>
 <pre><span class="prompt"></span><span class="sudo" hidden></span><span class="key">emerge</span> <span class="val">sec-keys/openpgp-keys-gentoozh</span>
@@ -209,23 +200,9 @@
   </div>
 
   <p class="note" data-i18n-html="keyAlt">
-    不想装这个包也可以直接下载，然后把上面 <code>--import</code> 那条命令的路径
-    换成下载到的文件。下载不需要 root。
+    不想装这个包，也可以直接下载公钥文件，见
+    <a href="/faq#key-download">FAQ</a>。
   </p>
-
-  <div class="src-pick" data-src-switch="dl" data-src-group="tool"
-       role="group" aria-label="下载工具">
-    <button type="button" class="src-opt on" data-uri="curl -O">curl</button>
-    <button type="button" class="src-opt" data-uri="wget">wget</button>
-  </div>
-
-  <div class="code">
-    <div class="code-head">
-      <span class="path">shell</span>
-      <button class="copy-chip" data-i18n="copy">复制</button>
-    </div>
-<pre><span class="prompt user"></span><span class="key" data-src-slot="dl">curl -O</span> https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</pre>
-  </div>
 
   <p class="note" data-i18n-html="keyNote">
     <code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。没有它，上面三条
@@ -346,7 +323,7 @@ window.MIRROR_I18N = {
     distNote: '這裡只有 overlay 的原始碼，不能替代官方來源，因此是追加而非替換。位址不寫 <code>distfiles/</code>，portage 會自己補上。這裡兩個都列出：<code>GENTOO_MIRRORS</code> 是按順序嘗試的列表，南京大學取不到時會落到來源站。',
     distOptOut: '因版權等原因不希望某個套件被鏡像時，在其 ebuild 中加入 <code>RESTRICT="mirror"</code>，同步工具會跳過。',
     step1: '匯入簽章公鑰', step2: '加入倉庫', step3: '打開 getbinpkg（附加）',
-    keyAlt: '不想裝這個套件也可以直接下載：<code>curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</code>，然後把上面 <code>--import</code> 那條命令的路徑換成下載到的檔案。',
+    keyAlt: '不想裝這個套件，也可以直接下載公鑰檔案，見 <a href="/faq#key-download">FAQ</a>。',
     keyNote: '<code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。沒有它，上面三條 gpg 命令會以 <code>no writable keyring found</code> 失敗——gpg 不會自己建這個目錄，而 portage 只在第一次取二進位套件時才會呼叫它，那已經是第 2、3 步之後了。簽章用的是 getuto 建立的 Portage Local Trust Key，口令在 <code>/etc/portage/gnupg/pass</code>，因此要用 <code>--passphrase-file</code> 讀。驗簽以 <code>portage</code> 使用者執行，該使用者對 trustdb 沒有寫入權限，所以 trustdb 要預先算好。',
     factPkgs: ' 個二進位套件', factDist: ' 個 distfiles 檔案', factTime: '更新於 ',
     h2contact: '聯絡', ctForum: '論壇'
@@ -365,7 +342,7 @@ window.MIRROR_I18N = {
     distNote: 'Only overlay sources live here, so this adds a mirror rather than replacing the official ones. Leave <code>distfiles/</code> off the address; portage appends it. Both are listed: <code>GENTOO_MIRRORS</code> is a list portage tries in order, so it falls through to the origin when Nanjing University does not have a file.',
     distOptOut: 'When a maintainer does not want a package mirrored — licensing or otherwise — they add <code>RESTRICT="mirror"</code> to its ebuild and the sync tool skips it.',
     step1: 'Import the signing key', step2: 'Add the repository', step3: 'Enable getbinpkg (append)',
-    keyAlt: 'You can also fetch it directly instead of installing the package: <code>curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</code>, then point the <code>--import</code> command above at the file you downloaded.',
+    keyAlt: 'You can fetch the key file directly instead of installing the package; see the <a href="/faq#key-download">FAQ</a>.',
     keyNote: '<code>getuto</code> creates <code>/etc/portage/gnupg</code>. Without it the three gpg commands above fail with <code>no writable keyring found</code>: gpg does not create the directory itself, and portage only invokes getuto when it first fetches a binary package, which is after steps 2 and 3. The signature is made with the Portage Local Trust Key getuto created. Its passphrase is in <code>/etc/portage/gnupg/pass</code>, hence <code>--passphrase-file</code>. Verification runs as the <code>portage</code> user, which has no write access to the trustdb, so the trustdb must be computed beforehand.',
     factPkgs: ' binary packages', factDist: ' distfiles', factTime: 'updated ',
     h2contact: 'Contact', ctForum: 'Forum'
@@ -376,7 +353,7 @@ window.MIRROR_I18N = {
 <!-- 在 i18n.js 之后：applyLang 会重写 .src-opt 的文字，切换脚本只改
      data-uri 与选中态，两者不冲突 -->
 <script src="/assets/mode-switch.js?v=39a1905b"></script>
-<script src="/assets/sudo-switch.js?v=f1c8c48e"></script>
+<script src="/assets/sudo-switch.js?v=0cce4b19"></script>
 <script src="/assets/source-switch.js?v=bfd01b4f"></script>
 
 <script>

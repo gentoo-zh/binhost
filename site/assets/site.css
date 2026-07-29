@@ -352,16 +352,16 @@ h2:first-of-type { margin-top: 2rem; }
 .mode:hover { color: var(--fg); }
 .mode.on { background: var(--panel-head); border-color: var(--fg-soft); color: var(--fg); }
 
-/* root / sudo。跟 .mode 同一套，只是小一号：它改的是命令本身，不是整段。 */
-.opt-pick { display: flex; gap: 0.25rem; margin: 0 0 0.5rem; }
-.opt {
-  border: 1px solid var(--border); border-radius: 0.3rem;
-  background: transparent; color: var(--fg-soft);
-  cursor: pointer; font-family: var(--mono); font-size: 0.72rem;
-  padding: 0.14rem 0.55rem;
+
+/* root / sudo。放在标题栏里而不是自己占一行：一个代码块上方原来叠着三排按钮，
+   而它管的就是这一块，跟复制放在一起才是它该在的位置。 */
+.code-head .head-btn {
+  flex: none; border: 0; border-radius: 0.3rem; background: transparent;
+  color: var(--fg-soft); cursor: pointer; font-family: var(--mono);
+  font-size: 0.72rem; padding: 0.16rem 0.5rem;
 }
-.opt:hover { color: var(--fg); }
-.opt.on { background: var(--panel-head); border-color: var(--fg-soft); color: var(--fg); }
+.code-head .head-btn:hover { background: var(--bg); color: var(--fg); }
+.code-head .head-btn[aria-pressed="true"] { background: var(--bg); color: var(--fg); }
 /* 四个条目排 2×2。auto-fit 在这个宽度下会排成 3+1，落单一个不好看 */
 
 .note { font-size: 0.88rem; line-height: 1.8; color: var(--fg-soft); }

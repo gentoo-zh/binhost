@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=1ec7607c">
+<link rel="stylesheet" href="/assets/site.css?v=2605a3c4">
 <script src="/assets/early.js?v=b8007afb"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -101,6 +101,26 @@
       <code>binpkg-signing</code>、本机签名密钥，以及让 gpg 读到 getuto 存的口令。
     </p>
 
+    <h2 id="key-download" data-i18n="q11">不装 sec-keys 包，怎么拿到签名公钥？</h2>
+    <p data-i18n-html="a11">
+      直接下载那个文件，再把配置第 1 步里 <code>--import</code> 那条命令的路径
+      换成下载到的文件。下载不需要 root。
+    </p>
+
+    <div class="src-pick" data-src-switch="dl" data-src-group="tool"
+         role="group" aria-label="下载工具">
+      <button type="button" class="src-opt on" data-uri="curl -O">curl</button>
+      <button type="button" class="src-opt" data-uri="wget">wget</button>
+    </div>
+
+    <div class="code">
+      <div class="code-head">
+        <span class="path">shell</span>
+        <button class="copy-chip" data-i18n="copy">复制</button>
+      </div>
+<pre><span class="prompt user"></span><span class="key" data-src-slot="dl">curl -O</span> https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</pre>
+    </div>
+
     <h2 data-i18n="q6">如何停用？</h2>
     <p data-i18n-html="a6">
       删除 <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code>。已安装的包不受影响。
@@ -176,7 +196,9 @@
 <script src="/assets/strings.js?v=b3051929"></script>
 <script>
 window.MIRROR_I18N = {
-  'zh-tw': { title: 'FAQ',
+  'zh-tw': { 
+    q11: '不裝 sec-keys 套件，怎麼拿到簽章公鑰？',
+    a11: '直接下載那個檔案，再把設定第 1 步裡 <code>--import</code> 那條命令的路徑換成下載到的檔案。下載不需要 root。',title: 'FAQ',
     q1: '設定好之後為何 emerge 不使用二進位套件，仍然編譯？',
     a1: '因為二進位套件記錄了建置時的 profile 與 USE，所以兩者不一致時 portage 不會採用它，而是直接編譯原始碼，且不作提示。用 <code>emerge -pv</code> 檢查，前綴為 <code>[binary]</code> 才表示採用了二進位套件。',
     q2: '為什麼要用 binrepos.conf，不能直接設 PORTAGE_BINHOST？',
@@ -200,7 +222,9 @@ window.MIRROR_I18N = {
     a10: '套件列表與檔案瀏覽的內容是指令碼算繪的，沒有指令碼時那兩頁是空的。純文字的套件清單在 <a href="/packages.txt">/packages.txt</a>，一行一個套件，第二欄 <code>bin</code> 表示有二進位套件、<code>src</code> 表示只鏡像原始碼。目錄瀏覽用 <a href="/_raw/">/_raw/</a>，那是 nginx 自己出的清單，不需要指令碼。其餘各頁的正文都寫在 HTML 裡，文字瀏覽器直接可讀。',
     a7: '僅收錄 gentoo-zh/overlay 自己的套件，且授權條款允許再散佈。帶 <code>RESTRICT=bindist</code> 的不收錄。清單見 <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>。'
   },
-  'en': { title: 'FAQ',
+  'en': { 
+    q11: 'How do I get the signing key without installing the sec-keys package?',
+    a11: 'Download the file directly, then point the <code>--import</code> command in step 1 at the file you downloaded. No root needed to download.',title: 'FAQ',
     q1: 'Why does emerge still compile after I have configured it?',
     a1: 'A binary package records the profile and USE it was built with, so portage skips it when either differs and builds from source without reporting anything. Run <code>emerge -pv</code> to check: only a <code>[binary]</code> prefix means the package came from here.',
     q2: 'Why binrepos.conf rather than PORTAGE_BINHOST?',
@@ -227,5 +251,6 @@ window.MIRROR_I18N = {
 };
 </script>
 <script src="/assets/i18n.js?v=f5917da1"></script>
+<script src="/assets/source-switch.js?v=bfd01b4f"></script>
 </body>
 </html>
