@@ -165,6 +165,9 @@ jobs:
         run: node build/test-app-crumbs.js
       - name: Links that differ per language
         run: node build/test-i18n-engine.js
+      # 一页上几个选择器问的是同一件事，镜像清单漂移了点下去就不同步
+      - name: Mirror pickers agree
+        run: python3 build/check-pickers.py
       # 写作规范见 site/design.html 的「文字」一节
       - name: Check copy
         run: python3 build/check-copy.py site

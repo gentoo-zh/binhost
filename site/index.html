@@ -111,7 +111,7 @@
 
 <span class="prompt"># </span>cat &gt;&gt; /etc/portage/make.conf &lt;&lt;<span class="val">'EOF'</span>
 <span class="key">FEATURES</span>=<span class="val">"${FEATURES} getbinpkg"</span>
-<span class="key">GENTOO_MIRRORS</span>=<span class="val" data-src-slot="quickdist" data-src-list='"${GENTOO_MIRRORS} %s"'>"${GENTOO_MIRRORS} https://mirror.nju.edu.cn/gentoo-zh https://distfiles.gentoozh.org"</span>
+<span class="key">GENTOO_MIRRORS</span>=<span class="val" data-src-slot="quick" data-src-list='"${GENTOO_MIRRORS} %s"'>"${GENTOO_MIRRORS} https://mirror.nju.edu.cn/gentoo-zh https://distfiles.gentoozh.org"</span>
 <span class="val">EOF</span></pre>
   </div>
 
@@ -154,15 +154,15 @@
   <div class="src-pick" data-src-switch="top" role="group" aria-label="镜像">
     <span class="src-label" data-i18n="srcLabel">镜像</span>
     <button type="button" class="src-opt on" data-i18n="srcNju"
-            data-uri="https://mirror.nju.edu.cn/gentoo-zh/binpkgs/x86-64">南京大学</button>
+            data-uri="https://mirror.nju.edu.cn/gentoo-zh">南京大学</button>
     <button type="button" class="src-opt" data-i18n="srcOrigin"
-            data-uri="https://distfiles.gentoozh.org/binpkgs/x86-64">源站</button>
+            data-uri="https://distfiles.gentoozh.org">源站</button>
   </div>
 
   <div class="uri">
     <span class="k">sync-uri</span>
-    <code data-src-slot="top">https://mirror.nju.edu.cn/gentoo-zh/binpkgs/x86-64</code>
-    <button class="copy-chip" data-src-copy="top" data-i18n="copy">复制</button>
+    <code data-src-slot="top" data-src-suffix="/binpkgs/x86-64">https://mirror.nju.edu.cn/gentoo-zh/binpkgs/x86-64</code>
+    <button class="copy-chip" data-src-copy="top" data-src-suffix="/binpkgs/x86-64" data-i18n="copy">复制</button>
   </div>
 
   <div class="step">
@@ -212,9 +212,9 @@ gpg --homedir /etc/portage/gnupg --check-trustdb" data-i18n="copy">复制</butto
     <div class="src-pick" data-src-switch="repo" role="group" aria-label="镜像">
       <span class="src-label" data-i18n="srcLabel">镜像</span>
       <button type="button" class="src-opt on" data-i18n="srcNju"
-              data-uri="https://mirror.nju.edu.cn/gentoo-zh/binpkgs/x86-64">南京大学</button>
+              data-uri="https://mirror.nju.edu.cn/gentoo-zh">南京大学</button>
       <button type="button" class="src-opt" data-i18n="srcOrigin"
-              data-uri="https://distfiles.gentoozh.org/binpkgs/x86-64">源站</button>
+              data-uri="https://distfiles.gentoozh.org">源站</button>
     </div>
 
     <div class="code">
@@ -223,7 +223,7 @@ gpg --homedir /etc/portage/gnupg --check-trustdb" data-i18n="copy">复制</butto
         <button class="copy-chip" data-i18n="copy">复制</button>
       </div>
 <pre><span class="sec">[gentoo-zh]</span>
-<span class="key">sync-uri</span> = <span class="val" data-src-slot="repo">https://mirror.nju.edu.cn/gentoo-zh/binpkgs/x86-64</span>
+<span class="key">sync-uri</span> = <span class="val" data-src-slot="repo" data-src-suffix="/binpkgs/x86-64">https://mirror.nju.edu.cn/gentoo-zh/binpkgs/x86-64</span>
 <span class="key">priority</span> = <span class="val">10</span>
 <span class="key">verify-signature</span> = <span class="val">true</span>
 <span class="key">location</span> = <span class="val">/var/cache/binhost/gentoo-zh</span></pre>
@@ -338,7 +338,7 @@ window.MIRROR_I18N = {
 <script src="/assets/i18n.js?v=e33da740"></script>
 <!-- 在 i18n.js 之后：applyLang 会重写 .src-opt 的文字，切换脚本只改
      data-uri 与选中态，两者不冲突 -->
-<script src="/assets/source-switch.js?v=301232e5"></script>
+<script src="/assets/source-switch.js?v=c290f404"></script>
 
 <script>
 /* 两个来源各写了一个小状态文件：二进制包由 publish.sh 写，distfiles 由

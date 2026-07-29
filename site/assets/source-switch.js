@@ -1,23 +1,32 @@
 /* Mirror pickers.
  *
- * Two of them, because portage reads the two settings differently:
+ * A page carries several of them, but they all ask the same thing: which
+ * mirror. Left independent they hand out two contradicting configs at once,
+ * so clicking any one of them switches the whole page.
+ *
+ * The two settings differ in what they accept, which is why a choice renders
+ * two ways:
  *
  *   binrepos.conf sync-uri takes exactly one address. portage runs it through
  *   _normalize_uri(), which strips a trailing slash and never splits on
- *   whitespace, so the reader has to choose. The picker writes the chosen one.
+ *   whitespace, so the reader has to choose. A slot writes the chosen one,
+ *   plus data-src-suffix if the setting wants a path under it.
  *
  *   GENTOO_MIRRORS is a list portage splits and tries in the order given
  *   (random.shuffle applies to thirdpartymirrors, the mirror:// scheme in
  *   SRC_URI, not to this). Dropping the others would throw away the fallback,
- *   so every mirror stays listed and the picker only decides which goes first.
+ *   so a slot carrying data-src-list keeps every mirror and only moves the
+ *   chosen one to the front. %s is where the addresses go.
  *
  * A picker is <div class="src-pick" data-src-switch="NAME"> holding one button
  * per mirror with data-uri. It writes [data-src-slot="NAME"] and refreshes the
- * copy payloads. Adding a mirror is one button.
+ * copy payloads. Adding a mirror is one button per picker.
  */
 (function () {
   var groups = document.querySelectorAll('[data-src-switch]');
   if (!groups.length) return;
+
+  function each(list, f) { Array.prototype.forEach.call(list, f); }
 
   /* Copy payloads are read off the rendered block rather than kept in a
      data-copy of their own. Two copies of one config drift as soon as either is
@@ -26,7 +35,7 @@
      unselectable. */
   function payload(pre) {
     var clone = pre.cloneNode(true);
-    Array.prototype.forEach.call(clone.querySelectorAll('.prompt'), function (p) {
+    each(clone.querySelectorAll('.prompt'), function (p) {
       p.parentNode.removeChild(p);
     });
     return clone.textContent.replace(/\s+$/, '');
@@ -44,63 +53,72 @@
     if (pre && chip) chip.setAttribute('data-copy', payload(pre));
   }
 
-  Array.prototype.forEach.call(groups, function (group) {
+  var pickers = [];
+
+  each(groups, function (group) {
     var name = group.getAttribute('data-src-switch');
     var opts = group.querySelectorAll('.src-opt');
     if (!opts.length) return;
 
-    function value(chosen) {
-      if (group.hasAttribute('data-src-list')) {
-        /* Chosen first, the rest after it in the order they are written. */
-        var rest = Array.prototype.filter.call(opts, function (o) { return o !== chosen; });
-        var all = [chosen].concat(rest).map(function (o) { return o.getAttribute('data-uri'); });
-        return group.getAttribute('data-src-list').replace('%s', all.join(' '));
-      }
-      return chosen.getAttribute('data-uri');
+    /* Chosen first, the rest after it in the order they are written. */
+    function ordered(chosen) {
+      var rest = Array.prototype.filter.call(opts, function (o) {
+        return o !== chosen;
+      });
+      return [chosen].concat(rest).map(function (o) {
+        return o.getAttribute('data-uri');
+      }).join(' ');
     }
 
-    function select(chosen) {
-      var v = value(chosen);
+    function render(chosen) {
+      var uri = chosen.getAttribute('data-uri');
+      var groupList = group.getAttribute('data-src-list');
 
-      Array.prototype.forEach.call(opts, function (o) {
+      each(opts, function (o) {
         o.classList.toggle('on', o === chosen);
         o.setAttribute('aria-pressed', o === chosen ? 'true' : 'false');
       });
 
-      Array.prototype.forEach.call(
-        document.querySelectorAll('[data-src-slot="' + name + '"]'),
-          function (slot) {
-            /* 快速配置那一段里，同一个选择要写出两种形态：binrepos.conf 要的是
-               带 /binpkgs/x86-64 的单个地址，make.conf 要的是站点根组成的列表。
-               所以槽位可以自带后缀。 */
-            slot.textContent = v + (slot.getAttribute('data-src-suffix') || '');
-          });
-
-        /* 列表形态的槽位：选中的排最前，其余按写的顺序跟在后面。data-src-list
-           写在槽位上，因为一个选择器可能同时要两种形态。 */
-        Array.prototype.forEach.call(
-          document.querySelectorAll('[data-src-slot="' + name + 'dist"]'),
-          function (slot) {
-            var rest = Array.prototype.filter.call(opts, function (o) { return o !== chosen; });
-            var all = [chosen].concat(rest).map(function (o) { return o.getAttribute('data-uri'); });
-            slot.textContent = (slot.getAttribute('data-src-list') || '%s').replace('%s', all.join(' '));
-          });
+      each(document.querySelectorAll('[data-src-slot="' + name + '"]'),
+        function (slot) {
+          var list = slot.getAttribute('data-src-list') || groupList;
+          slot.textContent = list
+            ? list.replace('%s', ordered(chosen))
+            : uri + (slot.getAttribute('data-src-suffix') || '');
+        });
 
       /* The bare address, for the heading that shows nothing else. */
-      Array.prototype.forEach.call(
-        document.querySelectorAll('.copy-chip[data-src-copy="' + name + '"]'),
-        function (chip) { chip.setAttribute('data-copy', v); });
+      each(document.querySelectorAll('.copy-chip[data-src-copy="' + name + '"]'),
+        function (chip) {
+          chip.setAttribute('data-copy', groupList
+            ? groupList.replace('%s', ordered(chosen))
+            : uri + (chip.getAttribute('data-src-suffix') || ''));
+        });
 
       refreshCopy(group);
     }
 
-    Array.prototype.forEach.call(opts, function (btn) {
-      btn.addEventListener('click', function () { select(btn); });
-    });
+    pickers.push({ opts: opts, render: render });
 
-    /* Fill the copy payloads once at load. Without this the chips carry no
-       data-copy until something is clicked, and the copy handler would put the
-       string "null" on the clipboard. */
-    select(group.querySelector('.src-opt.on') || opts[0]);
+    each(opts, function (btn) {
+      btn.addEventListener('click', function () {
+        var uri = btn.getAttribute('data-uri');
+        each(pickers, function (p) {
+          var match = Array.prototype.filter.call(p.opts, function (o) {
+            return o.getAttribute('data-uri') === uri;
+          })[0];
+          if (match) p.render(match);
+        });
+      });
+    });
+  });
+
+  /* Fill the copy payloads once at load. Without this the chips carry no
+     data-copy until something is clicked, and the copy handler would put the
+     string "null" on the clipboard. */
+  each(pickers, function (p) {
+    p.render(Array.prototype.filter.call(p.opts, function (o) {
+      return o.classList.contains('on');
+    })[0] || p.opts[0]);
   });
 })();
