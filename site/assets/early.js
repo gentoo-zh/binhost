@@ -18,6 +18,9 @@
   if (mode !== 'light' && mode !== 'dark' && mode !== 'system') mode = 'system';
   root.setAttribute('data-theme-mode', mode);
   if (mode === 'light' || mode === 'dark') root.setAttribute('data-theme', mode);
+  /* 样式表还没到之前，画布色由 color-scheme 决定。head 里的 meta 先声明两种都
+     支持，这里按选定的模式收窄——否则深色使用者会先看到一下白。 */
+  root.style.colorScheme = mode === 'system' ? 'light dark' : mode;
 
   /* --- 语言 --- */
   /* 判断规则要和 i18n.js 的 detectLang 一致。真正的语言仍由 i18n.js 决定，
