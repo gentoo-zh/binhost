@@ -21,6 +21,10 @@
  * A picker is <div class="src-pick" data-src-switch="NAME"> holding one button
  * per mirror with data-uri. It writes [data-src-slot="NAME"].
  * Adding a mirror is one button per picker.
+ *
+ * data-src-default 列出该镜像适合当默认的语言。教育网联合镜像站在中国大陆境内
+ * 快，繁体与英文界面的读者多在境外，所以默认跟着界面语言走。读者自己点过之后
+ * 就不再跟了，那是明确的选择。
  */
 (function () {
   var groups = document.querySelectorAll('[data-src-switch]');
@@ -29,6 +33,7 @@
   function each(list, f) { Array.prototype.forEach.call(list, f); }
 
   var pickers = [];
+  var picked = false;
 
   each(groups, function (group) {
     var name = group.getAttribute('data-src-switch');
@@ -79,6 +84,7 @@
     each(opts, function (btn) {
       btn.addEventListener('click', function () {
         var uri = btn.getAttribute('data-uri');
+        picked = true;
         each(pickers, function (p) {
           if (p.kind !== kind) return;
           var match = Array.prototype.filter.call(p.opts, function (o) {
@@ -90,11 +96,28 @@
     });
   });
 
+  /* 当前语言的默认镜像，没有标的话用 markup 里写死的那个。 */
+  function defaultOpt(opts) {
+    var lang = document.documentElement.getAttribute('data-lang');
+    return Array.prototype.filter.call(opts, function (o) {
+      var langs = (o.getAttribute('data-src-default') || '').split(' ');
+      return langs.indexOf(lang) >= 0;
+    })[0] || Array.prototype.filter.call(opts, function (o) {
+      return o.classList.contains('on');
+    })[0] || opts[0];
+  }
+
+  function renderDefaults() {
+    each(pickers, function (p) { p.render(defaultOpt(p.opts)); });
+  }
+
   /* 载入时先渲染一次：markup 里写死的是其中一个镜像，不渲染的话另一个选择器
      的按钮不会被标上，槽位也停在写死的那份。 */
-  each(pickers, function (p) {
-    p.render(Array.prototype.filter.call(p.opts, function (o) {
-      return o.classList.contains('on');
-    })[0] || p.opts[0]);
+  renderDefaults();
+
+  /* i18n.js 在本脚本之前跑，它开头那次 applyLang 广播的 langchange 收不到，
+     所以初次渲染自己读 data-lang，这里只管后续切换。 */
+  document.addEventListener('langchange', function () {
+    if (!picked) renderDefaults();
   });
 })();

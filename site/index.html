@@ -83,20 +83,22 @@
   <p class="note" data-i18n-html="distNote">
     这里只有 overlay 的源码，不能替代官方源，因此是追加而非替换。
     地址不写 <code>distfiles/</code>，portage 会自己补上。
-    这里两个都列出：<code>GENTOO_MIRRORS</code> 是按顺序尝试的列表，
-    南京大学取不到时会落到源站。
+    这里把镜像都列出：<code>GENTOO_MIRRORS</code> 是按顺序尝试的列表，
+    选中的取不到时会落到后面的地址。
   </p>
 
   <div class="step">
-    <!-- data-src-list：两个都留在列表里，选中的排到最前面。%s 换成排好序的地址 -->
+    <!-- data-src-list：镜像都留在列表里，选中的排到最前面。%s 换成排好序的地址 -->
     <div class="src-pick" data-src-switch="dist" data-src-list='"${GENTOO_MIRRORS} %s"'
          role="group" aria-label="优先取用的镜像">
       <span class="src-label" data-i18n="srcLabelFirst">优先</span>
-      <button type="button" class="src-opt on" data-i18n="srcNju"
+      <button type="button" class="src-opt on" data-i18n="srcCernet" data-src-default="zh-cn"
+              data-uri="https://mirrors.cernet.edu.cn/gentoo-zh">教育网联合镜像站</button>
+      <button type="button" class="src-opt" data-i18n="srcNju"
               data-uri="https://mirror.nju.edu.cn/gentoo-zh">南京大学</button>
       <button type="button" class="src-opt" data-i18n="srcNyist"
               data-uri="https://mirror.nyist.edu.cn/gentoo-zh">南阳理工</button>
-      <button type="button" class="src-opt" data-i18n="srcOrigin"
+      <button type="button" class="src-opt" data-i18n="srcOrigin" data-src-default="zh-tw en"
               data-uri="https://distfiles.gentoozh.org">源站</button>
     </div>
 
@@ -105,7 +107,7 @@
         <span class="path">/etc/portage/make.conf</span>
         <button class="copy-chip" data-i18n="copy">复制</button>
       </div>
-<pre><span class="key">GENTOO_MIRRORS</span>=<span class="val" data-src-slot="dist">"${GENTOO_MIRRORS} https://mirror.nju.edu.cn/gentoo-zh https://distfiles.gentoozh.org"</span></pre>
+<pre><span class="key">GENTOO_MIRRORS</span>=<span class="val" data-src-slot="dist">"${GENTOO_MIRRORS} https://mirrors.cernet.edu.cn/gentoo-zh https://distfiles.gentoozh.org"</span></pre>
     </div>
 
     <div class="code" data-pane="quick" hidden>
@@ -115,7 +117,7 @@
         <button class="copy-chip" data-i18n="copy">复制</button>
       </div>
 <pre><span class="prompt"></span><span class="sudo" hidden></span>tee -a /etc/portage/make.conf &gt; /dev/null &lt;&lt;<span class="val">'EOF'</span>
-<span class="key">GENTOO_MIRRORS</span>=<span class="val" data-src-slot="dist">"${GENTOO_MIRRORS} https://mirror.nju.edu.cn/gentoo-zh https://distfiles.gentoozh.org"</span>
+<span class="key">GENTOO_MIRRORS</span>=<span class="val" data-src-slot="dist">"${GENTOO_MIRRORS} https://mirrors.cernet.edu.cn/gentoo-zh https://distfiles.gentoozh.org"</span>
 <span class="val">EOF</span></pre>
     </div>
   </div>
@@ -134,17 +136,19 @@
 
   <div class="src-pick" data-src-switch="top" role="group" aria-label="镜像">
     <span class="src-label" data-i18n="srcLabel">镜像</span>
-    <button type="button" class="src-opt on" data-i18n="srcNju"
+    <button type="button" class="src-opt on" data-i18n="srcCernet" data-src-default="zh-cn"
+            data-uri="https://mirrors.cernet.edu.cn/gentoo-zh">教育网联合镜像站</button>
+    <button type="button" class="src-opt" data-i18n="srcNju"
             data-uri="https://mirror.nju.edu.cn/gentoo-zh">南京大学</button>
     <button type="button" class="src-opt" data-i18n="srcNyist"
             data-uri="https://mirror.nyist.edu.cn/gentoo-zh">南阳理工</button>
-    <button type="button" class="src-opt" data-i18n="srcOrigin"
+    <button type="button" class="src-opt" data-i18n="srcOrigin" data-src-default="zh-tw en"
             data-uri="https://distfiles.gentoozh.org">源站</button>
   </div>
 
   <div class="uri">
     <span class="k">sync-uri</span>
-    <code data-src-slot="top" data-src-suffix="/binpkgs/x86-64">https://mirror.nju.edu.cn/gentoo-zh/binpkgs/x86-64</code>
+    <code data-src-slot="top" data-src-suffix="/binpkgs/x86-64">https://mirrors.cernet.edu.cn/gentoo-zh/binpkgs/x86-64</code>
     <button class="copy-chip" data-src-copy="top" data-src-suffix="/binpkgs/x86-64" data-i18n="copy">复制</button>
   </div>
 
@@ -169,7 +173,7 @@
 <span class="prompt"></span><span class="sudo" hidden></span>mkdir -p /etc/portage/binrepos.conf
 <span class="prompt"></span><span class="sudo" hidden></span>tee /etc/portage/binrepos.conf/gentoo-zh.conf &gt; /dev/null &lt;&lt;<span class="val">'EOF'</span>
 <span class="sec">[gentoo-zh]</span>
-<span class="key">sync-uri</span> = <span class="val" data-src-slot="top" data-src-suffix="/binpkgs/x86-64">https://mirror.nju.edu.cn/gentoo-zh/binpkgs/x86-64</span>
+<span class="key">sync-uri</span> = <span class="val" data-src-slot="top" data-src-suffix="/binpkgs/x86-64">https://mirrors.cernet.edu.cn/gentoo-zh/binpkgs/x86-64</span>
 <span class="key">priority</span> = <span class="val">10</span>
 <span class="key">verify-signature</span> = <span class="val">true</span>
 <span class="key">location</span> = <span class="val">/var/cache/binhost/gentoo-zh</span>
@@ -225,11 +229,13 @@
          sync-uri 的显示与复制内容 -->
     <div class="src-pick" data-src-switch="repo" role="group" aria-label="镜像">
       <span class="src-label" data-i18n="srcLabel">镜像</span>
-      <button type="button" class="src-opt on" data-i18n="srcNju"
+      <button type="button" class="src-opt on" data-i18n="srcCernet" data-src-default="zh-cn"
+              data-uri="https://mirrors.cernet.edu.cn/gentoo-zh">教育网联合镜像站</button>
+      <button type="button" class="src-opt" data-i18n="srcNju"
               data-uri="https://mirror.nju.edu.cn/gentoo-zh">南京大学</button>
       <button type="button" class="src-opt" data-i18n="srcNyist"
               data-uri="https://mirror.nyist.edu.cn/gentoo-zh">南阳理工</button>
-      <button type="button" class="src-opt" data-i18n="srcOrigin"
+      <button type="button" class="src-opt" data-i18n="srcOrigin" data-src-default="zh-tw en"
               data-uri="https://distfiles.gentoozh.org">源站</button>
     </div>
 
@@ -239,7 +245,7 @@
         <button class="copy-chip" data-i18n="copy">复制</button>
       </div>
 <pre><span class="sec">[gentoo-zh]</span>
-<span class="key">sync-uri</span> = <span class="val" data-src-slot="repo" data-src-suffix="/binpkgs/x86-64">https://mirror.nju.edu.cn/gentoo-zh/binpkgs/x86-64</span>
+<span class="key">sync-uri</span> = <span class="val" data-src-slot="repo" data-src-suffix="/binpkgs/x86-64">https://mirrors.cernet.edu.cn/gentoo-zh/binpkgs/x86-64</span>
 <span class="key">priority</span> = <span class="val">10</span>
 <span class="key">verify-signature</span> = <span class="val">true</span>
 <span class="key">location</span> = <span class="val">/var/cache/binhost/gentoo-zh</span></pre>
@@ -324,9 +330,9 @@ window.MIRROR_I18N = {
     lead: 'gentoo-zh overlay 的二進位套件與 distfiles 鏡像。兩者相互獨立，按需分別設定。::gentoo 的部分用 <a href="https://gentoozh.org/zh-tw/mirrorlist/">社群鏡像列表</a>裡的節點。',
     h2bin: '二進位套件', h2dist: 'Distfiles',
     sigNote: '驗簽由第 2 步的 <code>verify-signature = true</code> 提供，只作用於本站。<code>FEATURES=binpkg-request-signature</code> 是全域的，會覆蓋它，也會要求你自己用 <code>FEATURES=buildpkg</code> 建出來的套件帶簽章——那些套件預設沒有簽章，於是每次本機建置都會在合併時報 <code>GnuPG verification failed</code>。要開它就得同時配好 <code>binpkg-signing</code> 與本機簽章金鑰。',
-    srcLabel: '鏡像', srcLabelFirst: '優先', srcNju: '南京大學', srcNyist: '南陽理工', srcOrigin: '來源站',
+    srcLabel: '鏡像', srcLabelFirst: '優先', srcCernet: '教育網聯合鏡像站', srcNju: '南京大學', srcNyist: '南陽理工', srcOrigin: '來源站',
     repoNote: '預設是南京大學，中國大陸下載會更快；來源站在美國，部分地區下載可能較為緩慢。兩邊的套件都是一樣的，簽章也是同一份，更換哪個都不會影響驗簽。',
-    distNote: '這裡只有 overlay 的原始碼，不能替代官方來源，因此是追加而非替換。位址不寫 <code>distfiles/</code>，portage 會自己補上。這裡兩個都列出：<code>GENTOO_MIRRORS</code> 是按順序嘗試的列表，南京大學取不到時會落到來源站。',
+    distNote: '這裡只有 overlay 的原始碼，不能替代官方來源，因此是追加而非替換。位址不寫 <code>distfiles/</code>，portage 會自己補上。這裡把鏡像都列出：<code>GENTOO_MIRRORS</code> 是按順序嘗試的列表，選中的取不到時會落到後面的位址。',
     distOptOut: '因版權等原因不希望某個套件被鏡像時，在其 ebuild 中加入 <code>RESTRICT="mirror"</code>，同步工具會跳過。',
     step1: '匯入簽章公鑰', step2: '加入倉庫', step3: '打開 getbinpkg（附加）',
     keyAlt: '不想裝這個套件，也可以直接下載公鑰檔案，見 <a href="/faq#key-download">FAQ</a>。',
@@ -343,9 +349,9 @@ window.MIRROR_I18N = {
     lead: 'Binary package and distfiles mirror for the gentoo-zh overlay. The two are independent and configured separately. For ::gentoo, use a node from the <a href="https://gentoozh.org/en/mirrorlist/">community mirror list</a>.',
     h2bin: 'Binary packages', h2dist: 'Distfiles',
     sigNote: 'Verification comes from <code>verify-signature = true</code> in step 2 and applies to this repository only. <code>FEATURES=binpkg-request-signature</code> is global, overrides that, and also demands a signature on the packages you build yourself with <code>FEATURES=buildpkg</code>. Those are unsigned by default, so every local build fails to merge with <code>GnuPG verification failed</code>. Enabling it means setting up <code>binpkg-signing</code> and a local signing key as well.',
-    srcLabel: 'Mirror', srcLabelFirst: 'First', srcNju: 'Nanjing University', srcNyist: 'NYIST', srcOrigin: 'Origin',
+    srcLabel: 'Mirror', srcLabelFirst: 'First', srcCernet: 'CERNET', srcNju: 'Nanjing University', srcNyist: 'NYIST', srcOrigin: 'Origin',
     repoNote: 'Nanjing University is the default and downloads faster from within China; the origin is in the United States and can be slow from some regions. The packages are the same either way and carry the same signature, so switching does not affect verification.',
-    distNote: 'Only overlay sources live here, so this adds a mirror rather than replacing the official ones. Leave <code>distfiles/</code> off the address; portage appends it. Both are listed: <code>GENTOO_MIRRORS</code> is a list portage tries in order, so it falls through to the origin when Nanjing University does not have a file.',
+    distNote: 'Only overlay sources live here, so this adds a mirror rather than replacing the official ones. Leave <code>distfiles/</code> off the address; portage appends it. Every mirror is listed: <code>GENTOO_MIRRORS</code> is a list portage tries in order, so it falls through to the next address when the selected mirror does not have a file.',
     distOptOut: 'When a maintainer does not want a package mirrored — licensing or otherwise — they add <code>RESTRICT="mirror"</code> to its ebuild and the sync tool skips it.',
     step1: 'Import the signing key', step2: 'Add the repository', step3: 'Enable getbinpkg (append)',
     keyAlt: 'You can fetch the key file directly instead of installing the package; see the <a href="/faq#key-download">FAQ</a>.',
@@ -360,7 +366,7 @@ window.MIRROR_I18N = {
      data-uri 与选中态，两者不冲突 -->
 <script src="/assets/mode-switch.js?v=39a1905b"></script>
 <script src="/assets/sudo-switch.js?v=0cce4b19"></script>
-<script src="/assets/source-switch.js?v=bfd01b4f"></script>
+<script src="/assets/source-switch.js?v=34b03a2a"></script>
 
 <script>
 /* 两个来源各写了一个小状态文件：二进制包由 publish.sh 写，distfiles 由
