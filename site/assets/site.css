@@ -371,6 +371,11 @@ a { color: var(--primary); text-decoration: none; }
    视口——滚下去表头照样跟着跑掉。实测七个宽度（320 到 1280），媒体查询会按宽度
    收起体积、版本、说明三列，表格本来就不会撑破视口，这个 overflow 用不上。 */
 #out { overflow-x: visible; }
+/* 表头的两种列数：根层是名称加内容，深层是名称、大小、修改时间。走哪一种由
+   <html> 上的属性决定，head 里就定好了，所以表头不必等数据才出现。 */
+[data-files="root"] .hd-deep, [data-files="deep"] .hd-root { display: none; }
+/* 还在加载时表格是空的，留出表头那一行的高度即可，别让下面的内容先顶上来。 */
+#out .listing[hidden] { display: none; }
 .listing { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.84rem; }
 .listing th {
   text-align: left; font-weight: 600; color: var(--fg-soft); font-size: 0.74rem;

@@ -68,7 +68,11 @@
   <input class="search" id="q" type="search" autocomplete="off"
          placeholder="搜索包名或说明">
 
-  <div class="filters" id="filters"></div>
+  <div class="filters" id="filters">
+    <button class="filter on" data-f="all" data-i18n="fltAll">全部</button>
+    <button class="filter" data-f="bin" data-i18n="fltBin">仅二进制包</button>
+    <button class="filter" data-f="dist" data-i18n="fltDist">仅 distfiles</button>
+  </div>
 
   <dl class="legend">
     <dt class="mark yes">&#10003;</dt>
@@ -85,7 +89,22 @@
 
   <p class="count" id="count"></p>
   <p class="count" id="updated"></p>
-  <div id="out" class="msg" data-i18n="loading">加载中…</div>
+  <div id="out">
+    <table class="listing pkgs">
+      <thead>
+        <tr>
+          <th data-i18n="thPkg">包</th>
+          <th class="desc" data-i18n="thDesc">说明</th>
+          <th class="mark" data-i18n="thBin">二进制包</th>
+          <th class="mark" data-i18n="thDist">Distfiles</th>
+          <th class="ver" data-i18n="thVer">版本</th>
+          <th class="size" data-i18n="thSize">体积</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p class="msg" id="msg" data-i18n="loading">加载中…</p>
+  </div>
 
 </main>
 
@@ -279,22 +298,18 @@ function render() {
   });
 
   const out = document.getElementById("out");
+  const msg = document.getElementById("msg");
+  const table = out.querySelector(".listing");
   if (!hit.length) {
-    out.className = "msg";
-    out.textContent = t("none");
+    table.hidden = true;
+    msg.hidden = false;
+    msg.textContent = t("none");
     return;
   }
 
-  out.className = "";
-  out.innerHTML =
-    '<table class="listing pkgs"><thead><tr>' +
-      '<th>' + t("thPkg") + '</th>' +
-      '<th class="desc">' + t("thDesc") + '</th>' +
-      '<th class="mark">' + t("thBin") + '</th>' +
-      '<th class="mark">' + t("thDist") + '</th>' +
-      '<th class="ver">' + t("thVer") + '</th>' +
-      '<th class="size">' + t("thSize") + '</th>' +
-    '</tr></thead><tbody>' +
+  table.hidden = false;
+  msg.hidden = true;
+  document.getElementById("rows").innerHTML =
     hit.map(function (r) {
       // 连 overlay 自己的树。overlay 的包大多不在 packages.gentoo.org 上，
       // 那边给的是 404。
@@ -329,8 +344,7 @@ function render() {
         '<td class="mark ' + (r.dist ? 'yes' : 'no') + '">' + (r.dist ? '\u2713' : '\u2014') + '</td>' +
         '<td class="ver">' + r.ver + '</td>' +
         '<td class="size">' + human(r.size) + '</td></tr>';
-    }).join("") +
-    '</tbody></table>';
+    }).join("");
 }
 
 function counts() {
@@ -346,11 +360,14 @@ function counts() {
   if (distGenerated) u.push(t("updDist") + fmtTime(distGenerated));
   document.getElementById("updated").textContent = u.join("\n");
 
-  const box = document.getElementById("filters");
-  box.innerHTML = [["all","fltAll"],["bin","fltBin"],["dist","fltDist"]].map(function (f) {
-    return '<button class="filter' + (filter === f[0] ? ' on' : '') +
-           '" data-f="' + f[0] + '">' + t(f[1]) + '</button>';
-  }).join("");
+}
+
+// 按钮的标记写在页面里，文案由 i18n.js 按 data-i18n 换。原来整排是这里画的，
+// 所以要等数据回来才出现，出现的一刻把下面的内容推下去。
+function markFilter() {
+  document.querySelectorAll("#filters .filter").forEach(function (b) {
+    b.classList.toggle("on", b.dataset.f === filter);
+  });
 }
 
 Promise.all([
@@ -393,6 +410,7 @@ document.getElementById("filters").addEventListener("click", function (e) {
   const b = e.target.closest("button[data-f]");
   if (!b) return;
   filter = b.dataset.f;
+  markFilter();
   counts(); render();
 });
 

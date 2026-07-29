@@ -9,6 +9,12 @@
 <link rel="stylesheet" href="/assets/site.css">
 <script src="/assets/early.js"></script>
 <!-- /chrome:head -->
+<script>
+// 根层与深层的表头列数不同，而走哪一种从网址就知道。放在 head 里定，表头就
+// 不必等数据才画出来。
+document.documentElement.setAttribute(
+  'data-files', location.pathname.replace(/\/+$/, '/') === '/files/' ? 'root' : 'deep');
+</script>
 <title>distfiles.gentoozh.org</title>
 <meta name="robots" content="noindex">
 </head>
@@ -58,17 +64,29 @@
 <main id="main" class="wrap wide">
   <h1 class="title" id="where"></h1>
   <p class="crumbs" id="crumbs"></p>
-  <div id="out" class="msg" data-i18n="loading">加载中…</div>
+  <div id="out">
+    <table class="listing">
+      <thead>
+        <tr class="hd-root">
+          <th data-i18n="thName">名称</th>
+          <th data-i18n="thWhat">内容</th>
+        </tr>
+        <tr class="hd-deep">
+          <th data-i18n="thName">名称</th>
+          <th class="size" data-i18n="thSize">大小</th>
+          <th class="date" data-i18n="thDate">修改时间</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p class="msg" id="msg" data-i18n="loading">加载中…</p>
+  </div>
 </main>
 
-<!-- 表格是 JS 生成的，但它的文案照样要能翻译。放在这里让 i18n.js 按常规流程处理，
-     渲染时再读回来——省得在脚本里复制一份语言判定逻辑。 -->
+<!-- 表格的行是 JS 生成的，这几串脚本要读回来用。表头已经写在表格里，走常规的
+     data-i18n，不必放这里。 -->
 <div id="strings" hidden>
   <span data-i18n="title">文件</span>
-  <span data-i18n="thWhat">内容</span>
-  <span data-i18n="thName">名称</span>
-  <span data-i18n="thSize">大小</span>
-  <span data-i18n="thDate">修改时间</span>
   <span data-i18n="notFound">这个路径不存在。</span>
   <span data-i18n="failed">读取目录失败：</span>
   <!-- 面包屑的第一节要用它。t() 只从这里取，导航栏上那一个它读不到。 -->
@@ -197,21 +215,16 @@ function render(items) {
       (atRoot ? '' : '<td class="date">' + date + '</td>') + '</tr>';
   }).join("");
 
-  const out = document.getElementById("out");
-  out.className = "";
-  out.innerHTML =
-    '<table class="listing"><thead><tr>' +
-      '<th>' + t("thName") + '</th>' +
-      (atRoot ? '<th>' + t("thWhat") + '</th>'
-              : '<th class="size">' + t("thSize") + '</th>' +
-                '<th class="date">' + t("thDate") + '</th>') +
-    '</tr></thead><tbody>' + up + rows + '</tbody></table>';
+  document.getElementById("rows").innerHTML = up + rows;
+  document.getElementById("msg").hidden = true;
+  document.querySelector("#out .listing").hidden = false;
 }
 
 function fail(e) {
-  const out = document.getElementById("out");
-  out.className = "msg";
-  out.textContent = e === 404 ? t("notFound") : t("failed") + e;
+  document.querySelector("#out .listing").hidden = true;
+  const m = document.getElementById("msg");
+  m.hidden = false;
+  m.textContent = e === 404 ? t("notFound") : t("failed") + e;
 }
 
 let loaded = null;   // 留一份，切语言时要用它重绘

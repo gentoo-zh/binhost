@@ -23,12 +23,15 @@ function check(name, cond, detail) {
 // --- 假 DOM ------------------------------------------------------------------
 // 只做这个测试用得到的部分。元素按 id 存，render() 要的就是 #out。
 function el(id) {
-  return {
+  const e = {
     id, innerHTML: "", textContent: "", className: "", hidden: false,
     dataset: {}, style: {},
-    addEventListener() {}, querySelector() { return null; },
+    addEventListener() {},
     querySelectorAll() { return nodeList([]); },
   };
+  // #out 里现在有静态的表格骨架，render 会去拿它来切显隐
+  e.querySelector = (sel) => (id === "out" && /listing/.test(sel) ? el("table") : null);
+  return e;
 }
 function nodeList(items) {
   return { length: items.length, forEach(f) { items.forEach(f); } };
@@ -65,12 +68,13 @@ const script = blocks.sort((a, b) => b.length - a.length)[0] +
 // --- 数据 --------------------------------------------------------------------
 const setRows = (data) => globalThis.__t.setRows(data);
 
+// 表头是静态的，脚本只填 tbody，所以这里读 #rows
 function renderWith(query) {
   nodes.q = nodes.q || el("q");
   nodes.q.value = query;
-  document.getElementById("out").innerHTML = "";
+  document.getElementById("rows").innerHTML = "";
   render();
-  return document.getElementById("out").innerHTML;
+  return document.getElementById("rows").innerHTML;
 }
 
 // 一个名字里带 firefox、说明里没有；一个反过来。搜 "browser" 只该命中后者的说明。
