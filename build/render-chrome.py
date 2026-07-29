@@ -43,7 +43,6 @@ def stamp(body):
 def render(name, flags, indent):
     body = (TPL / f"{name}.html").read_text()
     body = body.replace("{{wide}}", " wide" if "wide" in flags else "")
-    body = stamp(body)
     lines = [indent + l if l.strip() else l for l in body.splitlines(keepends=True)]
     head = f"{indent}<!-- chrome:{name}{flags} -->\n"
     return head + "".join(lines) + f"{indent}<!-- /chrome:{name} -->\n"
@@ -56,6 +55,10 @@ def main():
     for f in sorted(site.glob("*.html")):
         old = f.read_text()
         new = BLOCK.sub(lambda m: render(m.group(2), m.group(3), m.group(1)), old)
+        # 指纹要盖整页，不只是共用部分。页面自己在 body 末尾引的那几个脚本原来
+        # 没有指纹，而 nginx 给所有 css 与 js 发一年的 immutable，改了文件回访者
+        # 一年都取不到新的。
+        new = stamp(new)
         if new == old:
             continue
         if check:
