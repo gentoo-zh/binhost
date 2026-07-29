@@ -376,14 +376,19 @@ a { color: var(--primary); text-decoration: none; }
 [data-files="root"] .hd-deep, [data-files="deep"] .hd-root { display: none; }
 /* 还在加载时表格是空的，留出表头那一行的高度即可，别让下面的内容先顶上来。 */
 #out .listing[hidden] { display: none; }
-.listing { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.84rem; }
+/* 固定列宽。auto 布局下列宽由内容决定，表格还空着时按表头文字算，数据一到
+   重新分配，表头就横向跳一次。fixed 之下宽度只看这里写的值，从第一帧起不变。
+   没写宽度的列平分剩余宽度：名称与说明各占一半，和原来的比例接近。 */
+.listing {
+  width: 100%; table-layout: fixed; border-collapse: collapse;
+  font-family: var(--mono); font-size: 0.84rem;
+}
 .listing th {
   text-align: left; font-weight: 600; color: var(--fg-soft); font-size: 0.74rem;
   letter-spacing: 0.03em; white-space: nowrap;
   padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border);
 }
-/* 名称列吃掉剩余宽度，否则「大小」这种两字表头会被挤成竖排 */
-.listing th:first-child { width: 100%; }
+
 /* 表头留在视口里。四百多行的表格滚下去之后，那几列 ✓ 与 — 没有表头就认不出
    是哪一列。top 要让开顶栏——顶栏自己也是 sticky，不让开就滚到它底下去了；
    顶栏在窄屏会折成两行，高度由 util.js 量出来写进 --nav-h。
@@ -395,7 +400,7 @@ a { color: var(--primary); text-decoration: none; }
 }
 .listing td { padding: 0.36rem 0.6rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .listing tr:hover td { background: var(--hover); }
-.listing td.name { white-space: normal; word-break: break-all; width: 100%; }
+.listing td.name { white-space: normal; word-break: break-all; }
 .listing td.size, .listing td.date, .listing th.size, .listing th.date { text-align: right; color: var(--fg-soft); }
 .listing a.dir::after { content: "/"; color: var(--fg-soft); }
 .msg { color: var(--fg-soft); padding: 2rem 0; }
@@ -492,10 +497,8 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 #count { min-height: calc(3 * 1.65 * 0.82rem); }
 #updated { min-height: calc(2 * 1.65 * 0.82rem); }
 
-/* 目录页让名称列吃满宽度，包列表要反过来：说明才是长的那列。
-   包名不能断行——.listing 那边给文件名用的 break-all 会把
-   app-admin/chezmoi 拆成一个字一行。 */
-.pkgs th:first-child { width: 1%; }
+/* 目录页让名称列吃满宽度，包列表要反过来：说明才是长的那列。宽度写在下面
+   那组固定列宽里。 */
 /* 只在 <wbr> 标出的斜线处断。包名里没有空格，所以不加 <wbr> 就等于 nowrap，
    那样这一栏的最小宽度会等于最长的那个包名，把说明挤成三行、版本挤出屏幕。 */
 .pkgs td.name {
@@ -504,7 +507,7 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 }
 
 
-.pkgs td.desc, .pkgs th.desc { white-space: normal; color: var(--fg-soft); width: 100%; }
+.pkgs td.desc, .pkgs th.desc { white-space: normal; color: var(--fg-soft); }
 /* 一行不换行，行高统一：四百多行的表格里，参差的行高比读不全一句话更碍事。
    截断改成横向滚动，长说明在格子里划一下就能读完，不必再点进包页面。
    滚动条藏起来——每行一条会把表格切成一片横线。 */
@@ -544,7 +547,17 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 .fpr-copy:hover { color: var(--fg); }
 
 /* 对勾列。窄到只放得下一个符号，别让它抢名称列的宽度 */
-.listing th.mark, .listing td.mark { text-align: center; width: 1%; white-space: nowrap; }
+/* 两个状态列按表头文字定宽：里面的内容（对勾、不构建这类标签）都比表头窄。 */
+.listing th.mark, .listing td.mark { text-align: center; white-space: nowrap; }
+/* 只留说明列不写宽度：fixed 布局下多个 auto 列 Chrome 不平分，会把剩余
+   全给其中一个。名称列给百分比，窄屏收起别的列之后它按比例放大。 */
+.pkgs th:first-child { width: 33%; }
+.pkgs th.mark { width: 6rem; }
+.pkgs th.ver { width: 10.5rem; }
+.pkgs th.size { width: 4rem; }
+/* 文件浏览器：大小与修改时间定宽，名称吃掉剩下的。 */
+#out .listing th.size { width: 4.5rem; }
+#out .listing th.date { width: 9.5rem; }
 .listing td.mark.yes { color: #16a34a; font-weight: 600; }
 .listing td.mark.no { color: var(--fg-soft); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .listing td.mark.yes { color: #4ade80; } }
@@ -626,6 +639,14 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 
 /* --- 窄屏 --- */
 @media (max-width: 34rem) {
+  /* 手机上两个状态列各占 6rem 的话，名称列只剩不到 100px，而标签又是 nowrap
+     的，会把表格撑出视口。收窄并允许标签折行。 */
+  .pkgs th.mark { width: 4.5rem; }
+  .pkgs td.mark { white-space: normal; }
+  /* 固定列宽之下放不下的包名会盖到右边一列上。斜线处的 <wbr> 是首选断点，
+     一个词还是超宽时允许在任意字符断开。 */
+  .pkgs td.name { overflow-wrap: anywhere; }
+
   .wrap { padding: 2.25rem 1rem 2.5rem; }
 
   .title { font-size: 1.45rem; }
