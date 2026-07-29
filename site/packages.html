@@ -104,6 +104,8 @@
       <tbody id="rows"></tbody>
     </table>
     <p class="msg" id="msg" data-i18n="loading">加载中…</p>
+    <noscript><p class="msg" data-i18n-html="noJs">这张表由脚本渲染。
+      纯文本一份在 <a href="/packages.txt">/packages.txt</a>。</p></noscript>
   </div>
 
 </main>
@@ -157,6 +159,7 @@
   <span data-i18n="whyLong_candidate">有构建系统但未收录，需人工确认</span>
   <span data-i18n="none">没有匹配的包。</span>
   <span data-i18n="ph">搜索包名或说明</span>
+  <span data-i18n-html="noJs">这张表由脚本渲染。纯文本一份在 <a href="/packages.txt">/packages.txt</a>。</span>
 </div>
 
 <script src="/assets/util.js"></script>
@@ -181,7 +184,8 @@ window.MIRROR_I18N = {
     whyLong_meta: 'virtual、acct-user，不安裝檔案',
     whyLong_candidate: '有建置系統但未收錄，需人工確認',
     lgDashDist: '沒有原始碼檔案，或下載失敗',
-    ph: '搜尋套件名稱或說明'
+    ph: '搜尋套件名稱或說明',
+    noJs: '這張表由指令碼算繪。純文字一份在 <a href="/packages.txt">/packages.txt</a>。'
   },
   'en': {
     pending: 'pending', excluded: 'excluded', updBin: 'binaries updated ', updDist: 'distfiles updated ', fltAll: 'All', fltBin: 'Binaries', fltDist: 'Distfiles', title: 'Packages',
@@ -202,7 +206,8 @@ window.MIRROR_I18N = {
     whyLong_meta: 'A virtual or acct-user package.',
     whyLong_candidate: 'Has a build system but is not on the list.',
     lgDashDist: 'No source files, or the download failed.',
-    ph: 'Search name or description'
+    ph: 'Search name or description',
+    noJs: 'This table is rendered by a script. A plain text copy is at <a href="/packages.txt">/packages.txt</a>.'
   }
 };
 </script>

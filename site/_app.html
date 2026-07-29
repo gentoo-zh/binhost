@@ -80,6 +80,8 @@ document.documentElement.setAttribute(
       <tbody id="rows"></tbody>
     </table>
     <p class="msg" id="msg" data-i18n="loading">加载中…</p>
+    <noscript><p class="msg" data-i18n-html="noJs">这个列表由脚本渲染。
+      不带脚本的目录浏览在 <a href="/_raw/">/_raw/</a>。</p></noscript>
   </div>
 </main>
 
@@ -91,6 +93,7 @@ document.documentElement.setAttribute(
   <span data-i18n="failed">读取目录失败：</span>
   <!-- 面包屑的第一节要用它。t() 只从这里取，导航栏上那一个它读不到。 -->
   <span data-i18n="navFiles">文件</span>
+  <span data-i18n-html="noJs">这个列表由脚本渲染。不带脚本的目录浏览在 <a href="/_raw/">/_raw/</a>。</span>
 </div>
 
 <!-- chrome:foot wide -->
@@ -115,12 +118,14 @@ window.MIRROR_I18N = {
   'zh-tw': { loading: '載入中…',
     title: '檔案', thWhat: '內容',
     thName: '名稱', thSize: '大小', thDate: '修改時間',
-    notFound: '這個路徑不存在。', failed: '讀取目錄失敗：'
+    notFound: '這個路徑不存在。', failed: '讀取目錄失敗：',
+    noJs: '這個列表由指令碼算繪。不帶指令碼的目錄瀏覽在 <a href="/_raw/">/_raw/</a>。'
   },
   'en': { loading: 'Loading…',
     title: 'Files', thWhat: 'Content',
     thName: 'Name', thSize: 'Size', thDate: 'Modified',
-    notFound: 'No such path.', failed: 'Could not read directory: '
+    notFound: 'No such path.', failed: 'Could not read directory: ',
+    noJs: 'This listing is rendered by a script. Plain directory browsing is at <a href="/_raw/">/_raw/</a>.'
   }
 };
 </script>

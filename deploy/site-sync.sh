@@ -85,7 +85,7 @@ fi
 # 23 and, under set -e, stops the whole sync. site/*.html with --delete is not
 # an option either, because DEST also holds the published packages and
 # distfiles.
-rsync -a --safe-links --include='*.html' --exclude='*' "${WORK}/site/" "${DEST}/"
+rsync -a --safe-links --include='*.html' --include='robots.txt' --exclude='*' "${WORK}/site/" "${DEST}/"
 
 # A page deleted from the repository used to stay served for good: rsync without
 # --delete only ever adds. /mirror went on answering 200 with the old table for

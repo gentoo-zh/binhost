@@ -186,6 +186,20 @@ def main(overlay):
     # temporary file and rename.
     os.replace(tmp, OUT)
 
+    # 纯文本一份。包列表页的表格是脚本画的，文字浏览器和 curl 只看得到
+    # 「加载中」，而这个站点的使用者相当一部分就在终端里。
+    txt = OUT.with_name("packages.txt")
+    lines = [f"# gentoo-zh overlay，{len(out)} 个包",
+             f"# 生成于 {time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime())}",
+             "# 第二列：bin 有二进制包，src 只镜像源码，-- 两者都没有",
+             ""]
+    for pkg in out:
+        mark = "bin" if pkg["binhost"] else "src" if pkg["dist"] else "--"
+        lines.append(f"{pkg['cp']:<44} {mark}  {pkg['desc']}")
+    tmp_txt = txt.with_suffix(".txt.new")
+    tmp_txt.write_text("\n".join(lines) + "\n")
+    os.replace(tmp_txt, txt)
+
     with_dist = sum(1 for p in out if p["dist"])
     print(f">>> {len(out)} packages ({sum(p['binhost'] for p in out)} on the binhost "
           f"list, {with_dist} with distfiles) -> {OUT}")

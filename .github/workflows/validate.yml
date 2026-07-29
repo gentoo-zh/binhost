@@ -244,6 +244,11 @@ jobs:
           case "$(hdr /binpkgs/x86-64/ content-security-policy)" in "default-src 'self'"*) ;; *) fail "binpkgs 目录页拿到的不是站点那一份 CSP" ;; esac
           [ "$(hdr /binpkgs/x86-64/Packages x-content-type-options)" = nosniff ] || fail "索引没有 nosniff"
 
+          # 爬虫策略与图标：漏了就是每次访问一条 404，以及爬虫去抓三十多 GB
+          printf 'User-agent: *\nDisallow: /distfiles/\n' > /srv/mirrors/robots.txt
+          [ "$(code /robots.txt)" = 200 ] || fail "robots.txt 取不到"
+          [ "$(code /favicon.ico)" = 301 ] || fail "favicon.ico 没有跳转"
+
           # 目录交给前端渲染
           [ "$(code /binpkgs/x86-64/)" = 200 ] || fail "目录浏览打不开"
           [ "$(code /files/)" = 200 ]          || fail "浏览根打不开"

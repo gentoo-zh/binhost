@@ -35,6 +35,10 @@ DIST_MAX_AGE_H="${DIST_MAX_AGE_H:-6}"
 KEY_WARN_DAYS="${KEY_WARN_DAYS:-180}"
 CERT_WARN_DAYS="${CERT_WARN_DAYS:-14}"
 EXPORTER_PORT="${EXPORTER_PORT:-9100}"
+# 磁盘。distfiles 只涨不缩，回收桶还要再留十四天的量。盘满时 emirrordist 写出
+# 的是截断的文件，而它照样退出 0——没有任何一处会说出来。
+DISK_WARN_PCT="${DISK_WARN_PCT:-85}"
+DISK_PATH="${DISK_PATH:-/srv/pub}"
 
 problems=0
 failures=()
@@ -63,6 +67,18 @@ if [[ -d ${SIGNING_GNUPGHOME} ]]; then
     fi
 else
     note "signing key" "not on this host"
+fi
+
+# --- 磁盘 ---------------------------------------------------------------------
+# 只在这台上查：另一份 status.sh 跑在别处，那边没有 /srv/pub。
+if [[ -d ${DISK_PATH} ]]; then
+    read -r used avail pct < <(df -P "${DISK_PATH}" | awk 'NR==2 {gsub(/%/,"",$5); print $3, $4, $5}')
+    human() { awk -v k="$1" 'BEGIN { split("K M G T", u); i=1; while (k>=1024 && i<4) { k/=1024; i++ } printf "%.0f%s", k, u[i] }'; }
+    if (( pct >= DISK_WARN_PCT )); then
+        bad "磁盘" "${DISK_PATH} 用了 ${pct}%，剩 $(human "${avail}")"
+    else
+        note "磁盘" "${pct}%，剩 $(human "${avail}")"
+    fi
 fi
 
 # --- TLS ----------------------------------------------------------------------

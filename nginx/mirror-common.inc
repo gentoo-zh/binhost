@@ -19,6 +19,16 @@ location ^~ /.well-known/acme-challenge/ {
 # 目录列表的数据源。页面是静态的，内容从这里取。
 # 用 ^~ 而不是普通前缀：下面按正则匹配目录的规则优先级更高，
 # 否则 /_ls/foo/ 会被那条规则匹配，返回 HTML 而非 JSON。
+# 目录浏览的无脚本回落。/_ls/ 出的是 JSON 给前端用，这里出的是 nginx 自己
+# 画的 HTML 列表，文字浏览器和 curl 直接能读。
+location ^~ /_raw/ {
+	alias /srv/pub/;
+	autoindex on;
+	autoindex_exact_size off;
+	autoindex_localtime on;
+	include /etc/nginx/conf.d/headers-site.inc;
+}
+
 location ^~ /_ls/ {
 	alias /srv/pub/;
 	autoindex on;
@@ -144,9 +154,27 @@ location ~ ^/(.+)\.html$ { return 301 /$1; }
 # 发出去过，留一条跳转。精确匹配，别把 /mirrors 之类的一起卷走。
 location = /mirror { return 301 /faq; }
 
+# 站点图标只有 webp 一份。页面里都写了 link rel=icon，但书签、抓取器这些场合
+# 浏览器会直接要 /favicon.ico，不接就是每次访问多一条 404。
+location = /favicon.ico { return 301 /assets/logo.webp; }
+
 # 站点资源每次都要回源校验。不发 Cache-Control 时浏览器按启发式规则自己
 # 决定缓存多久，改了样式用户看不到。no-cache 不是不缓存，是必须先问一次；
 # 内容没变 ETag 会让它只回一个 304。
+location = /robots.txt {
+	root /srv/mirrors;
+	include /etc/nginx/conf.d/headers-site.inc;
+}
+
+# 包列表的纯文本一份。表格是脚本画的，文字浏览器只看得到「加载中」。
+location = /packages.txt {
+	root /srv/mirrors;
+	default_type text/plain;
+	charset utf-8;
+	add_header Cache-Control "no-cache";
+	include /etc/nginx/conf.d/headers-site.inc;
+}
+
 location ~* \.(css|js|json)$ {
 	add_header Cache-Control "no-cache";
 	include /etc/nginx/conf.d/headers-site.inc;

@@ -9,3 +9,6 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 add_header X-Frame-Options "DENY" always;
 add_header Content-Security-Policy "default-src 'none'; sandbox" always;
 add_header Alt-Svc 'h3=":443"; ma=86400' always;
+# 单个源码包和二进制包进搜索索引没有意义。X-Robots-Tag 只有索引器认，wget、
+# rsync、portage 都不看，所以不影响任何人取用。
+add_header X-Robots-Tag "noindex" always;
