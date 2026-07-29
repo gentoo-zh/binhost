@@ -165,7 +165,11 @@ html.lang-swap body { visibility: hidden; }
   border-radius: 4px; cursor: pointer; line-height: 1;
 }
 .lang-btn:hover { background: var(--hover); color: var(--fg); }
-.lang-btn.active { color: var(--primary); }
+/* 当前项由 <html> 上的属性决定，early.js 在第一次绘制前就写好了。原来是
+   i18n.js 加 class，要等到 body 末尾，高亮会晚一拍才出现。 */
+[data-lang="zh-cn"] .lang-btn[data-lang="zh-cn"],
+[data-lang="zh-tw"] .lang-btn[data-lang="zh-tw"],
+[data-lang="en"] .lang-btn[data-lang="en"] { color: var(--primary); }
 
 .icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -187,7 +191,15 @@ html.lang-swap body { visibility: hidden; }
   padding: 0.42rem 0.6rem; border-radius: 4px; cursor: pointer; text-align: left;
 }
 .menu-item:hover { background: var(--hover); }
-.menu-item.active { color: var(--primary); font-weight: 600; }
+[data-theme-mode="light"] .menu-item[data-mode="light"],
+[data-theme-mode="dark"] .menu-item[data-mode="dark"],
+[data-theme-mode="system"] .menu-item[data-mode="system"] { color: var(--primary); font-weight: 600; }
+
+/* 三个图标都在标记里，按当前模式显示一个。这样按钮不必等脚本才画出来。 */
+.theme-btn .ico { display: none; }
+[data-theme-mode="light"] .theme-btn .ico-light,
+[data-theme-mode="dark"] .theme-btn .ico-dark,
+[data-theme-mode="system"] .theme-btn .ico-system { display: inline-flex; }
 .menu-item svg { flex: none; }
 
 /* --- 正文 --- */

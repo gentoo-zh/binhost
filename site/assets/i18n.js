@@ -7,7 +7,7 @@
  *      简体取自文档原文；其它语言由 window.MIRROR_I18N[lang][key] 提供，缺则回落简体。
  *   2) 整段翻译：同一段内容写多份 <div data-langblock="zh-cn"> / "zh-tw" / "en">，
  *      非当前语言的 hidden。行内同理用 data-langblock-inline。简体段直接写在 HTML。
- *   控件注入到 #controls；#copy-toast 存在时才挂「点击复制」。
+ *   控件的标记在页面里，本脚本只做绑定；#copy-toast 存在时才挂点击复制。
  *   无脚本 / 文本浏览器下控件整段不存在，页面保持干净（简体原文可读）。
  */
 (function () {
@@ -24,11 +24,6 @@
     'en': { light: 'Light', dark: 'Dark', system: 'System' }
   };
   var COPIED = { 'zh-cn': '已复制', 'zh-tw': '已複製', 'en': 'Copied' };
-  var ICONS = {
-    light: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>',
-    dark: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>',
-    system: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>'
-  };
 
   /* 翻译来源：共用串 + 页面自己的表，同名以页面为准 */
   var T = {};
@@ -71,61 +66,49 @@
   var curLang = detectLang();
   var themeMode = read('mirror-theme') || 'system';
 
-  var controls = document.getElementById('controls');
-
-  /* 语言按钮（数据驱动） */
-  var langWrap = document.createElement('div'); langWrap.className = 'lang';
+  /* 控件的标记写在页面里，这里只做绑定。原来是脚本创建再插进去，所以顶栏会
+     晚一拍才变样，当前项和图标也跟着晚。 */
   var langBtns = {};
-  LANG_LIST.forEach(function (p) {
-    var b = document.createElement('button');
-    b.type = 'button'; b.className = 'lang-btn'; b.textContent = p[1]; b.dataset.lang = p[0];
-    b.title = LANG_NAME[p[0]];
-    b.addEventListener('click', function () { applyLang(p[0]); });
-    langWrap.appendChild(b); langBtns[p[0]] = b;
+  document.querySelectorAll('.lang-btn').forEach(function (b) {
+    var code = b.dataset.lang;
+    if (enabled.indexOf(code) < 0) { b.hidden = true; return; }
+    langBtns[code] = b;
+    b.addEventListener('click', function () { applyLang(code); });
   });
 
-  /* 主题菜单 */
-  var themeWrap = document.createElement('div'); themeWrap.className = 'menu-wrap';
-  var themeBtn = document.createElement('button');
-  themeBtn.type = 'button'; themeBtn.className = 'icon-btn';
-  themeBtn.setAttribute('aria-haspopup', 'true'); themeBtn.setAttribute('aria-expanded', 'false');
-  var menu = document.createElement('div'); menu.className = 'menu'; menu.setAttribute('role', 'menu'); menu.hidden = true;
+  var themeWrap = document.querySelector('.menu-wrap');
+  var themeBtn = themeWrap && themeWrap.querySelector('.theme-btn');
+  var menu = themeWrap && themeWrap.querySelector('.menu');
   var items = {};
-  ['light', 'dark', 'system'].forEach(function (m) {
-    var it = document.createElement('button');
-    it.type = 'button'; it.className = 'menu-item'; it.setAttribute('role', 'menuitemradio'); it.dataset.mode = m;
-    it.innerHTML = ICONS[m] + '<span></span>';
-    it.addEventListener('click', function () { applyTheme(m); closeMenu(); themeBtn.focus(); });
-    menu.appendChild(it); items[m] = it;
-  });
-  themeBtn.addEventListener('click', function (e) { e.stopPropagation(); if (menu.hidden) openMenu(); else closeMenu(); });
-  themeWrap.appendChild(themeBtn); themeWrap.appendChild(menu);
-
-  /* 没有 #controls 的页面也要应用主题与语言。这两步原先排在提前 return 之后，
-     一旦有页面不放控件，用户存的深色偏好就静默失效。 */
-  if (controls) {
-    controls.appendChild(langWrap);
-    controls.appendChild(themeWrap);
+  if (menu) {
+    menu.querySelectorAll('.menu-item').forEach(function (it) {
+      items[it.dataset.mode] = it;
+      it.addEventListener('click', function () { applyTheme(it.dataset.mode); closeMenu(); themeBtn.focus(); });
+    });
   }
-
-  function openMenu() { menu.hidden = false; themeBtn.setAttribute('aria-expanded', 'true'); }
-  function closeMenu() { menu.hidden = true; themeBtn.setAttribute('aria-expanded', 'false'); }
-  document.addEventListener('click', function (e) { if (!themeWrap.contains(e.target)) closeMenu(); });
+  if (themeBtn) {
+    themeBtn.addEventListener('click', function (e) {
+      e.stopPropagation(); if (menu.hidden) openMenu(); else closeMenu();
+    });
+  }
+  document.addEventListener('click', function (e) { if (themeWrap && !themeWrap.contains(e.target)) closeMenu(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
 
+  /* 图标与当前项由 <html> 上的 data-theme-mode 决定，CSS 自己挑，这里只管文案。 */
   function renderTheme() {
-    themeBtn.innerHTML = ICONS[themeMode];
+    if (!themeBtn) return;
     var title = THEME_WORD[curLang] + THEME_SEP[curLang] + THEME_LABEL[curLang][themeMode];
     themeBtn.title = title; themeBtn.setAttribute('aria-label', title);
     ['light', 'dark', 'system'].forEach(function (m) {
-      items[m].lastChild.textContent = THEME_LABEL[curLang][m];
-      items[m].classList.toggle('active', m === themeMode);
+      if (items[m]) items[m].lastChild.textContent = THEME_LABEL[curLang][m];
     });
   }
   function applyTheme(mode) {
     themeMode = mode;
-    if (mode === 'light' || mode === 'dark') document.documentElement.setAttribute('data-theme', mode);
-    else document.documentElement.removeAttribute('data-theme');
+    var root = document.documentElement;
+    root.setAttribute('data-theme-mode', mode);
+    if (mode === 'light' || mode === 'dark') root.setAttribute('data-theme', mode);
+    else root.removeAttribute('data-theme');
     store('mirror-theme', mode);
     renderTheme();
   }
@@ -137,7 +120,8 @@
     document.querySelectorAll('[data-i18n-href]').forEach(function (el) { el.setAttribute('href', val(l, el.dataset.i18nHref)); });
     document.querySelectorAll('[data-langblock]').forEach(function (el) { el.hidden = (el.getAttribute('data-langblock') !== l); });
     document.querySelectorAll('[data-langblock-inline]').forEach(function (el) { el.hidden = (el.getAttribute('data-langblock-inline') !== l); });
-    Object.keys(langBtns).forEach(function (k) { langBtns[k].classList.toggle('active', k === l); });
+    document.documentElement.setAttribute('data-lang', l);
+    Object.keys(langBtns).forEach(function (k) { langBtns[k].title = LANG_NAME[k]; });
     /* 浏览器标签页的标题原来只有 HTML 里那一份，切语言之后仍是中文。
        每页的 i18n 表本来就有 title，取它拼上站名；没有 title 的页面
        （首页、文件浏览器）只用站名。 */
@@ -154,7 +138,7 @@
 
   applyTheme(themeMode);
   applyLang(curLang);
-  /* lang-early.js 为了不让访客看见换语言前那一屏，先把正文挡住了。换完揭开。
+  /* early.js 为了不让访客看见换语言前那一屏，先把正文挡住了。换完揭开。
      它自己也有个 1.5 秒的兜底，那是留给本脚本没跑起来的情形。 */
   document.documentElement.classList.remove('lang-swap');
 
