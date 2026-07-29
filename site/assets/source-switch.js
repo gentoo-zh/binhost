@@ -19,39 +19,14 @@
  *   chosen one to the front. %s is where the addresses go.
  *
  * A picker is <div class="src-pick" data-src-switch="NAME"> holding one button
- * per mirror with data-uri. It writes [data-src-slot="NAME"] and refreshes the
- * copy payloads. Adding a mirror is one button per picker.
+ * per mirror with data-uri. It writes [data-src-slot="NAME"].
+ * Adding a mirror is one button per picker.
  */
 (function () {
   var groups = document.querySelectorAll('[data-src-switch]');
   if (!groups.length) return;
 
   function each(list, f) { Array.prototype.forEach.call(list, f); }
-
-  /* Copy payloads are read off the rendered block rather than kept in a
-     data-copy of their own. Two copies of one config drift as soon as either is
-     edited, and the copy nobody reads is the one users paste. Prompts are left
-     out: they mark who runs the command and the page already makes them
-     unselectable. */
-  function payload(pre) {
-    var clone = pre.cloneNode(true);
-    each(clone.querySelectorAll('.prompt'), function (p) {
-      p.parentNode.removeChild(p);
-    });
-    return clone.textContent.replace(/\s+$/, '');
-  }
-
-  function refreshCopy(group) {
-    /* Only the block directly below this picker. Searching the parent for any
-       .code reaches the wrong one when the picker sits in the page body rather
-       than inside a step -- the heading's picker would have rewritten step 1's
-       copy payload, which is a shell command, not a config. */
-    var code = group.nextElementSibling;
-    if (!code || !code.classList.contains('code')) return;
-    var pre = code.querySelector('pre');
-    var chip = code.querySelector('.copy-chip');
-    if (pre && chip) chip.setAttribute('data-copy', payload(pre));
-  }
 
   var pickers = [];
 
@@ -94,8 +69,6 @@
             ? groupList.replace('%s', ordered(chosen))
             : uri + (chip.getAttribute('data-src-suffix') || ''));
         });
-
-      refreshCopy(group);
     }
 
     pickers.push({ opts: opts, render: render });
@@ -113,9 +86,8 @@
     });
   });
 
-  /* Fill the copy payloads once at load. Without this the chips carry no
-     data-copy until something is clicked, and the copy handler would put the
-     string "null" on the clipboard. */
+  /* 载入时先渲染一次：markup 里写死的是其中一个镜像，不渲染的话另一个选择器
+     的按钮不会被标上，槽位也停在写死的那份。 */
   each(pickers, function (p) {
     p.render(Array.prototype.filter.call(p.opts, function (o) {
       return o.classList.contains('on');

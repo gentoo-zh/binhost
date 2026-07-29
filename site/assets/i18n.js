@@ -176,8 +176,18 @@
       clearTimeout(timer);
       timer = setTimeout(function () { toast.classList.remove('show'); }, 1200);
     };
-    var copy = function (el) {
+    /* 代码块的复制内容当场从看得见的那一份读，不预先算。预先算要有人在切镜像、
+       切分页之后各自去更新，两个写入方，漏一个就复制到另一份的内容。 */
+    var value = function (el) {
       var v = el.getAttribute('data-copy');
+      if (v !== null) return v;
+      var box = el.closest ? el.closest('.code') : null;
+      if (!box) return '';
+      var pre = box.querySelector('pre[data-pane]:not([hidden])') || box.querySelector('pre');
+      return pre ? pre.textContent.replace(/\s+$/, '') : '';
+    };
+    var copy = function (el) {
+      var v = value(el);
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(v).then(flash, flash);
       else {
         var t = document.createElement('textarea'); t.value = v; document.body.appendChild(t); t.select();
@@ -186,7 +196,7 @@
       }
     };
     document.addEventListener('click', function (e) {
-      var chip = e.target.closest ? e.target.closest('.copy-chip[data-copy]') : null;
+      var chip = e.target.closest ? e.target.closest('.copy-chip') : null;
       if (chip) copy(chip);
     });
     document.addEventListener('keydown', function (e) {

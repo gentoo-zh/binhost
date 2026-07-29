@@ -327,7 +327,22 @@ h2:first-of-type { margin-top: 2rem; }
 .code .val { color: var(--c-val); }
 .code .flag { color: var(--c-flag); }
 /* 提示符只表示身份，不可选中，复制时不会带上 */
+/* 提示符用伪元素生成。user-select: none 在 Chrome 上够用，iOS Safari 与
+   Firefox 选中一整段时照样把它复制走，而 # 粘进 shell 会把整行注释掉。
+   伪元素的内容不在 DOM 文本里，任何浏览器都取不到。 */
+.code .prompt::before { content: "# "; }
 .code .prompt { color: var(--c-prompt); user-select: none; }
+
+/* 配置块的两种写法就地切换，见 code-tabs.js */
+.tabs { display: flex; gap: 0.1rem; min-width: 0; }
+.code-head .tab {
+  border: 0; background: transparent; cursor: pointer; font: inherit;
+  font-family: var(--mono); font-size: 0.74rem; color: var(--fg-soft);
+  padding: 0.16rem 0.5rem; border-radius: 0.3rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.code-head .tab:hover { color: var(--fg); }
+.code-head .tab.on { background: var(--bg); color: var(--fg); }
 /* 四个条目排 2×2。auto-fit 在这个宽度下会排成 3+1，落单一个不好看 */
 
 .note { font-size: 0.88rem; line-height: 1.8; color: var(--fg-soft); }
