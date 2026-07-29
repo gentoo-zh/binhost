@@ -38,6 +38,24 @@ def panes(t):
     return out
 
 
+def opt_picks(name, t, bad):
+    """root / sudo 开关必须和它下面那个代码块一起显隐。
+
+    开关自己不在 pane 里的话，手动模式下它会挂在一个一条命令都没有的文件块
+    底下，点了什么也不会变。
+    """
+    for m in re.finditer(r'<div class="opt-pick"([^>]*)>', t):
+        rest = t[m.end():m.end() + 1200]
+        code = re.search(r'<div class="code"([^>]*)>', rest)
+        if not code or 'class="sudo"' not in rest[:code.end() + 2000]:
+            bad.append(f"{name}: 有个 root/sudo 开关，下面那个块里没有要 root 的命令")
+            continue
+        want = re.search(r'data-pane="(\w+)"', code.group(1))
+        got = re.search(r'data-pane="(\w+)"', m.group(1))
+        if want and (not got or got.group(1) != want.group(1)):
+            bad.append(f"{name}: root/sudo 开关不跟着 {want.group(1)} 一起显隐")
+
+
 def main():
     bad = []
     for f in sorted((ROOT / "site").glob("*.html")):
@@ -48,6 +66,7 @@ def main():
         quick = {l for block in p["quick"] for l in block}
         if not p["manual"]:
             bad.append(f"{f.name}: 有快速配置却没有手动配置")
+        opt_picks(f.name, t, bad)
         for block in p["manual"]:
             for line in block:
                 if not CONF.match(line.strip()):
