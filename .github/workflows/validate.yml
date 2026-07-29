@@ -153,6 +153,15 @@ jobs:
 
       - name: Check i18n tables
         run: node build/check-i18n.js site
+      # 导航栏与页脚每页都得一样。漏一项是眼睛才看得出来的，加过两次
+      - name: Check nav and footer
+        run: python3 build/check-chrome.py site
+      - name: Search hint on the packages page
+        run: node build/test-packages-search.js
+      - name: File browser breadcrumbs
+        run: node build/test-app-crumbs.js
+      - name: Links that differ per language
+        run: node build/test-i18n-href.js
       # 写作规范见 site/design.html 的「文字」一节
       - name: Check copy
         run: python3 build/check-copy.py site
