@@ -120,4 +120,20 @@ if (missing.length) {
   process.exit(1);
 }
 
+// 脚本放进 assets 却没有页面引它，功能就是死的：按钮在页面上、脚本也写好了，
+// 中间那行 <script> 漏了，点下去毫无反应也毫无报错。加这条就是因为漏过一次。
+{
+  const site = path.join(DIR, "..");
+  const pages = fs.readdirSync(site)
+    .filter((f) => f.endsWith(".html"))
+    .map((f) => fs.readFileSync(path.join(site, f), "utf8"))
+    .join("\n");
+  const orphan = fs.readdirSync(DIR)
+    .filter((f) => f.endsWith(".js") && !pages.includes("/assets/" + f));
+  if (orphan.length) {
+    console.error(`!!! ${orphan.join(", ")} 没有任何页面引用`);
+    process.exit(1);
+  }
+}
+
 console.log(`  ${loaded} 个脚本都能载入`);
