@@ -47,7 +47,9 @@ location ^~ /distfiles/ {
 	location ~ /$ {
 		root /srv/mirrors;
 		add_header Cache-Control "no-cache";
-		include /etc/nginx/conf.d/headers-files.inc;
+		# 这里回的是 _app.html，是页面不是文件。换成 files 那一份，
+		# default-src 'none' 会把它自己的样式和脚本一并挡掉。
+		include /etc/nginx/conf.d/headers-site.inc;
 		try_files /_app.html =404;
 	}
 }
@@ -63,7 +65,9 @@ location ^~ /binpkgs/ {
 	location ~ /$ {
 		root /srv/mirrors;
 		add_header Cache-Control "no-cache";
-		include /etc/nginx/conf.d/headers-files.inc;
+		# 这里回的是 _app.html，是页面不是文件。换成 files 那一份，
+		# default-src 'none' 会把它自己的样式和脚本一并挡掉。
+		include /etc/nginx/conf.d/headers-site.inc;
 		try_files /_app.html =404;
 	}
 

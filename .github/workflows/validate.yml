@@ -238,6 +238,10 @@ jobs:
           [ "$(hdr /faq x-content-type-options)" = nosniff ] || fail "页面没有 nosniff"
           case "$(hdr /faq content-security-policy)" in "default-src 'self'"*) ;; *) fail "页面 CSP 不对" ;; esac
           case "$(hdr /distfiles/c6/t.tar.gz content-security-policy)" in "default-src 'none'; sandbox") ;; *) fail "distfile 没有拿到 sandbox 那一份" ;; esac
+          # 目录页回的是 _app.html，是页面不是文件。给它 sandbox 那一份的话
+          # default-src 'none' 会把它自己的样式和脚本挡掉，页面变成一片裸 HTML
+          case "$(hdr /distfiles/c6/ content-security-policy)" in "default-src 'self'"*) ;; *) fail "distfiles 目录页拿到的不是站点那一份 CSP" ;; esac
+          case "$(hdr /binpkgs/x86-64/ content-security-policy)" in "default-src 'self'"*) ;; *) fail "binpkgs 目录页拿到的不是站点那一份 CSP" ;; esac
           [ "$(hdr /binpkgs/x86-64/Packages x-content-type-options)" = nosniff ] || fail "索引没有 nosniff"
 
           # 目录交给前端渲染
