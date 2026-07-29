@@ -36,4 +36,8 @@
       show(btn.getAttribute('data-pane'));
     });
   });
+
+  /* 载入时也走一遍。原来只在点击时才跑，markup 里漏写 hidden 的那一个就一直
+     露在外面，而它管的块是藏着的。 */
+  show('manual');
 })();

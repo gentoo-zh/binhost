@@ -66,6 +66,13 @@ def main():
         quick = {l for block in p["quick"] for l in block}
         if not p["manual"]:
             bad.append(f"{f.name}: 有快速配置却没有手动配置")
+        # 默认是手动，快速那份在 markup 里就该是藏着的，否则脚本跑起来之前
+        # 会闪一下，脚本没跑（文字浏览器）时更是一直露着
+        for m in re.finditer(r'<(\w+)([^>]*data-pane="quick"[^>]*)>', t):
+            if "class=\"mode\"" in m.group(2) or " hidden" in m.group(2):
+                continue
+            bad.append(f"{f.name}: <{m.group(1)} data-pane=\"quick\"> 没写 hidden")
+
         opt_picks(f.name, t, bad)
         for block in p["manual"]:
             for line in block:
