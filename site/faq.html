@@ -143,6 +143,15 @@
       仅收录 gentoo-zh/overlay 自己的包，且许可证允许再分发。带 <code>RESTRICT=bindist</code> 的不收录。
       清单见 <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>。
     </p>
+
+    <h2 data-i18n="q10">在 w3m、lynx 或者 curl 里怎么看？</h2>
+    <p data-i18n-html="a10">
+      包列表与文件浏览的内容是脚本渲染的，没有脚本时那两页是空的。
+      纯文本的包清单在 <a href="/packages.txt">/packages.txt</a>，一行一个包，
+      第二列 <code>bin</code> 表示有二进制包、<code>src</code> 表示只镜像源码。
+      目录浏览用 <a href="/_raw/">/_raw/</a>，那是 nginx 自己出的列表，不需要脚本。
+      其余各页的正文都写在 HTML 里，文字浏览器直接可读。
+    </p>
   </div>
 
 </main>
@@ -187,6 +196,8 @@ window.MIRROR_I18N = {
     a9: 'rsync 公開開放，無需申請。一個模組裡就是 <code>binpkgs/</code> 與 <code>distfiles/</code>。同步到本機後用 HTTP 提供即構成一個完整的鏡像，因為索引中的 <code>PATH</code> 是相對路徑，不依賴主機名稱。',
     a9b: '每日同步一次。因為套件名含版本與 build id，內容不再變化，所以已有的檔案不會重複傳輸。<code>--delay-updates</code> 讓這一批檔案在末尾一次換入。不加則索引可能先落地，而它引用的套件尚未傳完，這段時間下游回傳 404。鏡像建成後在 <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issues</a> 提出，加進上面那一條。',
     q7: '都收錄了哪些套件？',
+    q10: '在 w3m、lynx 或者 curl 裡怎麼看？',
+    a10: '套件列表與檔案瀏覽的內容是指令碼算繪的，沒有指令碼時那兩頁是空的。純文字的套件清單在 <a href="/packages.txt">/packages.txt</a>，一行一個套件，第二欄 <code>bin</code> 表示有二進位套件、<code>src</code> 表示只鏡像原始碼。目錄瀏覽用 <a href="/_raw/">/_raw/</a>，那是 nginx 自己出的清單，不需要指令碼。其餘各頁的正文都寫在 HTML 裡，文字瀏覽器直接可讀。',
     a7: '僅收錄 gentoo-zh/overlay 自己的套件，且授權條款允許再散佈。帶 <code>RESTRICT=bindist</code> 的不收錄。清單見 <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>。'
   },
   'en': { title: 'FAQ',
@@ -209,6 +220,8 @@ window.MIRROR_I18N = {
     a9: 'rsync is open and needs no application. One module carries <code>binpkgs/</code> and <code>distfiles/</code>. Sync it locally, serve it over HTTP, and it is a complete mirror, because <code>PATH</code> in the index is relative and does not depend on the hostname.',
     a9b: 'Sync once a day. Package names carry the version and build id, so their content never changes and existing files are not transferred again. <code>--delay-updates</code> swaps the batch in at the end; without it the index can land before the packages it names, and the mirror answers 404 in between. Once it is running, open a <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issue</a> to have it added to the answer above.',
     q7: 'Which packages are included?',
+    q10: 'How do I read this in w3m, lynx or curl?',
+    a10: 'The package list and the file browser are rendered by a script, so those two pages are empty without one. A plain text package list is at <a href="/packages.txt">/packages.txt</a>, one package per line, the second column <code>bin</code> meaning a binary package exists and <code>src</code> meaning only the sources are mirrored. For directory browsing use <a href="/_raw/">/_raw/</a>, which nginx renders itself and needs no script. Every other page has its text in the HTML and reads fine in a text browser.',
     a7: 'Only packages from gentoo-zh/overlay itself, and only where the licence permits redistribution. Anything with <code>RESTRICT=bindist</code> is excluded. The list is in <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>.'
   }
 };
