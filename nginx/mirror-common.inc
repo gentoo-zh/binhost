@@ -40,14 +40,14 @@ location ^~ /_ls/ {
 # 而 root 是把 URI 追加在后面，正好是我们要的。
 location ^~ /distfiles/ {
 	root /srv/pub;
-	add_header Strict-Transport-Security "max-age=31536000" always;
+	include /etc/nginx/conf.d/headers-files.inc;
 
 	# 目录请求交给前端渲染。外层那条 location ~ /$ 在 ^~ 命中之后不会被考虑，
 	# 所以这里要再写一次。
 	location ~ /$ {
 		root /srv/mirrors;
 		add_header Cache-Control "no-cache";
-		add_header Strict-Transport-Security "max-age=31536000" always;
+		include /etc/nginx/conf.d/headers-files.inc;
 		try_files /_app.html =404;
 	}
 }
@@ -56,14 +56,14 @@ location ^~ /distfiles/ {
 # 写成外层的 location ~ 是不会生效的。
 location ^~ /binpkgs/ {
 	root /srv/pub;
-	add_header Strict-Transport-Security "max-age=31536000" always;
+	include /etc/nginx/conf.d/headers-files.inc;
 
 	# 目录请求交给前端渲染。外层那条 location ~ /$ 在 ^~ 命中之后不会被考虑，
 	# 所以这里要再写一次。
 	location ~ /$ {
 		root /srv/mirrors;
 		add_header Cache-Control "no-cache";
-		add_header Strict-Transport-Security "max-age=31536000" always;
+		include /etc/nginx/conf.d/headers-files.inc;
 		try_files /_app.html =404;
 	}
 
@@ -71,7 +71,7 @@ location ^~ /binpkgs/ {
 	location ~ \.gpkg\.tar$ {
 		root /srv/pub;
 		access_log /var/log/nginx/binpkg.log mirror;
-		add_header Strict-Transport-Security "max-age=31536000" always;
+		include /etc/nginx/conf.d/headers-files.inc;
 	}
 
 	# 首页读它取包数与时间。^~ 命中之后外层那条按扩展名发缓存头的规则不再被
@@ -80,7 +80,7 @@ location ^~ /binpkgs/ {
 	location = /binpkgs/x86-64/status.json {
 		root /srv/pub;
 		add_header Cache-Control "no-cache";
-		add_header Strict-Transport-Security "max-age=31536000" always;
+		include /etc/nginx/conf.d/headers-files.inc;
 	}
 
 	# 索引会变。缓存久了用户会拿着旧索引去要新文件，只能拿到 404。
@@ -90,7 +90,7 @@ location ^~ /binpkgs/ {
 		# Cache-Control: max-age=300，两者并用时响应里有两个同名头，取哪个
 		# 由中间缓存决定。线上实测确实发了两条。
 		add_header Cache-Control "public, max-age=300, must-revalidate";
-		add_header Strict-Transport-Security "max-age=31536000" always;
+		include /etc/nginx/conf.d/headers-files.inc;
 	}
 }
 
@@ -102,7 +102,7 @@ location ^~ /gentoo-zh/ {
 # 心跳戳，off-box 的检查靠它判断这台机器是不是还在跑 cron。
 location = /.health {
 	add_header Cache-Control "no-store";
-	add_header Strict-Transport-Security "max-age=31536000" always;
+	include /etc/nginx/conf.d/headers-site.inc;
 	default_type text/plain;
 }
 
@@ -113,7 +113,7 @@ location = /.health {
 location = /files { return 301 /files/; }
 location = /files/ {
 	add_header Cache-Control "no-cache";
-	add_header Strict-Transport-Security "max-age=31536000" always;
+	include /etc/nginx/conf.d/headers-site.inc;
 	try_files /_app.html =404;
 }
 location ^~ /files/ { return 404; }
@@ -129,7 +129,7 @@ location = /_app { return 404; }
 # try_files 的回落会重新走一遍 location 匹配。精确匹配优先级最高。
 location = /_app.html {
 	add_header Cache-Control "no-cache";
-	add_header Strict-Transport-Security "max-age=31536000" always;
+	include /etc/nginx/conf.d/headers-site.inc;
 }
 
 location = /index.html { return 301 /; }
@@ -145,7 +145,7 @@ location = /mirror { return 301 /faq; }
 # 内容没变 ETag 会让它只回一个 304。
 location ~* \.(css|js|json)$ {
 	add_header Cache-Control "no-cache";
-	add_header Strict-Transport-Security "max-age=31536000" always;
+	include /etc/nginx/conf.d/headers-site.inc;
 }
 
 # 只有以斜杠结尾的请求才是「浏览目录」，交给前端渲染。
@@ -155,7 +155,7 @@ location ~* \.(css|js|json)$ {
 # 网页，出错的地方离真正的原因会隔得非常远。
 location ~ /$ {
 	add_header Cache-Control "no-cache";   # 同上，目录和首页也走 index.html
-	add_header Strict-Transport-Security "max-age=31536000" always;
+	include /etc/nginx/conf.d/headers-site.inc;
 	try_files ${uri}index.html /_app.html;
 }
 
@@ -163,7 +163,7 @@ error_page 404 /404.html;
 location = /404.html {
 	internal;
 	add_header Cache-Control "no-cache";
-	add_header Strict-Transport-Security "max-age=31536000" always;
+	include /etc/nginx/conf.d/headers-site.inc;
 }
 
 # 文件按原样给，给不出就 404。
@@ -172,6 +172,6 @@ location / {
 	# 页面走 $uri.html 这一档进来，上面按后缀匹配的规则不会再作用于它们，
 	# 所以缓存头写在这里。
 	add_header Cache-Control "no-cache";
-	add_header Strict-Transport-Security "max-age=31536000" always;
+	include /etc/nginx/conf.d/headers-site.inc;
 	try_files $uri $uri.html $uri/index.html $uri/ =404;
 }

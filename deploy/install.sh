@@ -94,6 +94,8 @@ sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/pub/binpkgs /srv/pu
 sudo install -dm755 /etc/nginx/conf.d
 sudo install -m644 nginx.conf         /etc/nginx/nginx.conf
 sudo install -m644 mirror-common.inc  /etc/nginx/conf.d/mirror-common.inc
+sudo install -m644 headers-site.inc   /etc/nginx/conf.d/headers-site.inc
+sudo install -m644 headers-files.inc  /etc/nginx/conf.d/headers-files.inc
 # 证书还没签发时 nginx -t 会以 cannot load certificate 失败，而 set -e 会让
 # 这一句中止整个安装：日志轮替、cron、node_exporter、overlay 副本、服务启动
 # 全都不会跑，而 /etc/nginx 已经被换成一份载不起来的配置。
