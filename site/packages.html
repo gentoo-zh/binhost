@@ -107,7 +107,7 @@
       </thead>
       <tbody id="rows"></tbody>
     </table>
-    <p class="msg" id="msg" data-i18n="loading">加载中…</p>
+    <p class="msg" id="msg"></p>
     <noscript><p class="msg" data-i18n-html="noJs">这张表由脚本渲染。
       纯文本一份在 <a href="/packages.txt">/packages.txt</a>。</p></noscript>
   </div>
@@ -410,6 +410,7 @@ Promise.all([
 });
 
 document.getElementById("q").addEventListener("input", render);
+document.getElementById("msg").textContent = t("loading");
 document.getElementById("filters").addEventListener("click", function (e) {
   const b = e.target.closest("button[data-f]");
   if (!b) return;

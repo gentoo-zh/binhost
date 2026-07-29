@@ -79,7 +79,7 @@ document.documentElement.setAttribute(
       </thead>
       <tbody id="rows"></tbody>
     </table>
-    <p class="msg" id="msg" data-i18n="loading">加载中…</p>
+    <p class="msg" id="msg"></p>
     <noscript><p class="msg" data-i18n-html="noJs">这个列表由脚本渲染。
       不带脚本的目录浏览在 <a href="/_raw/">/_raw/</a>。</p></noscript>
   </div>
@@ -238,6 +238,7 @@ let loaded = null;   // 留一份，切语言时要用它重绘
 
 crumbs();
 fixHead();
+document.getElementById("msg").textContent = t("loading");
 fetch("/_ls" + lsPath)
   .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
   .then(function (items) { loaded = items; render(items); })
