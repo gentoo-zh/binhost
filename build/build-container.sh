@@ -122,10 +122,14 @@ mkdir -p /run/lock
 # form portage's verify-signature checks. gpg-keepalive is needed because
 # gpg-agent drops cached credentials after two hours and a full run is longer
 # than that.
+# 索引的 TTL 写进头部，客户端据此决定缓存多久。不写则每次 emerge 都要重取
+# 那份索引，而它已经接近二十万字节。一小时与官方 binhost 一致，而这边一天只
+# 发布一次，缓存一小时不会让谁拿到过期的索引。
 cat >> /etc/portage/make.conf <<EOF
 FEATURES="\${FEATURES} binpkg-signing gpg-keepalive"
 BINPKG_GPG_SIGNING_KEY="${SIGNING_KEY}"
 BINPKG_GPG_SIGNING_GPG_HOME="/root/.gnupg"
+PORTAGE_BINHOST_TTL="3600"
 EOF
 
 # USE flags the dependencies need. On the first full run these all failed at
