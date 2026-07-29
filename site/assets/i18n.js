@@ -94,6 +94,17 @@
   document.addEventListener('click', function (e) { if (themeWrap && !themeWrap.contains(e.target)) closeMenu(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
 
+  function openMenu() {
+    if (!menu) return;
+    menu.hidden = false;
+    themeBtn.setAttribute('aria-expanded', 'true');
+  }
+  function closeMenu() {
+    if (!menu) return;
+    menu.hidden = true;
+    themeBtn.setAttribute('aria-expanded', 'false');
+  }
+
   /* 图标与当前项由 <html> 上的 data-theme-mode 决定，CSS 自己挑，这里只管文案。 */
   function renderTheme() {
     if (!themeBtn) return;
