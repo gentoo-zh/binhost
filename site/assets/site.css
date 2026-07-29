@@ -1,4 +1,7 @@
 /* distfiles.gentoozh.org */
+/* hidden 的 UA 规则是 display: none，元素自己写了 display 就盖掉了。站上因此
+   已经单独补过两次（菜单、包列表），这里统一一条。 */
+[hidden] { display: none !important; }
 
 /* [data-theme="light"] 一并声明：design.html 用带该属性的探针 div 读色值，
    只有 :root 的话它读到的是继承来的当前主题，系统深色时浅色那组色块显示的
@@ -184,7 +187,6 @@ html.lang-swap body { visibility: hidden; }
   background: var(--card); border: 1px solid var(--border); border-radius: 4px;
   padding: 0.3rem; display: flex; flex-direction: column; gap: 0.1rem; z-index: 50;
 }
-.menu[hidden] { display: none; }
 .menu-item {
   display: flex; align-items: center; gap: 0.55rem; width: 100%; border: none;
   background: transparent; color: var(--fg-body); font: inherit; font-size: 0.86rem;
@@ -404,7 +406,6 @@ a { color: var(--primary); text-decoration: none; }
    收起体积、版本、说明三列，表格本来就不会撑破视口，这个 overflow 用不上。 */
 #out { overflow-x: visible; }
 /* 还在加载时表格是空的，留出表头那一行的高度即可，别让下面的内容先顶上来。 */
-#out .listing[hidden] { display: none; }
 /* 固定列宽。auto 布局下列宽由内容决定，表格还空着时按表头文字算，数据一到
    重新分配，表头就横向跳一次。fixed 之下宽度只看这里写的值，从第一帧起不变。
    没写宽度的列平分剩余宽度：名称与说明各占一半，和原来的比例接近。 */
