@@ -120,6 +120,15 @@ html.lang-swap body { visibility: hidden; }
   --nav-h: 3.2rem;
 }
 
+/* 跳到正文。平时不占位，键盘 Tab 到它才出现——否则要按四五次才能越过导航栏。 */
+.skip {
+  position: absolute; left: -9999px; top: 0; z-index: 60;
+  background: var(--surface); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 0.3rem;
+  padding: 0.5rem 0.9rem; font-size: 0.88rem; text-decoration: none;
+}
+.skip:focus { left: 0.5rem; top: 0.5rem; }
+
 .nav {
   position: sticky; top: 0; z-index: 40; border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg) 82%, transparent);

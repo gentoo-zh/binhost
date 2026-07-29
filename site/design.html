@@ -1,12 +1,15 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
+<!-- chrome:head -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>设计语言 — distfiles.gentoozh.org</title>
-<meta name="robots" content="noindex">
 <link rel="icon" href="/assets/logo.webp">
 <link rel="stylesheet" href="/assets/site.css">
+<script src="/assets/lang-early.js"></script>
+<!-- /chrome:head -->
+<title>设计语言 — distfiles.gentoozh.org</title>
+<meta name="robots" content="noindex">
 <style>
 /* 这一页自带的展示用样式。正式页面不需要这些。 */
 .sw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 0.75rem; margin: 1rem 0 1.75rem; }
@@ -24,10 +27,11 @@
 .rule-do::before { content: "＋"; position: absolute; left: 0; color: var(--ok); }
 .rule-dont::before { content: "－"; position: absolute; left: 0; color: var(--fg-soft); }
 </style>
-<script src="/assets/lang-early.js"></script>
 </head>
 <body>
 
+<!-- chrome:nav -->
+<a class="skip" href="#main" data-i18n="skip">跳到正文</a>
 <header class="nav">
   <div class="nav-inner">
     <a class="nav-brand" href="/">
@@ -47,8 +51,9 @@
     <div class="nav-tools" id="controls"></div>
   </div>
 </header>
+<!-- /chrome:nav -->
 
-<main class="wrap">
+<main id="main" class="wrap">
 
   <h1 class="title">设计语言</h1>
   <p class="lead">
@@ -309,6 +314,7 @@
 
 </main>
 
+<!-- chrome:foot -->
 <footer class="foot">
   <div class="foot-inner">
     <span class="foot-brand">distfiles.gentoozh.org</span>
@@ -321,6 +327,7 @@
     </nav>
   </div>
 </footer>
+<!-- /chrome:foot -->
 
 <div id="copy-toast" aria-hidden="true"></div>
 

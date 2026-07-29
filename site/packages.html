@@ -1,15 +1,23 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
+<!-- chrome:head -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>包列表 — distfiles.gentoozh.org</title>
 <link rel="icon" href="/assets/logo.webp">
 <link rel="stylesheet" href="/assets/site.css">
 <script src="/assets/lang-early.js"></script>
+<!-- /chrome:head -->
+<!-- 数据请求原来排在所有脚本之后才开始，实测晚三百多毫秒。 -->
+<link rel="preload" href="/packages.json" as="fetch" crossorigin>
+<link rel="preload" href="/binpkgs/x86-64/Packages" as="fetch" crossorigin>
+<link rel="preload" href="/distfiles-index.json" as="fetch" crossorigin>
+<title>包列表 — distfiles.gentoozh.org</title>
 </head>
 <body>
 
+<!-- chrome:nav wide -->
+<a class="skip" href="#main" data-i18n="skip">跳到正文</a>
 <header class="nav wide">
   <div class="nav-inner">
     <a class="nav-brand" href="/">
@@ -29,8 +37,9 @@
     <div class="nav-tools" id="controls"></div>
   </div>
 </header>
+<!-- /chrome:nav -->
 
-<main class="wrap wide">
+<main id="main" class="wrap wide">
 
   <h1 class="title" data-i18n="title">包列表</h1>
   <p class="lead" data-i18n="lead">
@@ -61,6 +70,7 @@
 
 </main>
 
+<!-- chrome:foot wide -->
 <footer class="foot wide">
   <div class="foot-inner">
     <span class="foot-brand">distfiles.gentoozh.org</span>
@@ -73,6 +83,7 @@
     </nav>
   </div>
 </footer>
+<!-- /chrome:foot -->
 
 <div id="strings" hidden>
   <span data-i18n="failed">加载失败：</span>

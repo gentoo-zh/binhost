@@ -1,16 +1,23 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
+<!-- chrome:head -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>distfiles.gentoozh.org</title>
-<meta name="description" content="gentoo-zh 的二进制包与 distfiles 镜像。">
 <link rel="icon" href="/assets/logo.webp">
 <link rel="stylesheet" href="/assets/site.css">
 <script src="/assets/lang-early.js"></script>
+<!-- /chrome:head -->
+<!-- 数据请求原来排在所有脚本之后才开始，实测晚三百多毫秒。 -->
+<link rel="preload" href="/binpkgs/x86-64/status.json" as="fetch" crossorigin>
+<link rel="preload" href="/distfiles-status.json" as="fetch" crossorigin>
+<title>distfiles.gentoozh.org</title>
+<meta name="description" content="gentoo-zh 的二进制包与 distfiles 镜像。">
 </head>
 <body>
 
+<!-- chrome:nav -->
+<a class="skip" href="#main" data-i18n="skip">跳到正文</a>
 <header class="nav">
   <div class="nav-inner">
     <a class="nav-brand" href="/">
@@ -30,8 +37,9 @@
     <div class="nav-tools" id="controls"></div>
   </div>
 </header>
+<!-- /chrome:nav -->
 
-<main class="wrap">
+<main id="main" class="wrap">
 
   <h1 class="title" data-i18n="title">配置</h1>
 
@@ -204,6 +212,7 @@ gpg --homedir /etc/portage/gnupg --check-trustdb" data-i18n="copy">复制</butto
 
 </main>
 
+<!-- chrome:foot -->
 <footer class="foot">
   <div class="foot-inner">
     <span class="foot-brand">distfiles.gentoozh.org</span>
@@ -216,6 +225,7 @@ gpg --homedir /etc/portage/gnupg --check-trustdb" data-i18n="copy">复制</butto
     </nav>
   </div>
 </footer>
+<!-- /chrome:foot -->
 
 <div id="copy-toast" aria-hidden="true"></div>
 
