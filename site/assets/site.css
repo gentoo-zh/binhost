@@ -379,10 +379,6 @@ a { color: var(--primary); text-decoration: none; }
 }
 #copy-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-@media (max-width: 40rem) {
-  .title { font-size: 1.6rem; line-height: 1.35; letter-spacing: -0.01em; font-weight: 600; color: var(--fg); margin: 0 0 0.35rem; }
-  .listing td.date, .listing th.date { display: none; }
-}
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
 /* --- 交互反馈 ---
@@ -471,11 +467,7 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
   width: auto;   /* 盖掉 .listing td.name 的 width:100%，那是给文件名用的 */
 }
 
-/* 宽到放得下就不断行。说明栏声明了 width:100%，会把剩余宽度全吃掉，
-   包名栏因此缩到最小内容宽度，明明有空间也照断。 */
-@media (min-width: 62rem) {
-  .pkgs td.name { white-space: nowrap; }
-}
+
 .pkgs td.desc, .pkgs th.desc { white-space: normal; color: var(--fg-soft); width: 100%; }
 /* 一行不换行，行高统一：四百多行的表格里，参差的行高比读不全一句话更碍事。
    截断改成横向滚动，长说明在格子里划一下就能读完，不必再点进包页面。
@@ -492,28 +484,14 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 .pkgs td.mark .why-tag { color: var(--fg-soft); font-style: normal; opacity: 0.75; }
 .pkgs td.ver, .pkgs th.ver { text-align: right; white-space: nowrap; }
 
-@media (max-width: 62rem) {
-  /* 状态列才是这张表的重点，先牺牲体积再牺牲版本 */
-  .pkgs td.size, .pkgs th.size { display: none; }
-}
-@media (max-width: 52rem) {
-  .pkgs td.ver, .pkgs th.ver { display: none; }
-}
+
 /* 靠说明命中的那一句。说明列看得见时它是多余的，藏起来。 */
 .pkgs .hit-desc { display: none; }
 .pkgs mark {
   background: var(--accent-weak); color: var(--fg);
   border-radius: 0.15rem; padding: 0 0.1em;
 }
-@media (max-width: 44rem) {
-  .pkgs td.desc, .pkgs th.desc { display: none; }
-  /* 说明列没了，搜索却还在比对说明，得让这一行自己说明白为什么被搜出来 */
-  .pkgs .hit-desc {
-    display: block; margin-top: 0.2rem;
-    font-size: 0.78rem; line-height: 1.35;
-    color: var(--fg-soft); white-space: normal;
-  }
-}
+
 
 /* 指纹放在步骤标题旁，导入完可以直接对一眼 */
 .fpr-box { margin-left: auto; display: flex; align-items: center; gap: 0.35rem; }
@@ -528,12 +506,6 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
   font: inherit; font-size: 0.7rem; padding: 0.1rem 0.5rem;
 }
 .fpr-copy:hover { color: var(--fg); }
-/* 窄屏一行放不下四十位十六进制。指纹是核对公钥的唯一依据，不能隐藏，
-   改成占满一行按分组换行，复制键跟在后面。 */
-@media (max-width: 52rem) {
-  .fpr-box { margin-left: 0; width: 100%; }
-  .fpr { white-space: normal; }
-}
 
 /* 对勾列。窄到只放得下一个符号，别让它抢名称列的宽度 */
 .listing th.mark, .listing td.mark { text-align: center; width: 1%; white-space: nowrap; }
@@ -577,12 +549,46 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 /* 「待构建」比破折号长，别让它把这列撑开 */
 .listing td.mark .pend { font-size: 0.74rem; font-style: italic; }
 
-/* --- 窄屏 --- */
-@media (max-width: 23rem) {
-  /* 三栏加内边距刚好超一点，表格会出现几像素的横向滚动 */
-  .pkgs td, .pkgs th { padding-left: 0.35rem; padding-right: 0.35rem; }
+/* --- 断点 ---
+   一条列隐藏阶梯加一个布局断点，全部放在基准规则之后：同权重下后面的赢，
+   混在基准规则中间会被下面的基准规则盖掉。指纹那条就这样失效过一次。
+
+   62rem  藏体积列（放得下时包名不断行）
+   52rem  藏版本列，指纹改成占满一行按分组换行
+   44rem  藏说明列与文件浏览器的日期列，显示搜索命中的那一句，标题缩一档
+   34rem  手机布局：顶栏折两行，内边距与代码字号收紧
+*/
+/* 宽到放得下就不断行。说明栏声明了 width:100%，会把剩余宽度全吃掉，
+   包名栏因此缩到最小内容宽度，明明有空间也照断。 */
+@media (min-width: 62rem) {
+  .pkgs td.name { white-space: nowrap; }
 }
 
+@media (max-width: 62rem) {
+  /* 状态列才是这张表的重点，先牺牲体积再牺牲版本 */
+  .pkgs td.size, .pkgs th.size { display: none; }
+}
+
+@media (max-width: 52rem) {
+  .pkgs td.ver, .pkgs th.ver { display: none; }
+  /* 一行放不下四十位十六进制。指纹是核对公钥的唯一依据，不能隐藏，改成占满
+     一行按分组换行，复制键跟在后面。 */
+  .fpr-box { margin-left: 0; width: 100%; }
+  .fpr { white-space: normal; }
+}
+
+@media (max-width: 44rem) {
+  .listing td.date, .listing th.date { display: none; }
+  .pkgs td.desc, .pkgs th.desc { display: none; }
+  /* 说明列没了，搜索却还在比对说明，得让这一行自己说明白为什么被搜出来 */
+  .pkgs .hit-desc {
+    display: block; margin-top: 0.2rem;
+    font-size: 0.78rem; line-height: 1.35;
+    color: var(--fg-soft); white-space: normal;
+  }
+}
+
+/* --- 窄屏 --- */
 @media (max-width: 34rem) {
   .wrap { padding: 2.25rem 1rem 2.5rem; }
 
