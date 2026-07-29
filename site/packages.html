@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=56296001">
+<link rel="stylesheet" href="/assets/site.css?v=513b860f">
 <script src="/assets/early.js?v=b8007afb"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -129,47 +129,44 @@
 </footer>
 <!-- /chrome:foot -->
 
-<div id="strings" hidden>
-  <span data-i18n="failed">加载失败：</span>
-  <span data-i18n="thPkg">包</span>
-  <span data-i18n="thDesc">说明</span>
-  <span data-i18n="thVer">版本</span>
-  <span data-i18n="thSize">体积</span>
-  <span data-i18n="thBin">二进制包</span>
-  <span data-i18n="thDist">Distfiles</span>
-  <span data-i18n="updBin">二进制包更新于 </span>
-  <span data-i18n="updDist">distfiles 更新于 </span>
-  <span data-i18n="fltAll">全部</span>
-  <span data-i18n="fltBin">仅二进制包</span>
-  <span data-i18n="fltDist">仅 distfiles</span>
-  <span data-i18n="countFmt">overlay {n} 个包
-其中有二进制包 {b} 个
-其中有 distfiles {d} 个</span>
-  <span data-i18n="pending">待构建</span>
-  <span data-i18n="excluded">不构建</span>
-  <span data-i18n="why_prebuilt">预编译</span>
-  <span data-i18n="why_nobuild">无构建</span>
-  <span data-i18n="why_bindist">不可分发</span>
-  <span data-i18n="why_nokeyword">无 amd64</span>
-  <span data-i18n="why_masked">已屏蔽</span>
-  <span data-i18n="why_meta">元包</span>
-  <span data-i18n="why_candidate">待复查</span>
-  <span data-i18n="whyLong_prebuilt">上游发布二进制包，无编译过程</span>
-  <span data-i18n="whyLong_nobuild">字体、词库、主题，无构建系统</span>
-  <span data-i18n="whyLong_bindist">RESTRICT=bindist，许可证不允许再分发</span>
-  <span data-i18n="whyLong_nokeyword">没有 amd64 keyword</span>
-  <span data-i18n="whyLong_masked">被 profiles/package.mask 屏蔽</span>
-  <span data-i18n="whyLong_meta">virtual、acct-user，不安装文件</span>
-  <span data-i18n="whyLong_candidate">有构建系统但未收录，需人工确认</span>
-  <span data-i18n="none">没有匹配的包。</span>
-  <span data-i18n="ph">搜索包名或说明</span>
-  <span data-i18n-html="noJs">这张表由脚本渲染。纯文本一份在 <a href="/packages.txt">/packages.txt</a>。</span>
-</div>
-
 <script src="/assets/util.js"></script>
 <script src="/assets/strings.js"></script>
 <script>
 window.MIRROR_I18N = {
+  'zh-cn': {
+    failed: '加载失败：',
+    thPkg: '包',
+    thDesc: '说明',
+    thVer: '版本',
+    thSize: '体积',
+    thBin: '二进制包',
+    thDist: 'Distfiles',
+    updBin: '二进制包更新于 ',
+    updDist: 'distfiles 更新于 ',
+    fltAll: '全部',
+    fltBin: '仅二进制包',
+    fltDist: '仅 distfiles',
+    countFmt: 'overlay {n} 个包\n其中有二进制包 {b} 个\n其中有 distfiles {d} 个',
+    pending: '待构建',
+    excluded: '不构建',
+    why_prebuilt: '预编译',
+    why_nobuild: '无构建',
+    why_bindist: '不可分发',
+    why_nokeyword: '无 amd64',
+    why_masked: '已屏蔽',
+    why_meta: '元包',
+    why_candidate: '待复查',
+    whyLong_prebuilt: '上游发布二进制包，无编译过程',
+    whyLong_nobuild: '字体、词库、主题，无构建系统',
+    whyLong_bindist: 'RESTRICT=bindist，许可证不允许再分发',
+    whyLong_nokeyword: '没有 amd64 keyword',
+    whyLong_masked: '被 profiles/package.mask 屏蔽',
+    whyLong_meta: 'virtual、acct-user，不安装文件',
+    whyLong_candidate: '有构建系统但未收录，需人工确认',
+    none: '没有匹配的包。',
+    ph: '搜索包名或说明',
+    noJs: '这张表由脚本渲染。纯文本一份在 <a href="/packages.txt">/packages.txt</a>。'
+  },
   'zh-tw': {
     pending: '待建置', excluded: '不建置', updBin: '二進位套件更新於 ', updDist: 'distfiles 更新於 ', fltAll: '全部', fltBin: '僅二進位套件', fltDist: '僅 distfiles', title: '套件列表',
     lead: '標籤的含義見下方圖例，滑鼠停留查看詳情。',
@@ -225,10 +222,8 @@ window.MIRROR_I18N = {
 // 路径和文件名都进 innerHTML。路径来自 URL，任何以斜杠结尾的地址 nginx 都
 // 回这个页面；文件名来自 ebuild 的 Manifest。两者都不是我们能约束的内容。
 
-function t(key) {
-  const el = document.querySelector('#strings [data-i18n="' + key + '"]');
-  return el ? el.textContent : key;
-}
+// 串由 i18n.js 统一查表，页面不再自己存一份。
+function t(key) { return (window.MIRROR_T && window.MIRROR_T(key)) || key; }
 
 
 // CPV 拆成 category/name 和版本。版本从第一个「-数字」开头的段起。
@@ -423,12 +418,12 @@ document.getElementById("filters").addEventListener("click", function (e) {
   counts(); render();
 });
 
-// 切语言时表头、状态词和计数都要跟着变
-new MutationObserver(function () {
+// 切语言时把自绘的部分重画一次。
+document.addEventListener('langchange', function () {
   if (rows.length) { counts(); render(); }
   const ph = t("ph");
   if (ph) document.getElementById("q").placeholder = ph;
-}).observe(document.getElementById("strings"), { subtree: true, characterData: true, childList: true });
+});
 </script>
 </body>
 </html>

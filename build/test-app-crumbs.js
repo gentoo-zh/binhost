@@ -33,14 +33,15 @@ function crumbsFor(urlPath) {
   global.document = {
     documentElement: { lang: "zh-cn" },
     getElementById(id) { return (nodes[id] = nodes[id] || el(id)); },
-    querySelector(sel) {
-      const m = /data-i18n="([^"]+)"/.exec(sel || "");
-      return m ? { textContent: { navFiles: "Files", title: "Files" }[m[1]] || m[1] } : null;
-    },
+    querySelector: () => null,
     querySelectorAll() { return nodeList([]); },
     addEventListener() {},
   };
-  global.window = { MIRROR_I18N: {}, addEventListener() {} };
+  // 串现在统一由 i18n.js 查表，页面通过 MIRROR_T 取
+  global.window = {
+    MIRROR_I18N: {}, addEventListener() {},
+    MIRROR_T: (k) => ({ navFiles: "Files", title: "Files" }[k] || k),
+  };
   global.location = { pathname: urlPath, replace() {} };
   global.fetch = () => new Promise(() => {});
   global.MutationObserver = class { observe() {} };

@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=56296001">
+<link rel="stylesheet" href="/assets/site.css?v=513b860f">
 <script src="/assets/early.js?v=b8007afb"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -71,11 +71,7 @@ document.documentElement.setAttribute(
   <div id="out">
     <table class="listing">
       <thead>
-        <tr class="hd-root">
-          <th data-i18n="thName">名称</th>
-          <th data-i18n="thWhat">内容</th>
-        </tr>
-        <tr class="hd-deep">
+        <tr id="hd">
           <th data-i18n="thName">名称</th>
           <th class="size" data-i18n="thSize">大小</th>
           <th class="date" data-i18n="thDate">修改时间</th>
@@ -88,17 +84,6 @@ document.documentElement.setAttribute(
       不带脚本的目录浏览在 <a href="/_raw/">/_raw/</a>。</p></noscript>
   </div>
 </main>
-
-<!-- 表格的行是 JS 生成的，这几串脚本要读回来用。表头已经写在表格里，走常规的
-     data-i18n，不必放这里。 -->
-<div id="strings" hidden>
-  <span data-i18n="title">文件</span>
-  <span data-i18n="notFound">这个路径不存在。</span>
-  <span data-i18n="failed">读取目录失败：</span>
-  <!-- 面包屑的第一节要用它。t() 只从这里取，导航栏上那一个它读不到。 -->
-  <span data-i18n="navFiles">文件</span>
-  <span data-i18n-html="noJs">这个列表由脚本渲染。不带脚本的目录浏览在 <a href="/_raw/">/_raw/</a>。</span>
-</div>
 
 <!-- chrome:foot wide -->
 <footer class="foot wide">
@@ -119,6 +104,13 @@ document.documentElement.setAttribute(
 <script src="/assets/strings.js"></script>
 <script>
 window.MIRROR_I18N = {
+  'zh-cn': {
+    title: '文件',
+    notFound: '这个路径不存在。',
+    failed: '读取目录失败：',
+    navFiles: '文件',
+    noJs: '这个列表由脚本渲染。不带脚本的目录浏览在 <a href="/_raw/">/_raw/</a>。'
+  },
   'zh-tw': { loading: '載入中…',
     title: '檔案', thWhat: '內容',
     thName: '名稱', thSize: '大小', thDate: '修改時間',
@@ -161,11 +153,8 @@ const lsPath = atRoot ? "/" : path;
 // 回这个页面；文件名来自 ebuild 的 Manifest。两者都不是我们能约束的内容。
 
 
-// i18n.js 已经把当前语言的串换进 #strings 了，直接读。
-function t(key) {
-  const el = document.querySelector('#strings [data-i18n="' + key + '"]');
-  return el ? el.textContent : key;
-}
+// 串由 i18n.js 统一查表，页面不再自己存一份。
+function t(key) { return (window.MIRROR_T && window.MIRROR_T(key)) || key; }
 
 
 function lang() {
@@ -195,6 +184,15 @@ function crumbs() {
   // atRoot 那个三元是死码：上面已经在 atRoot 时提前返回了。
   document.getElementById("crumbs").innerHTML =
     ['<a href="' + ROOT + '">' + t("navFiles") + "</a>"].concat(links).join(" / ");
+}
+
+// 根层列的是两类内容，表头跟着换。原来两行都写在标记里、由 CSS 选一行，而文字
+// 浏览器不套 CSS，两行会一起显示。这里在取数据之前改，不会有位移。
+function fixHead() {
+  if (!atRoot) return;
+  document.getElementById("hd").innerHTML =
+    '<th data-i18n="thName">' + esc(t("thName")) + '</th>' +
+    '<th data-i18n="thWhat">' + esc(t("thWhat")) + '</th>';
 }
 
 function render(items) {
@@ -239,19 +237,21 @@ function fail(e) {
 let loaded = null;   // 留一份，切语言时要用它重绘
 
 crumbs();
+fixHead();
 fetch("/_ls" + lsPath)
   .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
   .then(function (items) { loaded = items; render(items); })
   .catch(function (e) { loaded = e; fail(e); });
 
-// 切语言时 i18n.js 会改写 #strings，表格是我们自己画的，得跟着重画一次。
-new MutationObserver(function () {
+// 切语言时把自绘的部分重画一次。
+document.addEventListener('langchange', function () {
+  fixHead();
   // 面包屑与标题也要重画。它们原来只在载入时算一次，于是把标签换成可翻译的
   // 之后，切语言时那一节仍停在首屏那种语言——写死 mirrors 的时候看不出来。
   crumbs();
   if (Array.isArray(loaded)) render(loaded);
   else if (loaded !== null) fail(loaded);
-}).observe(document.getElementById("strings"), { subtree: true, characterData: true, childList: true });
+});
 </script>
 </body>
 </html>

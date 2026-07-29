@@ -137,7 +137,9 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
       continue;
     }
   }
-  for (const lang of Object.keys(T)) {
+    // zh-cn 是补充的一节：只放正文里没有对应元素、脚本才用得到的串，其余
+    // 简体来自文档本身与 strings.js，不该要求它覆盖全部键。
+    for (const lang of Object.keys(T).filter(l => l !== 'zh-cn')) {
     const miss = [...keys].filter(k => !(k in T[lang]));
     if (miss.length) {
       console.error(`!!! ${f} [${lang}] 缺少翻译: ${miss.join(', ')}`);

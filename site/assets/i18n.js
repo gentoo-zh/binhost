@@ -36,7 +36,13 @@
       Object.keys(page[l] || {}).forEach(function (k) { T[l][k] = page[l][k]; });
     });
   })();
-  var CN = {};                                  // 简体 = 文档原文
+  /* 简体的来源有两处：页面上带 data-i18n 的元素（正文），以及页面自己表里的
+     zh-cn 一节（只给脚本读、正文里没有对应元素的那些串）。后者原来是一个
+     hidden 的 div，而文字浏览器不套 CSS，那一整库模板字符串会直接倒在页尾。 */
+  var CN = {};
+  Object.keys((window.MIRROR_I18N || {})['zh-cn'] || {}).forEach(function (k) {
+    CN[k] = window.MIRROR_I18N['zh-cn'][k];
+  });
   document.querySelectorAll('[data-i18n]').forEach(function (el) { CN[el.dataset.i18n] = el.textContent; });
   document.querySelectorAll('[data-i18n-html]').forEach(function (el) { CN[el.dataset.i18nHtml] = el.innerHTML; });
   /* 链接地址也分语言：gentoozh.org 按语言分路径。 */
@@ -146,6 +152,10 @@
        applyLang 遍历不到。广播一次，让它们自己重画。 */
     document.dispatchEvent(new CustomEvent('langchange', { detail: l }));
   }
+
+  /* 页面里自绘的表格要取当前语言的串。原来是从一个 hidden 的 div 里读回来，
+     那个 div 在文字浏览器里会整块显示出来。 */
+  window.MIRROR_T = function (key) { return val(curLang, key); };
 
   applyTheme(themeMode);
   applyLang(curLang);
