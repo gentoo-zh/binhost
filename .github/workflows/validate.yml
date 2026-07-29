@@ -168,6 +168,9 @@ jobs:
       # 一页上几个选择器问的是同一件事，镜像清单漂移了点下去就不同步
       - name: Mirror pickers agree
         run: python3 build/check-pickers.py
+      # 同一份配置在页面上有两种写法，改一边忘另一边照着抄的人就拿到旧的
+      - name: Both setup modes say the same thing
+        run: python3 build/check-panes.py
       # 写作规范见 site/design.html 的「文字」一节
       - name: Check copy
         run: python3 build/check-copy.py site

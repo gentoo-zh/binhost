@@ -153,12 +153,11 @@
         <span class="path" data-i18n="asRoot">以 root 执行</span>
         <button class="copy-chip" data-i18n="copy">复制</button>
       </div>
-<pre><span class="prompt"></span>emerge --oneshot sec-keys/openpgp-keys-gentoozh
+<pre><span class="prompt"></span>emerge sec-keys/openpgp-keys-gentoozh
 <span class="prompt"></span>getuto
 <span class="prompt"></span>gpg --homedir /etc/portage/gnupg --import /usr/share/openpgp-keys/gentoozh.asc
 <span class="prompt"></span>gpg --homedir /etc/portage/gnupg --batch --yes --pinentry-mode loopback \
-      --passphrase-file /etc/portage/gnupg/pass \
-      --lsign-key 6A0726AF1476A2F382C6AC6638A0234EC16AD42E
+    --passphrase-file /etc/portage/gnupg/pass --lsign-key 6A0726AF1476A2F382C6AC6638A0234EC16AD42E
 <span class="prompt"></span>gpg --homedir /etc/portage/gnupg --check-trustdb
 
 <span class="prompt"></span>mkdir -p /etc/portage/binrepos.conf
