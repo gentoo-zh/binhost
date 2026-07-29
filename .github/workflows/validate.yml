@@ -154,6 +154,9 @@ jobs:
       - name: Check i18n tables
         run: node build/check-i18n.js site
       # 导航栏与页脚每页都得一样。漏一项是眼睛才看得出来的，加过两次
+      # 共用部分是生成的，手改页面而没重新生成就在这里红
+      - name: Shared chrome is up to date
+        run: python3 build/render-chrome.py --check
       - name: Check nav and footer
         run: python3 build/check-chrome.py site
       - name: Search hint on the packages page
@@ -198,7 +201,7 @@ jobs:
           openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
             -subj /CN=distfiles.gentoozh.org \
             -keyout $live/privkey.pem -out $live/fullchain.pem 2>/dev/null
-          cp nginx/mirror-common.inc nginx/distfiles.conf /etc/nginx/conf.d/
+          cp nginx/*.inc nginx/distfiles.conf /etc/nginx/conf.d/
           # Gentoo 装成 mime.types.nginx，其他地方是 mime.types
           sed 's/mime\.types\.nginx/mime.types/' nginx/nginx.conf > /etc/nginx/nginx.conf
           nginx -t
@@ -229,6 +232,13 @@ jobs:
           # 多写一层的话真实请求会变成 /distfiles/distfiles/... 而 404。
           [ "$(code /distfiles/c6/t.tar.gz)" = 200 ]        || fail "distfiles 布局不对"
           [ "$(code /distfiles/distfiles/layout.conf)" = 404 ] || fail "distfiles 多了一层"
+
+          # 安全响应头两类路径各一套。add_header 整块继承，漏一个 location 就整套失效
+          hdr() { curl -sS -o /dev/null -D - -H "$H" "http://127.0.0.1$1" | tr -d '\r' | grep -i "^$2:" | cut -d' ' -f2-; }
+          [ "$(hdr /faq x-content-type-options)" = nosniff ] || fail "页面没有 nosniff"
+          case "$(hdr /faq content-security-policy)" in "default-src 'self'"*) ;; *) fail "页面 CSP 不对" ;; esac
+          case "$(hdr /distfiles/c6/t.tar.gz content-security-policy)" in "default-src 'none'; sandbox") ;; *) fail "distfile 没有拿到 sandbox 那一份" ;; esac
+          [ "$(hdr /binpkgs/x86-64/Packages x-content-type-options)" = nosniff ] || fail "索引没有 nosniff"
 
           # 目录交给前端渲染
           [ "$(code /binpkgs/x86-64/)" = 200 ] || fail "目录浏览打不开"
