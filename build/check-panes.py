@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""手动配置与快速配置写的必须是同一份东西。
+"""手动配置与快速配置写的必须是同一份配置。
 
 一页上同一份配置有两种写法，改了一边忘了另一边，页面看着仍然正常，照着抄的人
-拿到的却是旧的。这里要求手动那份的每一行都能在快速那份里找到。
+拿到的却是旧的。这里要求手动那份里的每一行配置都能在快速那份里找到。
 
-快速那份还多出命令行（cat、mkdir、EOF），所以是单向包含，不是逐字相等。
+只比配置行——节名和 key = value。命令行不比：快速那份多出 tee、mkdir，手动那
+份也有快速路径不走的（比如不装公钥包时改用 curl 下载），两边本来就不该一样。
 """
 import html
 import pathlib
@@ -14,6 +15,8 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 PRE = re.compile(r'<pre[^>]*>(.*?)</pre>', re.S)
 PANE = re.compile(r'<div[^>]*data-pane="(\w+)"(?![^>]*class="mode")')
+# 节名与 key = value。会漂移的是这些，命令怎么写不算
+CONF = re.compile(r'^\[[\w-]+\]$|^[\w-]+\s*=')
 
 
 def text(pre):
@@ -47,6 +50,8 @@ def main():
             bad.append(f"{f.name}: 有快速配置却没有手动配置")
         for block in p["manual"]:
             for line in block:
+                if not CONF.match(line.strip()):
+                    continue
                 if line not in quick:
                     bad.append(f"{f.name}: 手动配置里的这一行在快速配置里找不到：{line}")
     for b in bad:

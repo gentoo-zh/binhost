@@ -331,6 +331,9 @@ h2:first-of-type { margin-top: 2rem; }
    Firefox 选中一整段时照样把它复制走，而 # 粘进 shell 会把整行注释掉。
    伪元素的内容不在 DOM 文本里，任何浏览器都取不到。 */
 .code .prompt::before { content: "# "; }
+[data-sudo="on"] .code .prompt::before { content: "$ "; }
+/* 下载不需要 root，这一条不跟着切 */
+.code .prompt.user::before { content: "$ "; }
 .code .prompt { color: var(--c-prompt); user-select: none; }
 
 /* 手动配置 / 快速配置，见 mode-switch.js。放在大标题下面，因为它决定整段
@@ -346,6 +349,17 @@ h2:first-of-type { margin-top: 2rem; }
 }
 .mode:hover { color: var(--fg); }
 .mode.on { background: var(--panel-head); border-color: var(--fg-soft); color: var(--fg); }
+
+/* root / sudo。跟 .mode 同一套，只是小一号：它改的是命令本身，不是整段。 */
+.opt-pick { display: flex; gap: 0.25rem; margin: 0 0 0.5rem; }
+.opt {
+  border: 1px solid var(--border); border-radius: 0.3rem;
+  background: transparent; color: var(--fg-soft);
+  cursor: pointer; font-family: var(--mono); font-size: 0.72rem;
+  padding: 0.14rem 0.55rem;
+}
+.opt:hover { color: var(--fg); }
+.opt.on { background: var(--panel-head); border-color: var(--fg-soft); color: var(--fg); }
 /* 四个条目排 2×2。auto-fit 在这个宽度下会排成 3+1，落单一个不好看 */
 
 .note { font-size: 0.88rem; line-height: 1.8; color: var(--fg-soft); }

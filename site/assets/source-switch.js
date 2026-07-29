@@ -32,6 +32,9 @@
 
   each(groups, function (group) {
     var name = group.getAttribute('data-src-switch');
+    /* 页面上不止一种选择器：选镜像的，和选下载工具的。同步只在同一类里做，
+       否则点了 wget 会去别的选择器里找一个叫 wget 的镜像。 */
+    var kind = group.getAttribute('data-src-group') || 'mirror';
     var opts = group.querySelectorAll('.src-opt');
     if (!opts.length) return;
 
@@ -71,12 +74,13 @@
         });
     }
 
-    pickers.push({ opts: opts, render: render });
+    pickers.push({ kind: kind, opts: opts, render: render });
 
     each(opts, function (btn) {
       btn.addEventListener('click', function () {
         var uri = btn.getAttribute('data-uri');
         each(pickers, function (p) {
+          if (p.kind !== kind) return;
           var match = Array.prototype.filter.call(p.opts, function (o) {
             return o.getAttribute('data-uri') === uri;
           })[0];

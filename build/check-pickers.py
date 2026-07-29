@@ -9,7 +9,8 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-PICK = re.compile(r'<div class="src-pick"[^>]*data-src-switch="(\w+)"(.*?)</div>', re.S)
+PICK = re.compile(r'<div class="src-pick"([^>]*)data-src-switch="(\w+)"(.*?)</div>', re.S)
+GROUP = re.compile(r'data-src-group="(\w+)"')
 URI = re.compile(r'data-uri="([^"]+)"')
 SLOT = re.compile(r'data-src-slot="(\w+)"([^>]*)')
 CHIP = re.compile(r'data-src-copy="(\w+)"')
@@ -18,15 +19,21 @@ CHIP = re.compile(r'data-src-copy="(\w+)"')
 def main():
     bad = []
     for f in sorted((ROOT / "site").glob("*.html")):
-        picks = {n: URI.findall(body) for n, body in PICK.findall(f.read_text())}
+        # 一页上不止一类选择器（镜像、下载工具），只在同一类里要求一致
+        picks, kinds = {}, {}
+        for pre, n, body in PICK.findall(f.read_text()):
+            picks[n] = URI.findall(body + pre)
+            m = GROUP.search(pre) or GROUP.search(body)
+            kinds[n] = m.group(1) if m else "mirror"
         if not picks:
             continue
         text = f.read_text()
 
         # 一页上的选择器问的是同一件事，镜像清单必须一致，否则点了同步不过去
-        sets = {n: tuple(u) for n, u in picks.items()}
-        if len(set(sets.values())) > 1:
-            bad.append(f"{f.name}: 各选择器的镜像清单不一致 {sets}")
+        for kind in set(kinds.values()):
+            sets = {n: tuple(u) for n, u in picks.items() if kinds[n] == kind}
+            if len(set(sets.values())) > 1:
+                bad.append(f"{f.name}: {kind} 类各选择器的清单不一致 {sets}")
         for n, uris in picks.items():
             if len(uris) != len(set(uris)):
                 bad.append(f"{f.name}: 选择器 {n} 有重复的镜像")

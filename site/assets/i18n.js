@@ -184,7 +184,14 @@
       var box = el.closest ? el.closest('.code') : null;
       if (!box) return '';
       var pre = box.querySelector('pre[data-pane]:not([hidden])') || box.querySelector('pre');
-      return pre ? pre.textContent.replace(/\s+$/, '') : '';
+      if (!pre) return '';
+      /* 藏起来的东西不复制。hidden 的文本照样在 textContent 里，看得见的是一份、
+         复制到的是另一份，正是复制按钮最不该出的错。 */
+      var clone = pre.cloneNode(true);
+      Array.prototype.forEach.call(clone.querySelectorAll('[hidden]'), function (el) {
+        el.parentNode.removeChild(el);
+      });
+      return clone.textContent.replace(/\s+$/, '');
     };
     var copy = function (el) {
       var v = value(el);

@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=ca731c70">
+<link rel="stylesheet" href="/assets/site.css?v=0647d135">
 <script src="/assets/early.js?v=b8007afb"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -106,12 +106,16 @@
 <pre><span class="key">GENTOO_MIRRORS</span>=<span class="val" data-src-slot="dist">"${GENTOO_MIRRORS} https://mirror.nju.edu.cn/gentoo-zh https://distfiles.gentoozh.org"</span></pre>
     </div>
 
+    <div class="opt-pick" role="group" aria-label="以什么身份执行">
+      <button type="button" class="opt on" data-sudo="off">root</button>
+      <button type="button" class="opt" data-sudo="on">sudo</button>
+    </div>
     <div class="code" data-pane="quick" hidden>
       <div class="code-head">
         <span class="path" data-i18n="asRoot">以 root 执行</span>
         <button class="copy-chip" data-i18n="copy">复制</button>
       </div>
-<pre><span class="prompt"></span>cat &gt;&gt; /etc/portage/make.conf &lt;&lt;<span class="val">'EOF'</span>
+<pre><span class="prompt"></span><span class="sudo" hidden></span>tee -a /etc/portage/make.conf &gt; /dev/null &lt;&lt;<span class="val">'EOF'</span>
 <span class="key">GENTOO_MIRRORS</span>=<span class="val" data-src-slot="dist">"${GENTOO_MIRRORS} https://mirror.nju.edu.cn/gentoo-zh https://distfiles.gentoozh.org"</span>
 <span class="val">EOF</span></pre>
     </div>
@@ -148,20 +152,24 @@
       整段以 root 执行，三步一次做完。想知道每一步在做什么，切到手动配置。
     </p>
 
+    <div class="opt-pick" role="group" aria-label="以什么身份执行">
+      <button type="button" class="opt on" data-sudo="off">root</button>
+      <button type="button" class="opt" data-sudo="on">sudo</button>
+    </div>
     <div class="code">
       <div class="code-head">
         <span class="path" data-i18n="asRoot">以 root 执行</span>
         <button class="copy-chip" data-i18n="copy">复制</button>
       </div>
-<pre><span class="prompt"></span>emerge sec-keys/openpgp-keys-gentoozh
-<span class="prompt"></span>getuto
-<span class="prompt"></span>gpg --homedir /etc/portage/gnupg --import /usr/share/openpgp-keys/gentoozh.asc
-<span class="prompt"></span>gpg --homedir /etc/portage/gnupg --batch --yes --pinentry-mode loopback \
+<pre><span class="prompt"></span><span class="sudo" hidden></span>emerge sec-keys/openpgp-keys-gentoozh
+<span class="prompt"></span><span class="sudo" hidden></span>getuto
+<span class="prompt"></span><span class="sudo" hidden></span>gpg --homedir /etc/portage/gnupg --import /usr/share/openpgp-keys/gentoozh.asc
+<span class="prompt"></span><span class="sudo" hidden></span>gpg --homedir /etc/portage/gnupg --batch --yes --pinentry-mode loopback \
     --passphrase-file /etc/portage/gnupg/pass --lsign-key 6A0726AF1476A2F382C6AC6638A0234EC16AD42E
-<span class="prompt"></span>gpg --homedir /etc/portage/gnupg --check-trustdb
+<span class="prompt"></span><span class="sudo" hidden></span>gpg --homedir /etc/portage/gnupg --check-trustdb
 
-<span class="prompt"></span>mkdir -p /etc/portage/binrepos.conf
-<span class="prompt"></span>cat &gt; /etc/portage/binrepos.conf/gentoo-zh.conf &lt;&lt;<span class="val">'EOF'</span>
+<span class="prompt"></span><span class="sudo" hidden></span>mkdir -p /etc/portage/binrepos.conf
+<span class="prompt"></span><span class="sudo" hidden></span>tee /etc/portage/binrepos.conf/gentoo-zh.conf &gt; /dev/null &lt;&lt;<span class="val">'EOF'</span>
 <span class="sec">[gentoo-zh]</span>
 <span class="key">sync-uri</span> = <span class="val" data-src-slot="top" data-src-suffix="/binpkgs/x86-64">https://mirror.nju.edu.cn/gentoo-zh/binpkgs/x86-64</span>
 <span class="key">priority</span> = <span class="val">10</span>
@@ -169,7 +177,7 @@
 <span class="key">location</span> = <span class="val">/var/cache/binhost/gentoo-zh</span>
 <span class="val">EOF</span>
 
-<span class="prompt"></span>cat &gt;&gt; /etc/portage/make.conf &lt;&lt;<span class="val">'EOF'</span>
+<span class="prompt"></span><span class="sudo" hidden></span>tee -a /etc/portage/make.conf &gt; /dev/null &lt;&lt;<span class="val">'EOF'</span>
 <span class="key">FEATURES</span>=<span class="val">"${FEATURES} getbinpkg"</span>
 <span class="val">EOF</span></pre>
     </div>
@@ -182,24 +190,42 @@
         <code class="fpr">6A07 26AF 1476 A2F3 82C6  AC66 38A0 234E C16A D42E</code>
         <button class="copy-chip fpr-copy" data-copy="6A0726AF1476A2F382C6AC6638A0234EC16AD42E" data-i18n="copy">复制</button>
       </span></p>
+    <div class="opt-pick" role="group" aria-label="以什么身份执行">
+      <button type="button" class="opt on" data-sudo="off">root</button>
+      <button type="button" class="opt" data-sudo="on">sudo</button>
+    </div>
     <div class="code">
       <div class="code-head">
         <span class="path">shell</span>
         <button class="copy-chip" data-i18n="copy">复制</button>
       </div>
-<pre><span class="prompt"></span><span class="key">emerge</span> <span class="val">sec-keys/openpgp-keys-gentoozh</span>
-<span class="prompt"></span><span class="key">getuto</span>
-<span class="prompt"></span><span class="key">gpg</span> <span class="flag">--homedir</span> /etc/portage/gnupg <span class="flag">--import</span> /usr/share/openpgp-keys/gentoozh.asc
-<span class="prompt"></span><span class="key">gpg</span> <span class="flag">--homedir</span> /etc/portage/gnupg <span class="flag">--batch --yes --pinentry-mode</span> loopback \
+<pre><span class="prompt"></span><span class="sudo" hidden></span><span class="key">emerge</span> <span class="val">sec-keys/openpgp-keys-gentoozh</span>
+<span class="prompt"></span><span class="sudo" hidden></span><span class="key">getuto</span>
+<span class="prompt"></span><span class="sudo" hidden></span><span class="key">gpg</span> <span class="flag">--homedir</span> /etc/portage/gnupg <span class="flag">--import</span> /usr/share/openpgp-keys/gentoozh.asc
+<span class="prompt"></span><span class="sudo" hidden></span><span class="key">gpg</span> <span class="flag">--homedir</span> /etc/portage/gnupg <span class="flag">--batch --yes --pinentry-mode</span> loopback \
     <span class="flag">--passphrase-file</span> /etc/portage/gnupg/pass <span class="flag">--lsign-key</span> <span class="val">6A0726AF1476A2F382C6AC6638A0234EC16AD42E</span>
-<span class="prompt"></span><span class="key">gpg</span> <span class="flag">--homedir</span> /etc/portage/gnupg <span class="flag">--check-trustdb</span></pre>
+<span class="prompt"></span><span class="sudo" hidden></span><span class="key">gpg</span> <span class="flag">--homedir</span> /etc/portage/gnupg <span class="flag">--check-trustdb</span></pre>
     </div>
   </div>
 
   <p class="note" data-i18n-html="keyAlt">
-    不想装这个包也可以直接下载：<code>curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</code>，
-    然后把上面 <code>--import</code> 那条命令的路径换成下载到的文件。
+    不想装这个包也可以直接下载，然后把上面 <code>--import</code> 那条命令的路径
+    换成下载到的文件。下载不需要 root。
   </p>
+
+  <div class="src-pick" data-src-switch="dl" data-src-group="tool"
+       role="group" aria-label="下载工具">
+    <button type="button" class="src-opt on" data-uri="curl -O">curl</button>
+    <button type="button" class="src-opt" data-uri="wget">wget</button>
+  </div>
+
+  <div class="code">
+    <div class="code-head">
+      <span class="path">shell</span>
+      <button class="copy-chip" data-i18n="copy">复制</button>
+    </div>
+<pre><span class="prompt user"></span><span class="key" data-src-slot="dl">curl -O</span> https://distfiles.gentoozh.org/gentoo-zh-binhost.asc</pre>
+  </div>
 
   <p class="note" data-i18n-html="keyNote">
     <code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。没有它，上面三条
@@ -346,11 +372,11 @@ window.MIRROR_I18N = {
   }
 };
 </script>
-<script src="/assets/i18n.js?v=9a14e0b2"></script>
+<script src="/assets/i18n.js?v=f5917da1"></script>
 <!-- 在 i18n.js 之后：applyLang 会重写 .src-opt 的文字，切换脚本只改
      data-uri 与选中态，两者不冲突 -->
 <script src="/assets/mode-switch.js?v=bd76bf61"></script>
-<script src="/assets/source-switch.js?v=b067ab37"></script>
+<script src="/assets/source-switch.js?v=bfd01b4f"></script>
 
 <script>
 /* 两个来源各写了一个小状态文件：二进制包由 publish.sh 写，distfiles 由
