@@ -69,7 +69,22 @@
 
       Array.prototype.forEach.call(
         document.querySelectorAll('[data-src-slot="' + name + '"]'),
-        function (slot) { slot.textContent = v; });
+          function (slot) {
+            /* 快速配置那一段里，同一个选择要写出两种形态：binrepos.conf 要的是
+               带 /binpkgs/x86-64 的单个地址，make.conf 要的是站点根组成的列表。
+               所以槽位可以自带后缀。 */
+            slot.textContent = v + (slot.getAttribute('data-src-suffix') || '');
+          });
+
+        /* 列表形态的槽位：选中的排最前，其余按写的顺序跟在后面。data-src-list
+           写在槽位上，因为一个选择器可能同时要两种形态。 */
+        Array.prototype.forEach.call(
+          document.querySelectorAll('[data-src-slot="' + name + 'dist"]'),
+          function (slot) {
+            var rest = Array.prototype.filter.call(opts, function (o) { return o !== chosen; });
+            var all = [chosen].concat(rest).map(function (o) { return o.getAttribute('data-uri'); });
+            slot.textContent = (slot.getAttribute('data-src-list') || '%s').replace('%s', all.join(' '));
+          });
 
       /* The bare address, for the heading that shows nothing else. */
       Array.prototype.forEach.call(
