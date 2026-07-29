@@ -248,6 +248,13 @@ jobs:
           printf 'User-agent: *\nDisallow: /distfiles/\n' > /srv/mirrors/robots.txt
           [ "$(code /robots.txt)" = 200 ] || fail "robots.txt 取不到"
           [ "$(code /favicon.ico)" = 301 ] || fail "favicon.ico 没有跳转"
+          # 资源 URL 带指纹才敢长缓存；数据仍要每次验
+          mkdir -p /srv/mirrors/assets && echo 'body{}' > /srv/mirrors/assets/t.css
+          echo '{}' > /srv/mirrors/t.json
+          case "$(hdr /assets/t.css cache-control)" in *immutable*) ;; *) fail "css 没有长缓存" ;; esac
+          case "$(hdr /t.json cache-control)" in *no-cache*) ;; *) fail "json 不该长缓存" ;; esac
+          # 无脚本客户端的两条回落
+          [ "$(code /_raw/)" = 200 ] || fail "/_raw/ 目录浏览打不开"
 
           # 目录交给前端渲染
           [ "$(code /binpkgs/x86-64/)" = 200 ] || fail "目录浏览打不开"

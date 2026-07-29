@@ -195,7 +195,7 @@ def main(overlay):
              ""]
     for pkg in out:
         mark = "bin" if pkg["binhost"] else "src" if pkg["dist"] else "--"
-        lines.append(f"{pkg['cp']:<44} {mark}  {pkg['desc']}")
+        lines.append(f"{pkg['cp']:<44} {mark}  {pkg['desc']}".rstrip())
     tmp_txt = txt.with_suffix(".txt.new")
     tmp_txt.write_text("\n".join(lines) + "\n")
     os.replace(tmp_txt, txt)

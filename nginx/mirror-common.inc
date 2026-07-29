@@ -175,8 +175,15 @@ location = /packages.txt {
 	include /etc/nginx/conf.d/headers-site.inc;
 }
 
-location ~* \.(css|js|json)$ {
+# json 是数据，每次都要验；css 与 js 的引用带内容指纹（见 render-chrome.py），
+# 改了文件 URL 就变，所以可以放心长缓存，省掉每次访问的那轮回源验证。
+location ~* \.json$ {
 	add_header Cache-Control "no-cache";
+	include /etc/nginx/conf.d/headers-site.inc;
+}
+
+location ~* \.(css|js)$ {
+	add_header Cache-Control "public, max-age=31536000, immutable";
 	include /etc/nginx/conf.d/headers-site.inc;
 }
 

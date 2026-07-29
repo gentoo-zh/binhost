@@ -72,7 +72,7 @@ fi
 # --- 磁盘 ---------------------------------------------------------------------
 # 只在这台上查：另一份 status.sh 跑在别处，那边没有 /srv/pub。
 if [[ -d ${DISK_PATH} ]]; then
-    read -r used avail pct < <(df -P "${DISK_PATH}" | awk 'NR==2 {gsub(/%/,"",$5); print $3, $4, $5}')
+    read -r avail pct < <(df -P "${DISK_PATH}" | awk 'NR==2 {gsub(/%/,"",$5); print $4, $5}')
     human() { awk -v k="$1" 'BEGIN { split("K M G T", u); i=1; while (k>=1024 && i<4) { k/=1024; i++ } printf "%.0f%s", k, u[i] }'; }
     if (( pct >= DISK_WARN_PCT )); then
         bad "磁盘" "${DISK_PATH} 用了 ${pct}%，剩 $(human "${avail}")"

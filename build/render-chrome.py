@@ -15,6 +15,7 @@
 
 wide 是可选的变体，包列表和文件浏览器用宽版面。
 """
+import hashlib
 import pathlib
 import re
 import sys
@@ -25,9 +26,24 @@ BLOCK = re.compile(r"( *)<!-- chrome:(\w+)([^>]*?) -->\n.*?^ *<!-- /chrome:\2 --
                    re.S | re.M)
 
 
+def stamp(body):
+    """给 /assets/ 下的引用加上内容指纹。
+
+    改了文件 URL 就跟着变，浏览器不会取到旧的，nginx 那边才敢长缓存。
+    """
+    def one(m):
+        f = ROOT / "site" / m.group(1).lstrip("/")
+        if not f.exists():
+            return m.group(0)
+        h = hashlib.blake2b(f.read_bytes(), digest_size=4).hexdigest()
+        return f'{m.group(1)}?v={h}'
+    return re.sub(r'(/assets/[\w.-]+\.(?:css|js))(?:\?v=\w+)?', one, body)
+
+
 def render(name, flags, indent):
     body = (TPL / f"{name}.html").read_text()
     body = body.replace("{{wide}}", " wide" if "wide" in flags else "")
+    body = stamp(body)
     lines = [indent + l if l.strip() else l for l in body.splitlines(keepends=True)]
     head = f"{indent}<!-- chrome:{name}{flags} -->\n"
     return head + "".join(lines) + f"{indent}<!-- /chrome:{name} -->\n"
