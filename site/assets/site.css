@@ -359,12 +359,17 @@ h2:first-of-type { margin-top: 2rem; }
   /* 标题栏是 space-between，三个孩子会摊开，sudo 落到正中间。推到右边跟复制
      并排，左边留给路径。 */
   margin-left: auto;
-  flex: none; border: 0; border-radius: 0.3rem; background: transparent;
+  flex: none; border: 1px solid var(--border); border-radius: 0.3rem;
+  background: transparent;
   color: var(--fg-soft); cursor: pointer; font-family: var(--mono);
   font-size: 0.72rem; padding: 0.16rem 0.5rem;
 }
-.code-head .head-btn:hover { background: var(--bg); color: var(--fg); }
-.code-head .head-btn[aria-pressed="true"] { background: var(--bg); color: var(--fg); }
+.code-head .head-btn:hover { border-color: var(--fg-soft); color: var(--fg); }
+/* 按下去要一眼看得出来：它改的是复制出去的命令，看错了会以 root 跑一段以为
+   加了 sudo 的东西。所以用主色填实，不是换个灰度。 */
+.code-head .head-btn[aria-pressed="true"] {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
 /* 四个条目排 2×2。auto-fit 在这个宽度下会排成 3+1，落单一个不好看 */
 
 .note { font-size: 0.88rem; line-height: 1.8; color: var(--fg-soft); }
