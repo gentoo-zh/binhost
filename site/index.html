@@ -98,6 +98,8 @@
               data-uri="https://mirror.nju.edu.cn/gentoo-zh">南京大学</button>
       <button type="button" class="src-opt" data-i18n="srcNyist"
               data-uri="https://mirror.nyist.edu.cn/gentoo-zh">南阳理工</button>
+      <button type="button" class="src-opt" data-i18n="srcHernet"
+              data-uri="https://mirrors.ha.edu.cn/gentoo-zh">河南教育网</button>
       <button type="button" class="src-opt" data-i18n="srcOrigin" data-src-default="zh-tw en"
               data-uri="https://distfiles.gentoozh.org">源站</button>
     </div>
@@ -142,6 +144,8 @@
             data-uri="https://mirror.nju.edu.cn/gentoo-zh">南京大学</button>
     <button type="button" class="src-opt" data-i18n="srcNyist"
             data-uri="https://mirror.nyist.edu.cn/gentoo-zh">南阳理工</button>
+    <button type="button" class="src-opt" data-i18n="srcHernet"
+            data-uri="https://mirrors.ha.edu.cn/gentoo-zh">河南教育网</button>
     <button type="button" class="src-opt" data-i18n="srcOrigin" data-src-default="zh-tw en"
             data-uri="https://distfiles.gentoozh.org">源站</button>
   </div>
@@ -235,6 +239,8 @@
               data-uri="https://mirror.nju.edu.cn/gentoo-zh">南京大学</button>
       <button type="button" class="src-opt" data-i18n="srcNyist"
               data-uri="https://mirror.nyist.edu.cn/gentoo-zh">南阳理工</button>
+      <button type="button" class="src-opt" data-i18n="srcHernet"
+              data-uri="https://mirrors.ha.edu.cn/gentoo-zh">河南教育网</button>
       <button type="button" class="src-opt" data-i18n="srcOrigin" data-src-default="zh-tw en"
               data-uri="https://distfiles.gentoozh.org">源站</button>
     </div>
@@ -330,7 +336,7 @@ window.MIRROR_I18N = {
     lead: 'gentoo-zh overlay 的二進位套件與 distfiles 鏡像。兩者相互獨立，按需分別設定。::gentoo 的部分用 <a href="https://gentoozh.org/zh-tw/mirrorlist/">社群鏡像列表</a>裡的節點。',
     h2bin: '二進位套件', h2dist: 'Distfiles',
     sigNote: '驗簽由第 2 步的 <code>verify-signature = true</code> 提供，只作用於本站。<code>FEATURES=binpkg-request-signature</code> 是全域的，會覆蓋它，也會要求你自己用 <code>FEATURES=buildpkg</code> 建出來的套件帶簽章——那些套件預設沒有簽章，於是每次本機建置都會在合併時報 <code>GnuPG verification failed</code>。要開它就得同時配好 <code>binpkg-signing</code> 與本機簽章金鑰。',
-    srcLabel: '鏡像', srcLabelFirst: '優先', srcCernet: '教育網聯合鏡像站', srcNju: '南京大學', srcNyist: '南陽理工', srcOrigin: '來源站',
+    srcLabel: '鏡像', srcLabelFirst: '優先', srcCernet: '教育網聯合鏡像站', srcNju: '南京大學', srcNyist: '南陽理工', srcHernet: '河南教育網', srcOrigin: '來源站',
     repoNote: '預設是南京大學，中國大陸下載會更快；來源站在美國，部分地區下載可能較為緩慢。兩邊的套件都是一樣的，簽章也是同一份，更換哪個都不會影響驗簽。',
     distNote: '這裡只有 overlay 的原始碼，不能替代官方來源，因此是追加而非替換。位址不寫 <code>distfiles/</code>，portage 會自己補上。這裡把鏡像都列出：<code>GENTOO_MIRRORS</code> 是按順序嘗試的列表，選中的取不到時會落到後面的位址。',
     distOptOut: '因版權等原因不希望某個套件被鏡像時，在其 ebuild 中加入 <code>RESTRICT="mirror"</code>，同步工具會跳過。',
@@ -349,7 +355,7 @@ window.MIRROR_I18N = {
     lead: 'Binary package and distfiles mirror for the gentoo-zh overlay. The two are independent and configured separately. For ::gentoo, use a node from the <a href="https://gentoozh.org/en/mirrorlist/">community mirror list</a>.',
     h2bin: 'Binary packages', h2dist: 'Distfiles',
     sigNote: 'Verification comes from <code>verify-signature = true</code> in step 2 and applies to this repository only. <code>FEATURES=binpkg-request-signature</code> is global, overrides that, and also demands a signature on the packages you build yourself with <code>FEATURES=buildpkg</code>. Those are unsigned by default, so every local build fails to merge with <code>GnuPG verification failed</code>. Enabling it means setting up <code>binpkg-signing</code> and a local signing key as well.',
-    srcLabel: 'Mirror', srcLabelFirst: 'First', srcCernet: 'CERNET', srcNju: 'Nanjing University', srcNyist: 'NYIST', srcOrigin: 'Origin',
+    srcLabel: 'Mirror', srcLabelFirst: 'First', srcCernet: 'CERNET', srcNju: 'Nanjing University', srcNyist: 'NYIST', srcHernet: 'HERNET', srcOrigin: 'Origin',
     repoNote: 'Nanjing University is the default and downloads faster from within China; the origin is in the United States and can be slow from some regions. The packages are the same either way and carry the same signature, so switching does not affect verification.',
     distNote: 'Only overlay sources live here, so this adds a mirror rather than replacing the official ones. Leave <code>distfiles/</code> off the address; portage appends it. Every mirror is listed: <code>GENTOO_MIRRORS</code> is a list portage tries in order, so it falls through to the next address when the selected mirror does not have a file.',
     distOptOut: 'When a maintainer does not want a package mirrored — licensing or otherwise — they add <code>RESTRICT="mirror"</code> to its ebuild and the sync tool skips it.',
