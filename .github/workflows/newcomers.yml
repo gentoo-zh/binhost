@@ -5,6 +5,10 @@
 #
 # 判断新包只要 overlay 和 packages.txt，不需要构建出来的索引，所以整件事在这里
 # 做，建置机不必拿着能写仓库的凭据。
+#
+# 分两个 job，因为两边要的环境不一样：认 ebuild 要 portage 的 vercmp，只有
+# stage3 里有；开 PR 要 git 和 gh，stage3 里没有。所以 stage3 那边把话说完
+# ——哪些包该提、加进去之后清单还验得过——ubuntu 这边只负责提交和开 PR。
 name: newcomers
 
 on:
@@ -18,28 +22,68 @@ permissions:
   pull-requests: write
 
 jobs:
+  find:
+    runs-on: ubuntu-latest
+    container: gentoo/stage3:amd64
+    outputs:
+      rows: ${{ steps.pick.outputs.rows }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # stage3 里没有 git，取 tarball 就够：这里只看包在不在树里、ebuild 长
+      # 什么样，用不到提交记录
+      - name: Fetch the overlay
+        run: |
+          mkdir -p /tmp/overlay
+          wget -qO- https://github.com/gentoo-zh/overlay/archive/refs/heads/master.tar.gz |
+            tar xz -C /tmp/overlay --strip-components=1
+
+      - name: Pick the ones worth proposing
+        id: pick
+        run: |
+          set -euo pipefail
+          python3 build/check-versions.py --newcomers /tmp/overlay build/packages.txt > /tmp/new.txt
+          cat /tmp/new.txt
+
+          # 加进去之后清单还得验得过。验不过的不提：PR 上不会有检查跑
+          # （GITHUB_TOKEN 开的 PR 不触发 workflow），送出去就没人拦了。
+          : > /tmp/ok.txt
+          cp build/packages.txt /tmp/packages.orig
+          while read -r cp ver; do
+            [ -n "${cp}" ] || continue
+            cp /tmp/packages.orig build/packages.txt
+            python3 build/add-package.py "${cp}" > /dev/null
+            if python3 build/validate.py /tmp/overlay > /tmp/validate.log 2>&1; then
+              printf '%s %s\n' "${cp}" "${ver}" >> /tmp/ok.txt
+            else
+              echo "  ${cp} 加进去之后 validate 不过，不提："
+              grep -E 'packages\.txt' /tmp/validate.log | sed 's/^/    /' || true
+            fi
+          done < /tmp/new.txt
+          cp /tmp/packages.orig build/packages.txt
+
+          # 一行一个原子，交给下一个 job
+          {
+            echo "rows<<EOF"
+            cat /tmp/ok.txt
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
   propose:
+    needs: find
+    if: needs.find.outputs.rows != ''
     runs-on: ubuntu-latest
     steps:
       # 要在 master 上开分支，浅克隆只有触发的那一个 ref
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - name: Fetch the overlay
-        run: git clone --quiet --depth=1 https://github.com/gentoo-zh/overlay /tmp/overlay
-
-      - name: List packages that are not on the list yet
-        id: find
-        run: |
-          python3 build/check-versions.py --newcomers /tmp/overlay build/packages.txt > /tmp/new.txt
-          echo "count=$(wc -l < /tmp/new.txt)" >> "${GITHUB_OUTPUT}"
-          cat /tmp/new.txt
-
       - name: Open one pull request per package
-        if: steps.find.outputs.count != '0'
+        id: prs
         env:
           GH_TOKEN: ${{ github.token }}
+          ROWS: ${{ needs.find.outputs.rows }}
         run: |
           set -euo pipefail
           git config user.name "gentoozh-bot"
@@ -49,9 +93,9 @@ jobs:
           base=$(git rev-parse HEAD)
           : > /tmp/urls.txt
 
-          # 先读进数组再循环：git 和 gh 会读 stdin，用 while read 喂文件的话
-          # 第一轮之后清单就被它们吃掉了
-          mapfile -t rows < /tmp/new.txt
+          # 先读进数组再循环：git 和 gh 会读 stdin，用 while read 喂的话第一轮
+          # 之后清单就被它们吃掉了
+          mapfile -t rows <<< "${ROWS}"
 
           for row in "${rows[@]}"; do
             [ -n "${row}" ] || continue
@@ -76,16 +120,6 @@ jobs:
               continue
             fi
 
-            # PR 上的检查不会自己跑：GITHUB_TOKEN 开的 PR 不触发 workflow。
-            # 所以在这里先验一遍，验不过就不开，不要送一个坏清单出去。一个包
-            # 验不过是它自己的事，不该把这一轮剩下的都带走。
-            if ! python3 build/validate.py /tmp/overlay > /tmp/validate.log 2>&1; then
-              echo "  ${cp} 加进去之后 validate 不过，跳过："
-              grep -E '^\s+packages\.txt' /tmp/validate.log | sed 's/^/    /'
-              git checkout -q -- build/packages.txt
-              continue
-            fi
-
             # 只提这一个文件：-a 会把其他改动的文件一起卷进来
             git commit -q -m "build: add ${cp}" -- build/packages.txt
             git push -q origin "${branch}"
@@ -95,23 +129,28 @@ jobs:
               "" \
               "合并即收录，下一轮构建会带上它；不收就关掉这个 PR，并把它连同原因写进 \`build/excluded.txt\`，否则每天还会再开一次。" \
               "" \
-              "清单顺序不分大小写，这里只插一行，没有重排。\`validate.py\` 在开 PR 前已经跑过。")
+              "清单顺序不分大小写，这里只插一行，没有重排。加进去之后 \`validate.py\` 跑过了，PR 上不会再跑：GITHUB_TOKEN 开的 PR 不触发 workflow。")
             gh pr create --base master --head "${branch}" \
               --title "build: add ${cp}" --body "${body}" >> /tmp/urls.txt
           done
 
           cat /tmp/urls.txt
+          {
+            echo "urls<<EOF"
+            cat /tmp/urls.txt
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Post the links to Telegram
-        if: steps.find.outputs.count != '0'
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT: ${{ secrets.TELEGRAM_CHAT }}
+          URLS: ${{ steps.prs.outputs.urls }}
         run: |
           # 没配 secret 就跳过：这一步是通知，不该让它拦住开 PR
           [ -n "${TELEGRAM_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT:-}" ] || exit 0
-          [ -s /tmp/urls.txt ] || exit 0
-          text=$(printf '%s\n%s' "overlay 有新包待判断，合并即收录，不收就关掉：" "$(cat /tmp/urls.txt)")
+          [ -n "${URLS:-}" ] || exit 0
+          text=$(printf '%s\n%s' "overlay 有新包待判断，合并即收录，不收就关掉：" "${URLS}")
           curl -fsS --max-time 20 -o /dev/null \
             "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=${TELEGRAM_CHAT}" \

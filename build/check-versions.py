@@ -153,7 +153,7 @@ def main(overlay, index, listfile):
     for cp in live:
         print(f"    仅 9999 {cp}  只有 live ebuild，建不出可发布的版本")
     for cp, ver in fresh:
-        print(f"    新包   {cp}  {ver}  有构建系统却不在清单，要人决定收不收")
+        print(f"    新包   {cp}  {ver}  有构建系统但不在清单，需要判断是否收录")
 
     # Newcomers do not count towards the exit code. A newcomer is not a
     # mismatch, it is a package waiting for someone to decide, and cycle.sh
@@ -163,7 +163,25 @@ def main(overlay, index, listfile):
     return 1 if (stale or absent or gone or blocked or live) else 0
 
 
+def list_newcomers(overlay, listfile):
+    """只把新包按 `category/package 版本` 印出来，一行一个。
+
+    收不收是个判断，不该等到人去读日志。这一份给 CI 用，它据此开 PR。判断新包
+    只要 overlay 和清单，不碰索引，所以不必让建置机拿着能写仓库的凭据。
+    """
+    overlay = pathlib.Path(overlay)
+    wanted = {l.strip() for l in pathlib.Path(listfile).read_text().splitlines()
+              if ATOM.match(l.strip())}
+    for cp, ver in newcomers(overlay, wanted, read_mask(overlay)):
+        print(f"{cp} {ver}")
+    return 0
+
+
 if __name__ == "__main__":
+    if sys.argv[1:2] == ["--newcomers"]:
+        if len(sys.argv) != 4:
+            sys.exit("用法: check-versions.py --newcomers OVERLAY PACKAGES.TXT")
+        sys.exit(list_newcomers(sys.argv[2], sys.argv[3]))
     if len(sys.argv) != 4:
         sys.exit(__doc__)
     sys.exit(main(sys.argv[1], sys.argv[2], sys.argv[3]))
