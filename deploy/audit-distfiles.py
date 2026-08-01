@@ -92,6 +92,11 @@ RECYCLE = "/var/lib/emirrordist/recycle"
 # tree that read as empty or half-empty, and that lands far above a third.
 MAX_REAP_SHARE = 1 / 3
 
+# 禁止镜像那一类另加一个绝对下限。只按比例，镜像小的时候一个文件就超过三分之一，
+# 永远清不掉。一次真的加 RESTRICT 的批量是个位数——今晚三次分别是 2、7 个。
+# 要拦的是「整棵树忽然都成了禁止镜像」，那种规模远在这之上。
+MIN_RESTRICTED_TO_DOUBT = 20
+
 # 累计窗口。跨轮记账放在这里而不是 orphans.json，因为它记的是「已经做过什么」
 # 而不是「打算做什么」。
 LEDGER = "/var/lib/emirrordist/reaped.json"
@@ -256,6 +261,27 @@ def main(overlay, dest):
 
     deleted, failed = ([], []) if refused else reap(orphan, paths)
 
+    # RESTRICT=mirror 的文件不等宽限期。孤儿要等，是因为一次 bump 会让旧文件
+    # 短暂无人引用，等一周就能看出是不是误判；而「所有引用方都禁止镜像」是上游
+    # 明确的声明，不是过渡状态，多留一轮就是多发一轮不该发的文件。
+    #
+    # 仍然走回收桶：判断错了还取得回来，和孤儿同一个桶、同一个时钟。
+    # 比例闸和孤儿那道对称，但独立：这一类不进跨轮帐本。帐本记的是孤儿清理，
+    # 把这一类算进去会让整轮在文件已经删掉之后被标成拒绝清理，而 refused
+    # 的含义是一个都没碰。
+    restricted, restricted_failed = [], []
+    too_many = (len(extra) > MIN_RESTRICTED_TO_DOUBT
+                and len(extra) > len(have) * MAX_REAP_SHARE)
+    if too_many:
+        print(f"!! 本轮 {len(extra)}/{len(have)} 个文件被标为禁止镜像，"
+              f"超过 {MAX_REAP_SHARE:.0%}，没有清理", file=sys.stderr)
+    if not refused and not too_many:
+        for f in extra:
+            path = paths.get(f)
+            if path is None:
+                continue
+            (restricted if recycle(path) else restricted_failed).append(f)
+
     # 按轮计的上限拦不住连着来的几轮：每轮 30% 两轮就是一半个镜像，一次都不会
     # 被拒绝。所以再核对最近这段时间总共清掉了多少。
     recent = recent_deletions(len(deleted))
@@ -265,8 +291,12 @@ def main(overlay, dest):
 
     print(f"overlay 引用 {len(users)}，其中可镜像 {len(mirrorable)}，"
           f"不可镜像 {len(never)}，无法取得 {len(unfetchable)}")
-    print(f"镜像上 {len(have)}，缺 {len(missing)}，多 {len(extra)}，"
-          f"已无人引用 {len(orphan)}，本轮清理 {len(deleted)}")
+    print(f"镜像上 {len(have)}，缺 {len(missing)}，禁止镜像 {len(extra)}，"
+          f"已无人引用 {len(orphan)}，本轮清理 {len(deleted) + len(restricted)}"
+          f"（其中禁止镜像 {len(restricted)}）")
+    if restricted_failed:
+        print(f"!! {len(restricted_failed)} 个禁止镜像的文件没能回收，还在对外发",
+              file=sys.stderr)
     if failed:
         # 回收不成等于清理永远失效，而原来它只印一行 stderr、退出码不变，
         # daily.sh 于是每小时报一次成功。
@@ -287,7 +317,9 @@ def main(overlay, dest):
     #
     # A refused round is a failure: it means the input could not be trusted, and
     # that is exactly the case nobody would otherwise hear about.
-    return 1 if (missing or extra or refused or failed) else 0
+    # extra 不再让这一轮失败：它已经被清掉了，报错等于每清一次就告警一次。
+    # 清不掉才是要人看的，那是 restricted_failed。
+    return 1 if (missing or refused or failed or restricted_failed or too_many) else 0
 
 
 if __name__ == "__main__":

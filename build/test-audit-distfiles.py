@@ -119,15 +119,21 @@ def build_overlay(root, packages):
         d = root / cp
         d.mkdir(parents=True, exist_ok=True)
         dists = set()
-        for ver, files in versions.items():
-            (d / f"{d.name}-{ver}.ebuild").write_text('EAPI=8\nSLOT="0"\n')
+        for ver, spec in versions.items():
+            # 值可以是文件名列表，也可以是 (文件名列表, RESTRICT)
+            files, restrict = spec if isinstance(spec, tuple) else (spec, "")
+            body = 'EAPI=8\nSLOT="0"\n'
+            if restrict:
+                body += f'RESTRICT="{restrict}"\n'
+            (d / f"{d.name}-{ver}.ebuild").write_text(body)
             dists.update(files)
         (d / "Manifest").write_text(
             "".join(f"DIST {f} 1 BLAKE2B x SHA512 y\n" for f in sorted(dists)))
     return root
 
 
-def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False):
+def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False,
+             grace=0):
     """跑完整的 main()，回传 (退出码, 镜像上剩下的文件, 回收目录里的文件)。
 
     aged 把某个文件的 mtime 往前拨，模拟它很久以前就被抓下来了。
@@ -147,7 +153,7 @@ def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False):
         old = (audit.STATE, audit.RECYCLE, audit.GRACE_SECONDS, audit.LEDGER)
         audit.STATE = str(d / "state.json")
         audit.RECYCLE = str(d / "recycle")
-        audit.GRACE_SECONDS = 0          # 立即到期，好在一轮里看到结果
+        audit.GRACE_SECONDS = grace      # 默认立即到期，好在一轮里看到结果
         # 跨轮账本也要指到临时目录。原来没换，以 root 跑测试时它落在真实的
         # /var/lib/emirrordist/reaped.json：用例之间互相污染，前一个用例清理
         # 的 138 个把后一个撑过上限；跑完还会让当晚真正的对帐拒绝清理。
@@ -246,6 +252,58 @@ case("README.txt 不算孤儿", lambda: (
 
 print(f"  {'用例':<44} 结果")
 bad = 0
+# --- RESTRICT=mirror 的文件要被清掉 ---------------------------------------------
+# 上游说了不准镜像，而文件早就在盘上——加 RESTRICT 之前抓下来的。原来只报告不清，
+# 一个晚上撞上三次，每次都是几百 MB 在对外发着等人来看告警。
+
+case("没有 RESTRICT 就不动它", lambda: (
+    lambda r: r[0] == 0 and r[1] == ["foo-1.0.tar.gz"] and r[2] == []
+)(run_main({"app-misc/foo": {"1.0": ["foo-1.0.tar.gz"]}}, ["foo-1.0.tar.gz"])))
+
+case("禁止镜像的文件会被回收", lambda: (
+    lambda r: r[1] == [] and r[2] == ["foo-1.0.tar.gz"]
+)(run_main({"app-misc/foo": {"1.0": (["foo-1.0.tar.gz"], "mirror")}},
+           ["foo-1.0.tar.gz"])))
+
+case("清掉了就不该让这一轮失败", lambda: (
+    lambda r: r[0] == 0
+)(run_main({"app-misc/foo": {"1.0": (["foo-1.0.tar.gz"], "mirror")}},
+           ["foo-1.0.tar.gz"])))
+
+case("走回收桶而不是直接删", lambda: (
+    lambda r: r[2] == ["foo-1.0.tar.gz"]
+)(run_main({"app-misc/foo": {"1.0": (["foo-1.0.tar.gz"], "bindist mirror strip")}},
+           ["foo-1.0.tar.gz"])))
+
+# 文件名带版本号时按版本归属：1.0 禁、2.0 不禁，2.0 那个文件照样镜像
+case("按版本归属，不禁的那个留着", lambda: (
+    lambda r: r[1] == ["foo-2.0.tar.gz"] and r[2] == ["foo-1.0.tar.gz"]
+)(run_main({"app-misc/foo": {"1.0": (["foo-1.0.tar.gz"], "mirror"),
+                             "2.0": ["foo-2.0.tar.gz"]}},
+           ["foo-1.0.tar.gz", "foo-2.0.tar.gz"])))
+
+# 文件名里没有版本号时按目录取或，宁可当成禁止镜像。见 scan() 的 fallback。
+case("文件名没有版本号时从严", lambda: (
+    lambda r: r[1] == [] and r[2] == ["shared.tar.gz"]
+)(run_main({"app-misc/foo": {"1.0": (["shared.tar.gz"], "mirror"),
+                             "2.0": ["shared.tar.gz"]}}, ["shared.tar.gz"])))
+
+# 孤儿等宽限期，禁止镜像的不等：同一轮里前者留下、后者消失。
+# 孤儿要占得少，否则整轮会因为超过上限被拒，什么都不会动。
+case("禁止镜像的不等宽限期，孤儿等", lambda: (
+    lambda r: "orphan.tar.gz" in r[1] and r[2] == ["banned.tar.gz"]
+)(run_main({"app-misc/foo": {"1.0": (["banned.tar.gz"], "mirror")},
+            "app-misc/bar": {"1.0": [f"bar-{i}.tar.gz" for i in range(8)]}},
+           ["banned.tar.gz", "orphan.tar.gz"] + [f"bar-{i}.tar.gz" for i in range(8)],
+           grace=7 * 24 * 3600)))
+
+# 整棵树忽然都禁止镜像更像是读错了树，不是真的要清空镜像
+case("禁止镜像的比例过高时不清", lambda: (
+    lambda r: r[0] == 1 and r[2] == []
+)(run_main({"app-misc/foo": {"1.0": ([f"x-{i}.tar.gz" for i in range(30)], "mirror")}},
+           [f"x-{i}.tar.gz" for i in range(30)])))
+
+
 for name, fn in CASES:
     try:
         ok = bool(fn())
