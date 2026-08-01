@@ -13,7 +13,7 @@
   /* 强调色取自 gentoozh.org 的 hsl(255 55% 70%)，色相与 Gentoo 官方紫
      #54487a 一致。全站只有这一个强调色相。 */
   --accent: #5b43a3;
-  --accent-dim: #8779af;
+  --accent-dim: #6f5f9b;
   --accent-weak: #f3f0f9;
   --ok: #2f7d4f;
 
@@ -53,7 +53,7 @@
     color-scheme: dark;
 
     --accent: #9d88dd;
-    --accent-dim: #7b6aaf;
+    --accent-dim: #9182c4;
     --accent-weak: #231d35;
     --ok: #6cc08b;
 
@@ -79,7 +79,7 @@
   color-scheme: dark;
 
   --accent: #9d88dd;
-  --accent-dim: #7b6aaf;
+  --accent-dim: #9182c4;
   --accent-weak: #231d35;
   --ok: #6cc08b;
 
@@ -580,7 +580,7 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 .fpr-box { margin-left: auto; display: flex; align-items: center; gap: 0.35rem; }
 .fpr {
   font-family: var(--mono); font-size: 0.68rem;
-  color: var(--fg-soft); background: var(--chip);
+  color: var(--fg); background: var(--chip);
   padding: 0.14rem 0.45rem; border-radius: 0.3rem; white-space: nowrap;
 }
 .fpr-copy {
