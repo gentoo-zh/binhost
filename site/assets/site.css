@@ -528,7 +528,9 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
   border: 1px solid var(--border); border-radius: 4px; background: var(--card);
   color: var(--fg); font: inherit; font-size: 0.9rem; padding: 0.55rem 0.85rem;
 }
-.search:focus { outline: none; border-color: var(--primary); }
+/* 焦点环走上面统一的 :focus-visible。原来 outline:none 换 1px 边框变色，
+   键盘上认不出来，而站里其它控件都是那一套。 */
+.search:focus-visible { border-color: var(--primary); }
 /* 计数与更新时间按行给：三个数量口径不同，挤成一行读不出区别。
    pre-line 让脚本仍用 textContent 输出，不必为换行改成 innerHTML。 */
 .count {
