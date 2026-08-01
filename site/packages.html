@@ -69,8 +69,8 @@
     标签的含义见下方图例，鼠标停留查看详情。
   </p>
 
-  <input class="search" id="q" type="search" autocomplete="off"
-         placeholder="搜索包名或说明">
+  <label class="search-label" for="q" data-i18n="ph">搜索包名或说明</label>
+  <input class="search" id="q" type="search" autocomplete="off">
 
   <div class="filters" id="filters">
     <button class="filter on" data-f="all" data-i18n="fltAll">全部</button>
@@ -404,7 +404,6 @@ Promise.all([
   });
   counts();
   render();
-  document.getElementById("q").placeholder = t("ph");
 }).catch(function (e) {
   document.getElementById("out").textContent = t("failed") + e;
 });
@@ -422,8 +421,6 @@ document.getElementById("filters").addEventListener("click", function (e) {
 // 切语言时把自绘的部分重画一次。
 document.addEventListener('langchange', function () {
   if (rows.length) { counts(); render(); }
-  const ph = t("ph");
-  if (ph) document.getElementById("q").placeholder = ph;
 });
 </script>
 </body>
