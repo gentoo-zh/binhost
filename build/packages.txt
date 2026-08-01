@@ -18,7 +18,6 @@ app-i18n/fcitx-skk
 app-i18n/fcitx-vinput
 app-i18n/fcitx-zhuyin
 app-i18n/libime-jyutping
-app-misc/aichat
 app-misc/cc-switch
 app-misc/cc-switch-cli
 app-misc/gpick
