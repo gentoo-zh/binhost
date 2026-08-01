@@ -86,8 +86,8 @@ jobs:
           ROWS: ${{ needs.find.outputs.rows }}
         run: |
           set -euo pipefail
-          git config user.name "gentoozh-bot"
-          git config user.email "bot@gentoozh.org"
+          git config user.name "Zakk"
+          git config user.email "zakk@gentoozh.org"
 
           # 每个分支都从这里长出来，不是从上一个分支
           base=$(git rev-parse HEAD)
