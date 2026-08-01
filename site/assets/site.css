@@ -519,6 +519,10 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 
 /* --- 包列表 --- */
 
+/* 名字给 label 不给 placeholder：一打字它就没了，扫版面的人也从来看不到它。 */
+.search-label {
+  display: block; font-size: 0.82rem; color: var(--fg-soft); margin-bottom: 0.3rem;
+}
 .search {
   width: 100%; margin-bottom: 0.9rem;
   border: 1px solid var(--border); border-radius: 4px; background: var(--card);
