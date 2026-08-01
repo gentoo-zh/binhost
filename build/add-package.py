@@ -1,0 +1,33 @@
+#!/usr/bin/env python3
+"""把一个包加进 packages.txt，只插一行。
+
+顺序是不分大小写的，Python 的 sort 是按字节的，整档重排会把 net-proxy/Xray
+挪到 bore 前面——这件事已经发生过一次。所以这里只找位置插进去。
+"""
+import bisect
+import pathlib
+import re
+import sys
+
+LIST = pathlib.Path(__file__).resolve().parent / "packages.txt"
+ATOM = re.compile(r"^[a-z0-9][a-z0-9+._-]*/[A-Za-z0-9][A-Za-z0-9+._-]*$")
+
+
+def main(cp):
+    if not ATOM.match(cp):
+        sys.exit(f"不是一个 category/package: {cp}")
+    body = [l for l in LIST.read_text().splitlines() if l]
+    if cp in body:
+        print(f"{cp} 已经在清单里")
+        return 0
+    i = bisect.bisect_left([l.lower() for l in body], cp.lower())
+    body.insert(i, cp)
+    LIST.write_text("\n".join(body) + "\n")
+    print(f"加入 {cp}（第 {i + 1} 行）")
+    return 0
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        sys.exit(__doc__)
+    sys.exit(main(sys.argv[1]))

@@ -1,0 +1,118 @@
+# overlay 里出现了有构建系统、但不在收录清单上的包，就开一个 PR 把它加进去。
+#
+# 收不收是个判断，原来这个判断只出现在每晚构建的日志和 Telegram 告警里，要人
+# 自己去改清单。改成开 PR：合并就是收录，关掉就是不收，两边都不用再动手改文件。
+#
+# 判断新包只要 overlay 和 packages.txt，不需要构建出来的索引，所以整件事在这里
+# 做，建置机不必拿着能写仓库的凭据。
+name: newcomers
+
+on:
+  schedule:
+    # 每天 UTC 09:00，构建（UTC 08:00）跑完之后
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  propose:
+    runs-on: ubuntu-latest
+    steps:
+      # 要在 master 上开分支，浅克隆只有触发的那一个 ref
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch the overlay
+        run: git clone --quiet --depth=1 https://github.com/gentoo-zh/overlay /tmp/overlay
+
+      - name: List packages that are not on the list yet
+        id: find
+        run: |
+          python3 build/check-versions.py --newcomers /tmp/overlay build/packages.txt > /tmp/new.txt
+          echo "count=$(wc -l < /tmp/new.txt)" >> "${GITHUB_OUTPUT}"
+          cat /tmp/new.txt
+
+      - name: Open one pull request per package
+        if: steps.find.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "gentoozh-bot"
+          git config user.email "bot@gentoozh.org"
+
+          # 每个分支都从这里长出来，不是从上一个分支
+          base=$(git rev-parse HEAD)
+          : > /tmp/urls.txt
+
+          # 先读进数组再循环：git 和 gh 会读 stdin，用 while read 喂文件的话
+          # 第一轮之后清单就被它们吃掉了
+          mapfile -t rows < /tmp/new.txt
+
+          for row in "${rows[@]}"; do
+            [ -n "${row}" ] || continue
+            cp=${row%% *}
+            ver=${row#* }
+            branch="newcomer/${cp//\//-}"
+
+            # 已经开过就不再开。分支还在说明上一次的 PR 还没被处理，重复开只会
+            # 让人更不想看。
+            if git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1; then
+              echo "  ${cp} 已经有 ${branch}，跳过"
+              continue
+            fi
+
+            git checkout -q -B "${branch}" "${base}"
+            python3 build/add-package.py "${cp}"
+
+            # 没改动就没什么可提。git commit -a 在这种时候会失败，set -e 一退
+            # 出，后面的包一个都轮不到。
+            if git diff --quiet -- build/packages.txt; then
+              echo "  ${cp} 清单没有变化，跳过"
+              continue
+            fi
+
+            # PR 上的检查不会自己跑：GITHUB_TOKEN 开的 PR 不触发 workflow。
+            # 所以在这里先验一遍，验不过就不开，不要送一个坏清单出去。一个包
+            # 验不过是它自己的事，不该把这一轮剩下的都带走。
+            if ! python3 build/validate.py /tmp/overlay > /tmp/validate.log 2>&1; then
+              echo "  ${cp} 加进去之后 validate 不过，跳过："
+              grep -E '^\s+packages\.txt' /tmp/validate.log | sed 's/^/    /'
+              git checkout -q -- build/packages.txt
+              continue
+            fi
+
+            # 只提这一个文件：-a 会把其他改动的文件一起卷进来
+            git commit -q -m "build: add ${cp}" -- build/packages.txt
+            git push -q origin "${branch}"
+
+            body=$(printf '%s\n' \
+              "overlay 里的 \`${cp}\` ${ver} 有构建系统，可以在 amd64 上安装，但不在收录清单上。" \
+              "" \
+              "合并即收录，下一轮构建会带上它；不收就关掉这个 PR，并把它连同原因写进 \`build/excluded.txt\`，否则每天还会再开一次。" \
+              "" \
+              "清单顺序不分大小写，这里只插一行，没有重排。\`validate.py\` 在开 PR 前已经跑过。")
+            gh pr create --base master --head "${branch}" \
+              --title "build: add ${cp}" --body "${body}" >> /tmp/urls.txt
+          done
+
+          cat /tmp/urls.txt
+
+      - name: Post the links to Telegram
+        if: steps.find.outputs.count != '0'
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT: ${{ secrets.TELEGRAM_CHAT }}
+        run: |
+          # 没配 secret 就跳过：这一步是通知，不该让它拦住开 PR
+          [ -n "${TELEGRAM_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT:-}" ] || exit 0
+          [ -s /tmp/urls.txt ] || exit 0
+          text=$(printf '%s\n%s' "overlay 有新包待判断，合并即收录，不收就关掉：" "$(cat /tmp/urls.txt)")
+          curl -fsS --max-time 20 -o /dev/null \
+            "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT}" \
+            --data-urlencode "text=${text}"
