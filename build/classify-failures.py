@@ -84,12 +84,28 @@ def classify(text, cp=None):
 
 
 def read_logs(d):
-    """这一轮的失败日志。目录不存在时出声，不要装成没有失败。"""
+    """这一轮的失败日志。目录不存在时出声，不要装成没有失败。
+
+    以 failed.txt 为准，不是把目录里的 *.log 都当成包。整体解析失败时那份
+    whole.log 也在同一个目录，按文件名拆出来就成了一个叫 whole 的「包」，还会
+    被印成可以贴进 excluded.txt 的一行——那份清单是永久生效的。
+    """
     d = pathlib.Path(d)
     if not d.is_dir():
         print(f"!! 日志目录不存在：{d}", file=sys.stderr)
         return None
-    return sorted(d.glob("*.log"))
+    failed = d / "failed.txt"
+    if failed.is_file():
+        out = []
+        for atom in failed.read_text().split():
+            log = d / (atom.replace("/", "_", 1) + ".log")
+            if log.is_file():
+                out.append(log)
+            else:
+                print(f"!! {atom} 在 failed.txt 里，却没有对应的日志", file=sys.stderr)
+        return out
+    # 手工对着一个日志目录跑时没有 failed.txt，退回按文件名，但整体日志不算包
+    return [p for p in sorted(d.glob("*.log")) if p.name != "whole.log"]
 
 
 def main(logdir):

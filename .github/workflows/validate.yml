@@ -47,6 +47,10 @@ jobs:
       - name: Reaping orphans deletes the right file
         run: python3 build/test-audit-distfiles.py
 
+      # 失败分类会印出可以贴进 excluded.txt 的行，而那份清单是永久生效的。
+      - name: Failure classifier does not invent packages
+        run: python3 build/test-classify-failures.py
+
       # 脚本引用的东西必须真的被 install.sh 装过去。alert.sh 就出过这个问题：
       # 抽成共用文件、daily.sh 改成 source 它，而 install.sh 只 rsync 没安装。
       - name: install.sh covers what the scripts reach for
