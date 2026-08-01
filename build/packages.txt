@@ -122,6 +122,7 @@ net-misc/aliyundrive-webdav
 net-misc/aliyunpan
 net-misc/ananta
 net-misc/baidupcs-go
+net-misc/eternalterminal
 net-misc/geo
 net-misc/immich-go
 net-misc/ntpd-rs
