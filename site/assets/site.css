@@ -602,10 +602,8 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 /* 文件浏览器：大小与修改时间定宽，名称吃掉剩下的。 */
 #out .listing th.size { width: 4.5rem; }
 #out .listing th.date { width: 9.5rem; }
-.listing td.mark.yes { color: #16a34a; font-weight: 600; }
+.listing td.mark.yes { color: var(--ok); font-weight: 600; }
 .listing td.mark.no { color: var(--fg-soft); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .listing td.mark.yes { color: #4ade80; } }
-[data-theme="dark"] .listing td.mark.yes { color: #4ade80; }
 
 /* 过滤按钮 */
 .filters { display: flex; gap: 0.4rem; margin: 0 0 0.6rem; flex-wrap: wrap; }
@@ -624,14 +622,10 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
   font-size: 0.8rem;
 }
 .legend dt { justify-self: center; white-space: nowrap; }
-.legend dt.mark.yes { color: #16a34a; font-weight: 600; }
+.legend dt.mark.yes { color: var(--ok); font-weight: 600; }
 .legend dt.mark.no { color: var(--fg-soft); }
 .legend dt .pend { font-size: 0.74rem; font-style: italic; color: var(--fg-soft); }
 .legend dd { margin: 0; color: var(--fg-soft); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .legend dt.mark.yes { color: #4ade80; }
-}
-[data-theme="dark"] .legend dt.mark.yes { color: #4ade80; }
 .filter {
   border: 1px solid var(--border); border-radius: 4px; background: var(--card);
   color: var(--fg-soft); font: inherit; font-size: 0.8rem;
