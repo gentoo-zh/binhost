@@ -110,26 +110,18 @@ if ! emerge --update --deep --newuse --usepkg --keep-going --quiet-build @world;
     touch /tmp/world-incomplete
 fi
 
-# A perl major upgrade leaves XS modules installed under the old
-# vendor_perl/<version>/<arch>/ outside @INC: the package is still there but the
-# module will not load. configure finds intltool-update and then fails to find
-# XML::Parser, with an error indistinguishable from a missing dependency. This
-# is how app-i18n/libkkc broke across 5.42 to 5.44; after perl-cleaner
-# XML::Parser loaded immediately.
+# A perl major upgrade leaves XS modules under the old vendor_perl/<version>/
+# <arch>/, outside @INC: still installed, but they will not load. configure then
+# finds intltool-update and fails on XML::Parser, an error indistinguishable
+# from a missing dependency.
 echo ">>> perl-cleaner"
 perl-cleaner --all -- --quiet-build || echo "!!! perl-cleaner 未完成"
 
-# Drop binary packages the tree no longer has an ebuild for. Without this the
-# cache only ever grows.
+# 清掉树里已经没有 ebuild 的二进制包，否则缓存只涨不缩。
 #
-# 这一行原来是 `eclean-pkg --deep 2>/dev/null || true`，两处都错。容器里没装
-# gentoolkit，命令根本不存在，而 2>/dev/null || true 把「command not found」和
-# 退出码一起吞掉，于是它从来没生效过——PKGDIR 因此长到 656 个 CPV、4.1 G，同一
-# 个包留着三个版本。
-#
-# 而 --deep 的语义和上面那句注解相反：默认模式保留「树里还有 ebuild」的那些，
-# --deep 只保留「当前已安装」的那些。这个容器装的是 stage3 加 @world，一个
-# overlay 包都没装，所以哪天有人补上 gentoolkit，它会把整个共用缓存清光。
+# 不要加 --deep：默认模式保留「树里还有 ebuild」的，--deep 只保留「当前已安装」
+# 的。这个容器只装了 stage3 加 @world，一个 overlay 包都没装，--deep 会把整个
+# 共用缓存清光。
 if command -v eclean-pkg >/dev/null; then
     eclean-pkg || echo "!! eclean-pkg 未完成，本次未清理缓存"
 else
@@ -137,15 +129,11 @@ else
         echo "!! 安装失败 gentoolkit，缓存这次没清"
 fi
 
-# getuto generates a "Portage Local Trust Key" and writes its passphrase in
-# clear text into pass, to locally sign the Gentoo release keys it imports. That
-# step is already done and its result lives in trustdb.gpg; verification
-# afterwards reads only pubring and trustdb, and the private key is never needed
-# again -- with it removed, gpg --verify still reports Good signature
-# [ultimate].
-#
-# Left in place, an image pushed to ghcr with PUBLISH=1 would carry a private
-# key and its clear-text passphrase.
+# getuto's "Portage Local Trust Key" and its clear-text passphrase are only
+# needed to sign the release keys it imports, which is done by now and recorded
+# in trustdb.gpg. Verification afterwards reads pubring and trustdb alone --
+# checked: with these removed, gpg --verify still reports Good signature
+# [ultimate]. Left in place, PUBLISH=1 would push a private key to ghcr.
 rm -rf /etc/portage/gnupg/private-keys-v1.d \
        /etc/portage/gnupg/pass \
        /etc/portage/gnupg/openpgp-revocs.d
@@ -188,15 +176,13 @@ fi
 echo ">>> ${BASE} ready"
 
 # --- optional publish ---------------------------------------------------------
-# Worth doing for two reasons: it is a backup of an environment that costs an
-# hour to rebuild, and it lets anyone see exactly what the packages were built
-# in.
+# A backup of an environment that costs an hour to rebuild, and a way for anyone
+# to see what the packages were built in.
 #
-# Safe to publish: docker commit does not capture mount points, so the signing
-# key under /root/.gnupg is not in the image, and the local trust key getuto
-# generated was removed above. What remains is an aligned @world plus the public
-# keyring and fingerprints used for verification, all of which are public
-# already. Each of those was checked, not assumed.
+# Nothing secret goes with it, each point checked rather than assumed: docker
+# commit does not capture mount points, so the signing key under /root/.gnupg
+# stays out of the image, and getuto's local trust key was removed above. What
+# remains is an aligned @world plus the public keyring.
 
 if [[ -n ${PUBLISH:-} ]]; then
     remote="${REGISTRY:-ghcr.io/gentoo-zh}/binhost-base:${TAG}"

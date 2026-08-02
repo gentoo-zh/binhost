@@ -43,14 +43,10 @@ docker info >/dev/null 2>&1 || DOCKER="sudo docker"
 
 die() { echo "!!! $*" >&2; exit 1; }
 
-# Two rounds at once would write the same PKGDIR and STAGE. The lock lives here
-# rather than in the caller because a manual run, a timer run, and a rerun of a
-# few packages all go through this layer.
-#
-# The lock file follows STAGE instead of /var/lock: the build runs as an
-# ordinary user with no write access there.
-# cycle.sh 已经持有同一个锁并把 fd 传了下来，此时再抢会被自身阻塞。单独运行
-# 这支脚本时没有那个变量，照旧自己上锁。
+# 两轮同时执行会写同一个 PKGDIR 与 STAGE。锁放在这一层，因为手动执行、定时执行、
+# 只重新执行几个包都要经过这里；锁文件跟着 STAGE 走，建置以普通用户身份运行，
+# 对 /var/lock 没有写权限。cycle.sh 已持有同一个锁并把 fd 传了下来，此时再抢
+# 会被自身阻塞。
 if [[ -z ${BINHOST_LOCKED:-} ]]; then
     LOCK="${LOCK:-$(dirname "${STAGE}")/build.lock}"
     mkdir -p "$(dirname "${LOCK}")"
@@ -89,7 +85,7 @@ rm -f "${LOGDIR}"/*.log "${LOGDIR}"/failed.txt
 
 # A full disk or an interrupted build leaves zero-byte gpkg files in the cache.
 # Portage reports Invalid binary package for each of them every round and then
-# rebuilds as if there were no cache at all. Seventy of them accumulated once.
+# rebuilds as if there were no cache at all.
 empty=$(find "${PKGDIR}" -name '*.gpkg.tar' -size 0 -print -delete | wc -l)
 (( empty )) && echo ">>> 清掉 ${empty} 个 0 字节的缓存包" 
 
@@ -158,15 +154,11 @@ echo ">>> ${#atoms[@]} packages"
 # revbump.
 EMERGE=(emerge --usepkg --changed-use --with-bdeps=y --quiet-build)
 
-# One whole-list emerge first. Portage resolves once and knows what needs
-# rebuilding: 183 packages resolved in 171 seconds, against a median of 19
-# seconds each when run one at a time, an hour and a half in total. That hour
-# and a half is the same dependency tree, resolved 183 times.
-#
-# The cost is that the first unsatisfiable dependency aborts everything, so a
-# failure falls back to one emerge per package, which keeps a broken package
-# costing one package and keeps a log per package. The fallback does not happen
-# in normal operation.
+# One whole-list emerge first, so portage resolves the dependency tree once
+# instead of once per package -- measured at 171 seconds against an hour and a
+# half. The cost is that the first unsatisfiable dependency aborts everything,
+# so a failure falls back to one emerge per package, which keeps a broken
+# package costing one package and keeps a log per package.
 echo "::: 整体解析"
 failed=()
 if "${EMERGE[@]}" "${atoms[@]}" > /var/log/binhost/whole.log 2>&1; then
