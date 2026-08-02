@@ -31,35 +31,33 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
   // 两种引号都认。check-copy.py 那边的注解自己记着这个专案的 JS 用户字串
   // 一律单引号，而这里只认双引号，于是 t('why') 这样的写法两个循环都跑零次。
   const keysInScript = [...s.matchAll(/\bt\(["']([A-Za-z0-9_]+)["']\)/g)];
-    // t() on the page looks for keys only inside #strings. A data-i18n placed
-    // in the body, as in the legend, is invisible to it -- the two serve
-    // different purposes: one lets applyLang swap the text, the other supplies
-    // strings to dynamically generated rows. Deleting the second as a duplicate
-    // makes hundreds of rows show the key itself, in all three languages, which
-    // is easy to miss when scanning the page.
-    const strings = s.match(/<div id="strings"[\s\S]*?<\/div>/);
-    if (strings) {
-      const inStrings = new Set(
-        [...strings[0].matchAll(/data-i18n="([A-Za-z0-9_]+)"/g)].map(x => x[1]));
-      for (const [, key] of keysInScript) {
-        if (!inStrings.has(key)) {
-          console.error(`!!! ${f}: t("${key}") 无法获取，#strings 里没有这个 key`);
+  // t() looks for keys only inside #strings, so a data-i18n in the body is
+  // invisible to it. The two are not duplicates: one lets applyLang swap the
+  // text, the other supplies strings to dynamically generated rows. Deleting
+  // the second makes hundreds of rows show the key itself, in every language.
+  const strings = s.match(/<div id="strings"[\s\S]*?<\/div>/);
+  if (strings) {
+    const inStrings = new Set(
+      [...strings[0].matchAll(/data-i18n="([A-Za-z0-9_]+)"/g)].map(x => x[1]));
+    for (const [, key] of keysInScript) {
+      if (!inStrings.has(key)) {
+        console.error(`!!! ${f}: t("${key}") 无法获取，#strings 里没有这个 key`);
+        bad++;
+      }
+    }
+    // For keys built up as t("why_" + r.why): every key with that prefix
+    // appearing on the page has to be in there
+    for (const [, pre] of s.matchAll(/\bt\(["']([A-Za-z0-9_]+_)["']\s*\+/g)) {
+      const all = new Set([...s.matchAll(
+        new RegExp('data-i18n="(' + pre + '[A-Za-z0-9_]+)"', 'g'))].map(x => x[1]));
+      for (const k of all) {
+        if (!inStrings.has(k)) {
+          console.error(`!!! ${f}: ${k} 只在正文里，t("${pre}...") 无法获取它`);
           bad++;
         }
       }
-      // For keys built up as t("why_" + r.why): every key with that prefix
-      // appearing on the page has to be in there
-      for (const [, pre] of s.matchAll(/\bt\(["']([A-Za-z0-9_]+_)["']\s*\+/g)) {
-        const all = new Set([...s.matchAll(
-          new RegExp('data-i18n="(' + pre + '[A-Za-z0-9_]+)"', 'g'))].map(x => x[1]));
-        for (const k of all) {
-          if (!inStrings.has(k)) {
-            console.error(`!!! ${f}: ${k} 只在正文里，t("${pre}...") 无法获取它`);
-            bad++;
-          }
-        }
-      }
     }
+  }
   const m = s.match(/window\.MIRROR_I18N = (\{[\s\S]*?\n\};)/);
   if (!m) {
     // data-i18n on the page with no table means the whole block was deleted.
@@ -102,33 +100,20 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
 
   const keys = new Set([...keysInPage, ...keysInScript].map(x => x[1]));
 
-  // Keys built up as t("why_" + r.why) cannot be listed by static scanning. Once
-
-  // a prefix appears in the table, every language must carry it; one missing
-  // shows the untranslated text when the language is switched.
-
+  // Keys built up as t("why_" + r.why) cannot be listed by static scanning.
+  // Once a prefix appears in the table, every language must carry it; one
+  // missing shows the untranslated text when the language is switched.
   const prefixes = new Set();
-
   for (const lang of Object.keys(T)) {
-
     for (const k of Object.keys(T[lang])) {
-
       const i = k.indexOf('_');
-
       if (i > 0) prefixes.add(k.slice(0, i + 1));
-
     }
-
   }
-
   for (const pre of prefixes) {
-
     for (const lang of Object.keys(T)) {
-
       Object.keys(T[lang]).filter(k => k.startsWith(pre)).forEach(k => keys.add(k));
-
     }
-
   }
   for (const lang of LANGS) {
     if (!hadOwn[lang]) {
@@ -138,7 +123,6 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
     }
   }
   {
-    const inPage = new Set(keysInPage.map(x => x[1]));
     const cn = T['zh-cn'] || {};
     const miss = [...new Set(keysInScript.map(x => x[1]))]
       .filter(k => !(k in cn) && !(k in (COMMON['zh-cn'] || {})));
@@ -147,7 +131,7 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
       bad++;
     }
   }
-    for (const lang of Object.keys(T).filter(l => l !== 'zh-cn')) {
+  for (const lang of Object.keys(T).filter(l => l !== 'zh-cn')) {
     const miss = [...keys].filter(k => !(k in T[lang]));
     if (miss.length) {
       console.error(`!!! ${f} [${lang}] 缺少翻译: ${miss.join(', ')}`);
