@@ -39,6 +39,10 @@ EXPORTER_PORT="${EXPORTER_PORT:-9100}"
 # 的是截断的文件，而它照样退出 0——没有任何一处会说出来。
 DISK_WARN_PCT="${DISK_WARN_PCT:-85}"
 DISK_PATH="${DISK_PATH:-/srv/pub}"
+# 部署的那一份是哪个提交。install.sh 与 install-builder.sh 各写一份，两台机器
+# 上的路径不同，谁在就查谁。
+VERSION_FILE="${VERSION_FILE:-}"
+REPO_API="${REPO_API:-https://api.github.com/repos/gentoo-zh/binhost/commits/master}"
 
 problems=0
 failures=()
@@ -50,6 +54,33 @@ bad()  {
 }
 
 days_until() { echo $(( ( $(date -d "$1" +%s) - $(date +%s) ) / 86400 )); }
+
+# --- 部署版本 ------------------------------------------------------------------
+# 两台机器上的脚本都是 rsync 过去的一份拷贝，没有任何一处会说它落后了。建置机
+# 曾经跑了五天旧代码：修好的 bug 没到机器上，每天照发同一份告警，而看告警的人
+# 以为是修好之前那一轮留下的。
+#
+# 不自动更新，只报告。cycle.sh 自己覆写自己有 bash 按字节读脚本那个坑，
+# install-builder.sh 开头的注释已经写明拒绝在建置进行中部署。
+if [[ -z ${VERSION_FILE} ]]; then
+    for f in /usr/local/lib/binhost/VERSION /var/lib/binhost/build/VERSION; do
+        [[ -r ${f} ]] && { VERSION_FILE="${f}"; break; }
+    done
+fi
+if [[ -n ${VERSION_FILE} && -r ${VERSION_FILE} ]]; then
+    here=$(tr -d ' \n' < "${VERSION_FILE}")
+    there=$(curl -fsS --max-time 20 "${REPO_API}" 2>/dev/null |
+            sed -n 's/^  "sha": "\([0-9a-f]\{40\}\)",$/\1/p' | head -1)
+    if [[ -z ${there} ]]; then
+        note "部署版本" "${here:0:8}，取不到远端，跳过比对"
+    elif [[ ${here} == "${there}" ]]; then
+        note "部署版本" "${here:0:8}，与 master 一致"
+    else
+        bad "部署版本" "装的是 ${here:0:8}，master 是 ${there:0:8}，这台机器在跑旧代码"
+    fi
+else
+    bad "部署版本" "没有 VERSION，装的时候没记下提交号"
+fi
 
 # --- signing key --------------------------------------------------------------
 if [[ -d ${SIGNING_GNUPGHOME} ]]; then
