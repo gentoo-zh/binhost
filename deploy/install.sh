@@ -202,14 +202,22 @@ sudo rc-update add cronie default 2>/dev/null || true
 sudo rc-update add rsyncd default 2>/dev/null || true
 sudo rc-update add nginx  default 2>/dev/null || true
 # 起不来要说出来。原来整句 || true，四个服务全挂也照样打印「完成」。
-for s in cronie rsyncd nginx node_exporter; do
-    sudo rc-service \$s restart >/dev/null 2>&1 ||
-        echo "    !! \$s 没起来"
+svc_bad=0
+for s in cronie rsyncd nginx; do
+    sudo rc-service \$s restart >/dev/null 2>&1 || { echo "    !! \$s 未能启动"; svc_bad=1; }
 done
+# node_exporter 是可选的，缺了不影响对外服务
+sudo rc-service node_exporter restart >/dev/null 2>&1 ||
+    echo "    !! node_exporter 未能启动（可选）"
+[ \${svc_bad} -eq 0 ] || { echo "!! 关键服务未能启动" >&2; exit 1; }
 rm -rf '${tmp}'
 "
 
 say "完成"
 echo "站点内容由 deploy/site-sync.sh 自己拉，五分钟内会出现。"
 echo "还要手工配：/etc/binhost/alert.conf、TLS 证书。"
-[ -n "${MONITORS}" ] || echo "未传 MONITORS，9100 对外全关。"
+if [ -n "${MONITORS}" ]; then
+    echo "monitor_hosts: ${MONITORS}"
+else
+    echo "未传 MONITORS，沿用上次安装记录的抓取源；两者都为空时 9100 不对外开放。"
+fi
