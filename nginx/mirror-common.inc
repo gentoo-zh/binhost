@@ -198,6 +198,7 @@ location = /packages.txt {
 location ~* \.json$ {
 	add_header Cache-Control "no-cache";
 	include /etc/nginx/conf.d/headers-site.inc;
+	open_file_cache off;
 }
 
 location ~* \.(css|js)$ {
