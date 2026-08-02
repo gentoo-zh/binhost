@@ -16,11 +16,7 @@ location ^~ /.well-known/acme-challenge/ {
 	root /var/www/acme;
 }
 
-# 目录列表的数据源。页面是静态的，内容从这里取。
-# 用 ^~ 而不是普通前缀：下面按正则匹配目录的规则优先级更高，
-# 否则 /_ls/foo/ 会被那条规则匹配，返回 HTML 而非 JSON。
-# 目录浏览的无脚本回落。/_ls/ 出的是 JSON 给前端用，这里出的是 nginx 自己
-# 画的 HTML 列表，文字浏览器和 curl 直接能读。
+# 目录浏览的无脚本回落：nginx 自己画的 HTML 列表，文字浏览器和 curl 直接能读。
 location ^~ /_raw/ {
 	alias /srv/pub/;
 	autoindex on;
@@ -29,6 +25,8 @@ location ^~ /_raw/ {
 	include /etc/nginx/conf.d/headers-site.inc;
 }
 
+# 目录列表的数据源，页面从这里取 JSON。用 ^~ 而不是普通前缀：下面按正则匹配
+# 目录的规则优先级更高，否则 /_ls/foo/ 会被它接走，返回 HTML 而非 JSON。
 location ^~ /_ls/ {
 	alias /srv/pub/;
 	autoindex on;
@@ -54,12 +52,11 @@ location ^~ /distfiles/ {
 	include /etc/nginx/conf.d/headers-files.inc;
 
 	# 目录请求交给前端渲染。外层那条 location ~ /$ 在 ^~ 命中之后不会被考虑，
-	# 所以这里要再写一次。
+	# 所以这里要再写一次。回的是 _app.html，是页面不是文件，所以用站点那一份
+	# 头：files 那一份的 default-src 'none' 会把它自己的样式和脚本挡掉。
 	location ~ /$ {
 		root /srv/mirrors;
 		add_header Cache-Control "no-cache";
-		# 这里回的是 _app.html，是页面不是文件。换成 files 那一份，
-		# default-src 'none' 会把它自己的样式和脚本一并挡掉。
 		include /etc/nginx/conf.d/headers-site.inc;
 		try_files /_app.html =404;
 	}
@@ -71,13 +68,10 @@ location ^~ /binpkgs/ {
 	root /srv/pub;
 	include /etc/nginx/conf.d/headers-files.inc;
 
-	# 目录请求交给前端渲染。外层那条 location ~ /$ 在 ^~ 命中之后不会被考虑，
-	# 所以这里要再写一次。
+	# 同 /distfiles/ 里那一条
 	location ~ /$ {
 		root /srv/mirrors;
 		add_header Cache-Control "no-cache";
-		# 这里回的是 _app.html，是页面不是文件。换成 files 那一份，
-		# default-src 'none' 会把它自己的样式和脚本一并挡掉。
 		include /etc/nginx/conf.d/headers-site.inc;
 		try_files /_app.html =404;
 	}
