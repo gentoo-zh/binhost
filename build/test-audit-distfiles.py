@@ -320,6 +320,61 @@ case("带 fetch 的那个版本自己算无法获取", lambda: (
     lambda r: "b-1.0.tar.gz" not in r
 )(_fetch_probe()))
 
+RESTRICT_CASES = [
+    ("直接单行赋值", 'RESTRICT="mirror"\n', True),
+    ("注释掉的赋值不算", '# RESTRICT="mirror"\nSLOT="0"\n', False),
+    ("后一次赋值覆盖前一次", 'RESTRICT="mirror"\nRESTRICT=""\n', False),
+    ("引号内跨行", 'RESTRICT="\n\tmirror\n"\n', True),
+    ("+= 追加", 'RESTRICT="bindist"\nRESTRICT+=" mirror"\n', True),
+    ("+= 之后再整个覆盖", 'RESTRICT="mirror"\nRESTRICT="bindist"\n', False),
+    ("条件式里的赋值", 'if [[ -n ${X} ]]; then\n\tRESTRICT="mirror"\nfi\n', True),
+    ("单引号", "RESTRICT='mirror'\n", True),
+    ("不带引号", "RESTRICT=mirror\n", True),
+    ("别处出现 mirror 不算", 'HOMEPAGE="https://mirror.example.org"\n', False),
+]
+for _name, _text, _want in RESTRICT_CASES:
+    case(f"RESTRICT 解析：{_name}",
+         (lambda text=_text, want=_want:
+          ("mirror" in audit.restrict_tokens(text)) is want))
+
+
+def _ledger(content, writable=True):
+    """帐本处于某种状态时 recent_deletions 的行为。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        f = pathlib.Path(tmp) / "reaped.json"
+        if content is not None:
+            f.write_text(content)
+        if not writable:
+            os.chmod(tmp, 0o500)
+        old = audit.LEDGER
+        audit.LEDGER = str(f)
+        try:
+            return audit.recent_deletions(1)
+        finally:
+            audit.LEDGER = old
+            os.chmod(tmp, 0o700)
+
+
+def _raises(fn):
+    try:
+        fn()
+    except audit.LedgerError:
+        return True
+    except Exception:                                       # noqa: BLE001
+        return False
+    return False
+
+
+case("帐本不存在时按首轮处理", lambda: _ledger(None) == 1)
+case("帐本内容损坏时抛出，不当成空帐本",
+     lambda: _raises(lambda: _ledger("{ 坏掉的 json")))
+case("帐本不是清单时抛出",
+     lambda: _raises(lambda: _ledger('{"a": 1}')))
+case("帐本写不进时抛出",
+     lambda: _raises(lambda: _ledger("[]", writable=False)))
+case("帐本正常时累加",
+     lambda: _ledger(f'[[{int(time.time())}, 5]]') == 6)
+
 for name, fn in CASES:
     try:
         ok = bool(fn())

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
 import errno
+import os
 import pathlib
 import json
-import re
 import shutil
 import sys
 import time
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from ebuilds import restrict_tokens                        # noqa: E402
 
 
 def scan(overlay):
@@ -20,8 +23,8 @@ def scan(overlay):
         by_version = {}
         for e in ebuilds:
             ver = e.name[len(pn) + 1:-len(".ebuild")]
-            by_version[ver] = bool(
-                re.search(r"RESTRICT=.*\bmirror\b", e.read_text(errors="replace")))
+            by_version[ver] = "mirror" in restrict_tokens(
+                e.read_text(errors="replace"))
         fallback = any(by_version.values())
 
         for line in man.read_text(errors="replace").splitlines():
@@ -50,21 +53,32 @@ WINDOW_HOURS = 24
 MARKERS = {"layout.conf", "README.txt"}
 
 
+class LedgerError(Exception):
+    pass
+
+
 def recent_deletions(add_count, now=None):
     now = int(time.time()) if now is None else now
     f = pathlib.Path(LEDGER)
     try:
         rows = json.loads(f.read_text())
-    except (OSError, ValueError):
+    except FileNotFoundError:
         rows = []
+    except (OSError, ValueError) as e:
+        raise LedgerError(f"{f} 无法读取：{e}") from e
+    if not isinstance(rows, list):
+        raise LedgerError(f"{f} 内容不是清单")
     rows = [r for r in rows if now - r[0] < WINDOW_HOURS * 3600]
     if add_count:
         rows.append([now, add_count])
+    tmp = f.with_suffix(".json.new")
     try:
         f.parent.mkdir(parents=True, exist_ok=True)
-        f.write_text(json.dumps(rows))
-    except OSError as e:                                   # noqa: BLE001
-        print(f"!! 无法写入 {f}: {e}", file=sys.stderr)
+        tmp.write_text(json.dumps(rows))
+        os.replace(tmp, f)
+    except OSError as e:
+        tmp.unlink(missing_ok=True)
+        raise LedgerError(f"{f} 无法写入：{e}") from e
     return sum(n for _, n in rows)
 
 
@@ -148,8 +162,8 @@ def main(overlay, dest):
         by_version = {}
         for e in d.glob("*.ebuild"):
             ver = e.name[len(pn) + 1:-len(".ebuild")]
-            by_version[ver] = bool(
-                re.search(r'RESTRICT=.*\bfetch\b', e.read_text(errors="replace")))
+            by_version[ver] = "fetch" in restrict_tokens(
+                e.read_text(errors="replace"))
         if not any(by_version.values()):
             continue
         fallback = any(by_version.values())
@@ -175,8 +189,14 @@ def main(overlay, dest):
         refused = (f"本轮 {len(orphan)}/{len(have)} 个文件无人引用，"
                    f"超过 {MAX_REAP_SHARE:.0%}")
 
-    spent = recent_deletions(0)
-    budget = max(0, int(len(have) * MAX_REAP_SHARE) - spent)
+    spent, budget = 0, 0
+    if not refused:
+        try:
+            spent = recent_deletions(0)
+        except LedgerError as e:
+            refused = f"{e}，跨轮预算无依据"
+        else:
+            budget = max(0, int(len(have) * MAX_REAP_SHARE) - spent)
     deleted, failed = ([], []) if refused else reap(orphan, paths, budget=budget)
 
     restricted, restricted_failed = [], []
@@ -192,7 +212,13 @@ def main(overlay, dest):
                 continue
             (restricted if recycle(path) else restricted_failed).append(f)
 
-    recent = recent_deletions(len(deleted))
+    recent = spent
+    if deleted:
+        try:
+            recent = recent_deletions(len(deleted))
+        except LedgerError as e:
+            print(f"!! 帐本未记下本轮的 {len(deleted)} 个：{e}", file=sys.stderr)
+            failed = failed + deleted
     if not refused and budget == 0 and orphan:
         refused = (f"最近 {WINDOW_HOURS} 小时累计清理 {spent} 个，"
                    f"已达镜像的 {MAX_REAP_SHARE:.0%}，本轮未清理")

@@ -12,7 +12,8 @@ if not (ROOT / "deploy").is_dir() or not (ROOT / "site").is_dir():
 FPR = re.compile(r"\b((?:[0-9A-F]{4}[  ]?){9}[0-9A-F]{4})\b")
 
 SKIP_DIRS = {".git", "node_modules"}
-SKIP_FILES = {"build/test-fingerprint-consistent.py"}
+SKIP_FILES = {"build/test-fingerprint-consistent.py",
+              "build/test-shell-behaviour.sh"}
 
 found = {}
 for p in sorted(ROOT.rglob("*")):

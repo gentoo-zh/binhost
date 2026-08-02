@@ -16,9 +16,10 @@ HEADER = "ACCEPT_KEYWORDS: ~amd64\nPACKAGES: 999\nTIMESTAMP: 1\nVERSION: 0"
 HEADER_WITH_REV = HEADER + '\nREPO_REVISIONS: {}'
 
 
-def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None):
+def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None, PATH=None):
     cp = cpv.rsplit("-", 1)[0]
-    lines = [f"CPV: {cpv}", f"PATH: {cp}/{cpv.split('/')[-1]}.gpkg.tar", f"REPO: {repo}"]
+    path = f"{cp}/{cpv.split('/')[-1]}.gpkg.tar" if PATH is None else PATH
+    lines = [f"CPV: {cpv}", f"PATH: {path}", f"REPO: {repo}"]
     if build_id is not None:
         lines.append(f"BUILD_ID: {build_id}")
     if restrict:
@@ -159,6 +160,28 @@ case("overlay mask 掉之后不再 stage", lambda: (
 case("没 mask 时照旧收录", lambda: (
     cpvs(run([stanza("app-misc/a-1")], overlay_has=["app-misc/a-1"])[0])
     == ["app-misc/a-1"]))
+
+case("PATH 是绝对路径时整轮拒绝", lambda: (
+    run([stanza("app-misc/a-1", PATH="/etc/passwd")])[2] is not None))
+
+case("PATH 里有 .. 时整轮拒绝", lambda: (
+    run([stanza("app-misc/a-1", PATH="../../etc/passwd")])[2] is not None))
+
+case("PATH 中段有 .. 时整轮拒绝", lambda: (
+    run([stanza("app-misc/a-1", PATH="app-misc/../../x.gpkg.tar")])[2] is not None))
+
+case("PATH 为空时整轮拒绝", lambda: (
+    run([stanza("app-misc/a-1", PATH="")])[2] is not None))
+
+case("PATH 带前后空白时整轮拒绝", lambda: (
+    run([stanza("app-misc/a-1", PATH=" app-misc/a-1.gpkg.tar")])[2] is not None))
+
+case("正常的相对路径照常通过", lambda: (
+    run([stanza("app-misc/a-1", PATH="app-misc/a-1-1.gpkg.tar")])[2] is None))
+
+case("拒绝时一个包都不 stage", lambda: (
+    run([stanza("app-misc/a-1", PATH="app-misc/ok.gpkg.tar"),
+         stanza("app-misc/b-1", PATH="/etc/passwd")])[0] == []))
 
 bad = 0
 for name, fn in CASES:
