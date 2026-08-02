@@ -1,20 +1,16 @@
 #!/bin/bash
 # Pull the published site onto the mirror. Runs from cron on the mirror itself.
 #
-# The mirror pulls rather than CI pushing, so nothing outside ever holds a key
-# that reaches this machine and there is no inbound path to abuse. The cost is
-# that a change lands within the poll interval instead of instantly, which for
-# a static site is not a cost worth paying anything for.
+# The mirror pulls rather than CI pushing, so nothing outside holds a key that
+# reaches this machine. A change lands within the poll interval instead of
+# instantly, which for a static site costs nothing.
 #
-# Only site content is synced. The nginx configuration stays a manual, root
-# operation: a repository push should not be able to change how the server
-# behaves.
+# Only site content. The nginx configuration stays a manual root operation: a
+# repository push must not be able to change how the server behaves.
 #
-# --safe-links on every transfer. rsync -a includes -l, so a symlink in the
-# repository arrives as a symlink on the mirror, and nginx has no
-# disable_symlinks. site/assets/x -> / would publish every world-readable file
-# on the machine under /assets/x/. That is exactly the thing the paragraph above
-# says a push must not be able to do.
+# --safe-links on every transfer for the same reason. rsync -a includes -l and
+# nginx has no disable_symlinks here, so site/assets/x -> / would publish every
+# world-readable file on the machine under /assets/x/.
 
 set -euo pipefail
 
@@ -52,19 +48,14 @@ rsync -a --safe-links --delete "${WORK}/site/assets/" "${DEST}/assets/"
 # overlay, so its content follows the overlay rather than this repository's
 # commits.
 #
-# The signing public key is the trust anchor users import. Carried by this
-# five-minute automatic channel, anyone who can change the repository could
-# replace it and the mirror would follow, while users still see our domain. So
-# it is synced only when its fingerprint matches the one recorded on the server,
-# which is read from the machine and not from the repository.
+# 签名公钥是用户导入的信任锚。走这条五分钟一次的自动通道，能改仓库的人就能
+# 换掉它而镜像照跟，用户看到的仍是我们的域名。所以只有指纹与本机记录一致时
+# 才同步，那份记录读自机器，不读自仓库。
 #
-# 文件里的每一把都要在记录里，有一把对上并不足够。轮替时那份 .asc 会同时装着
-# 新旧两把，所以记录这一侧允许列多个指纹，一行一个。
-#
-# 「有一把对上就放行」是错的，而且比只看第一把更糟：能改仓库的人只要把自己
-# 的公钥连同我们的一起放进去，那份文件就照样通过，镜像照样发布，而站点第 1 步
-# 的 --lsign-key binhost@gentoozh.org 会签到排在前面的那一把——也就是他的。
-# 实测确认过。这道门守的就是这件事。
+# 文件里的每一把都要在记录里，有一把对上不算数：轮替时 .asc 会同时装着新旧
+# 两把，所以记录这一侧允许一行一个列多把。放宽成「有一把对上就放行」比只看
+# 第一把更糟——把自己的公钥连同我们的一起放进去就能通过，而站点第 1 步的
+# --lsign-key 会签到排在前面的那一把。实测确认过。
 FPR_FILE="${FPR_FILE:-/etc/binhost/signing-key.fpr}"
 if [[ -r ${FPR_FILE} ]]; then
     mapfile -t want < <(tr -d ' \r' < "${FPR_FILE}" | grep -oE '[0-9A-Fa-f]{40}' | tr 'a-f' 'A-F')

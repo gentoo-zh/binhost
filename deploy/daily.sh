@@ -66,9 +66,8 @@ ${out}"
 #
 # A failure here ends the round. The copy is the only source of truth for what
 # is still referenced, and audit-distfiles.py retires whatever it does not find
-# there. A fetch that failed leaves the tree at yesterday's commit -- harmless.
-# A reset that stopped halfway leaves it at neither, and that half tree would be
-# read as though the missing packages had been treecleaned.
+# there. A failed fetch leaves yesterday's commit, which is harmless; a reset
+# that stopped halfway leaves a tree that reads as a mass treeclean.
 if ! step "overlay 更新" git -C "${OVERLAY}" fetch --quiet origin master ||
    ! step "overlay 切换" git -C "${OVERLAY}" reset --quiet --hard origin/master; then
     echo "!! overlay 没有更新成功，这一轮到此为止" >&2
