@@ -95,6 +95,7 @@ location ^~ /binpkgs/ {
 		root /srv/pub;
 		add_header Cache-Control "no-cache";
 		include /etc/nginx/conf.d/headers-files.inc;
+		open_file_cache off;
 	}
 
 	# 索引会变。缓存久了用户会拿着旧索引去要新文件，只能拿到 404。
@@ -105,6 +106,7 @@ location ^~ /binpkgs/ {
 		# 由中间缓存决定。线上实测确实发了两条。
 		add_header Cache-Control "public, max-age=300, must-revalidate";
 		include /etc/nginx/conf.d/headers-files.inc;
+		open_file_cache off;
 	}
 }
 
@@ -191,6 +193,7 @@ location = /packages.txt {
 	charset utf-8;
 	add_header Cache-Control "no-cache";
 	include /etc/nginx/conf.d/headers-site.inc;
+	open_file_cache off;
 }
 
 # json 是数据，每次都要验；css 与 js 的引用带内容指纹（见 render-chrome.py），
@@ -219,6 +222,7 @@ location ~* \.(css|js)$ {
 location ~ /$ {
 	add_header Cache-Control "no-cache";   # 同上，目录和首页也走 index.html
 	include /etc/nginx/conf.d/headers-site.inc;
+	open_file_cache off;
 	try_files ${uri}index.html /_app.html;
 }
 
@@ -236,5 +240,6 @@ location / {
 	# 所以缓存头写在这里。
 	add_header Cache-Control "no-cache";
 	include /etc/nginx/conf.d/headers-site.inc;
+	open_file_cache off;
 	try_files $uri $uri.html $uri/index.html $uri/ =404;
 }
