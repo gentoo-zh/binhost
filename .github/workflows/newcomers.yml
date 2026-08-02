@@ -16,7 +16,7 @@ jobs:
     outputs:
       rows: ${{ steps.pick.outputs.rows }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Fetch the overlay
         run: |
@@ -57,7 +57,7 @@ jobs:
     if: needs.find.outputs.rows != ''
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
 
@@ -101,12 +101,12 @@ jobs:
             body=$(printf '%s\n' \
               "overlay 里的 \`${cp}\` ${ver} 有构建系统，可以在 amd64 上安装，但不在收录清单上。" \
               "" \
-              "合并即收录，下一轮构建会带上它；不收就关掉这个 PR，并把它连同原因写进 \`build/excluded.txt\`，否则每天还会再开一次。" \
+              "合并表示收录，下一轮构建会带上它。若不收录，请关闭本 PR，并将它连同原因写进 \`build/excluded.txt\`，否则每天会重新提出。" \
               "" \
               "清单顺序不分大小写，这里只插一行，没有重排。加进去之后 \`validate.py\` 已执行，PR 上不会再跑：GITHUB_TOKEN 开的 PR 不触发 workflow。")
             if ! gh pr create --base master --head "${branch}" \
                  --title "build: add ${cp}" --body "${body}" >> /tmp/urls.txt; then
-              echo "  ${cp} 开 PR 失败，撤掉分支 ${branch}"
+              echo "  ${cp} PR 创建失败，删除远端分支 ${branch}"
               git push -q origin --delete "${branch}" || true
             fi
           done
@@ -126,7 +126,7 @@ jobs:
         run: |
           [ -n "${TELEGRAM_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT:-}" ] || exit 0
           [ -n "${URLS:-}" ] || exit 0
-          text=$(printf '%s\n%s' "overlay 有新包待判断，合并即收录，不收就关掉：" "${URLS}")
+          text=$(printf '%s\n%s' "overlay 有待审核的新包，合并表示收录，不收录请关闭 PR：" "${URLS}")
           curl -fsS --max-time 20 -o /dev/null \
             "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=${TELEGRAM_CHAT}" \

@@ -19,7 +19,7 @@ if ${REMOTE} "[ -e '${ROOT}/stage/build.lock' ] && ! flock -n '${ROOT}/stage/bui
     echo "有一轮构建正在进行（${ROOT}/stage/build.lock）。" >&2
     echo "等它结束再部署；确实要现在覆盖就传 FORCE=1。" >&2
     [ "${FORCE:-}" = 1 ] || exit 1
-    echo "FORCE=1，照样部署。" >&2
+    echo "已设置 FORCE=1，继续部署。" >&2
 else
     echo "  没有"
 fi
@@ -48,7 +48,7 @@ if sudo test -e /etc/binhost/alert.conf; then
     sudo chmod 600 /etc/binhost/alert.conf
     sudo -u ${BUILD_USER} test -r /etc/binhost/alert.conf &&
         echo '    ${BUILD_USER} 能读到' ||
-        echo '    !! ${BUILD_USER} 仍然读不到，告警会是哑的'
+        echo '    !! ${BUILD_USER} 仍然无法读取，告警将无法传送'
 else
     echo '    /etc/binhost/alert.conf 还没有，告警不会发出'
 fi
@@ -72,5 +72,5 @@ sudo systemctl enable --now binhost-build.timer binhost-status.timer
 systemctl list-timers --all --no-pager | grep binhost || true"
 
 say "完成"
-echo "还要手工配：签名密钥（${ROOT}/gnupg）、到镜像机的免密 ssh、"
+echo "尚需手动设置：签名密钥（${ROOT}/gnupg）、到镜像机的免密 ssh、"
 echo "告警凭据 /etc/binhost/alert.conf。"

@@ -47,7 +47,7 @@ def main():
     if check and stale:
         print("!!! 这些页面和 build/chrome/ 下的模板不一致：" + "，".join(stale),
               file=sys.stderr)
-        print("    跑 python3 build/render-chrome.py 重新生成", file=sys.stderr)
+        print("    执行 python3 build/render-chrome.py 重新生成", file=sys.stderr)
         return 1
     if check:
         print("  共用部分: 各页与模板一致")

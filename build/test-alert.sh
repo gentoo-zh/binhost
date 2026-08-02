@@ -108,7 +108,7 @@ if [[ $(id -u) -eq 0 ]]; then
 else
     out=$(caller "${tmp}/full.conf"); rc=$?
     check "conf 不可读时调用者不受影响" "0 REACHED_END" "${rc} ${out}"
-    if grep -q "读不到" "${tmp}/err.txt"; then
+    if grep -q "无法读取" "${tmp}/err.txt"; then
         echo "  ✓ 不可读时有提示"; pass=$((pass + 1))
     else
         echo "  ✗ 不可读时无提示"; fail=$((fail + 1))
