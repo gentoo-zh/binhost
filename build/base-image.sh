@@ -84,7 +84,7 @@ if command -v eclean-pkg >/dev/null; then
     eclean-pkg || echo "!! eclean-pkg 未完成，本次未清理缓存"
 else
     emerge -q app-portage/gentoolkit && eclean-pkg ||
-        echo "!! 安装失败 gentoolkit，缓存这次没清"
+        echo "!! gentoolkit 安装失败，本次未清理缓存"
 fi
 
 rm -rf /etc/portage/gnupg/private-keys-v1.d \

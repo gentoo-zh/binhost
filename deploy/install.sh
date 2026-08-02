@@ -9,6 +9,9 @@ MONITORS="${MONITORS:-}"
 SSH_PORT="${SSH_PORT:-60001}"
 cd "$(dirname "$0")/.."
 
+[[ ${SSH_PORT} =~ ^[0-9]+$ ]] && (( SSH_PORT >= 1 && SSH_PORT <= 65535 )) ||
+    { echo "SSH_PORT 不是 1-65535 的整数：${SSH_PORT}" >&2; exit 1; }
+
 COMMIT="$(git rev-parse HEAD)"
 git diff --quiet && git diff --cached --quiet || COMMIT="${COMMIT}-dirty"
 
@@ -44,6 +47,13 @@ echo '--- rsync'
 sudo install -m644 rsyncd.conf /etc/rsyncd.conf
 
 echo '--- 防火墙'
+listening=\$(sudo sshd -T 2>/dev/null | awk '/^port /{print \$2}')
+if [ -n "\${listening}" ] && ! echo "\${listening}" | grep -qx '${SSH_PORT}'; then
+    echo "!! sshd 实际监听 \${listening}，而防火墙只会放行 ${SSH_PORT}" >&2
+    echo "   套用后当前连线会断，且没有第二条路进来。中止。" >&2
+    echo "   确认无误时以 SKIP_SSH_PORT_CHECK=1 重新执行。" >&2
+    [ -n "${SKIP_SSH_PORT_CHECK:-}" ] || exit 1
+fi
 sed 's/__SSH_PORT__/${SSH_PORT}/g' nftables.conf > nftables.conf.real
 sudo nft -c -f nftables.conf.real
 sudo install -m644 nftables.conf.real /etc/nftables.conf
@@ -71,7 +81,7 @@ if sudo test -r \"\${CERT}/fullchain.pem\" && sudo test -r \"\${CERT}/privkey.pe
     sudo install -m644 distfiles.conf /etc/nginx/conf.d/distfiles.conf
 else
     if sudo grep -qs 'listen 443' /etc/nginx/conf.d/distfiles.conf; then
-        echo '    !! 读不到证书，但现有配置在监听 443；保持原样不动' >&2
+        echo '    !! 无法读取证书，但现有配置在监听 443；保持原样不动' >&2
         echo '       证书确实没了就先修证书，再重新执行本脚本' >&2
     else
         echo '    证书还没有，先只配 HTTP；签发之后重新执行本脚本'
@@ -140,7 +150,7 @@ rm -rf '${tmp}'
 
 say "完成"
 echo "站点内容由 deploy/site-sync.sh 自己拉，五分钟内会出现。"
-echo "还要手工配：/etc/binhost/alert.conf、TLS 证书。"
+echo "尚需手动设置：/etc/binhost/alert.conf、TLS 证书。"
 if [ -n "${MONITORS}" ]; then
     echo "monitor_hosts: ${MONITORS}"
 else

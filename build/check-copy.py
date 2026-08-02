@@ -84,36 +84,69 @@ COMMENT = {
 NO_SUFFIX = {"cron.d-binhost", "logrotate-binhost", "rsyncd.conf", "nftables.conf"}
 
 
-EMIT_SUFFIX = (".sh", ".py", ".js", ".yml", ".yaml")
+SELF = {"check-copy.py", "test-check-copy.py"}
+
+EMIT_SUFFIX = (".sh", ".py", ".js", ".yml", ".yaml", ".html", ".css")
 CJK = re.compile(r'[\u4e00-\u9fff]')
-QUOTED = re.compile(r'"([^"]*)"|\'([^\']*)\'')
+
+STRINGS = re.compile(
+    r'"""([\s\S]*?)"""'
+    r"|'''([\s\S]*?)'''"
+    r"|`([^`]*)`"
+    r'|"((?:[^"\\\n]|\\.)*)"'
+    r"|'((?:[^'\\\n]|\\.)*)'",
+)
+HEREDOC = re.compile(
+    r"<<-?\s*['\"]?([A-Za-z_][A-Za-z0-9_]*)['\"]?[^\n]*\n([\s\S]*?)\n[ \t]*\1\b")
+
+
+def emitted_chunks(text, suffix):
+    out = []
+    if suffix in (".sh", ".yml", ".yaml"):
+        for m in HEREDOC.finditer(text):
+            out.append((text[:m.start()].count("\n") + 1, m.group(2)))
+    for m in STRINGS.finditer(text):
+        s = next((g for g in m.groups() if g is not None), "")
+        out.append((text[:m.start()].count("\n") + 1, s))
+    return [(n, s) for n, s in out if CJK.search(s)]
 
 
 def check_emitted(root):
     bad = 0
     for f in sorted(pathlib.Path(root).rglob("*")):
-        if not f.is_file() or f.suffix not in EMIT_SUFFIX or f.name == "check-copy.py":
+        if not f.is_file() or f.suffix not in EMIT_SUFFIX or f.name in SELF:
             continue
-        if any(part in (".git", "site") for part in f.parts):
+        if ".git" in f.parts:
             continue
         hits = []
-        for i, line in enumerate(f.read_text(errors="replace").splitlines(), 1):
-            if line.strip().startswith("#"):
-                continue
-            for m in QUOTED.finditer(line):
-                s = m.group(1) if m.group(1) is not None else m.group(2)
-                if not CJK.search(s):
-                    continue
-                for w in COLLOQUIAL_EMIT:
-                    if w in s:
-                        hits.append(f"{i}: 口语词「{w}」  {line.strip()[:60]}")
-                        break
+        for line, chunk in emitted_chunks(f.read_text(errors="replace"), f.suffix):
+            for w in COLLOQUIAL_EMIT:
+                if w in chunk:
+                    hits.append(f"{line}: 口语词「{w}」  {chunk.strip()[:60]}")
+                    break
         if hits:
             print(f"!!! {f}", file=sys.stderr)
             for h in hits:
                 print(f"      {h}", file=sys.stderr)
             bad += 1
     return bad
+
+
+BLOCK = re.compile(r"/\*([\s\S]*?)\*/|<!--([\s\S]*?)-->")
+
+
+def comment_chunks(text, pat):
+    out = []
+    if pat is None:
+        return list(enumerate(text.splitlines(), 1))
+    for m in BLOCK.finditer(text):
+        s = next((g for g in m.groups() if g is not None), "")
+        out.append((text[:m.start()].count("\n") + 1, s))
+    for i, line in enumerate(text.splitlines(), 1):
+        m = re.search(pat, line)
+        if m:
+            out.append((i, next((g for g in m.groups() if g), "")))
+    return out
 
 
 def check_comments(root):
@@ -127,25 +160,18 @@ def check_comments(root):
             pat = r"#(.*)$"
         else:
             continue
-        if f.name == "check-copy.py":
+        if f.name in SELF:
             continue
         try:
-            lines = f.read_text().splitlines()
+            text = f.read_text()
         except UnicodeDecodeError:
             continue
         hits = []
-        for i, line in enumerate(lines, 1):
-            if pat is None:
-                texts = [line]
-            else:
-                m = re.search(pat, line)
-                texts = ([next((g for g in m.groups() if g), "")] if m else []) + (
-                    re.findall(r'"([^"]*[\u4e00-\u9fff][^"]*)"', line)
-                    + re.findall(r"'([^']*[\u4e00-\u9fff][^']*)'", line))
-            for chunk in texts:
-                for w in COLLOQUIAL:
-                    if w in chunk:
-                        hits.append(f"{i}: 口语词「{w}」  {line.strip()[:60]}")
+        for line, chunk in comment_chunks(text, pat):
+            for w in COLLOQUIAL:
+                if w in chunk:
+                    hits.append(f"{line}: 口语词「{w}」  {chunk.strip()[:60]}")
+                    break
         if hits:
             bad += 1
             print(f"!!! {f}")

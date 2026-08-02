@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     container: gentoo/stage3:amd64
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Fetch the overlay
         run: |
@@ -39,6 +39,9 @@ jobs:
       - name: Adding a package to the list
         run: python3 build/test-add-package.py
 
+      - name: Version comparison fixture still matches portage
+        run: python3 build/test-vercmp-fixture.py
+
       - name: install.sh covers what the scripts reach for
         run: python3 build/test-install-covers-refs.py
 
@@ -66,7 +69,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
       - name: Commit messages follow the convention
@@ -79,7 +82,7 @@ jobs:
   python:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Compile
         run: python3 -m py_compile build/*.py deploy/*.py
       - name: Classifier against real log shapes
@@ -114,7 +117,7 @@ jobs:
   site:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Parse the scripts
         run: |
           for f in site/assets/*.js; do node --check "$f" || exit 1; done
@@ -124,6 +127,8 @@ jobs:
 
       - name: Check i18n tables
         run: node build/check-i18n.js site
+      - name: Version order on the packages page
+        run: node build/test-vercmp.js
       - name: Shared chrome is up to date
         run: python3 build/render-chrome.py --check
       - name: Check nav and footer
@@ -140,24 +145,29 @@ jobs:
         run: python3 build/check-panes.py
       - name: Check copy
         run: python3 build/check-copy.py site
+      - name: The copy checker still catches every shape
+        run: python3 build/test-check-copy.py
       - name: Check stylesheet
         run: python3 build/check-css.py site
 
   shell:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: shellcheck
         run: shellcheck build/*.sh deploy/*.sh deploy-site.sh
 
       - name: Alerting survives a broken alert.conf
         run: bash build/test-alert.sh
 
+      - name: Delete budgets, DONE markers and index consistency
+        run: bash build/test-shell-behaviour.sh
+
   nginx:
     runs-on: ubuntu-latest
     container: nginx:mainline
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Parse nginx config
         run: |
           apt-get update -qq && apt-get install -y -qq openssl curl
@@ -233,7 +243,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Parse the firewall rules
         run: |

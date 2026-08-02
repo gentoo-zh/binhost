@@ -229,10 +229,10 @@ def main(overlay, dest):
           f"已无人引用 {len(orphan)}，本轮清理 {len(deleted) + len(restricted)}"
           f"（其中禁止镜像 {len(restricted)}）")
     if restricted_failed:
-        print(f"!! {len(restricted_failed)} 个禁止镜像的文件没能回收，还在对外发",
+        print(f"!! {len(restricted_failed)} 个禁止镜像的文件回收失败，仍可公开存取",
               file=sys.stderr)
     if failed:
-        print(f"!! {len(failed)} 个没能回收，本轮清理没有完成", file=sys.stderr)
+        print(f"!! {len(failed)} 个回收失败，本轮清理未完成", file=sys.stderr)
     if refused:
         print(f"!! 拒绝清理：{refused}", file=sys.stderr)
 

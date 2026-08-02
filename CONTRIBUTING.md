@@ -39,7 +39,7 @@ python3 build/validate.py /var/db/repos/gentoo-zh
 
 ## 合并之后
 
-合并不等于立即可用。包在下一轮构建时产出，构建每晚 02:00 由 binhost-build.timer 触发，产物签名后发布。
+合并不等于立即可用。包在下一轮构建时产出，构建由 binhost-build.timer 在每日 16:00（Asia/Shanghai）触发，另有最多 15 分钟的随机延迟，产物签名后发布。
 
 清单决定构建什么。构建一个包会把它的依赖一并编出来，其中属于本 overlay 的
 那些也会随之发布，因此实际发布数多于清单条数。
@@ -72,7 +72,7 @@ test: skip repository-level tests on build-only machines
 ```
 
 `scope` 要指得到这个提交改动的部分：脚本名去掉扩展名（`stage-index`、`site-sync`），
-一个脚本装不下就用目录名（`build`、`deploy`、`site`、`nginx`），改 CI 用 `ci`。
+改动涉及多个脚本时用目录名（`build`、`deploy`、`site`、`nginx`），改 CI 用 `ci`。
 一族文件共用横线前的那一段，所以动了几个 `test-*.py` 写 `test:` 即可。
 
 一个主题只讲一件事。「删对文件、发得出告警、看得见 distfiles」是三个提交。
@@ -81,7 +81,7 @@ test: skip repository-level tests on build-only machines
 缩进的引文和断不开的地址不计。
 
 正文写**为什么**，不写做了什么——做了什么 diff 里有，改动的由来、原先错在哪、
-怎么验证的，diff 里没有。测试怎么跑、跑出什么，同样写在正文。
+验证方法在 diff 里看不出来。执行了哪些命令、结果如何，同样写在正文。
 
 中文不用全角引号 `「」`『』，代码和字面量用反引号。工具署名一律不写。这两条
 check-commits.py 都会查。

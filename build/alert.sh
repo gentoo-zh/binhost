@@ -4,7 +4,7 @@ alert() {
     local conf="${ALERT_CONF:-/etc/binhost/alert.conf}"
 
     if [[ -e ${conf} && ! -r ${conf} ]]; then
-        echo "!! ${conf} 读不到（当前用户 $(id -un)），告警传送失败" >&2
+        echo "!! ${conf} 无法读取（当前用户 $(id -un)），告警传送失败" >&2
         return 0
     fi
     [[ -r ${conf} ]] || return 0

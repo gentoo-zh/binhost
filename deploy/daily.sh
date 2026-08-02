@@ -44,7 +44,7 @@ ${out}"
 
 if ! step "overlay 更新" git -C "${OVERLAY}" fetch --quiet origin master ||
    ! step "overlay 切换" git -C "${OVERLAY}" reset --quiet --hard origin/master; then
-    echo "!! overlay 没有更新成功，这一轮到此为止" >&2
+    echo "!! overlay 更新失败，本轮终止" >&2
     exit 1
 fi
 
