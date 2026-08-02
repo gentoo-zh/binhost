@@ -146,8 +146,7 @@
        每页的 i18n 表本来就有 title，取它拼上站名；没有 title 的页面
        （首页、文件浏览器）只用站名。 */
     var pageTitle = val(l, 'title');
-    /* 没有 title 键的页面（设计语言页是单语的）保持 HTML 里那一份，
-       否则切一次语言就把它抹成站名。 */
+    /* 没有 title 键的页面保持 HTML 里那一份，否则切一次语言就把它抹成站名。 */
     if (pageTitle) document.title = pageTitle + ' — distfiles.gentoozh.org';
     renderTheme();
     store('mirror-lang', l);

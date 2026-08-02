@@ -65,9 +65,8 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
     // data-i18n on the page with no table means the whole block was deleted.
     // This used to continue, and CI stayed green.
     //
-    // 除非用到的键 strings.js 全都有。单语页（design.html）的正文不翻译，
-    // 但导航栏和页脚是全站共用的，同样标了 data-i18n，那几个键都在共用表里，
-    // 这种页面本来就不需要自己的表。
+    // 除非用到的键 strings.js 全都有：正文不翻译、只有导航栏和页脚带
+    // data-i18n 的页面，那几个键都在共用表里，本来就不需要自己的表。
     const own = [...keysInPage, ...keysInScript].map(x => x[1]);
     const missing = own.filter(k => !LANGS.every(l => COMMON[l] && k in COMMON[l]));
     if (missing.length) {
