@@ -228,15 +228,28 @@ def main(overlay, dest):
 
     # A fetch-restricted package has no URL in SRC_URI at all, so nobody can
     # mirror it and it does not count as missing.
+    # 按版本归属，和 scan() 里 mirror 那一份同一套。按整个目录取或时，一个包里
+    # 只要有一个版本带 fetch，同目录其他版本的文件也会被当成取不到，缺档从此
+    # 不再报出来。oraclejdk-bin 就是这样：8.391 带 fetch，21.0.1 不带。
     unfetchable = set()
     for man in overlay.glob("*/*/Manifest"):
         d = man.parent
-        if not any(re.search(r'RESTRICT=.*\bfetch\b', e.read_text(errors="replace"))
-                   for e in d.glob("*.ebuild")):
+        pn = d.name
+        by_version = {}
+        for e in d.glob("*.ebuild"):
+            ver = e.name[len(pn) + 1:-len(".ebuild")]
+            by_version[ver] = bool(
+                re.search(r'RESTRICT=.*\bfetch\b', e.read_text(errors="replace")))
+        if not any(by_version.values()):
             continue
+        fallback = any(by_version.values())
         for line in man.read_text(errors="replace").splitlines():
-            if line.startswith("DIST "):
-                unfetchable.add(line.split()[1])
+            if not line.startswith("DIST "):
+                continue
+            name = line.split()[1]
+            hit = [v for v in by_version if v in name]
+            if by_version[max(hit, key=len)] if hit else fallback:
+                unfetchable.add(name)
 
     mirrorable = {f for f, us in users.items() if any(not r for _, r in us)} - unfetchable
     never = {f for f, us in users.items() if us and all(r for _, r in us)}
