@@ -15,14 +15,21 @@ function elem(attrs, text) {
   const a = Object.assign({}, attrs);
   let inner = text || "";
   const e = {
-    dataset: { i18n: a["data-i18n"], i18nHtml: a["data-i18n-html"], i18nHref: a["data-i18n-href"] },
+    dataset: { i18n: a["data-i18n"], i18nHtml: a["data-i18n-html"], i18nHref: a["data-i18n-href"],
+               mode: a["data-mode"], lang: a["data-lang"] },
     textContent: text || "", hidden: false, style: {},
     getAttribute: (k) => a[k], setAttribute: (k, v) => { a[k] = v; },
     classList: { toggle() {}, add() {}, remove() {}, contains: () => false },
     _h: {},
     addEventListener(type, f) { (e._h[type] = e._h[type] || []).push(f); },
     click() { (e._h.click || []).forEach((f) => f({ stopPropagation() {}, target: e })); },
-    appendChild() {}, focus() {}, contains: () => false,
+    key(k) {
+      const ev = { key: k, preventDefault() {}, stopPropagation() {}, target: e };
+      for (let n = e; n; n = n._up) (n._h.keydown || []).forEach((f) => f(ev));
+      ((global.document._h || {}).keydown || []).forEach((f) => f(ev));
+    },
+    _up: null,
+    appendChild() {}, focus() { global.document.activeElement = e; }, contains: () => false,
   };
   Object.defineProperty(e, "innerHTML", { get: () => inner, set: (v) => { inner = v; } });
   Object.defineProperty(e, "lastChild", {
@@ -70,6 +77,7 @@ function menuRun() {
   items.forEach((i) => { i.innerHTML = "<svg></svg><span></span>"; });
   const menu = elem({ class: "menu", hidden: true });
   menu.hidden = true;
+  items.forEach((i) => { i._up = menu; });
   menu.querySelectorAll = () => ({ length: items.length, forEach: (f) => items.forEach(f) });
   const btn = elem({ class: "icon-btn theme-btn", "aria-expanded": "false" });
   const wrap = elem({ class: "menu-wrap" });
@@ -82,7 +90,9 @@ function menuRun() {
     querySelector: (s) => (/menu-wrap/.test(s) ? wrap : null),
     querySelectorAll: () => ({ length: 0, forEach() {} }),
     getElementById: () => null, createElement: () => elem({}, ""),
-    addEventListener() {}, dispatchEvent() {}, title: "",
+    _h: {},
+    addEventListener(type, f) { (this._h[type] = this._h[type] || []).push(f); },
+    dispatchEvent() {}, title: "", activeElement: null,
   };
   global.window = { MIRROR_I18N: {}, addEventListener() {} };
   global.navigator = { language: "zh-CN" };
@@ -104,6 +114,37 @@ check("再点收起", m.menu.hidden === true && m.btn.getAttribute("aria-expande
 m.btn.click();
 m.items[1].click();
 check("选一项之后菜单收起", m.menu.hidden === true);
+
+{
+  const { menu, btn, items } = menuRun();
+  const at = () => (global.document.activeElement || {}).getAttribute("data-mode");
+
+  btn.key("ArrowDown");
+  check("在按钮上按下箭头会展开", menu.hidden === false, String(menu.hidden));
+  check("并且聚焦到当前选中的那一项", at() === "system", String(at()));
+
+  global.document.activeElement.key("ArrowDown");
+  check("下箭头绕回第一项", at() === "light", String(at()));
+  global.document.activeElement.key("End");
+  check("End 到最后一项", at() === "system", String(at()));
+  global.document.activeElement.key("Home");
+  check("Home 到第一项", at() === "light", String(at()));
+  global.document.activeElement.key("ArrowUp");
+  check("上箭头从第一项绕到最后一项", at() === "system", String(at()));
+
+  const zeros = items.filter((i) => i.getAttribute("tabindex") === "0");
+  check("roving tabindex 只有一个 0", zeros.length === 1, String(zeros.length));
+
+  global.document.activeElement.key("Escape");
+  check("Escape 收起菜单", menu.hidden === true, String(menu.hidden));
+  check("并且焦点回到按钮", global.document.activeElement === btn, "焦点不在按钮上");
+
+  items[1].click();
+  check("选一项之后 aria-checked 跟着换",
+        items[1].getAttribute("aria-checked") === "true" &&
+        items[2].getAttribute("aria-checked") === "false",
+        items.map((i) => i.getAttribute("data-mode") + "=" + i.getAttribute("aria-checked")).join(" "));
+}
 
 console.log(failed ? `\n  ${failed} 项不通过` : "\n  语言链接与主题菜单：全部通过");
 process.exit(failed ? 1 : 0);

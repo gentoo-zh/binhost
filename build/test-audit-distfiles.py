@@ -149,7 +149,7 @@ def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False,
         return rc, left, binned
 
 
-case("overlay 读不到内容时拒绝清理", lambda: (
+case("overlay 无法读取内容时拒绝清理", lambda: (
     lambda r: r[0] == 1 and len(r[1]) == 5 and r[2] == []
 )(run_main({}, ["a.tar.gz", "b.tar.xz", "c.zip", "d.tar.bz2", "e.crate"])))
 
@@ -375,6 +375,41 @@ case("帐本写不进时抛出",
      lambda: _raises(lambda: _ledger("[]", writable=False)))
 case("帐本正常时累加",
      lambda: _ledger(f'[[{int(time.time())}, 5]]') == 6)
+
+UNCERTAIN_CASES = [
+    ("条件式里的赋值", 'RESTRICT=""\nif use x; then\n\tRESTRICT="mirror"\nfi\n', True),
+    ("未呼叫的函式", 'RESTRICT=""\nf() {\n\tRESTRICT="mirror"\n}\n', True),
+    ("case 分支里", 'case ${X} in\n\ta) RESTRICT="mirror" ;;\nesac\n', True),
+    ("行内 && 之后", 'true && RESTRICT="mirror"\n', True),
+    ("顶层赋值", 'RESTRICT="mirror"\n', False),
+    ("if 区块之后的顶层赋值", 'if true; then\n\tX=1\nfi\nRESTRICT="mirror"\n', False),
+    ("引号内跨行但顶层", 'RESTRICT="\n\tmirror\n"\n', False),
+]
+for _name, _text, _want in UNCERTAIN_CASES:
+    case(f"RESTRICT 是否算得准：{_name}",
+         (lambda text=_text, want=_want: audit.restrict_uncertain(text) is want))
+
+
+def _uncertain_round():
+    """RESTRICT 写在条件式里时，这一轮既不清理也不算可公开。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        ov = d / "overlay"
+        (ov / "profiles").mkdir(parents=True)
+        (ov / "profiles" / "repo_name").write_text("gentoo-zh\n")
+        pkg = ov / "app-misc" / "foo"
+        pkg.mkdir(parents=True)
+        (pkg / "foo-1.0.ebuild").write_text(
+            'RESTRICT=""\nif use x; then\n\tRESTRICT="mirror"\nfi\n')
+        (pkg / "Manifest").write_text("DIST foo-1.0.tar.gz 1 BLAKE2B x SHA512 y\n")
+        dist = d / "dist" / "ab"
+        dist.mkdir(parents=True)
+        (dist / "foo-1.0.tar.gz").write_text("x")
+        users, unsure = audit.scan(ov)
+        return "foo-1.0.tar.gz" in unsure and (dist / "foo-1.0.tar.gz").exists()
+
+
+case("RESTRICT 算不准时该文件进不确定集合", _uncertain_round)
 
 for name, fn in CASES:
     try:

@@ -12,7 +12,7 @@ permissions:
 jobs:
   find:
     runs-on: ubuntu-latest
-    container: gentoo/stage3:amd64
+    container: gentoo/stage3@sha256:7453ebe0a87f90ab16beed03c7f579a3cbb9ba4985e8cc310086277329b2290c  # gentoo/stage3:amd64
     outputs:
       rows: ${{ steps.pick.outputs.rows }}
     steps:
@@ -103,7 +103,7 @@ jobs:
               "" \
               "合并表示收录，下一轮构建会带上它。若不收录，请关闭本 PR，并将它连同原因写进 \`build/excluded.txt\`，否则每天会重新提出。" \
               "" \
-              "清单顺序不分大小写，这里只插一行，没有重排。加进去之后 \`validate.py\` 已执行，PR 上不会再跑：GITHUB_TOKEN 开的 PR 不触发 workflow。")
+              "清单顺序不分大小写，这里只插一行，没有重排。加进去之后 \`validate.py\` 已执行，该 PR 不会再次触发 workflow：GITHUB_TOKEN 开的 PR 不触发 workflow。")
             if ! gh pr create --base master --head "${branch}" \
                  --title "build: add ${cp}" --body "${body}" >> /tmp/urls.txt; then
               echo "  ${cp} PR 创建失败，删除远端分支 ${branch}"

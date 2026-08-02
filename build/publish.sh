@@ -8,20 +8,52 @@ STAGE="${STAGE:-/var/lib/binhost/stage/${TAG}}"
 REMOTE="${REMOTE:-mirror}"
 REMOTE_ROOT="${REMOTE_ROOT:-/srv/pub/binpkgs/${TAG}}"
 
-MAX_RETIRE_SHARE="${MAX_RETIRE_SHARE:-50}"
+MAX_RETIRE_SHARE="${MAX_RETIRE_SHARE:-20}"
+MAX_RETIRE_COUNT="${MAX_RETIRE_COUNT:-60}"
+
+index_header_ok() {
+    local file="$1" listed="$2" n
+    n=$(grep -c '^PACKAGES: ' "${file}")
+    if [ "${n}" -ne 1 ]; then
+        echo "索引里有 ${n} 行 PACKAGES 头部，应恰好一行" >&2
+        return 1
+    fi
+    declared=$(awk '/^PACKAGES: /{print $2; exit}' "${file}")
+    if ! [[ ${declared} =~ ^[1-9][0-9]*$ ]]; then
+        echo "索引头部的数量不是正整数：${declared:-空}" >&2
+        return 1
+    fi
+    if (( declared != listed )); then
+        echo "索引头部写 ${declared} 个，实际列出 ${listed} 个" >&2
+        return 1
+    fi
+}
 
 [[ -f ${STAGE}/Packages ]] || { echo "暂存区 ${STAGE} 里没有索引" >&2; exit 1; }
 
 mapfile -t paths < <(awk '/^PATH: /{print $2}' "${STAGE}/Packages")
 (( ${#paths[@]} )) || { echo "索引里没有列出任何包" >&2; exit 1; }
 
-declared=$(awk '/^PACKAGES: /{print $2; exit}' "${STAGE}/Packages")
-if [[ ${declared} =~ ^[0-9]+$ ]] && (( declared != ${#paths[@]} )); then
-    echo "索引头部写 ${declared} 个，实际列出 ${#paths[@]} 个，中止发布" >&2
+missing=0
+index_header_ok "${STAGE}/Packages" "${#paths[@]}" || { echo "中止发布" >&2; exit 1; }
+
+if [[ ! -s ${STAGE}/Packages.gz ]]; then
+    echo "缺少 ${STAGE}/Packages.gz，中止发布" >&2
+    exit 1
+fi
+if ! cmp -s <(gzip -dc "${STAGE}/Packages.gz") "${STAGE}/Packages"; then
+    echo "Packages 与 Packages.gz 内容不一致，中止发布" >&2
     exit 1
 fi
 
-missing=0
+while read -r p size; do
+    actual=$(stat -c %s "${STAGE}/${p}" 2>/dev/null || echo -1)
+    if [[ ${size} =~ ^[0-9]+$ ]] && (( actual != size )); then
+        echo "!! ${p} 实际 ${actual} 字节，索引写 ${size}" >&2
+        missing=$((missing + 1))
+    fi
+done < <(awk '/^PATH: /{p=$2} /^SIZE: /{if (p != "") {print p, $2; p=""}}' "${STAGE}/Packages")
+
 for p in "${paths[@]}"; do
     [[ -s ${STAGE}/${p} ]] || { echo "!! 索引列出但暂存区里没有或为空：${p}" >&2
                                 missing=$((missing + 1)); }
@@ -53,7 +85,7 @@ printf '{"packages":%s,"generated":%s}\n' "${n:-0}" "${ts:-0}" |
 
 # shellcheck disable=SC2029  # as above
 want=${#paths[@]}
-# shellcheck disable=SC2029  # want 与路径都是本地展开
+# shellcheck disable=SC2029
 retired=$(printf '%s\n' "${paths[@]}" | ssh "${REMOTE}" "
     cat > /tmp/binhost-keep-${TAG}.txt
     got=\$(wc -l < /tmp/binhost-keep-${TAG}.txt)
@@ -67,9 +99,12 @@ retired=$(printf '%s\n' "${paths[@]}" | ssh "${REMOTE}" "
     grep -vxF -f /tmp/binhost-keep-${TAG}.txt /tmp/binhost-have-${TAG}.txt \
         > /tmp/binhost-retire-${TAG}.txt || true
     n=\$(wc -l < /tmp/binhost-retire-${TAG}.txt)
-    if [ \"\${have}\" -gt 0 ] && [ \$(( n * 100 )) -gt \$(( have * ${MAX_RETIRE_SHARE} )) ] &&
-       [ -z '${FORCE_RETIRE:-}' ]; then
-        echo \"本轮要清理 \${n}/\${have} 个，超过 ${MAX_RETIRE_SHARE}%，未清理\" >&2
+    over=0
+    [ \"\${n}\" -gt 0 ] && [ \"\${have}\" -gt 0 ] &&
+        [ \$(( n * 100 )) -ge \$(( have * ${MAX_RETIRE_SHARE} )) ] && over=1
+    [ \"\${n}\" -ge ${MAX_RETIRE_COUNT} ] && over=1
+    if [ \"\${over}\" -eq 1 ] && [ '${FORCE_RETIRE:-0}' != 1 ]; then
+        echo \"本轮要清理 \${n}/\${have} 个，达到 ${MAX_RETIRE_SHARE}% 或 ${MAX_RETIRE_COUNT} 个的上限，未清理\" >&2
         echo \"确认无误后以 FORCE_RETIRE=1 重新执行\" >&2
         rm -f /tmp/binhost-keep-${TAG}.txt /tmp/binhost-have-${TAG}.txt /tmp/binhost-retire-${TAG}.txt
         exit 3

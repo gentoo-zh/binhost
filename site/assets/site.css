@@ -25,11 +25,11 @@
   --card: var(--surface);
   --panel: var(--surface);
   --panel-head: var(--bg);
-  --c-sec: var(--accent);      /* 段名 [gentoo-zh] */
-  --c-key: var(--fg);          /* 键、命令 */
-  --c-val: var(--accent);      /* 值、地址 */
-  --c-flag: var(--fg-soft);    /* 选项 */
-  --c-prompt: var(--accent-dim); /* 提示符 # $ */
+  --c-sec: var(--accent);
+  --c-key: var(--fg);
+  --c-val: var(--accent);
+  --c-flag: var(--fg-soft);
+  --c-prompt: var(--accent-dim);
   --shadow: none;
 }
 
@@ -442,7 +442,7 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 
 .pkgs td.name {
   white-space: normal; word-break: normal; overflow-wrap: normal;
-  width: auto;   /* 盖掉 .listing td.name 的 width:100%，那是给文件名用的 */
+  width: auto;
 }
 
 

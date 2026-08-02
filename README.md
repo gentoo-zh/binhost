@@ -3,7 +3,7 @@
 [distfiles.gentoozh.org](https://distfiles.gentoozh.org/) 的站点、nginx 配置，以及构建和发布 [gentoo-zh overlay](https://github.com/gentoo-zh/overlay) 二进制包的脚本。
 
 ```
-build/    构建、发布与各项检查。多数在构建机上跑，
+build/    构建、发布与各项检查。多数在构建机上运行，
           gen-packages.py、status.sh 等几支由 install.sh 装到镜像机
 deploy/   两台机器的安装、同步与定时任务
 nginx/    服务器配置

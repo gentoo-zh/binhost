@@ -86,7 +86,6 @@ check("名字里的 & 在标签上转义",
 check("名字里的空格与 & 在地址上编码",
       osegs[2] && osegs[2][1] === "/distfiles/a%20b%26c/", JSON.stringify(osegs[2]));
 
-// encodeURI 不编码 ? 与 #，于是目录名带这两个字符时 href 变成 query 或 fragment
 const q = parse(crumbsFor("/distfiles/a?b/").html);
 check("名字里的 ? 在地址上编码",
       q[2] && q[2][1] === "/distfiles/a%3Fb/", JSON.stringify(q[2]));
@@ -99,7 +98,6 @@ const pct = parse(crumbsFor("/distfiles/100%25/").html);
 check("名字里的 % 在地址上编码",
       pct[2] && pct[2][1] === "/distfiles/100%25/", JSON.stringify(pct[2]));
 
-// 地址里有解不开的 % 时不能整页崩掉，decodeURIComponent 会抛 URIError
 let survived = true;
 try { crumbsFor("/distfiles/100%/"); } catch (e) { survived = false; }
 check("地址里有非法的 % 时不抛异常", survived, "抛了异常");
