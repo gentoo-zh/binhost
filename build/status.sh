@@ -87,7 +87,9 @@ else
 fi
 
 # --- 站点同步 ------------------------------------------------------------------
-if [[ -d ${SITE_WORK}/.git ]]; then
+if [[ ! -d ${SITE_WORK}/.git && -d ${SITE_DEST} && -e ${SITE_DEST}/index.html ]]; then
+    bad "站点同步" "${SITE_WORK} 不是仓库副本，而 ${SITE_DEST} 里有站点内容"
+elif [[ -d ${SITE_WORK}/.git ]]; then
     fetched=$(stat -c %Y "${SITE_WORK}/.git/FETCH_HEAD" 2>/dev/null || echo 0)
     age_h=$(( ($(date +%s) - fetched) / 3600 ))
     here_site=$(git -C "${SITE_WORK}" rev-parse HEAD 2>/dev/null)
@@ -97,7 +99,9 @@ if [[ -d ${SITE_WORK}/.git ]]; then
         bad "站点同步" "${SITE_WORK}/.git/FETCH_HEAD 不存在，同步从未执行"
     elif (( age_h >= SITE_STALE_H )); then
         bad "站点同步" "上次拉取在 ${age_h} 小时前，五分钟一次的同步已停止"
-    elif [[ -n ${served} && -n ${onbox} && ${served} != "${onbox}" ]]; then
+    elif [[ -z ${served} || -z ${onbox} ]]; then
+        bad "站点同步" "index.html 在仓库副本或发布目录里读不到，无法比对"
+    elif [[ ${served} != "${onbox}" ]]; then
         bad "站点同步" "仓库副本与发布目录不一致，rsync 未完成"
     else
         note "站点同步" "${here_site:0:8}，${age_h} 小时内已拉取"
@@ -106,9 +110,13 @@ fi
 
 # --- signing key --------------------------------------------------------------
 if [[ -d ${SIGNING_GNUPGHOME} ]]; then
-    expiry=$(sudo gpg --homedir "${SIGNING_GNUPGHOME}" --list-keys --with-colons 2>/dev/null |
-             awk -F: '/^pub/{print $7; exit}')
-    if [[ -n ${expiry} && ${expiry} != 0 ]]; then
+    keys=$(sudo gpg --homedir "${SIGNING_GNUPGHOME}" --list-keys --with-colons 2>/dev/null)
+    gpg_rc=$?
+    expiry=$(awk -F: '/^pub/{print $7; exit}' <<< "${keys}")
+    # 空钥匙圈返回 0，输出里只有一条 tru: 记录，所以要看有没有 pub:
+    if (( gpg_rc != 0 )) || ! grep -q '^pub:' <<< "${keys}"; then
+        bad "signing key" "读不到 ${SIGNING_GNUPGHOME} 里的公钥"
+    elif [[ -n ${expiry} && ${expiry} != 0 ]]; then
         left=$(( (expiry - $(date +%s)) / 86400 ))
         if (( left < KEY_WARN_DAYS )); then
             bad "signing key" "expires in ${left}d"
@@ -315,6 +323,9 @@ fi
 if (( problems > 0 )) && [[ ${BINHOST_ALERT:-} == 1 ]] && [[ -r ${ALERT_CONF} ]]; then
     # shellcheck source=/dev/null
     . "${ALERT_CONF}"
+    if [[ -z ${TELEGRAM_TOKEN:-} || -z ${TELEGRAM_CHAT:-} ]]; then
+        echo "!!! ${ALERT_CONF} 缺 TELEGRAM_TOKEN 或 TELEGRAM_CHAT，本次告警未发出" >&2
+    fi
     if [[ -n ${TELEGRAM_TOKEN:-} && -n ${TELEGRAM_CHAT:-} ]]; then
         text="binhost 检查未通过（$(hostname)）:"
         for f in "${failures[@]}"; do
