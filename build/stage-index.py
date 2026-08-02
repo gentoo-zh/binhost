@@ -20,6 +20,9 @@ import shutil
 import sys
 import time
 
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+from ebuilds import read_mask  # noqa: E402
+
 
 def parse(text):
     """Packages index -> (header, [(fields, stanza), ...])."""
@@ -77,6 +80,7 @@ def select(entries, overlay=None, excluded=None):
     quietly dropped.
     """
     excluded = read_excluded() if excluded is None else excluded
+    masked = read_mask(overlay) if overlay is not None else set()
     best = {}       # cpv -> (build_id, fields, stanza)
     skipped = 0
 
@@ -107,6 +111,10 @@ def select(entries, overlay=None, excluded=None):
         # made. Being in PKGDIR only says it built once.
         cp = re.match(r"^([a-z0-9-]+/.+?)-[0-9]", cpv)
         if cp and cp.group(1) in excluded:
+            skipped += 1
+            continue
+
+        if cp and cp.group(1) in masked:
             skipped += 1
             continue
 
