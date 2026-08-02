@@ -22,7 +22,7 @@ rsync -a --safe-links --delete site/assets/ "${REMOTE}:/srv/mirrors/assets/"
 # when its fingerprint matches the one recorded on the mirror, and that check is
 # the only thing standing between the repository and the trust anchor users
 # import. Pushing it from a second path would walk around the check.
-rsync -a --safe-links site/*.html "${REMOTE}:/srv/mirrors/"
+rsync -a --safe-links site/*.html site/robots.txt "${REMOTE}:/srv/mirrors/"
 
 rsync -a --safe-links nginx/ "${REMOTE}:/tmp/nginx-conf/"
 # Back up before overwriting: by the time nginx -t fails the broken config is
@@ -33,6 +33,8 @@ ssh "${REMOTE}" '
     sudo cp /tmp/nginx-conf/nginx.conf /etc/nginx/nginx.conf
     sudo cp /tmp/nginx-conf/distfiles.conf /etc/nginx/conf.d/distfiles.conf
     sudo cp /tmp/nginx-conf/mirror-common.inc /etc/nginx/conf.d/mirror-common.inc
+    sudo cp /tmp/nginx-conf/headers-site.inc /etc/nginx/conf.d/headers-site.inc
+    sudo cp /tmp/nginx-conf/headers-files.inc /etc/nginx/conf.d/headers-files.inc
     rm -rf /tmp/nginx-conf
     if ! sudo nginx -t; then
         echo "!! 配置不通过，已还原" >&2
