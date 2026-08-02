@@ -209,8 +209,8 @@
       <thead><tr><th data-i18n="thPkg">包</th><th class="desc" data-i18n="thDesc">说明</th><th class="mark" data-i18n="thBin">二进制包</th><th class="ver" data-i18n="thVer">版本</th></tr></thead>
       <tbody>
         <tr><td class="name"><a href="#">app-admin/chezmoi</a></td><td class="desc">Manage your dotfiles across machines</td><td class="mark yes">✓</td><td class="ver">2.71.1</td></tr>
-        <tr><td class="name"><a href="#">app-misc/crush</a></td><td class="desc">A command line shell</td><td class="mark no"><span class="pend" data-i18n="pendNo">不构建</span></td><td class="ver"></td></tr>
-        <tr><td class="name"><a href="#">app-text/goldendict</a></td><td class="desc">Feature-rich dictionary lookup program</td><td class="mark no"><span class="pend" data-i18n="pendWait">待构建</span></td><td class="ver"></td></tr>
+        <tr><td class="name"><a href="#">app-misc/crush</a></td><td class="desc">A command line shell</td><td class="mark no"><span class="pend" data-i18n="excluded">不构建</span></td><td class="ver"></td></tr>
+        <tr><td class="name"><a href="#">app-text/goldendict</a></td><td class="desc">Feature-rich dictionary lookup program</td><td class="mark no"><span class="pend" data-i18n="pending">待构建</span></td><td class="ver"></td></tr>
       </tbody>
     </table>
   </div>
@@ -430,8 +430,8 @@ window.MIRROR_I18N = {
     thDesc: '說明',
     thBin: '二進位套件',
     thVer: '版本',
-    pendNo: '不建置',
-    pendWait: '待建置',
+    excluded: '不建置',
+    pending: '待建置',
     table1: '搜尋同時比對套件名和說明。說明欄被隱藏的寬度上，靠說明命中的列在套件名下面補一句說明，命中的詞用 <code>&lt;mark&gt;</code> 圈出來，底色 <code>--accent-weak</code>。否則結果裡會出現名稱與搜尋詞無關的套件，頁面上找不到理由。',
     hCode: '程式碼區塊',
     code1: '路徑寫在標題列，命令與設定在下方。值用強調色，鍵用內文色，註解與提示符用次要色。每一塊都能整段複製，不需要使用者自己選取。',
@@ -554,8 +554,8 @@ window.MIRROR_I18N = {
     thDesc: 'Description',
     thBin: 'Binary',
     thVer: 'Version',
-    pendNo: 'Not built',
-    pendWait: 'Pending',
+    excluded: 'excluded',
+    pending: 'pending',
     table1: 'Search matches the package name and the description at once. At widths where the description column is hidden, a row matched on its description carries that description under the name, with the matched term wrapped in <code>&lt;mark&gt;</code> over <code>--accent-weak</code>. Without it the results hold packages whose names have nothing to do with the query, and the page gives no reason why.',
     hCode: 'Code blocks',
     code1: 'The path goes in the title bar, the command or configuration below it. Values take the accent, keys the body colour, comments and prompts the secondary colour. Every block copies whole, so nobody has to select it by hand.',
