@@ -99,6 +99,10 @@ if [[ -d ${SITE_WORK}/.git ]]; then
         bad "站点同步" "上次拉取在 ${age_h} 小时前，五分钟一次的同步已停止"
     elif [[ -n ${served} && -n ${onbox} && ${served} != "${onbox}" ]]; then
         bad "站点同步" "仓库副本与发布目录不一致，rsync 未完成"
+    elif [[ -r ${SITE_WORK}/site/gentoo-zh-binhost.asc && -r ${SITE_DEST}/gentoo-zh-binhost.asc ]] &&
+         ! cmp -s "${SITE_WORK}/site/gentoo-zh-binhost.asc" "${SITE_DEST}/gentoo-zh-binhost.asc"; then
+        # 指纹守卫拒绝同步公钥时只往 stderr 写一行，而那一行没有人读得到
+        bad "站点同步" "仓库里的公钥与已发布的不一致，指纹守卫可能拦下了它"
     else
         note "站点同步" "${here_site:0:8}，${age_h} 小时内已拉取"
     fi
