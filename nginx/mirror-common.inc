@@ -51,6 +51,8 @@ location ^~ /distfiles/ {
 	root /srv/pub;
 	include /etc/nginx/conf.d/headers-files.inc;
 
+	gzip off;
+
 	# 目录请求交给前端渲染。外层那条 location ~ /$ 在 ^~ 命中之后不会被考虑，
 	# 所以这里要再写一次。回的是 _app.html，是页面不是文件，所以用站点那一份
 	# 头：files 那一份的 default-src 'none' 会把它自己的样式和脚本挡掉。
