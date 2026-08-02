@@ -72,12 +72,10 @@ mv -f "${tmp}/Packages.gz" "${DEST}/Packages.gz"
 # Remove packages the index no longer names. After the index update, because
 # until then they were still valid.
 #
-# Membership is tested against a set rather than by piping the list into
-# grep -q. grep exits on the first match, printf then dies of SIGPIPE, and
-# pipefail turns that into a non-zero pipeline -- which here reads as "not in
-# the index" and deletes a package the index does name. The earlier the match,
-# the likelier it is, so the packages at the top of the list were the ones at
-# risk.
+# Membership against a set, not by piping the list into grep -q: grep exits on
+# the first match, printf dies of SIGPIPE, and pipefail turns that into a
+# non-zero pipeline, which here reads as "not in the index" and deletes a
+# package the index does name.
 declare -A wanted=()
 for p in "${paths[@]}"; do wanted["${p}"]=1; done
 

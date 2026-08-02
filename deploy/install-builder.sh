@@ -29,14 +29,11 @@ git diff --quiet && git diff --cached --quiet || COMMIT="${COMMIT}-dirty"
 
 say() { printf '\n=== %s ===\n' "$1"; }
 
-# Deploying into a running build is not safe. bash reads a script by byte offset
-# as it executes, and the round also copies build/ into its container at the
-# start, so a mid-round replacement leaves the two disagreeing about which
-# version is running. One round published a package that the new filter excludes
-# because of exactly this.
-#
-# build-container.sh takes this lock for the length of a round. No lock file at
-# all means the machine has never built, which is not a reason to refuse.
+# Deploying into a running build is not safe: bash reads a script by byte offset
+# as it executes, and the round copies build/ into its container at the start,
+# so a mid-round replacement leaves the two disagreeing about which version is
+# running. build-container.sh holds this lock for the length of a round; no lock
+# file at all means the machine has never built, which is not a reason to refuse.
 say "确认没有构建正在进行"
 if ${REMOTE} "[ -e '${ROOT}/stage/build.lock' ] && ! flock -n '${ROOT}/stage/build.lock' -c true"; then
     echo "有一轮构建正在进行（${ROOT}/stage/build.lock）。" >&2

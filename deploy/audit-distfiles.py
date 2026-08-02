@@ -68,28 +68,23 @@ def scan(overlay):
 GRACE_SECONDS = 7 * 24 * 3600
 STATE = "/var/lib/emirrordist/orphans.json"
 
-# Deleted files go into emirrordist's own recycle directory, the one
-# distfiles-sync.sh already configures with --recycle-dir and --recycle-db.
-#
-# Not a separate bin of our own with an mtime-based sweep: rename() keeps the
-# original mtime, and a distfile's mtime is when it was fetched, not when it was
-# recycled. Anything older than the window was therefore swept in the same round
-# it arrived -- the earlier attempt at this was an unlink with extra steps.
-# emirrordist records the time in recycle.db instead, and adopts files it finds
-# there that it did not put there itself, so one bin and one clock serve both.
+# emirrordist's own recycle directory, the one distfiles-sync.sh configures with
+# --recycle-dir and --recycle-db. Not a bin of our own swept by mtime: rename()
+# keeps the original mtime, and a distfile's mtime is when it was fetched, so
+# anything past the window would be swept in the round it arrived -- an unlink
+# with extra steps. emirrordist keeps the time in recycle.db and adopts files it
+# finds there, so one bin and one clock serve both.
 RECYCLE = "/var/lib/emirrordist/recycle"
 
-# The largest share of the mirror one round may retire. Reaping is driven by
-# what the overlay references, so anything that makes the overlay read as empty
-# or half-read -- a failed fetch, an interrupted reset, a wrong path -- turns
-# every file on the mirror into an orphan at once. Below the limit the round
-# proceeds; above it nothing is touched and the round fails so someone looks.
+# The largest share of the mirror one round may retire. Reaping follows what the
+# overlay references, so anything that makes the overlay read as empty or
+# half-read -- a failed fetch, an interrupted reset, a wrong path -- turns every
+# file into an orphan at once. Above the limit nothing is touched and the round
+# fails so someone looks.
 #
-# A third, not a tenth. A real mass treeclean reaches double digits on its own:
-# the overlay dropped 30 packages on 2026-07-28 and the mirror went to 138
-# unreferenced files out of 1224, which is 11%. A limit that a legitimate day
-# trips is a limit people learn to wave through. What it has to catch is the
-# tree that read as empty or half-empty, and that lands far above a third.
+# A third, not a tenth: a legitimate mass treeclean already reaches double
+# digits (30 packages dropped on 2026-07-28 left 138 of 1224 unreferenced, 11%),
+# and a limit that normal days trip is one people learn to wave through.
 MAX_REAP_SHARE = 1 / 3
 
 # 禁止镜像那一类另加一个绝对下限。只按比例，镜像小的时候一个文件就超过三分之一，
@@ -258,12 +253,8 @@ def main(overlay, dest):
     extra = sorted(never & have)
     # No longer referenced by the overlay at all. Old source files after a bump
     # are this, and emirrordist --delete works from the list it fetched this
-    # round so it never reaches them.
-    #
-    # The layout marker is not a distfile: layout.conf tells portage this tree
-    # uses two levels of hashing rather than a flat directory, and the official
-    # distfiles root carries the same file. Without it clients fetch from the
-    # wrong path.
+    # round, so it never reaches them. layout.conf is exempt: it is the marker
+    # telling portage this tree is hashed rather than flat, not a distfile.
     orphan = sorted(have - set(users))
 
     # Refuse the round rather than act on an overlay that reads as empty or
@@ -285,13 +276,11 @@ def main(overlay, dest):
     deleted, failed = ([], []) if refused else reap(orphan, paths, budget=budget)
 
     # RESTRICT=mirror 的文件不等宽限期。孤儿要等，是因为一次 bump 会让旧文件
-    # 短暂无人引用，等一周就能看出是不是误判；而「所有引用方都禁止镜像」是上游
-    # 明确的声明，不是过渡状态，多留一轮就是多发一轮不该发的文件。
+    # 短暂无人引用；而「所有引用方都禁止镜像」是上游明确的声明，不是过渡状态，
+    # 多留一轮就是多发一轮不该发的文件。仍然走回收桶，判断错了取得回来。
     #
-    # 仍然走回收桶：判断错了还取得回来，和孤儿同一个桶、同一个时钟。
-    # 比例闸和孤儿那道对称，但独立：这一类不进跨轮帐本。帐本记的是孤儿清理，
-    # 把这一类算进去会让整轮在文件已经删掉之后被标成拒绝清理，而 refused
-    # 的含义是一个都没碰。
+    # 比例闸独立于孤儿那一道，且不进跨轮帐本：帐本记的是孤儿清理，算进来会让
+    # 整轮在文件已经删掉之后被标成 refused，而 refused 的含义是一个都没碰。
     restricted, restricted_failed = [], []
     too_many = (len(extra) > MIN_RESTRICTED_TO_DOUBT
                 and len(extra) > len(have) * MAX_REAP_SHARE)
@@ -334,14 +323,9 @@ def main(overlay, dest):
     for f in deleted[:20]:
         print(f"  清理 {f}")
 
-    # Unreferenced files are handled by reap on its grace period. They are what
-    # a bump normally leaves behind, so they are not a failure. Alerting hourly
-    # about the same set of files only teaches people to ignore alerts.
-    #
-    # A refused round is a failure: it means the input could not be trusted, and
-    # that is exactly the case nobody would otherwise hear about.
-    # extra 不再让这一轮失败：它已经被清掉了，报错等于每清一次就告警一次。
-    # 清不掉才是要人看的，那是 restricted_failed。
+    # 无人引用的文件由 reap 按宽限期处理，那是 bump 的正常产物，不算失败；
+    # 每小时为同一批文件告警只会教人忽略告警。extra 同理，它已经被清掉了。
+    # 拒绝的那一轮才是失败：输入不可信，而这正是没人会另外发现的情形。
     return 1 if (missing or refused or failed or restricted_failed or too_many) else 0
 
 

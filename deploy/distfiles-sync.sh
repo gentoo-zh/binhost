@@ -42,14 +42,12 @@ delete=(--delete
         --deletion-db "${STATE}/deletion.db"
         --deletion-delay "${DELETION_DELAY}"
         --scheduled-deletion-log /var/log/emirrordist/deletions.log
-        # Deleted files move here first and are only removed for good after
+        # Deleted files move here first and go for good only after
         # RECYCLE_DELAY. emirrordist decides what to delete from what it managed
-        # to read this round, and it exits 0 whether or not it read anything: if
-        # the main tree is missing or unsynced, every ebuild fails aux_get, no
-        # file has an owner, and the whole mirror is scheduled for deletion with
-        # an empty failure log and nothing to alert on. The header of this file
-        # says these are originals that cannot be fetched again, so the delay
-        # alone is not enough of a guard.
+        # to read, and exits 0 either way: with the main tree missing every
+        # ebuild fails aux_get, no file has an owner, and the whole mirror is
+        # scheduled for deletion with an empty failure log. These are originals
+        # that cannot be fetched again, so the delay alone is not enough.
         --recycle-dir "${RECYCLE}"
         --recycle-db "${STATE}/recycle.db"
         --recycle-deletion-delay "${RECYCLE_DELAY}")
