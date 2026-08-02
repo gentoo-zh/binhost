@@ -1,20 +1,4 @@
 #!/bin/bash
-# One-time provisioning for a new mirror. Runs locally, acts over ssh.
-#
-#   TARGET=root@203.0.113.7 deploy/provision.sh
-#
-# The order is deliberate: each step proves the new path works before the old
-# one is cut, so a failure anywhere cannot lock us out.
-#
-# The previous machine was fixed up as problems appeared; this does all of it
-# at once:
-#   - the interface name did not match /etc/conf.d/net, so a reboot lost the host
-#   - only C/POSIX was generated, so the LC_* ssh carries over made every command
-#     report a setlocale failure
-#   - logrotate.d held configuration while logrotate itself was not installed, so
-#     nothing ever rotated
-#   - a wrong firewall rule locks the machine out, so every change here carries
-#     an automatic rollback
 
 set -euo pipefail
 
@@ -30,7 +14,6 @@ on()  { ssh -o StrictHostKeyChecking=accept-new "${TARGET}" "$@"; }
 
 say "现状"
 # shellcheck disable=SC2016  # single quotes are deliberate: these expand on the
-                              # remote, not here
 on 'echo "  $(uname -sr)"; echo "  init: $(ps -p1 -o comm=)"; echo "  $(df -h / | awk "NR==2{print \$2\" 盘，已用 \"\$3}")"; echo "  $(free -h | awk "/^Mem/{print \$2\" 内存\"}")"'
 
 say "管理员与密钥"
@@ -44,9 +27,6 @@ on "command -v sudo >/dev/null || emerge -q app-admin/sudo
     visudo -c >/dev/null && echo '  sudoers 语法 ok'"
 
 say "locale"
-# ssh carries the client LANG/LC_* across, and without the matching locale on
-# the server every command reports a setlocale failure. The system itself stays
-# on C.UTF-8.
 # shellcheck disable=SC2016  # $lg 是远端的变量，故意不在本地展开
 on 'printf "en_US.UTF-8 UTF-8\nen_GB.UTF-8 UTF-8\nzh_CN.UTF-8 UTF-8\nzh_TW.UTF-8 UTF-8\n" > /etc/locale.gen
     lg=$(mktemp)
@@ -70,7 +50,6 @@ on 'iface=$(ip -o -4 route show default | awk "{print \$5}" | head -1)
 
 say "内核网络调优"
 # shellcheck disable=SC2016  # the heredoc is written out verbatim, no local
-                              # expansion
 on 'cat > /etc/sysctl.d/99-mirror.conf <<EOF
 net.core.default_qdisc = fq
 net.ipv4.tcp_congestion_control = bbr
@@ -86,12 +65,7 @@ net.ipv4.tcp_syncookies = 1
 vm.swappiness = 10
 vm.vfs_cache_pressure = 50
 EOF
-    # OpenRC loads modules from here, not from the systemd modules-load.d
-    # 追加到既有的值里，不是再写一行。OpenRC 是 source 这个文件，后面的赋值
-    # 盖前面的：原来那一行会让机器上本来有的 modules= 下次开机全部不再加载。
     if [ -f /etc/conf.d/modules ] && ! grep -q tcp_bbr /etc/conf.d/modules; then
-        # 值可能没引号或用单引号。原来只认双引号，另外两种写法会走到 else，
-        # 于是文件里出现第二个 modules=，后一个盖掉前一个——正是这段要避免的。
         if grep -qE "^modules=" /etc/conf.d/modules; then
             sed -i -E "s/^modules=(\"|'\''|)(.*)\1\s*$/modules=\"\2 tcp_bbr\"/" /etc/conf.d/modules
         else
@@ -103,14 +77,10 @@ EOF
     echo "  拥塞控制: $(sysctl -n net.ipv4.tcp_congestion_control)"'
 
 say "日志轮转"
-# /etc/logrotate.d often already holds configuration while logrotate itself is
-# not installed, and then none of it does anything.
 on 'command -v logrotate >/dev/null || emerge -q app-admin/logrotate
     if command -v logrotate >/dev/null; then echo "  logrotate 已就位"; fi'
 
 say "收紧 sshd"
-# Last, and only once key login is confirmed working: the other order locks the
-# machine out.
 on "ssh-keygen -l -f /home/${ADMIN}/.ssh/authorized_keys >/dev/null" ||
     { echo '!! 公钥没装好，不动 sshd' >&2; exit 1; }
 on "sed -i -E \

@@ -1,15 +1,4 @@
 #!/usr/bin/env python3
-"""按站点的写作规范检查页面文案。
-
-规范见 site/design.html 的「文字」一节。这里只查能机器判定的：禁止的句式、
-禁止的词、标点。结构与因果那几条要人看。
-
-检查两处，规则不同：
-
-- 站点文案（正文加 i18n 表里的串）：全套规则，包括标点与排版
-- 代码注释：只查口语词。注释里不该有「的话」「就行」这种说话腔，但破折号
-  密度、省略号写法那几条是给正文定的，套到注释上只会制造噪音
-"""
 
 import pathlib
 import re
@@ -27,15 +16,11 @@ PHRASES = [
 ]
 
 WORDS = [
-    # startup jargon
     "赋能", "抓手", "闭环", "底层逻辑", "认知升级", "长期主义", "颗粒度",
     "护城河", "组合拳", "打法", "破圈", "沉淀", "生态位",
-    # bureaucratic register
     "不断深化", "持续推动", "有力支撑", "彰显", "诠释", "擘画",
     "注入新的活力", "迈上新台阶",
-    # additionally for the Traditional text
     "至关重要", "至關重要", "深入探讨", "深入探討", "版图", "版圖",
-    # colloquial
     "的话", "的話", "就行", "拉下来", "拉下來", "装上", "裝上", "搞定",
     "直接跑", "直接给", "直接給", "白跑", "一下就",
     "写不了", "寫不了", "不能省", "读不了", "讀不了", "认不出", "認不出",
@@ -43,8 +28,6 @@ WORDS = [
     "省得", "免得", "干脆", "乾脆", "好几", "好幾", "一大堆", "没啥", "沒啥",
 ]
 
-# Filler verbs have legitimate uses in technical writing, so report only where
-# they are plainly redundant
 FILLER = [
     (r"进行[了]?(构建|同步|下载|安装|验证|检查)", "「进行」多余"),
     (r"通过[^，。]{0,8}的方式", "「通过…的方式」空转"),
@@ -53,16 +36,9 @@ FILLER = [
 
 
 def visible_text(html):
-    """Text a reader sees: the body plus the strings in the i18n tables.
-
-    排除三处：<title> 里的分隔符是排版惯例；设计语言页的规则表本身要列出
-    这些禁止项；代码块里是命令与配置，不是文案。
-    """
     body = re.sub(r"<(script|style)\b[\s\S]*?</\1>", "", html)
     body = re.sub(r"<title>[\s\S]*?</title>", "", body)
     body = re.sub(r'<table class="spec"[\s\S]*?</table>', "", body)
-    # The design page lists disallowed phrasing as counter-examples; what sits
-    # in rule-dont is those examples themselves
     body = re.sub(r'<[^>]*class="rule-dont"[^>]*>[\s\S]*?</[a-z]+>', "", body)
     body = re.sub(r"<pre[\s\S]*?</pre>", "", body)
     body = re.sub(r"<[^>]+>", " ", body)
@@ -71,9 +47,6 @@ def visible_text(html):
     return body + "\n" + tables
 
 
-# Only this set is checked in comments. Technical comments legitimately use
-# words the full rules would flag, and applying all of them only trains people
-# to ignore the warnings.
 COLLOQUIAL = [
     "的话", "的話", "就行", "拉下来", "拉下來", "装上", "裝上", "搞定",
     "直接跑", "直接给", "直接給", "白跑", "白做", "一下就", "就这么", "就這麼",
@@ -88,17 +61,11 @@ COLLOQUIAL = [
     "其实", "其實", "坦白讲", "坦白講",
 ]
 
-# 发出去的字符串按更严的一份查：告警进 Telegram 群，状态那几行是运维第一眼
-# 看到的内容，写成说话腔就不像一份系统在报告。注释不套这一份，技术中文里
-# 「这一步」「跑完」是正常说法。
 COLLOQUIAL_EMIT = COLLOQUIAL + [
     "在跑", "没跑", "沒跑", "跑完", "跑起来", "跑起來", "没成", "沒成", "停了",
     "那一步", "这一步", "這一步", "弄", "搞", "整个儿",
 ]
 
-# How a comment starts, per file. The pattern is not anchored to the line start
-# so a trailing comment counts too: `rm -f "${log}"  # 成功的不留` used to slip
-# through, and that is where offhand wording collects.
 COMMENT = {
     ".sh": r"#(.*)$",
     ".py": r"#(.*)$",
@@ -107,21 +74,16 @@ COMMENT = {
     ".timer": r"#(.*)$",
     ".conf": r"#(.*)$",
     ".inc": r"#(.*)$",
-    ".md": None,          # prose, checked whole
+    ".md": None,
     ".yml": r"#(.*)$",
     ".yaml": r"#(.*)$",
     ".css": r"/\*(.*?)\*/",
     ".html": r"<!--(.*?)-->|/\*(.*?)\*/|(?<![:\w])//(.*)$",
 }
 
-# Files with no suffix that are still configuration with comments.
 NO_SUFFIX = {"cron.d-binhost", "logrotate-binhost", "rsyncd.conf", "nftables.conf"}
 
 
-# 发给人看的字符串也要查，不只是注释。告警会进 Telegram 群，状态那几行是运维
-# 第一眼看到的内容。
-# 含中文的字符串常量一律按发出去的文字查。原来只认行首几个命令，于是变量拼装、
-# heredoc、console.log、跨行 print 全都漏掉，而检查器仍报全绿。
 EMIT_SUFFIX = (".sh", ".py", ".js", ".yml", ".yaml")
 CJK = re.compile(r'[\u4e00-\u9fff]')
 QUOTED = re.compile(r'"([^"]*)"|\'([^\']*)\'')
@@ -155,8 +117,6 @@ def check_emitted(root):
 
 
 def check_comments(root):
-    """Colloquial words in code comments. The suffix decides how a comment
-    starts."""
     bad = 0
     for f in sorted(pathlib.Path(root).rglob("*")):
         if not f.is_file() or ".git" in f.parts:
@@ -167,7 +127,6 @@ def check_comments(root):
             pat = r"#(.*)$"
         else:
             continue
-        # This script lists the words itself, so skip it
         if f.name == "check-copy.py":
             continue
         try:
@@ -176,17 +135,10 @@ def check_comments(root):
             continue
         hits = []
         for i, line in enumerate(lines, 1):
-            if pat is None:                     # .md: the whole line is prose
+            if pat is None:
                 texts = [line]
             else:
                 m = re.search(pat, line)
-                # Beyond comments, Chinese strings printed for people are checked
-                # too: alerts and logs are text a user reads. Both quote styles:
-                # assets/strings.js writes every user-visible string in single
-                # quotes, so a double-quote-only pattern covered none of it.
-                # 注解与字串都要查，不是二选一。原来命中注解就只查注解那段，
-                # 于是 print("装上就行")  # 说明 这种行末带注解的写法，字串
-                # 部分整个不查——而 Python 里那是常见写法。
                 texts = ([next((g for g in m.groups() if g), "")] if m else []) + (
                     re.findall(r'"([^"]*[\u4e00-\u9fff][^"]*)"', line)
                     + re.findall(r"'([^']*[\u4e00-\u9fff][^']*)'", line))
@@ -219,12 +171,10 @@ def main(dirname):
             for m in re.finditer(pat, text):
                 hits.append(f"{why}: {m.group(0)[:20]}")
 
-        # At most one em dash per thousand characters
         chars = len(re.sub(r"\s", "", text))
         dashes = text.count("——")
         if chars and dashes > max(1, chars // 1000):
             hits.append(f"破折号 {dashes} 处，{chars} 字，超过每千字 1 次")
-        # Chinese text only. In English an em dash with spaces is normal.
         for line in text.split("\n"):
             if re.search(r"[\u4e00-\u9fff]", line) and re.search(r"\S — \S", line):
                 hits.append("中文里出现 em dash 加空格，改用全角——")

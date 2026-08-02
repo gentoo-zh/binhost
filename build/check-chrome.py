@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""导航栏与页脚每页都得一样。
-
-wide 只是宽度选择，不算差异；链接的地址、顺序、i18n 键必须一致。
-"""
 import pathlib
 import re
 import sys

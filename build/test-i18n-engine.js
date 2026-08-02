@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-// i18n.js 的两处：切语言时链接地址要跟着换，主题菜单要开得起来。
-// 两者坏掉都是静默的，页面看上去正常，点下去才知道。
 
 const fs = require("fs");
 const path = require("path");
@@ -26,7 +24,6 @@ function elem(attrs, text) {
     click() { (e._h.click || []).forEach((f) => f({ stopPropagation() {}, target: e })); },
     appendChild() {}, focus() {}, contains: () => false,
   };
-  // 主题菜单写 innerHTML 之后要读 lastChild，真 DOM 里那是 innerHTML 建出来的
   Object.defineProperty(e, "innerHTML", { get: () => inner, set: (v) => { inner = v; } });
   Object.defineProperty(e, "lastChild", {
     get: () => (/<[a-z]/i.test(inner) ? { textContent: "" } : null),
@@ -67,9 +64,6 @@ for (const [lang, url] of Object.entries(want)) {
   check(`${lang} 的链接指向 ${url}`, r.href === url, `拿到 ${r.href}`);
 }
 
-// --- 主题菜单开关 ---
-// 按钮的 click 处理器调用 openMenu/closeMenu，这两个函式被误删过一次，
-// 页面照常渲染，只有点按钮才报 openMenu is not defined。
 function menuRun() {
   const items = ["light", "dark", "system"].map((m) =>
     elem({ "data-mode": m, class: "menu-item" }, ""));

@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-// 文件浏览器的面包屑：标签和地址要对得上真实路径。
-// 页面脚本是内联的，抠出来在假 DOM 里跑。
 
 const fs = require("fs");
 const path = require("path");
@@ -27,7 +25,6 @@ function el(id) {
   };
 }
 
-// 脚本在顶层就读 location.pathname，每个用例要重执行一次。
 function crumbsFor(urlPath) {
   const nodes = {};
   global.document = {
@@ -37,7 +34,6 @@ function crumbsFor(urlPath) {
     querySelectorAll() { return nodeList([]); },
     addEventListener() {},
   };
-  // 串现在统一由 i18n.js 查表，页面通过 MIRROR_T 取
   global.window = {
     MIRROR_I18N: {}, addEventListener() {},
     MIRROR_T: (k) => ({ navFiles: "Files", title: "Files" }[k] || k),
@@ -55,16 +51,13 @@ function crumbsFor(urlPath) {
            title: (nodes.where || el("where")).textContent };
 }
 
-// 每一节的 (标签, 地址)
 function parse(s) {
   return [...s.matchAll(/<a href="([^"]*)">([^<]*)<\/a>/g)].map((m) => [m[2], m[1]]);
 }
 
-// --- 根层 --------------------------------------------------------------------
 const root = crumbsFor("/files/");
 check("根层不显示面包屑（标题已经写明位置）", root.hidden === true);
 
-// --- 两个真实的一级目录 ---------------------------------------------------------
 for (const [dir, label] of [["binpkgs", "binpkgs"], ["distfiles", "distfiles"]]) {
   const r = crumbsFor(`/${dir}/`);
   const segs = parse(r.html);
@@ -77,7 +70,6 @@ for (const [dir, label] of [["binpkgs", "binpkgs"], ["distfiles", "distfiles"]])
         segs[1] && segs[1][1] === `/${dir}/`, JSON.stringify(segs[1]));
 }
 
-// --- 深层 --------------------------------------------------------------------
 const deep = crumbsFor("/binpkgs/x86-64/app-editors/");
 const dsegs = parse(deep.html);
 check("深层每一节都在", dsegs.length === 4, JSON.stringify(dsegs));
@@ -87,7 +79,6 @@ check("深层各节地址逐级累加",
       JSON.stringify(dsegs.map((s) => s[1])));
 check("标题写的是当前路径", deep.title === "/binpkgs/x86-64/app-editors", deep.title);
 
-// --- 名字里有特殊字符 ------------------------------------------------------------
 const odd = crumbsFor("/distfiles/a b&c/");
 const osegs = parse(odd.html);
 check("名字里的 & 在标签上转义",

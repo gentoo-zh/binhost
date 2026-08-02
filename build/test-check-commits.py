@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""Check check-commits against the message shapes that actually come up.
-
-Each case builds a throwaway repository with one commit, so the cases do not
-depend on what this repository's history happens to hold today.
-"""
 import pathlib
 import subprocess
 import sys
@@ -13,13 +8,10 @@ CHECK = str(pathlib.Path(__file__).with_name("check-commits.py"))
 
 
 def run(subject, body="", files=("build/stage-index.py",)):
-    """Commit one message over the given files, return the checker's output."""
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
         git = ["git", "-C", str(d), "-c", "user.name=t", "-c", "user.email=t@t"]
         subprocess.run(git[:3] + ["init", "-q", "-b", "master"], check=True)
-        # An empty first commit gives the range a base without putting any of
-        # the cases' own files in it.
         subprocess.run(git + ["commit", "-q", "--allow-empty", "-m", "base: 起点"],
                        check=True)
         for f in files:
@@ -35,15 +27,12 @@ def run(subject, body="", files=("build/stage-index.py",)):
 
 
 CASES = [
-    # name, subject, body, files, should pass
     ("脚本名当 scope", "stage-index: decide by version", "", ("build/stage-index.py",), True),
     ("目录名当 scope", "build: change three scripts together", "",
      ("build/a.py", "build/b.py"), True),
     ("一族文件用横线前那段", "test: change two cases together", "",
      ("build/test-validate.py", "build/test-stage-index.py"), True),
     (".github 用 ci", "ci: add a job", "", (".github/workflows/validate.yml",), True),
-    # 根目录的文件原来一个可用的写法都没有：主题必须小写开头，而候选集里只有
-    # 原样大小写的文件名。纯文档的 PR 因此合不进来。
     ("根目录文件用小写文件名", "readme: fix a typo", "", ("README.md",), True),
     ("根目录文件用 docs", "docs: fix a typo", "", ("README.md",), True),
     ("点开头的文件", "gitignore: ignore pyc", "", (".gitignore",), True),
@@ -72,10 +61,7 @@ CASES = [
      ("build/stage-index.py",), False),
 ]
 
-# 每个用例只有一个提交，而 CI 执行的是整个 PR 的范围。把检查器改成只看最新那个
-# 提交，上面所有用例照样全过——第二个提交带着中文主题或工具署名就会漏过去。
 def multi(subjects):
-    """一次造若干提交，返回 (退出码, 输出)。"""
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
         git = ["git", "-C", str(d), "-c", "user.name=t", "-c", "user.email=t@t",
@@ -98,8 +84,6 @@ print(f"  {'情形':<26} {'预期':<6} 实际")
 bad = 0
 for name, subject, body, files, ok in CASES:
     if body is None:
-        # Not reachable through -m: git strips the blank line. Build the
-        # message by hand so the "no blank line" case can be tested at all.
         rc, out = run(subject + "\n紧接着的正文", "", files)
     else:
         rc, out = run(subject, body, files)

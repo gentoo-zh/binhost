@@ -1,20 +1,4 @@
 #!/usr/bin/env python3
-"""把共用的 head、导航栏、页脚写进各页的标记区间。
-
-模板在 build/chrome/，不随站点发布。生成的仍是纯静态 HTML，同步脚本和 nginx
-都不知道有这一步。
-
-    python3 build/render-chrome.py           # 写回
-    python3 build/render-chrome.py --check   # 只检查，有差异就非零退出（CI 用）
-
-页里写：
-
-    <!-- chrome:nav wide -->
-    ...生成的内容...
-    <!-- /chrome:nav -->
-
-wide 是可选的变体，包列表和文件浏览器用宽版面。
-"""
 import hashlib
 import pathlib
 import re
@@ -27,10 +11,6 @@ BLOCK = re.compile(r"( *)<!-- chrome:(\w+)([^>]*?) -->\n.*?^ *<!-- /chrome:\2 --
 
 
 def stamp(body):
-    """给 /assets/ 下的引用加上内容指纹。
-
-    改了文件 URL 就跟着变，浏览器不会取到旧的，nginx 那边才敢长缓存。
-    """
     def one(m):
         f = ROOT / "site" / m.group(1).lstrip("/")
         if not f.exists():
@@ -55,9 +35,6 @@ def main():
     for f in sorted(site.glob("*.html")):
         old = f.read_text()
         new = BLOCK.sub(lambda m: render(m.group(2), m.group(3), m.group(1)), old)
-        # 指纹要盖整页，不只是共用部分。页面自己在 body 末尾引的那几个脚本原来
-        # 没有指纹，而 nginx 给所有 css 与 js 发一年的 immutable，改了文件回访者
-        # 一年都无法获取新的。
         new = stamp(new)
         if new == old:
             continue

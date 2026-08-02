@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-"""把一个包加进 packages.txt，只插一行。
-
-顺序是不分大小写的，Python 的 sort 是按字节的，整档重排会把 net-proxy/Xray
-挪到 bore 前面——这件事已经发生过一次。所以这里只找位置插进去。
+"""
+add-package.py <category/package>
 """
 import bisect
 import pathlib

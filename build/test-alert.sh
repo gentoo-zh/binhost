@@ -1,10 +1,4 @@
 #!/bin/bash
-# Cases for alert.sh.
-#
-# The one that matters: under set -euo pipefail an alert.conf missing a variable
-# used to take the caller down at the exact moment it had something to report.
-# Two of the four call sites had that bug and two did not, which is what a
-# copied function does over time.
 
 set -uo pipefail
 
@@ -12,7 +6,6 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 tmp=$(mktemp -d)
 trap 'rm -rf "${tmp}"' EXIT
 
-# Stand in for curl so nothing leaves the machine and the call can be inspected.
 mkdir -p "${tmp}/bin"
 cat > "${tmp}/bin/curl" <<'EOF'
 #!/bin/bash
@@ -31,9 +24,6 @@ check() {
     fi
 }
 
-# Each case runs in its own bash -euo pipefail, which is how the callers run.
-# A subshell would not reproduce it: set -u aborts the shell, and the point is
-# whether the caller survives.
 caller() {
     local conf=$1
     CURL_LOG="${tmp}/curl.log" ALERT_CONF="${conf}" \
@@ -82,9 +72,6 @@ else
     echo "  ✗ 正文未传出"; fail=$((fail + 1))
 fi
 
-# A message longer than Telegram accepts must still go out, truncated. It used
-# to be dropped whole, and the message grows with the number of failures, so the
-# alert vanished exactly when the round had gone worst.
 : > "${tmp}/curl.log"
 long=$(printf 'x%.0s' $(seq 1 6000))
 out=$(CURL_LOG="${tmp}/curl.log" ALERT_CONF="${tmp}/full.conf" \
@@ -100,8 +87,6 @@ if [[ ${sent} -ge 1 ]]; then
 else
     echo "  ✗ 超长消息一条都没发"; fail=$((fail + 1))
 fi
-# awk stops itself rather than being cut off by head: under pipefail a head that
-# exits first leaves awk killed by SIGPIPE, and the assignment fails the run.
 len=$(awk '/^text=/{print length($0); exit}' "${tmp}/curl.log")
 if [[ -n ${len} && ${len} -le 3700 ]]; then
     echo "  ✓ 发出去的是截断过的（${len} 字）"; pass=$((pass + 1))
@@ -109,8 +94,6 @@ else
     echo "  ✗ 没有截断（${len:-?} 字）"; fail=$((fail + 1))
 fi
 
-# Credentials must not survive the call: a later `set -x` or an env dump in the
-# caller would otherwise print the token.
 out=$(CURL_LOG="${tmp}/curl.log" ALERT_CONF="${tmp}/full.conf" \
       bash -euo pipefail -c '
         . "'"${HERE}"'/alert.sh"
