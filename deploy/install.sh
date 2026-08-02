@@ -74,7 +74,6 @@ sudo install -m755 audit-distfiles.py  /usr/local/lib/binhost/audit-distfiles.py
 # 记下装的是哪个提交。两台机器上的脚本都是拷贝，没有这一行就没有任何一处能说出
 # 它落后了——建置机为此跑了五天旧代码。status.sh 每天比对一次。
 printf %s '${COMMIT}' | sudo install -m644 /dev/stdin /usr/local/lib/binhost/VERSION
-printf %s '${MONITORS}' | sudo install -m644 /dev/stdin /usr/local/lib/binhost/MONITORS
 
 echo '--- rsync'
 sudo install -m644 rsyncd.conf /etc/rsyncd.conf
@@ -177,12 +176,15 @@ command -v node_exporter >/dev/null ||
 sudo rc-update add node_exporter default 2>/dev/null || true
 # The firewall step's flush emptied monitor_hosts; refill it from MONITORS and
 # save.
-if [ -n '${MONITORS}' ]; then
+mon='${MONITORS}'
+[ -n \"\${mon}\" ] || mon=\$(cat /usr/local/lib/binhost/MONITORS 2>/dev/null || true)
+if [ -n \"\${mon}\" ]; then
     sudo nft flush set inet filter monitor_hosts
-    for ip in ${MONITORS}; do sudo nft add element inet filter monitor_hosts { \$ip }; done
+    for ip in \${mon}; do sudo nft add element inet filter monitor_hosts { \$ip }; done
     sudo rc-service nftables save >/dev/null
-    echo '  monitor_hosts: ${MONITORS}'
+    echo \"  monitor_hosts: \${mon}\"
 fi
+printf %s \"\${mon}\" | sudo install -m644 /dev/stdin /usr/local/lib/binhost/MONITORS
 
 echo '--- overlay 副本'
 # distfiles are fetched by its Manifests, the package list generated from its
