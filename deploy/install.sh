@@ -9,8 +9,10 @@ MONITORS="${MONITORS:-}"
 SSH_PORT="${SSH_PORT:-60001}"
 cd "$(dirname "$0")/.."
 
-[[ ${SSH_PORT} =~ ^[0-9]+$ ]] && (( SSH_PORT >= 1 && SSH_PORT <= 65535 )) ||
-    { echo "SSH_PORT 不是 1-65535 的整数：${SSH_PORT}" >&2; exit 1; }
+if ! [[ ${SSH_PORT} =~ ^[0-9]+$ ]] || (( SSH_PORT < 1 || SSH_PORT > 65535 )); then
+    echo "SSH_PORT 不是 1-65535 的整数：${SSH_PORT}" >&2
+    exit 1
+fi
 
 COMMIT="$(git rev-parse HEAD)"
 git diff --quiet && git diff --cached --quiet || COMMIT="${COMMIT}-dirty"
@@ -48,11 +50,12 @@ sudo install -m644 rsyncd.conf /etc/rsyncd.conf
 
 echo '--- 防火墙'
 listening=\$(sudo sshd -T 2>/dev/null | awk '/^port /{print \$2}')
-if [ -n "\${listening}" ] && ! echo "\${listening}" | grep -qx '${SSH_PORT}'; then
-    echo "!! sshd 实际监听 \${listening}，而防火墙只会放行 ${SSH_PORT}" >&2
-    echo "   套用后当前连线会断，且没有第二条路进来。中止。" >&2
-    echo "   确认无误时以 SKIP_SSH_PORT_CHECK=1 重新执行。" >&2
-    [ -n "${SKIP_SSH_PORT_CHECK:-}" ] || exit 1
+if [ -n \"\${listening}\" ] && ! echo \"\${listening}\" | grep -qx '${SSH_PORT}' &&
+   [ -z '${SKIP_SSH_PORT_CHECK:-}' ]; then
+    echo \"!! sshd 实际监听 \${listening}，而防火墙只会放行 ${SSH_PORT}\" >&2
+    echo '   套用后当前连线会断，且没有第二条路进来，已中止' >&2
+    echo '   确认无误时以 SKIP_SSH_PORT_CHECK=1 重新执行' >&2
+    exit 1
 fi
 sed 's/__SSH_PORT__/${SSH_PORT}/g' nftables.conf > nftables.conf.real
 sudo nft -c -f nftables.conf.real
