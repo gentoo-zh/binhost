@@ -43,6 +43,7 @@ DISK_PATH="${DISK_PATH:-/srv/pub}"
 # 上的路径不同，谁在就查谁。
 VERSION_FILE="${VERSION_FILE:-}"
 REPO_API="${REPO_API:-https://api.github.com/repos/gentoo-zh/binhost/commits/master}"
+MONITORS_FILE="${MONITORS_FILE:-/usr/local/lib/binhost/MONITORS}"
 
 problems=0
 failures=()
@@ -236,14 +237,15 @@ else
             bad "node_exporter" "读不到 monitor_hosts 集合"
         else
             monitors=$(grep -Eo '[0-9]+(\.[0-9]+){3}' <<< "${set_out}" | wc -l)
-            if (( monitors == 0 )); then
-                # The set is emptied by nftables.conf's flush ruleset, and
-                # install.sh refills it from MONITORS. Install without MONITORS
-                # and the port is open to nobody -- the rule is there and
-                # nothing gets through.
-                bad "node_exporter" "monitor_hosts 是空的，没有抓取源连得上"
-            else
+            want=0
+            [[ -r ${MONITORS_FILE} ]] &&
+                want=$(grep -Eo '[0-9]+(\.[0-9]+){3}' "${MONITORS_FILE}" | wc -l)
+            if (( monitors > 0 )); then
                 note "node_exporter" "ok，放行 ${monitors} 个抓取源"
+            elif (( want > 0 )); then
+                bad "node_exporter" "装的时候配了 ${want} 个抓取源，集合却是空的"
+            else
+                note "node_exporter" "没有配抓取源，${EXPORTER_PORT} 对外全关"
             fi
         fi
     fi

@@ -74,6 +74,7 @@ sudo install -m755 audit-distfiles.py  /usr/local/lib/binhost/audit-distfiles.py
 # 记下装的是哪个提交。两台机器上的脚本都是拷贝，没有这一行就没有任何一处能说出
 # 它落后了——建置机为此跑了五天旧代码。status.sh 每天比对一次。
 printf %s '${COMMIT}' | sudo install -m644 /dev/stdin /usr/local/lib/binhost/VERSION
+printf %s '${MONITORS}' | sudo install -m644 /dev/stdin /usr/local/lib/binhost/MONITORS
 
 echo '--- rsync'
 sudo install -m644 rsyncd.conf /etc/rsyncd.conf
