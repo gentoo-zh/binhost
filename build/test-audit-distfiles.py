@@ -304,6 +304,41 @@ case("禁止镜像的比例过高时不清", lambda: (
            [f"x-{i}.tar.gz" for i in range(30)])))
 
 
+def _budget_rounds():
+    """连续三轮，每轮孤儿都低于单轮上限，看累计额度拦不拦得住。"""
+    import tempfile as _t, pathlib as _p
+    d = _p.Path(_t.mkdtemp())
+    old = (audit.LEDGER, audit.STATE, audit.RECYCLE, audit.GRACE_SECONDS)
+    audit.LEDGER = str(d / "reaped.json")
+    audit.RECYCLE = str(d / "recycle")
+    audit.GRACE_SECONDS = 0
+    files = d / "f"
+    files.mkdir()
+    have, got = 300, []
+    cap = int(have * audit.MAX_REAP_SHARE)
+    try:
+        for r in (1, 2, 3):
+            budget = max(0, cap - audit.recent_deletions(0))
+            orph = [f"x{r}-{i}.tar.gz" for i in range(90)]
+            paths = {}
+            for f in orph:
+                (files / f).write_text("x")
+                paths[f] = files / f
+            audit.STATE = str(d / f"s{r}.json")
+            deleted, _ = audit.reap(orph, paths, budget=budget)
+            audit.recent_deletions(len(deleted))
+            got.append(len(deleted))
+    finally:
+        audit.LEDGER, audit.STATE, audit.RECYCLE, audit.GRACE_SECONDS = old
+    return got, cap
+
+
+case("累计额度在删除之前就生效", lambda: (
+    lambda r: sum(r[0]) <= r[1])(_budget_rounds()))
+
+case("额度用完之后一个都不再删", lambda: (
+    lambda r: r[0][-1] == 0)(_budget_rounds()))
+
 for name, fn in CASES:
     try:
         ok = bool(fn())
