@@ -339,20 +339,21 @@ for _name, _text, _want in RESTRICT_CASES:
 
 
 def _ledger(content, writable=True):
-    """帐本处于某种状态时 recent_deletions 的行为。"""
     with tempfile.TemporaryDirectory() as tmp:
-        f = pathlib.Path(tmp) / "reaped.json"
-        if content is not None:
-            f.write_text(content)
-        if not writable:
-            os.chmod(tmp, 0o500)
+        base = pathlib.Path(tmp)
+        if writable:
+            f = base / "reaped.json"
+            if content is not None:
+                f.write_text(content)
+        else:
+            (base / "wall").write_text("")
+            f = base / "wall" / "reaped.json"
         old = audit.LEDGER
         audit.LEDGER = str(f)
         try:
             return audit.recent_deletions(1)
         finally:
             audit.LEDGER = old
-            os.chmod(tmp, 0o700)
 
 
 def _raises(fn):
