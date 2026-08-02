@@ -72,7 +72,7 @@ sudo install -m644 packages.txt        /usr/local/lib/binhost/packages.txt
 sudo install -m644 excluded.txt        /usr/local/lib/binhost/excluded.txt
 sudo install -m755 audit-distfiles.py  /usr/local/lib/binhost/audit-distfiles.py
 # 记下装的是哪个提交。两台机器上的脚本都是拷贝，没有这一行就没有任何一处能说出
-# 它落后了——建置机为此跑了五天旧代码。status.sh 每天比对一次。
+# 它落后了——建置机为此运行了五天的旧代码。status.sh 每天比对一次。
 printf %s '${COMMIT}' | sudo install -m644 /dev/stdin /usr/local/lib/binhost/VERSION
 
 echo '--- rsync'
@@ -116,23 +116,23 @@ sudo install -m644 headers-files.inc  /etc/nginx/conf.d/headers-files.inc
 # 这一句中止整个安装：日志轮替、cron、node_exporter、overlay 副本、服务启动
 # 全都不会跑，而 /etc/nginx 已经被换成一份载不起来的配置。
 #
-# 这是个先有鸡还是先有蛋：certbot 的 HTTP-01 需要 nginx 先跑起来提供 acme 的
+# 这是个先有鸡还是先有蛋：certbot 的 HTTP-01 需要 nginx 先启动提供 acme 的
 # location。所以证书不在就跳过 HTTPS 那份配置，先把 HTTP 立起来，签发之后再
-# 跑一次这个脚本。
+# 执行一次这个脚本。
 CERT=/etc/letsencrypt/live/distfiles.gentoozh.org
 # 两个文件都要在。只测 fullchain 时，续期中断留下的半套证书会让这里判定
 # 证书齐全，于是配上 HTTPS 那一份，nginx -t 再以 cannot load certificate 失败。
 if sudo test -r \"\${CERT}/fullchain.pem\" && sudo test -r \"\${CERT}/privkey.pem\"; then
     sudo install -m644 distfiles.conf /etc/nginx/conf.d/distfiles.conf
 else
-    # 机器上已经在跑 HTTPS 时不要降级。证书临时读不到（续期把目录换掉的一瞬、
+    # 机器上已经运行中 HTTPS 时不要降级。证书临时读不到（续期把目录换掉的一瞬、
     # sudo 规则变了）就把 443 从配置里删掉，等于用一次例行安装把站点打回明文，
     # 而且 HSTS 已经发出去的浏览器会直接连不上。
     if sudo grep -qs 'listen 443' /etc/nginx/conf.d/distfiles.conf; then
         echo '    !! 读不到证书，但现有配置在监听 443；保持原样不动' >&2
-        echo '       证书确实没了就先修证书，再重跑本脚本' >&2
+        echo '       证书确实没了就先修证书，再重新执行本脚本' >&2
     else
-        echo '    证书还没有，先只配 HTTP；签发之后重跑本脚本'
+        echo '    证书还没有，先只配 HTTP；签发之后重新执行本脚本'
         # 整个第二个 server 块一起去掉。从 listen 443 那一行删起会把它的
         # server { 留在原地，大括号不配对，nginx -t 一样失败。
         awk '/^server \{/{n++} n<2' distfiles.conf |
@@ -168,7 +168,7 @@ sudo sed -i 's|^\(\*/5 \* \* \* \* \)[^ ]*|\1${SITE_USER}|' /etc/cron.d/binhost
 echo '--- 监控'
 # node_exporter is scraped by two Prometheus instances. Port 9100 admits only
 # the monitor_hosts set.
-# emerge 失败不该挡住后面的 overlay 副本、repos.conf 与服务启动——那些是这台
+# emerge 失败不该阻止后面的 overlay 副本、repos.conf 与服务启动——那些是这台
 # 机器能不能工作的部分，监控只是能不能被看见。
 command -v node_exporter >/dev/null ||
     sudo emerge -q app-metrics/node_exporter ||

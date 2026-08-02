@@ -27,7 +27,7 @@ function el(id) {
   };
 }
 
-// 脚本在顶层就读 location.pathname，每个用例要重跑一次。
+// 脚本在顶层就读 location.pathname，每个用例要重执行一次。
 function crumbsFor(urlPath) {
   const nodes = {};
   global.document = {

@@ -61,7 +61,7 @@ done
 # dropped connection or a full disk all end up here.
 if (( failed )); then
     echo "!!! ${failed} 个包没取到，索引保持原样" >&2
-    echo "    修好来源后重跑；已取到的 ${new} 个不会重复下载" >&2
+    echo "    修好来源后重新执行；已取到的 ${new} 个不会重复下载" >&2
     exit 1
 fi
 

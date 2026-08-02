@@ -9,7 +9,7 @@ add_header X-Content-Type-Options "nosniff" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 add_header X-Frame-Options "DENY" always;
 add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()" always;
-# 页面里有内联脚本，所以 script-src 只能留 unsafe-inline；能挡住的是外部脚本、
+# 页面里有内联脚本，所以 script-src 只能留 unsafe-inline；能阻止的是外部脚本、
 # 内联事件处理器之外的注入面，以及被别人嵌进 iframe。
 add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" always;
 add_header Alt-Svc 'h3=":443"; ma=86400' always;

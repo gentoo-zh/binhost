@@ -57,7 +57,7 @@ def main():
         new = BLOCK.sub(lambda m: render(m.group(2), m.group(3), m.group(1)), old)
         # 指纹要盖整页，不只是共用部分。页面自己在 body 末尾引的那几个脚本原来
         # 没有指纹，而 nginx 给所有 css 与 js 发一年的 immutable，改了文件回访者
-        # 一年都取不到新的。
+        # 一年都无法获取新的。
         new = stamp(new)
         if new == old:
             continue
@@ -68,7 +68,7 @@ def main():
             print(f"  更新 {f.name}")
 
     if check and stale:
-        print("!!! 这些页面和 build/chrome/ 下的模板对不上：" + "，".join(stale),
+        print("!!! 这些页面和 build/chrome/ 下的模板不一致：" + "，".join(stale),
               file=sys.stderr)
         print("    跑 python3 build/render-chrome.py 重新生成", file=sys.stderr)
         return 1

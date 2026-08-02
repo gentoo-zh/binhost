@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=179ca8f3">
-<script src="/assets/early.js?v=b8007afb"></script>
+<link rel="stylesheet" href="/assets/site.css?v=fbe35479">
+<script src="/assets/early.js?v=5e6859c6"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://distfiles.gentoozh.org/assets/logo.webp">
@@ -81,7 +81,7 @@
       清单里只有个位数的包在 <code>IUSE</code> 里出现 <code>systemd</code>，其余产物两边一致。
     </p>
 
-    <h2 data-i18n="q4">二进制包会不会在我的 CPU 上跑不起来？</h2>
+    <h2 data-i18n="q4">二进制包是否可能无法在我的 CPU 上运行？</h2>
     <p data-i18n-html="a4">
       不会。构建在容器里，<code>CFLAGS</code> 是通用的，不带 <code>-march=native</code>。
       因为 portage 接受二进制包时不比较 <code>CFLAGS</code>，所以这一点只能在构建端保证。
@@ -207,7 +207,7 @@ window.MIRROR_I18N = {
     a2: '因為 <code>PORTAGE_BINHOST</code> 產生的是隱含儲存庫，無法單獨設定 <code>verify-signature</code>。若為使用本站的套件而關閉驗簽，官方 binhost 的驗簽會一併關閉。',
     q3: 'OpenRC 和 systemd 都能使用嗎？',
     a3: '可以。儲存庫按 CPU 基線切分，不按 init 系統切，這也是官方 binhost 的做法。清單裡只有個位數的套件在 <code>IUSE</code> 裡出現 <code>systemd</code>，其餘產物兩邊一致。',
-    q4: '二進位套件會不會在我的 CPU 上跑不起來？',
+    q4: '二進位套件是否可能無法在我的 CPU 上執行？',
     a4: '不會。建置在容器裡，<code>CFLAGS</code> 是通用的，不帶 <code>-march=native</code>。因為 portage 接受二進位套件時不比較 <code>CFLAGS</code>，所以這一點只能在建置端保證。',
     q5: '怎麼確認安裝的套件沒被竄改？',
     a5: '簽章內嵌在每個 gpkg 套件裡（<code>image.tar.zst.sig</code>），和官方 binhost 一樣。設定裡的 <code>verify-signature = true</code> 讓 portage 拒絕本站驗簽不過的套件，它寫在 <code>binrepos.conf</code> 裡，只作用於本站。',
@@ -252,7 +252,7 @@ window.MIRROR_I18N = {
   }
 };
 </script>
-<script src="/assets/i18n.js?v=221d05ee"></script>
-<script src="/assets/source-switch.js?v=67fbc159"></script>
+<script src="/assets/i18n.js?v=e6b5f0bf"></script>
+<script src="/assets/source-switch.js?v=309b2e30"></script>
 </body>
 </html>

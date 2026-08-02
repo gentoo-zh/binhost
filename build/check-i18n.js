@@ -43,7 +43,7 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
         [...strings[0].matchAll(/data-i18n="([A-Za-z0-9_]+)"/g)].map(x => x[1]));
       for (const [, key] of keysInScript) {
         if (!inStrings.has(key)) {
-          console.error(`!!! ${f}: t("${key}") 取不到，#strings 里没有这个 key`);
+          console.error(`!!! ${f}: t("${key}") 无法获取，#strings 里没有这个 key`);
           bad++;
         }
       }
@@ -54,7 +54,7 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
           new RegExp('data-i18n="(' + pre + '[A-Za-z0-9_]+)"', 'g'))].map(x => x[1]));
         for (const k of all) {
           if (!inStrings.has(k)) {
-            console.error(`!!! ${f}: ${k} 只在正文里，t("${pre}...") 取不到它`);
+            console.error(`!!! ${f}: ${k} 只在正文里，t("${pre}...") 无法获取它`);
             bad++;
           }
         }

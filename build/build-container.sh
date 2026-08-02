@@ -49,7 +49,7 @@ die() { echo "!!! $*" >&2; exit 1; }
 #
 # The lock file follows STAGE instead of /var/lock: the build runs as an
 # ordinary user with no write access there.
-# cycle.sh 已经持有同一个锁并把 fd 传了下来，此时再抢会被自己挡住。单独运行
+# cycle.sh 已经持有同一个锁并把 fd 传了下来，此时再抢会被自身阻塞。单独运行
 # 这支脚本时没有那个变量，照旧自己上锁。
 if [[ -z ${BINHOST_LOCKED:-} ]]; then
     LOCK="${LOCK:-$(dirname "${STAGE}")/build.lock}"
@@ -170,7 +170,7 @@ EMERGE=(emerge --usepkg --changed-use --with-bdeps=y --quiet-build)
 echo "::: 整体解析"
 failed=()
 if "${EMERGE[@]}" "${atoms[@]}" > /var/log/binhost/whole.log 2>&1; then
-    echo ">>> 整体一次完成，未逐包重跑"
+    echo ">>> 整体一次完成，未逐包重新执行"
     rm -f /var/log/binhost/whole.log
 else
     echo "!!! 整体失败，退回逐包（每包一份日志）"

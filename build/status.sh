@@ -61,7 +61,7 @@ days_until() { echo $(( ( $(date -d "$1" +%s) - $(date +%s) ) / 86400 )); }
 
 # --- 部署版本 ------------------------------------------------------------------
 # 两台机器上的脚本都是 rsync 过去的一份拷贝，没有任何一处会说它落后了。建置机
-# 曾经跑了五天旧代码：修好的 bug 没到机器上，每天照发同一份告警，而看告警的人
+# 曾经运行了五天的旧代码：修好的 bug 没到机器上，每天照发同一份告警，而看告警的人
 # 以为是修好之前那一轮留下的。
 #
 # 不自动更新，只报告。cycle.sh 自己覆写自己有 bash 按字节读脚本那个坑，
@@ -172,7 +172,7 @@ else
         # Arithmetic expansion turns an empty or non-numeric value into 0
         # without a word, which makes age come out as fifty-odd years. Without
         # this test nobody would ever find out.
-        bad "index" "TIMESTAMP 读不出来"
+        bad "index" "TIMESTAMP 无法解析"
     else
         age=$(( ( $(date +%s) - ts ) / 86400 ))
         if (( age >= INDEX_MAX_AGE_D )); then
@@ -204,8 +204,8 @@ if [[ -n ${head:-} ]]; then
             bad "package fetch" "HTTP ${code}"
         fi
     else
-        # 没有 else 时这一整项静默消失，而它正是用来发现索引与文件对不上的。
-        bad "package fetch" "索引里取不到一条 PATH"
+        # 没有 else 时这一整项静默消失，而它正是用来发现索引与文件不一致的。
+        bad "package fetch" "索引里无法获取一条 PATH"
     fi
 fi
 
@@ -217,12 +217,12 @@ fi
 # runs.
 dist=$(curl -fsS --max-time 15 "${SITE}/distfiles-status.json" 2>/dev/null)
 if [[ -z ${dist} ]]; then
-    bad "distfiles" "取不到 distfiles-status.json"
+    bad "distfiles" "无法获取 distfiles-status.json"
 else
     dts=$(grep -o '"generated":[0-9]*' <<< "${dist}" | cut -d: -f2)
     dn=$(grep -o '"files":[0-9]*' <<< "${dist}" | cut -d: -f2)
     if [[ ! ${dts} =~ ^[0-9]+$ || ! ${dn} =~ ^[0-9]+$ ]]; then
-        bad "distfiles" "status 读不出来"
+        bad "distfiles" "status 无法解析"
     elif (( dn == 0 )); then
         bad "distfiles" "一个文件都没有"
     else
@@ -298,7 +298,7 @@ fi
 
 stamp=$(curl -fsS --max-time 15 "${SITE}/.health" 2>/dev/null | tr -dc '0-9')
 if [[ -z ${stamp} ]]; then
-    bad "heartbeat" "取不到 ${SITE}/.health"
+    bad "heartbeat" "无法获取 ${SITE}/.health"
 else
     age_h=$(( ( $(date +%s) - stamp ) / 3600 ))
     if (( age_h >= HEARTBEAT_MAX_H )); then
@@ -319,7 +319,7 @@ fi
 # 有问题却没有告警配置时要说出来。这台的 cron mail 没有出口，只印在 stdout
 # 等于没人知道，而「没配告警」和「一切正常」在外面看起来一模一样。
 if (( problems > 0 )) && [[ ! -r ${ALERT_CONF} ]]; then
-    echo "!! 有 ${problems} 项未通过，但 ${ALERT_CONF} 读不到，告警发不出去" >&2
+    echo "!! 有 ${problems} 项未通过，但 ${ALERT_CONF} 读不到，告警传送失败" >&2
 fi
 
 # 只有定时执行才发群通知。手动查看状态时不该惊动所有人：这一份在两台机器上

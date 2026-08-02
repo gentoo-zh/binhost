@@ -117,7 +117,7 @@ fi
 # is how app-i18n/libkkc broke across 5.42 to 5.44; after perl-cleaner
 # XML::Parser loaded immediately.
 echo ">>> perl-cleaner"
-perl-cleaner --all -- --quiet-build || echo "!!! perl-cleaner 未跑完"
+perl-cleaner --all -- --quiet-build || echo "!!! perl-cleaner 未完成"
 
 # Drop binary packages the tree no longer has an ebuild for. Without this the
 # cache only ever grows.
@@ -134,7 +134,7 @@ if command -v eclean-pkg >/dev/null; then
     eclean-pkg || echo "!! eclean-pkg 未完成，本次未清理缓存"
 else
     emerge -q app-portage/gentoolkit && eclean-pkg ||
-        echo "!! 装不上 gentoolkit，缓存这次没清"
+        echo "!! 安装失败 gentoolkit，缓存这次没清"
 fi
 
 # getuto generates a "Portage Local Trust Key" and writes its passphrase in

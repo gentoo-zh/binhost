@@ -82,6 +82,10 @@ COLLOQUIAL = [
     "拉倒", "压根", "壓根", "干脆", "乾脆", "老是", "半天",
     "多半", "看一眼", "东西", "東西", "没劲", "沒勁", "省得", "好几", "好幾",
     "一大堆", "没啥", "沒啥", "乱七八糟", "亂七八糟",
+    "跑一次", "跑一遍", "重跑", "跑完", "跑起来", "跑起來", "跑不", "在跑",
+    "没跑", "沒跑", "跑了", "跑过", "跑過", "装不上", "裝不上", "取不到",
+    "读不出", "讀不出", "对不上", "對不上", "发不出", "發不出", "挡住", "擋住",
+    "其实", "其實", "坦白讲", "坦白講",
 ]
 
 # 发出去的字符串按更严的一份查：告警进 Telegram 群，状态那几行是运维第一眼
@@ -104,6 +108,10 @@ COMMENT = {
     ".conf": r"#(.*)$",
     ".inc": r"#(.*)$",
     ".md": None,          # prose, checked whole
+    ".yml": r"#(.*)$",
+    ".yaml": r"#(.*)$",
+    ".css": r"/\*(.*?)\*/",
+    ".html": r"<!--(.*?)-->|/\*(.*?)\*/|(?<![:\w])//(.*)$",
 }
 
 # Files with no suffix that are still configuration with comments.
@@ -112,17 +120,17 @@ NO_SUFFIX = {"cron.d-binhost", "logrotate-binhost", "rsyncd.conf", "nftables.con
 
 # 发给人看的字符串也要查，不只是注释。告警会进 Telegram 群，状态那几行是运维
 # 第一眼看到的内容。
-EMIT_CMD = {
-    ".sh": re.compile(r'^\s*(?:echo|printf|say|bad|note|alert|die)\b'),
-    ".py": re.compile(r'^\s*(?:print|sys\.exit)\b'),
-}
+# 含中文的字符串常量一律按发出去的文字查。原来只认行首几个命令，于是变量拼装、
+# heredoc、console.log、跨行 print 全都漏掉，而检查器仍报全绿。
+EMIT_SUFFIX = (".sh", ".py", ".js", ".yml", ".yaml")
+CJK = re.compile(r'[\u4e00-\u9fff]')
 QUOTED = re.compile(r'"([^"]*)"|\'([^\']*)\'')
 
 
 def check_emitted(root):
     bad = 0
     for f in sorted(pathlib.Path(root).rglob("*")):
-        if not f.is_file() or f.suffix not in EMIT_CMD or f.name == "check-copy.py":
+        if not f.is_file() or f.suffix not in EMIT_SUFFIX or f.name == "check-copy.py":
             continue
         if any(part in (".git", "site") for part in f.parts):
             continue
@@ -130,10 +138,10 @@ def check_emitted(root):
         for i, line in enumerate(f.read_text(errors="replace").splitlines(), 1):
             if line.strip().startswith("#"):
                 continue
-            if not EMIT_CMD[f.suffix].match(line):
-                continue
             for m in QUOTED.finditer(line):
                 s = m.group(1) if m.group(1) is not None else m.group(2)
+                if not CJK.search(s):
+                    continue
                 for w in COLLOQUIAL_EMIT:
                     if w in s:
                         hits.append(f"{i}: 口语词「{w}」  {line.strip()[:60]}")
@@ -179,7 +187,7 @@ def check_comments(root):
                 # 注解与字串都要查，不是二选一。原来命中注解就只查注解那段，
                 # 于是 print("装上就行")  # 说明 这种行末带注解的写法，字串
                 # 部分整个不查——而 Python 里那是常见写法。
-                texts = ([m.group(1)] if m else []) + (
+                texts = ([next((g for g in m.groups() if g), "")] if m else []) + (
                     re.findall(r'"([^"]*[\u4e00-\u9fff][^"]*)"', line)
                     + re.findall(r"'([^']*[\u4e00-\u9fff][^']*)'", line))
             for chunk in texts:

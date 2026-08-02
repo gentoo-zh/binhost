@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=179ca8f3">
-<script src="/assets/early.js?v=b8007afb"></script>
+<link rel="stylesheet" href="/assets/site.css?v=fbe35479">
+<script src="/assets/early.js?v=5e6859c6"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://distfiles.gentoozh.org/assets/logo.webp">
@@ -85,7 +85,7 @@
     这里只有 overlay 的源码，不能替代官方源，因此是追加而非替换。
     地址不写 <code>distfiles/</code>，portage 会自己补上。
     这里把镜像都列出：<code>GENTOO_MIRRORS</code> 是按顺序尝试的列表，
-    选中的取不到时会落到后面的地址。
+    选中的无法获取时会落到后面的地址。
   </p>
 
   <div class="step">
@@ -343,7 +343,7 @@ window.MIRROR_I18N = {
     sigNote: '驗簽由第 2 步的 <code>verify-signature = true</code> 提供，只作用於本站。<code>FEATURES=binpkg-request-signature</code> 是全域的，會覆蓋它，也會要求你自己用 <code>FEATURES=buildpkg</code> 建出來的套件帶簽章——那些套件預設沒有簽章，於是每次本機建置都會在合併時報 <code>GnuPG verification failed</code>。要開它就得同時配好 <code>binpkg-signing</code> 與本機簽章金鑰。',
     srcLabel: '鏡像', srcLabelFirst: '優先', srcCernet: '教育網聯合鏡像站', srcNju: '南京大學', srcNyist: '南陽理工', srcHernet: '河南教育網', srcOrigin: '來源站',
     repoNote: '預設是南京大學，中國大陸下載會更快；來源站在美國，部分地區下載可能較為緩慢。兩邊的套件都是一樣的，簽章也是同一份，更換哪個都不會影響驗簽。',
-    distNote: '這裡只有 overlay 的原始碼，不能替代官方來源，因此是追加而非替換。位址不寫 <code>distfiles/</code>，portage 會自己補上。這裡把鏡像都列出：<code>GENTOO_MIRRORS</code> 是按順序嘗試的列表，選中的取不到時會落到後面的位址。',
+    distNote: '這裡只有 overlay 的原始碼，不能替代官方來源，因此是追加而非替換。位址不寫 <code>distfiles/</code>，portage 會自己補上。這裡把鏡像都列出：<code>GENTOO_MIRRORS</code> 是按順序嘗試的列表，選中的無法取得時會落到後面的位址。',
     distOptOut: '因版權等原因不希望某個套件被鏡像時，在其 ebuild 中加入 <code>RESTRICT="mirror"</code>，同步工具會跳過。',
     step1: '匯入簽章公鑰', step2: '加入倉庫', step3: '打開 getbinpkg（附加）',
     keyAlt: '不想裝這個套件，也可以直接下載公鑰檔案，見 <a href="/faq#key-download">FAQ</a>。',
@@ -375,12 +375,12 @@ window.MIRROR_I18N = {
   }
 };
 </script>
-<script src="/assets/i18n.js?v=221d05ee"></script>
+<script src="/assets/i18n.js?v=e6b5f0bf"></script>
 <!-- 在 i18n.js 之后：applyLang 会重写 .src-opt 的文字，切换脚本只改
      data-uri 与选中态，两者不冲突 -->
 <script src="/assets/mode-switch.js?v=39a1905b"></script>
-<script src="/assets/sudo-switch.js?v=0cce4b19"></script>
-<script src="/assets/source-switch.js?v=67fbc159"></script>
+<script src="/assets/sudo-switch.js?v=89d1a2ad"></script>
+<script src="/assets/source-switch.js?v=309b2e30"></script>
 
 <script>
 /* 两个来源各写了一个小状态文件：二进制包由 publish.sh 写，distfiles 由
@@ -390,7 +390,7 @@ window.MIRROR_I18N = {
   var langTable = window.MIRROR_I18N || {};
   /* 语言从 i18n.js 广播的事件拿，不自己读 localStorage：localStorage 被禁用时
      i18n.js 会退回按 navigator 判定，两边就会得出不同的语言。 */
-  /* 从 <html lang> 起步，而不是 null。i18n.js 在本段之前就载入并同步跑完
+  /* 从 <html lang> 起步，而不是 null。i18n.js 在本段之前就载入并同步完成
      applyLang，langchange 那次派送早于下面的监听器注册，于是 curLang 一直是
      null，s() 永远回退到简体：繁中与英文的访客首屏看到的是简体那一行，要手动
      点一次语言键才会改。 */

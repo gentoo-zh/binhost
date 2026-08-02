@@ -4,7 +4,7 @@
 [hidden] { display: none !important; }
 
 /* [data-theme="light"] 一并声明：design.html 用带该属性的探针 div 读色值，
-   只有 :root 的话它读到的是继承来的当前主题，系统深色时浅色那组色块显示的
+   只有 :root 时它读到的是继承来的当前主题，系统深色时浅色那组色块显示的
    是深色值。写成选择器列表而不是再抄一份，两份浅色调色板要靠人盯着同步。 */
 :root,
 [data-theme="light"] {
@@ -36,7 +36,7 @@
   --panel: var(--surface);
   --panel-head: var(--bg);
   /* 代码块只用一个色相：值用强调色，其余靠中性色的明暗分层。
-     原来值是青绿，和紫色是两个色相，跟设计语言里写的对不上。 */
+     原来值是青绿，和紫色是两个色相，跟设计语言里写的不一致。 */
   --c-sec: var(--accent);      /* 段名 [gentoo-zh] */
   --c-key: var(--fg);          /* 键、命令 */
   --c-val: var(--accent);      /* 值、地址 */
@@ -117,7 +117,7 @@ body {
    简体访客一帧都不必等。 */
 html.lang-swap body { visibility: hidden; }
 
-/* 顶栏高度。util.js 量出实际值写回来，这里是它跑起来之前的初值，也是
+/* 顶栏高度。util.js 量出实际值写回来，这里是它启动之前的初值，也是
    没有脚本时的取值——顶栏单行时就是这个高度。 */
 :root {
   --nav-h: 3.2rem;
@@ -147,7 +147,7 @@ html.lang-swap body { visibility: hidden; }
 .nav-links {
   display: flex; align-items: center; gap: 0.1rem;
   /* margin-left: auto 把链接连同后面的语言、主题一起推到右边。
-     用 flex: 1 的话它会占满中间，链接就贴在品牌旁边。 */
+     用 flex: 1 时它会占满中间，链接就贴在品牌旁边。 */
   flex: 0 1 auto; margin-left: auto;
   min-width: 0; overflow-x: auto; scrollbar-width: none;
 }
@@ -331,7 +331,7 @@ h2:first-of-type { margin-top: 2rem; }
 /* 提示符只表示身份，不可选中，复制时不会带上 */
 /* 提示符用伪元素生成。user-select: none 在 Chrome 上够用，iOS Safari 与
    Firefox 选中一整段时照样把它复制走，而 # 粘进 shell 会把整行注释掉。
-   伪元素的内容不在 DOM 文本里，任何浏览器都取不到。 */
+   伪元素的内容不在 DOM 文本里，任何浏览器都无法获取。 */
 .code .prompt::before { content: "# "; }
 [data-sudo="on"] .code .prompt::before { content: "$ "; }
 /* 下载不需要 root，这一条不跟着切 */
@@ -368,7 +368,7 @@ h2:first-of-type { margin-top: 2rem; }
 }
 .code-head .head-btn:hover { border-color: var(--fg-soft); color: var(--fg); }
 /* 按下去要一眼看得出来：它改的是复制出去的命令，看错了会以 root 跑一段以为
-   加了 sudo 的东西。用主色描边加淡底，填实那一块在这种小标题栏里太重。 */
+   加了 sudo 的内容。用主色描边加淡底，填实那一块在这种小标题栏里太重。 */
 .code-head .head-btn[aria-pressed="true"] {
   background: var(--accent-weak); border-color: var(--accent); color: var(--accent);
 }
@@ -463,7 +463,7 @@ a { color: var(--primary); text-decoration: none; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
 /* --- 交互反馈 ---
-   可点的东西要看得出可点，按下去要有回应。悬停变色、聚焦有描边、
+   可点的内容要看得出可点，按下去要有回应。悬停变色、聚焦有描边、
    点击有位移。除此之外没有动画。 */
 
 a { color: var(--accent); text-decoration: none; }
@@ -488,9 +488,9 @@ button:active, .copy-chip:active { transform: translateY(1px); }
 
 /* 数据带：包数、更新时间这类事实，放在标题下方一行 */
 /* 两列网格：一行一个来源，数量与时间各占一列，时间因此左对齐成一竖排。
-   用 flex 换行的话两行的时间会错开。 */
+   用 flex 换行时两行的时间会错开。 */
 /* 内容是取回数据之后才填的，所以高度先按最终行数留出来：两行，行高由里面
-   那个大一档的数字决定。不留的话页面会在数据到达时整块往下扩。 */
+   那个大一档的数字决定。不留时页面会在数据到达时整块往下扩。 */
 .facts {
   display: grid; grid-template-columns: auto auto;
   justify-content: start; gap: 0.35rem 1.75rem;
@@ -500,7 +500,7 @@ button:active, .copy-chip:active { transform: translateY(1px); }
 }
 .facts span { display: inline-flex; align-items: baseline; gap: 0.3em; }
 /* 数量用强调色、字号大一档：这一行的信息量集中在两个数字上，
-   全用次要色的话要逐字读才找得到。时间用正文色，说明文字保持次要色。 */
+   全用次要色时要逐字读才找得到。时间用正文色，说明文字保持次要色。 */
 .facts .num { color: var(--accent); font-size: 0.95rem; font-weight: 600; }
 .facts b { font-weight: 500; color: var(--fg-body); }
 
@@ -538,7 +538,7 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 /* 焦点环走上面统一的 :focus-visible。原来 outline:none 换 1px 边框变色，
    键盘上认不出来，而站里其它控件都是那一套。 */
 .search:focus-visible { border-color: var(--primary); }
-/* 计数与更新时间按行给：三个数量口径不同，挤成一行读不出区别。
+/* 计数与更新时间按行给：三个数量口径不同，挤成一行无法解析区别。
    pre-line 让脚本仍用 textContent 输出，不必为换行改成 innerHTML。 */
 .count {
   font-size: 0.82rem; color: var(--fg-soft); margin: 0 0 0.7rem;
@@ -684,7 +684,7 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 
 /* --- 窄屏 --- */
 @media (max-width: 34rem) {
-  /* 手机上两个状态列各占 6rem 的话，名称列只剩不到 100px，而标签又是 nowrap
+  /* 手机上两个状态列各占 6rem 时，名称列只剩不到 100px，而标签又是 nowrap
      的，会把表格撑出视口。收窄并允许标签折行。 */
   .pkgs th.mark { width: 4.5rem; }
   .pkgs td.mark { white-space: normal; }
