@@ -36,7 +36,7 @@ def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None):
     return "\n".join(lines)
 
 
-def run(stanzas, overlay_has=None, excluded=frozenset()):
+def run(stanzas, overlay_has=None, excluded=frozenset(), masked=()):
     """Parse and select.
 
     overlay_has lists the cpv the overlay carries, as ebuilds rather than bare
@@ -55,6 +55,11 @@ def run(stanzas, overlay_has=None, excluded=frozenset()):
             d = ov / cp
             d.mkdir(parents=True, exist_ok=True)
             (d / (cpv.split("/", 1)[1] + ".ebuild")).write_text("EAPI=8\n")
+        prof = ov / "profiles"
+        prof.mkdir(parents=True, exist_ok=True)
+        (prof / "repo_name").write_text("gentoo-zh\n")
+        (prof / "package.mask").write_text(
+            "".join(f"# masked for removal\n{cp}\n" for cp in masked))
         return stage_index.select(entries, ov, excluded=excluded)
 
 
@@ -172,6 +177,14 @@ case("插入后头部保持字母序", lambda: (
         "ACCEPT_KEYWORDS: ~amd64\nPACKAGES: 1\nTIMESTAMP: 1\nVERSION: 0", 7, "abc").splitlines())))
 
 print(f"  {'用例':<40} 结果")
+case("overlay mask 掉之后不再 stage", lambda: (
+    cpvs(run([stanza("app-misc/a-1")], overlay_has=["app-misc/a-1"],
+             masked=("app-misc/a",))[0]) == []))
+
+case("没 mask 时照旧收录", lambda: (
+    cpvs(run([stanza("app-misc/a-1")], overlay_has=["app-misc/a-1"])[0])
+    == ["app-misc/a-1"]))
+
 bad = 0
 for name, fn in CASES:
     try:
