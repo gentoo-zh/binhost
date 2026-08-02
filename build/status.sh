@@ -76,14 +76,14 @@ if [[ -n ${VERSION_FILE} && -r ${VERSION_FILE} ]]; then
     there=$(curl -fsS --max-time 20 "${REPO_API}" 2>/dev/null |
             sed -n 's/^  "sha": "\([0-9a-f]\{40\}\)",$/\1/p' | head -1)
     if [[ -z ${there} ]]; then
-        note "部署版本" "${here:0:8}，取不到远端，跳过比对"
+        note "部署版本" "${here:0:8}，远端不可达，未比对"
     elif [[ ${here} == "${there}" ]]; then
         note "部署版本" "${here:0:8}，与 master 一致"
     else
-        bad "部署版本" "装的是 ${here:0:8}，master 是 ${there:0:8}，这台机器在跑旧代码"
+        bad "部署版本" "已部署 ${here:0:8}，master 为 ${there:0:8}，该机运行的不是当前代码"
     fi
 else
-    bad "部署版本" "没有 VERSION，装的时候没记下提交号"
+    bad "部署版本" "缺少 VERSION，安装时未记录提交号"
 fi
 
 # --- 站点同步 ------------------------------------------------------------------
@@ -94,13 +94,13 @@ if [[ -d ${SITE_WORK}/.git ]]; then
     served=$(md5sum "${SITE_DEST}/index.html" 2>/dev/null | cut -d' ' -f1)
     onbox=$(md5sum "${SITE_WORK}/site/index.html" 2>/dev/null | cut -d' ' -f1)
     if (( fetched == 0 )); then
-        bad "站点同步" "${SITE_WORK}/.git/FETCH_HEAD 不存在，同步没跑过"
+        bad "站点同步" "${SITE_WORK}/.git/FETCH_HEAD 不存在，同步从未执行"
     elif (( age_h >= SITE_STALE_H )); then
-        bad "站点同步" "上次拉取在 ${age_h} 小时前，每五分钟一次的同步停了"
+        bad "站点同步" "上次拉取在 ${age_h} 小时前，五分钟一次的同步已停止"
     elif [[ -n ${served} && -n ${onbox} && ${served} != "${onbox}" ]]; then
-        bad "站点同步" "仓库副本与发布目录不一致，rsync 那一步没成"
+        bad "站点同步" "仓库副本与发布目录不一致，rsync 未完成"
     else
-        note "站点同步" "${here_site:0:8}，${age_h} 小时内拉过"
+        note "站点同步" "${here_site:0:8}，${age_h} 小时内已拉取"
     fi
 fi
 
@@ -264,9 +264,9 @@ else
             if (( monitors > 0 )); then
                 note "node_exporter" "ok，放行 ${monitors} 个抓取源"
             elif (( want > 0 )); then
-                bad "node_exporter" "装的时候配了 ${want} 个抓取源，集合却是空的"
+                bad "node_exporter" "安装时配置了 ${want} 个抓取源，当前集合为空"
             else
-                note "node_exporter" "没有配抓取源，${EXPORTER_PORT} 对外全关"
+                note "node_exporter" "未配置抓取源，${EXPORTER_PORT} 不对外开放"
             fi
         fi
     fi
@@ -310,7 +310,9 @@ if (( problems > 0 )) && [[ ! -r ${ALERT_CONF} ]]; then
     echo "!! 有 ${problems} 项未通过，但 ${ALERT_CONF} 读不到，告警发不出去" >&2
 fi
 
-if (( problems > 0 )) && [[ -r ${ALERT_CONF} ]]; then
+# 只有定时执行才发群通知。手动查看状态时不该惊动所有人：这一份在两台机器上
+# 反复执行过，每次都往群里发一条，一晚上二十余条。
+if (( problems > 0 )) && [[ ${BINHOST_ALERT:-} == 1 ]] && [[ -r ${ALERT_CONF} ]]; then
     # shellcheck source=/dev/null
     . "${ALERT_CONF}"
     if [[ -n ${TELEGRAM_TOKEN:-} && -n ${TELEGRAM_CHAT:-} ]]; then

@@ -12,7 +12,7 @@ coverage by more than half.
 
 `INDEX` 指向 Packages 索引时，索引里出现过的包一律保留一行。构建一个包会把
 它属于本 overlay 的依赖一并编出来（acct-user、virtual 这类），那些包不在清单
-里也没有源码文件，按下面的规则本会被跳过，页面上就查不到已经发布的东西。
+里也没有源码文件，按下面的规则本会被跳过，页面上就查不到已经发布的包。
 """
 
 import json

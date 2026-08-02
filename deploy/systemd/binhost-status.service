@@ -10,4 +10,5 @@ Type=oneshot
 # 装的时候按实际用户改。
 User=adminc3b9c6
 Group=adminc3b9c6
+Environment=BINHOST_ALERT=1
 ExecStart=/usr/local/bin/binhost-status

@@ -2,7 +2,7 @@
 """classify-failures.py 的用例。
 
 它的输出里有一段是「可以贴进 excluded.txt」的行，那份清单永久生效，所以这里
-盯着的是：不该出现在里面的东西不会出现。
+要确认的是：不该出现在里面的条目不会出现。
 """
 import pathlib
 import subprocess

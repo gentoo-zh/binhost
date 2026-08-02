@@ -5,7 +5,7 @@
 */5 * * * * zakk /usr/local/bin/binhost-site-sync
 # 健康检查排在构建之后：构建 08:00 UTC（16:00+8）起跑约两个半小时，
 # 00:20 UTC（08:20+8）查到的是刚发布的结果，而不是前一天的。
-20 0 * * * root /usr/local/bin/binhost-status
+20 0 * * * root BINHOST_ALERT=1 /usr/local/bin/binhost-status
 # distfiles 每小时同步。overlay 的提交散布在一天里，一天一次会让下午合并的
 # 版本等到次日才镜像，最长差 24 小时。这一步很便宜：没有新文件时 1 秒，
 # 取两个新文件 5 秒，因为等的是上游网络而不是这台的单核。
