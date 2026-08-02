@@ -84,6 +84,14 @@ COLLOQUIAL = [
     "一大堆", "没啥", "沒啥", "乱七八糟", "亂七八糟",
 ]
 
+# 发出去的字符串按更严的一份查：告警进 Telegram 群，状态那几行是运维第一眼
+# 看到的内容，写成说话腔就不像一份系统在报告。注释不套这一份，技术中文里
+# 「这一步」「跑完」是正常说法。
+COLLOQUIAL_EMIT = COLLOQUIAL + [
+    "在跑", "没跑", "沒跑", "跑完", "跑起来", "跑起來", "没成", "沒成", "停了",
+    "那一步", "这一步", "這一步", "弄", "搞", "整个儿",
+]
+
 # How a comment starts, per file. The pattern is not anchored to the line start
 # so a trailing comment counts too: `rm -f "${log}"  # 成功的不留` used to slip
 # through, and that is where offhand wording collects.
@@ -100,6 +108,42 @@ COMMENT = {
 
 # Files with no suffix that are still configuration with comments.
 NO_SUFFIX = {"cron.d-binhost", "logrotate-binhost", "rsyncd.conf", "nftables.conf"}
+
+
+# 发给人看的字符串也要查，不只是注释。告警会进 Telegram 群，状态那几行是运维
+# 第一眼看到的内容。
+EMIT_CMD = {
+    ".sh": re.compile(r'^\s*(?:echo|printf|say|bad|note|alert|die)\b'),
+    ".py": re.compile(r'^\s*(?:print|sys\.exit)\b'),
+}
+QUOTED = re.compile(r'"([^"]*)"|\'([^\']*)\'')
+
+
+def check_emitted(root):
+    bad = 0
+    for f in sorted(pathlib.Path(root).rglob("*")):
+        if not f.is_file() or f.suffix not in EMIT_CMD or f.name == "check-copy.py":
+            continue
+        if any(part in (".git", "site") for part in f.parts):
+            continue
+        hits = []
+        for i, line in enumerate(f.read_text(errors="replace").splitlines(), 1):
+            if line.strip().startswith("#"):
+                continue
+            if not EMIT_CMD[f.suffix].match(line):
+                continue
+            for m in QUOTED.finditer(line):
+                s = m.group(1) if m.group(1) is not None else m.group(2)
+                for w in COLLOQUIAL_EMIT:
+                    if w in s:
+                        hits.append(f"{i}: 口语词「{w}」  {line.strip()[:60]}")
+                        break
+        if hits:
+            print(f"!!! {f}", file=sys.stderr)
+            for h in hits:
+                print(f"      {h}", file=sys.stderr)
+            bad += 1
+    return bad
 
 
 def check_comments(root):
@@ -191,8 +235,9 @@ def main(dirname):
             print(f"  {f.name}: ok")
 
     bad += check_comments(pathlib.Path(dirname).parent)
+    bad += check_emitted(pathlib.Path(dirname).parent)
     if not bad:
-        print("  代码注释: 无口语词")
+        print("  代码注释与输出字符串: 无口语词")
     return 1 if bad else 0
 
 

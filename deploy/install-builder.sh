@@ -37,7 +37,7 @@ say() { printf '\n=== %s ===\n' "$1"; }
 #
 # build-container.sh takes this lock for the length of a round. No lock file at
 # all means the machine has never built, which is not a reason to refuse.
-say "确认没有构建在跑"
+say "确认没有构建正在进行"
 if ${REMOTE} "[ -e '${ROOT}/stage/build.lock' ] && ! flock -n '${ROOT}/stage/build.lock' -c true"; then
     echo "有一轮构建正在进行（${ROOT}/stage/build.lock）。" >&2
     echo "等它结束再部署；确实要现在覆盖就传 FORCE=1。" >&2

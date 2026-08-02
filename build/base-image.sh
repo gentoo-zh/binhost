@@ -131,7 +131,7 @@ perl-cleaner --all -- --quiet-build || echo "!!! perl-cleaner 未跑完"
 # --deep 只保留「当前已安装」的那些。这个容器装的是 stage3 加 @world，一个
 # overlay 包都没装，所以哪天有人补上 gentoolkit，它会把整个共用缓存清光。
 if command -v eclean-pkg >/dev/null; then
-    eclean-pkg || echo "!! eclean-pkg 没跑完，缓存这次没清"
+    eclean-pkg || echo "!! eclean-pkg 未完成，本次未清理缓存"
 else
     emerge -q app-portage/gentoolkit && eclean-pkg ||
         echo "!! 装不上 gentoolkit，缓存这次没清"

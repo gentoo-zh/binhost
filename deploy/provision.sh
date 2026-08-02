@@ -50,7 +50,7 @@ say "locale"
 # shellcheck disable=SC2016  # $lg 是远端的变量，故意不在本地展开
 on 'printf "en_US.UTF-8 UTF-8\nen_GB.UTF-8 UTF-8\nzh_CN.UTF-8 UTF-8\nzh_TW.UTF-8 UTF-8\n" > /etc/locale.gen
     lg=$(mktemp)
-    locale-gen > "$lg" 2>&1 || echo "  !! locale-gen 没跑完"
+    locale-gen > "$lg" 2>&1 || echo "  !! locale-gen 未完成"
     tail -1 "$lg" | sed "s/^/  /"; rm -f "$lg"'
 
 say "网络：确认开机不会失联"

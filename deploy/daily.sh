@@ -27,7 +27,7 @@ if ! command -v flock >/dev/null; then
     exit 1
 fi
 if ! flock -n 9; then
-    echo "上一轮还在跑（${LOCK}），这一轮跳过" >&2
+    echo "上一轮尚未结束（${LOCK}），本轮跳过" >&2
     exit 0
 fi
 
