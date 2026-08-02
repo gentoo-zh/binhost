@@ -38,7 +38,12 @@ before=$(git -C "${WORK}" rev-parse HEAD)
 git -C "${WORK}" reset --quiet --hard "origin/${BRANCH}"
 after=$(git -C "${WORK}" rev-parse HEAD)
 
-(( fresh )) || [[ ${before} != "${after}" ]] || exit 0
+# 记下上一次真正同步完成的提交。原来只比 HEAD：rsync 失败之后 HEAD 已经是新的，
+# 下一次比对相等就直接退出，除非又有新提交，否则永远不会重试。
+DONE="${DONE:-${WORK}/.synced}"
+synced=$(cat "${DONE}" 2>/dev/null || true)
+
+(( fresh )) || [[ ${before} != "${after}" ]] || [[ ${synced} != "${after}" ]] || exit 0
 
 # --delete only inside assets/: everything else in DEST belongs to the package
 # publisher, and wiping it would take the repository down with the site.
@@ -99,4 +104,5 @@ for f in "${DEST}"/*.html; do
     rm -f "${f}"
 done
 
+printf '%s' "${after}" > "${DONE}"
 echo "site updated ${before:0:7} -> ${after:0:7}"
