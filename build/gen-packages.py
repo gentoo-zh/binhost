@@ -44,6 +44,7 @@ LIST = pathlib.Path(os.environ.get("LIST", HERE / "packages.txt"))
 EXCLUDED = pathlib.Path(os.environ.get("EXCLUDED", HERE / "excluded.txt"))
 OUT = pathlib.Path(os.environ.get("OUT", HERE.parent / "site" / "packages.json"))
 INDEX = os.environ.get("INDEX", "")
+DIST_INDEX = pathlib.Path(os.environ.get("DIST_INDEX", OUT.parent / "distfiles-index.json"))
 
 CPV = re.compile(r"^CPV: (\S+)", re.M)
 
@@ -121,6 +122,14 @@ def read_built():
     return out
 
 
+def mirrored():
+    """镜像上实际有的 distfiles。取不到就回 None，调用方据此退回只看 Manifest。"""
+    try:
+        return set(json.loads(DIST_INDEX.read_text())["files"])
+    except (OSError, ValueError, KeyError):
+        return None
+
+
 def main(overlay):
     overlay = pathlib.Path(overlay)
     if not (overlay / "profiles" / "repo_name").exists():
@@ -131,6 +140,10 @@ def main(overlay):
         for line in LIST.read_text().splitlines()
         if ATOM.match(line.strip())
     }
+
+    have = mirrored()
+    if have is None:
+        print(f"!! 取不到 {DIST_INDEX}，distfiles 一栏按 Manifest 算", file=sys.stderr)
 
     excluded = read_excluded()
     built = read_built()
@@ -194,7 +207,9 @@ def main(overlay):
              "# 第二列：bin 有二进制包，src 只镜像源码，-- 两者都没有",
              ""]
     for pkg in out:
-        mark = "bin" if pkg["binhost"] else "src" if pkg["dist"] else "--"
+        on_mirror = bool(pkg["dist"]) and (
+            have is None or all(f in have for f in pkg["dist"]))
+        mark = "bin" if pkg["binhost"] else "src" if on_mirror else "--"
         lines.append(f"{pkg['cp']:<44} {mark}  {pkg['desc']}".rstrip())
     tmp_txt = txt.with_suffix(".txt.new")
     tmp_txt.write_text("\n".join(lines) + "\n")
