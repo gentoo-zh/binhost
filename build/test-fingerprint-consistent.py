@@ -36,6 +36,27 @@ REQUIRED = {
     "docs/key-rotation.md",
 }
 
+ASC = ROOT / "site" / "gentoo-zh-binhost.asc"
+if ASC.exists():
+    import shutil
+    import subprocess
+    if shutil.which("gpg"):
+        out = subprocess.run(
+            ["gpg", "--with-colons", "--show-keys", str(ASC)],
+            capture_output=True, text=True).stdout
+        blob = {l.split(":")[9] for l in out.splitlines() if l.startswith("fpr:")}
+        if not blob:
+            print(f"!!! {ASC.name} 解析不出任何指纹", file=sys.stderr)
+            sys.exit(1)
+        for f in sorted(blob):
+            found.setdefault(f, []).append("site/gentoo-zh-binhost.asc")
+        print(f"  {ASC.name} 里的指纹：{', '.join(sorted(blob))}")
+    else:
+        print("  跳过公钥解析：本机没有 gpg")
+else:
+    print(f"!!! {ASC} 不存在", file=sys.stderr)
+    sys.exit(1)
+
 if not found:
     print("!!! 仓库里一个指纹都没有", file=sys.stderr)
     sys.exit(1)

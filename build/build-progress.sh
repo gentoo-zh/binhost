@@ -9,8 +9,11 @@ EVERY="${EVERY:-60}"
 
 push() {
     # shellcheck disable=SC2029  # SITE_ROOT 与 OUT 要在本地展开
-    ssh "${REMOTE}" "cat > ${SITE_ROOT}/.${OUT}.new &&
-                     mv -f ${SITE_ROOT}/.${OUT}.new ${SITE_ROOT}/${OUT}" || true
+    if ! ssh "${REMOTE}" "cat > ${SITE_ROOT}/.${OUT}.new &&
+                          mv -f ${SITE_ROOT}/.${OUT}.new ${SITE_ROOT}/${OUT}"; then
+        echo "!! 建置进度未能送到 ${REMOTE}" >&2
+        return 1
+    fi
 }
 
 snapshot() {
@@ -37,10 +40,15 @@ watch)
     done
     ;;
 finish)
-    printf '{"state":"done","generated":%s}\n' "$(date +%s)" | push
+    state="${2:-done}"
+    case "${state}" in
+        done|failed) ;;
+        *) echo "用法: $0 finish [done|failed]" >&2; exit 1 ;;
+    esac
+    printf '{"state":"%s","generated":%s}\n' "${state}" "$(date +%s)" | push
     ;;
 *)
-    echo "用法: $0 watch <log> | $0 finish" >&2
+    echo "用法: $0 watch <log> | $0 finish [done|failed]" >&2
     exit 1
     ;;
 esac

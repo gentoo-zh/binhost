@@ -43,7 +43,7 @@ export BINHOST_LOCKED=1
 rm -f "${LOGDIR}/whole.log"
 ./build/build-progress.sh watch "${LOGDIR}/whole.log" &
 progress=$!
-trap 'kill "${progress}" 2>/dev/null || true; ./build/build-progress.sh finish' EXIT
+trap 'rc=$?; kill "${progress}" 2>/dev/null || true; ./build/build-progress.sh finish "$( (( rc )) && echo failed || echo done )"' EXIT
 
 if ! ./build/run-full.sh; then
     alert "binhost 构建阶段失败（$(hostname)）"

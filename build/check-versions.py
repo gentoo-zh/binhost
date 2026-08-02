@@ -94,7 +94,7 @@ def main(overlay, index, listfile):
         got = have.get(cp)
         if got is None:
             absent.append((cp, cur))
-        elif got != cur:
+        elif vercmp(got, cur) != 0:
             stale.append((cp, got, cur))
 
     fresh = newcomers(overlay, wanted, masked)

@@ -100,7 +100,7 @@ def main(overlay):
 
     have = mirrored()
     if have is None:
-        print(f"!! 无法获取 {DIST_INDEX}，distfiles 一栏按 Manifest 算", file=sys.stderr)
+        print(f"!! 无法获取 {DIST_INDEX}，源码一列无法确定", file=sys.stderr)
 
     excluded = read_excluded()
     built = read_built()
@@ -139,6 +139,14 @@ def main(overlay):
         out.append(row)
 
     out.sort(key=lambda p: p["cp"])
+
+    if missing:
+        print(f"!!! {len(missing)} listed but not in {overlay}:")
+        for cp in missing:
+            print(f"      {cp}")
+        print("!!! 清单与 overlay 不一致，未写出任何文件", file=sys.stderr)
+        return 1
+
     tmp = OUT.with_suffix(".json.new")
     tmp.write_text(json.dumps(
         {"generated": int(time.time()), "packages": out},
@@ -148,12 +156,18 @@ def main(overlay):
     txt = OUT.with_name("packages.txt")
     lines = [f"# gentoo-zh overlay，{len(out)} 个包",
              f"# 生成于 {time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime())}",
-             "# 第二列：bin 有二进制包，src 只镜像源码，-- 两者都没有",
+             "# 第二列：bin 有二进制包，src 只镜像源码，-- 两者都没有，"
+             "?? 无法确定（distfiles 索引未能读取）",
              ""]
     for pkg in out:
-        on_mirror = bool(pkg["dist"]) and (
-            have is None or all(f in have for f in pkg["dist"]))
-        mark = "bin" if pkg["binhost"] else "src" if on_mirror else "--"
+        if pkg["binhost"]:
+            mark = "bin"
+        elif not pkg["dist"]:
+            mark = "--"
+        elif have is None:
+            mark = "??"
+        else:
+            mark = "src" if all(f in have for f in pkg["dist"]) else "--"
         lines.append(f"{pkg['cp']:<44} {mark}  {pkg['desc']}".rstrip())
     tmp_txt = txt.with_suffix(".txt.new")
     tmp_txt.write_text("\n".join(lines) + "\n")
@@ -162,11 +176,8 @@ def main(overlay):
     with_dist = sum(1 for p in out if p["dist"])
     print(f">>> {len(out)} packages ({sum(p['binhost'] for p in out)} on the binhost "
           f"list, {with_dist} with distfiles) -> {OUT}")
-    if missing:
-        print(f"!!! {len(missing)} listed but not in {overlay}:")
-        for cp in missing:
-            print(f"      {cp}")
-        return 1
+    if have is None:
+        print("!!! distfiles 索引未能读取，源码一列按无法确定输出", file=sys.stderr)
     return 0
 
 
