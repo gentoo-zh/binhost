@@ -440,6 +440,11 @@ a { color: var(--primary); text-decoration: none; }
 }
 .listing td { padding: 0.36rem 0.6rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .listing tr:hover td { background: var(--hover); }
+
+/* 窄屏下这张表会被 html 的 overflow-x: clip 切掉：单元格是 nowrap，撑出去的
+   部分没有滚动条也看不到。这里放的是路径与说明，换行不影响读。 */
+.listing.wrap { table-layout: auto; }
+.listing.wrap td { white-space: normal; word-break: break-all; }
 .listing td.name { white-space: normal; word-break: break-all; }
 .listing td.size, .listing td.date, .listing th.size, .listing th.date { text-align: right; color: var(--fg-soft); }
 .listing a.dir::after { content: "/"; color: var(--fg-soft); }

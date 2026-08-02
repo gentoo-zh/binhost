@@ -41,7 +41,7 @@ function run(lang) {
                        : /i18n-html/.test(sel) ? []
                        : /data-i18n\]/.test(sel) ? [link] : []);
   global.document = {
-    documentElement: { lang: "zh-cn", setAttribute() {}, removeAttribute() {}, classList: { remove() {} } },
+    documentElement: { style: {}, lang: "zh-cn", setAttribute() {}, removeAttribute() {}, classList: { remove() {} } },
     querySelectorAll: (sel) => ({ forEach: (f) => list(sel).forEach(f), length: list(sel).length }),
     querySelector: () => null,
     getElementById: () => null,
