@@ -44,6 +44,9 @@ DISK_PATH="${DISK_PATH:-/srv/pub}"
 VERSION_FILE="${VERSION_FILE:-}"
 REPO_API="${REPO_API:-https://api.github.com/repos/gentoo-zh/binhost/commits/master}"
 MONITORS_FILE="${MONITORS_FILE:-/usr/local/lib/binhost/MONITORS}"
+SITE_WORK="${SITE_WORK:-/var/lib/binhost-site}"
+SITE_STALE_H="${SITE_STALE_H:-2}"
+SITE_DEST="${SITE_DEST:-/srv/mirrors}"
 
 problems=0
 failures=()
@@ -81,6 +84,24 @@ if [[ -n ${VERSION_FILE} && -r ${VERSION_FILE} ]]; then
     fi
 else
     bad "部署版本" "没有 VERSION，装的时候没记下提交号"
+fi
+
+# --- 站点同步 ------------------------------------------------------------------
+if [[ -d ${SITE_WORK}/.git ]]; then
+    fetched=$(stat -c %Y "${SITE_WORK}/.git/FETCH_HEAD" 2>/dev/null || echo 0)
+    age_h=$(( ($(date +%s) - fetched) / 3600 ))
+    here_site=$(git -C "${SITE_WORK}" rev-parse HEAD 2>/dev/null)
+    served=$(md5sum "${SITE_DEST}/index.html" 2>/dev/null | cut -d' ' -f1)
+    onbox=$(md5sum "${SITE_WORK}/site/index.html" 2>/dev/null | cut -d' ' -f1)
+    if (( fetched == 0 )); then
+        bad "站点同步" "${SITE_WORK}/.git/FETCH_HEAD 不存在，同步没跑过"
+    elif (( age_h >= SITE_STALE_H )); then
+        bad "站点同步" "上次拉取在 ${age_h} 小时前，每五分钟一次的同步停了"
+    elif [[ -n ${served} && -n ${onbox} && ${served} != "${onbox}" ]]; then
+        bad "站点同步" "仓库副本与发布目录不一致，rsync 那一步没成"
+    else
+        note "站点同步" "${here_site:0:8}，${age_h} 小时内拉过"
+    fi
 fi
 
 # --- signing key --------------------------------------------------------------
