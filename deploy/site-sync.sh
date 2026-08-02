@@ -74,7 +74,7 @@ if [[ -r ${FPR_FILE} ]]; then
     for g in "${got[@]}"; do
         [[ " ${want[*]} " == *" ${g} "* ]] || unexpected+=("${g}")
     done
-    # 记录为空、文件里一把钥匙都读不出来，都要拦住。原来这两种情形下
+    # 记录为空、文件里一把钥匙都无法解析，都要拦住。原来这两种情形下
     # 比对的是两个空串，反而放行。
     if (( ${#want[@]} && ${#got[@]} && ${#unexpected[@]} == 0 )); then
         rsync -a --safe-links "${WORK}/site/gentoo-zh-binhost.asc" "${DEST}/"

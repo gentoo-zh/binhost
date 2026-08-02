@@ -17,6 +17,6 @@ IOSchedulingClass=idle
 ExecStart=/var/lib/binhost/build/cycle.sh
 Environment=SIGNING_KEY=6A0726AF1476A2F382C6AC6638A0234EC16AD42E
 # 不设上限时卡住的一轮会一直 activating：下一次定时触发被锁挡在门外，
-# 而没有任何人知道。全量重建最久跑过 13 小时，18 小时留足余量又短于定时周期，
+# 而没有任何人知道。全量重建最久已执行 13 小时，18 小时留足余量又短于定时周期，
 # 超时由 systemd 判失败，OnFailure 那条负责通知。
 TimeoutStartSec=18h

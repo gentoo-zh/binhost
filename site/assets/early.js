@@ -38,7 +38,7 @@
   if (lang === 'zh-cn') return;
   root.className += (root.className ? ' ' : '') + 'lang-swap';
 
-  /* i18n.js 没跑起来（网络断了、脚本 404、旧浏览器报错）时，页面不能一直空着。
+  /* i18n.js 没启动（网络断了、脚本 404、旧浏览器报错）时，页面不能一直空着。
      到点自己揭开，访客看到的是简体原文，好过一片空白。 */
   setTimeout(function () { root.classList.remove('lang-swap'); }, 1500);
 })();

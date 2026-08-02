@@ -13,7 +13,7 @@ name: newcomers
 
 on:
   schedule:
-    # 每天 UTC 09:00，构建（UTC 08:00）跑完之后
+    # 每天 UTC 09:00，构建（UTC 08:00）完成之后
     - cron: "0 9 * * *"
   workflow_dispatch:
 
@@ -93,7 +93,7 @@ jobs:
           base=$(git rev-parse HEAD)
           : > /tmp/urls.txt
 
-          # 先读进数组再循环：git 和 gh 会读 stdin，用 while read 喂的话第一轮
+          # 先读进数组再循环：git 和 gh 会读 stdin，用 while read 喂时第一轮
           # 之后清单就被它们吃掉了
           mapfile -t rows <<< "${ROWS}"
 
@@ -129,7 +129,7 @@ jobs:
               "" \
               "合并即收录，下一轮构建会带上它；不收就关掉这个 PR，并把它连同原因写进 \`build/excluded.txt\`，否则每天还会再开一次。" \
               "" \
-              "清单顺序不分大小写，这里只插一行，没有重排。加进去之后 \`validate.py\` 跑过了，PR 上不会再跑：GITHUB_TOKEN 开的 PR 不触发 workflow。")
+              "清单顺序不分大小写，这里只插一行，没有重排。加进去之后 \`validate.py\` 已执行，PR 上不会再跑：GITHUB_TOKEN 开的 PR 不触发 workflow。")
             # 分支已经推上去了，开 PR 失败就把它删掉。留着会让下一轮那条
             # 「分支还在说明上次的 PR 还没被处理」命中，这个包从此不再提出来。
             if ! gh pr create --base master --head "${branch}" \

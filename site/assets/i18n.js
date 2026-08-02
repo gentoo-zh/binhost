@@ -162,8 +162,8 @@
 
   applyTheme(themeMode);
   applyLang(curLang);
-  /* early.js 为了不让访客看见换语言前那一屏，先把正文挡住了。换完揭开。
-     它自己也有个 1.5 秒的兜底，那是留给本脚本没跑起来的情形。 */
+  /* early.js 为了不让访客看见换语言前那一屏，先把正文阻止了。换完揭开。
+     它自己也有个 1.5 秒的兜底，那是留给本脚本没启动的情形。 */
   document.documentElement.classList.remove('lang-swap');
 
   /* 点击复制。提示条是可选的：整段逻辑原来包在 if (toast) 里，于是 faq 页
@@ -188,7 +188,7 @@
       if (!box) return '';
       var pre = box.querySelector('pre[data-pane]:not([hidden])') || box.querySelector('pre');
       if (!pre) return '';
-      /* 藏起来的东西不复制。hidden 的文本照样在 textContent 里，看得见的是一份、
+      /* 藏起来的内容不复制。hidden 的文本照样在 textContent 里，看得见的是一份、
          复制到的是另一份，正是复制按钮最不该出的错。 */
       var clone = pre.cloneNode(true);
       Array.prototype.forEach.call(clone.querySelectorAll('[hidden]'), function (el) {

@@ -117,7 +117,7 @@ location ^~ /gentoo-zh/ {
 	rewrite ^/gentoo-zh/(.*)$ /$1 permanent;
 }
 
-# 心跳戳，off-box 的检查靠它判断这台机器是不是还在跑 cron。
+# 心跳戳，off-box 的检查靠它判断这台机器是不是还运行中 cron。
 location = /.health {
 	add_header Cache-Control "no-store";
 	include /etc/nginx/conf.d/headers-site.inc;
@@ -156,13 +156,13 @@ location = /_app.html {
 #
 # 必须排在下面那两条正则之前，nginx 取第一个匹配上的正则 location。排在后面的
 # 话 /~user/ 会被「目录交给前端渲染」那条接走，返回 200 加一段文件浏览器外壳；
-# 上传的 .html 会被下一行 301 到一个取不到的地址。只有纯文件碰巧还正常。实测
+# 上传的 .html 会被下一行 301 到一个无法获取的地址。只有纯文件碰巧还正常。实测
 # 过两种顺序。
 #
 # disable_symlinks：public_html 里放一个指向 / 的软链接，就等于把这台机器上所有
 # 可读文件发出去。site-sync.sh 里防的是同一件事。
 #
-# 用 files 那组头：上传的 HTML 在本站这个 origin 下跑不了脚本，也不会被索引。
+# 用 files 那组头：上传的 HTML 在本站这个 origin 下无法执行脚本，也不会被索引。
 location ~ ^/~([a-z][a-z0-9_-]*)(/.*)?$ {
 	alias /home/$1/public_html$2;
 	autoindex on;

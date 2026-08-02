@@ -46,9 +46,9 @@ if [[ -n ${started} && -n ${finished} ]]; then
     if [[ -n ${s} && -n ${f} && $(( f - s )) -ge 60 ]]; then
         d=$(( f - s ))
         if (( d >= 3600 )); then
-            elapsed=$(printf '，跑了 %d 小时 %d 分' $(( d / 3600 )) $(( d % 3600 / 60 )))
+            elapsed=$(printf '，耗时 %d 小时 %d 分' $(( d / 3600 )) $(( d % 3600 / 60 )))
         else
-            elapsed=$(printf '，跑了 %d 分' $(( d / 60 )))
+            elapsed=$(printf '，耗时 %d 分' $(( d / 60 )))
         fi
     fi
 fi

@@ -96,7 +96,7 @@
     });
   });
 
-  /* 当前语言的默认镜像，没有标的话用 markup 里写死的那个。 */
+  /* 当前语言的默认镜像，没有标时用 markup 里写死的那个。 */
   function defaultOpt(opts) {
     var lang = document.documentElement.getAttribute('data-lang');
     return Array.prototype.filter.call(opts, function (o) {
@@ -111,7 +111,7 @@
     each(pickers, function (p) { p.render(defaultOpt(p.opts)); });
   }
 
-  /* 载入时先渲染一次：markup 里写死的是其中一个镜像，不渲染的话另一个选择器
+  /* 载入时先渲染一次：markup 里写死的是其中一个镜像，不渲染时另一个选择器
      的按钮不会被标上，槽位也停在写死的那份。 */
   renderDefaults();
 

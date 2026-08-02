@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=179ca8f3">
-<script src="/assets/early.js?v=b8007afb"></script>
+<link rel="stylesheet" href="/assets/site.css?v=fbe35479">
+<script src="/assets/early.js?v=5e6859c6"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://distfiles.gentoozh.org/assets/logo.webp">
@@ -134,7 +134,7 @@
 <script>
 window.MIRROR_I18N = {
   'zh-cn': {
-    unknown: '取不到',
+    unknown: '无法获取',
     loading: '加载中…',
     failed: '加载失败：',
     thPkg: '包',
@@ -216,7 +216,7 @@ window.MIRROR_I18N = {
   }
 };
 </script>
-<script src="/assets/i18n.js?v=221d05ee"></script>
+<script src="/assets/i18n.js?v=e6b5f0bf"></script>
 
 <script>
 // 两个数据源：packages.json 是收录清单（构建之前就存在），
@@ -299,7 +299,7 @@ function render() {
   const q = document.getElementById("q").value.trim().toLowerCase();
   let hit = rows;
   // 按 r.ver 筛，和下面 counts() 里的 b 同一个口径：这个筛选问的是「现在能装
-  // 什么」，不是「我们打算构建什么」。按 r.binhost 筛的话，行数会比标题上那个
+  // 什么」，不是「我们打算构建什么」。按 r.binhost 筛时，行数会比标题上那个
   // 数字多出待构建的那些。
   if (filter === "bin") hit = hit.filter(function (r) { return r.ver; });
   else if (filter === "dist") hit = hit.filter(function (r) { return r.dist; });
@@ -399,7 +399,7 @@ Promise.all([
     .then(function (r) { return r.ok ? r.json() : null; })
     .catch(function () { return null; })
 ]).then(function (res) {
-  // 取不到和「一个都没有」不是同一件事。原来两者都变成空集合，页面照常渲染成
+  // 无法获取和「一个都没有」不是同一件事。原来两者都变成空集合，页面照常渲染成
   // 零个二进制包、零个 distfile，读者分不出是镜像空了还是这一份索引挂了。
   binFailed = res[1] === null;
   distFailed = res[2] === null;

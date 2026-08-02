@@ -134,7 +134,7 @@ def build_overlay(root, packages):
 
 def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False,
              grace=0):
-    """跑完整的 main()，回传 (退出码, 镜像上剩下的文件, 回收目录里的文件)。
+    """完成整的 main()，回传 (退出码, 镜像上剩下的文件, 回收目录里的文件)。
 
     aged 把某个文件的 mtime 往前拨，模拟它很久以前就被抓下来了。
     preload 先在回收桶里放一份同名的。
@@ -156,7 +156,7 @@ def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False,
         audit.GRACE_SECONDS = grace      # 默认立即到期，好在一轮里看到结果
         # 跨轮账本也要指到临时目录。原来没换，以 root 跑测试时它落在真实的
         # /var/lib/emirrordist/reaped.json：用例之间互相污染，前一个用例清理
-        # 的 138 个把后一个撑过上限；跑完还会让当晚真正的对帐拒绝清理。
+        # 的 138 个把后一个撑过上限；完成还会让当晚真正的对帐拒绝清理。
         audit.LEDGER = str(d / "reaped.json")
         if preload:
             (d / "recycle").mkdir(parents=True, exist_ok=True)
@@ -180,7 +180,7 @@ def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False,
         return rc, left, binned
 
 
-# overlay 读不出任何 Manifest：整个镜像都会算成孤儿，必须一个都不动并且报错
+# overlay 无法解析任何 Manifest：整个镜像都会算成孤儿，必须一个都不动并且报错
 case("overlay 读不到内容时拒绝清理", lambda: (
     lambda r: r[0] == 1 and len(r[1]) == 5 and r[2] == []
 )(run_main({}, ["a.tar.gz", "b.tar.xz", "c.zip", "d.tar.bz2", "e.crate"])))
@@ -370,12 +370,12 @@ def _fetch_probe():
 
 
 # fetch 限制按版本归属：一个包里 8.391 带 fetch、21.0.1 不带，21.0.1 的文件
-# 缺档仍然要报出来。按整个目录取或时它会被当成取不到，从此不再报。
+# 缺档仍然要报出来。按整个目录取或时它会被当成无法获取，从此不再报。
 case("fetch 限制不跨版本传染", lambda: (
     lambda r: "b-2.0.tar.gz" in r
 )(_fetch_probe()))
 
-case("带 fetch 的那个版本自己算取不到", lambda: (
+case("带 fetch 的那个版本自己算无法获取", lambda: (
     lambda r: "b-1.0.tar.gz" not in r
 )(_fetch_probe()))
 

@@ -123,7 +123,7 @@ def read_built():
 
 
 def mirrored():
-    """镜像上实际有的 distfiles。取不到就回 None，调用方据此退回只看 Manifest。"""
+    """镜像上实际有的 distfiles。无法获取时回 None，调用方据此退回只看 Manifest。"""
     try:
         return set(json.loads(DIST_INDEX.read_text())["files"])
     except (OSError, ValueError, KeyError):
@@ -143,7 +143,7 @@ def main(overlay):
 
     have = mirrored()
     if have is None:
-        print(f"!! 取不到 {DIST_INDEX}，distfiles 一栏按 Manifest 算", file=sys.stderr)
+        print(f"!! 无法获取 {DIST_INDEX}，distfiles 一栏按 Manifest 算", file=sys.stderr)
 
     excluded = read_excluded()
     built = read_built()

@@ -8,7 +8,7 @@
  app-i18n/fcitx-openbangla
 ```
 
-提交前本地跑一次校验，CI 跑的是同一个脚本：
+提交前本地执行一次校验，CI 执行的是同一个脚本：
 
 ```bash
 python3 build/validate.py /var/db/repos/gentoo-zh
@@ -98,7 +98,7 @@ check-commits.py 都会查。
 CI 只检查 PR 自己带来的提交，不检查历史——这套规矩是后来才有的，为了让旧提交
 合规而改写一个已经公开的分支，代价大于收益。
 
-本地先跑一遍：
+本地先执行一遍：
 
 ```bash
 python3 build/check-commits.py origin/master..HEAD

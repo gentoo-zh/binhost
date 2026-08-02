@@ -229,7 +229,7 @@ def main(overlay, dest):
     # A fetch-restricted package has no URL in SRC_URI at all, so nobody can
     # mirror it and it does not count as missing.
     # 按版本归属，和 scan() 里 mirror 那一份同一套。按整个目录取或时，一个包里
-    # 只要有一个版本带 fetch，同目录其他版本的文件也会被当成取不到，缺档从此
+    # 只要有一个版本带 fetch，同目录其他版本的文件也会被当成无法获取，缺档从此
     # 不再报出来。oraclejdk-bin 就是这样：8.391 带 fetch，21.0.1 不带。
     unfetchable = set()
     for man in overlay.glob("*/*/Manifest"):
