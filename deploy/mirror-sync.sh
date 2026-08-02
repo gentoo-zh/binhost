@@ -35,6 +35,12 @@ echo ">>> ${#paths[@]} 个包"
 new=0
 failed=0
 for path in "${paths[@]}"; do
+    # 索引来自上游，PATH 直接拼进本地路径就等于让上游决定写到哪里。带 .. 的
+    # 一条实测能写到 DEST 之外，覆盖执行账号有权限的任何文件。
+    case ${path} in
+        /*|*/../*|../*|*/..|..) echo "!! 索引里的路径不合法，跳过：${path}" >&2
+                                failed=$((failed + 1)); continue ;;
+    esac
     [[ -f ${DEST}/${path} ]] && continue
     mkdir -p "${DEST}/$(dirname "${path}")"
     # Write to a temporary name and rename, so an interruption cannot leave a
