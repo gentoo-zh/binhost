@@ -124,4 +124,43 @@ print(f"  {'✓' if ok else '✗'} {'新包上线未收录':<22} {'新包':<8} "
 if not ok:
     bad += 1
 
+# --- --newcomers ---------------------------------------------------------------
+# newcomers workflow 据它开 PR，改错了会无人值守地送出去。
+
+
+def newcomers(packages, list_lines, masked=(), restrict=None, keywords=None):
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        overlay = make_overlay(d / "overlay", packages, masked)
+        for cp, extra in (restrict or {}).items():
+            for eb in (overlay / cp).glob("*.ebuild"):
+                eb.write_text(eb.read_text() + f'RESTRICT="{extra}"\n')
+        for cp, kw in (keywords or {}).items():
+            for eb in (overlay / cp).glob("*.ebuild"):
+                eb.write_text(eb.read_text().replace('KEYWORDS="~amd64"',
+                                                     f'KEYWORDS="{kw}"'))
+        (d / "list.txt").write_text("\n".join(list_lines) + "\n")
+        p = subprocess.run([sys.executable, CHECK, "--newcomers", str(overlay),
+                            str(d / "list.txt")], capture_output=True, text=True)
+        return p.returncode, [l for l in p.stdout.splitlines() if l.strip()]
+
+
+NEW = [
+    ("在清单里的不报", {PKG: NOW}, [PKG], {}, []),
+    ("不在清单里的报出来", {PKG: NOW}, [], {}, [f"{PKG} {NOW}"]),
+    ("被 mask 的不报", {PKG: NOW}, [], {"masked": (PKG,)}, []),
+    ("acct-group 不报", {"acct-group/foo": "0"}, [], {}, []),
+    ("virtual 不报", {"virtual/foo": "0"}, [], {}, []),
+    ("-bin 结尾不报", {"app-misc/foo-bin": "1.0"}, [], {}, []),
+    ("不接受 amd64 的不报", {PKG: NOW}, [], {"keywords": {PKG: "~arm64"}}, []),
+    ("RESTRICT=bindist 不报", {PKG: NOW}, [], {"restrict": {PKG: "bindist"}}, []),
+]
+
+for name, pkgs, lst, kw, want in NEW:
+    rc, got = newcomers(pkgs, lst, **kw)
+    ok = got == want and rc == 0
+    print(f"  {'✓' if ok else '✗'} {name:<24} {got if got else '（无）'}")
+    if not ok:
+        bad += 1
+
 sys.exit(1 if bad else 0)
