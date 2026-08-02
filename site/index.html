@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=429ba98c">
+<link rel="stylesheet" href="/assets/site.css?v=48a24cf4">
 <script src="/assets/early.js?v=b8007afb"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -16,6 +16,7 @@
 <!-- 数据请求原来排在所有脚本之后才开始，实测晚三百多毫秒。 -->
 <link rel="preload" href="/binpkgs/x86-64/status.json" as="fetch" crossorigin>
 <link rel="preload" href="/distfiles-status.json" as="fetch" crossorigin>
+<link rel="preload" href="/build-status.json" as="fetch" crossorigin>
 <title>distfiles.gentoozh.org</title>
 <meta name="description" content="gentoo-zh 的二进制包与 distfiles 镜像。">
 </head>
@@ -324,11 +325,14 @@
 
 <div id="copy-toast" aria-hidden="true"></div>
 
+<script src="/assets/util.js?v=9373bf4f"></script>
 <script src="/assets/strings.js?v=b3051929"></script>
 <script>
 window.MIRROR_I18N = {
   'zh-tw': {
 
+    factBuilding: ' 正在建置',
+    factFetching: ' 正在取二進位套件',
     modeManual: '手動設定',
     modeQuick: '快速設定',
     quickNote: '這一段把三步一次做完。想知道每一步在做什麼，切到手動設定。',
@@ -348,6 +352,8 @@ window.MIRROR_I18N = {
   },
   'en': {
 
+    factBuilding: ' building',
+    factFetching: ' fetching binaries',
     modeManual: 'Step by step',
     modeQuick: 'Quick setup',
     quickNote: 'One block, all three steps. Switch to step by step to see what each one does.',
@@ -412,9 +418,14 @@ window.MIRROR_I18N = {
 
   function render() {
     if (!data) return;
-    var bin = data[0], dist = data[1], html = '';
+    var bin = data[0], dist = data[1], job = data[2], html = '';
     if (bin && bin.packages) html += fact(bin.packages, s('factPkgs', ' 个二进制包'), bin.generated);
     if (dist && dist.files) html += fact(dist.files, s('factDist', ' 个 distfiles 文件'), dist.generated);
+    if (job && job.state === 'running' && job.total) {
+      html += '<span class="job"><b class="num">' + job.done + '/' + job.total + '</b>' +
+              s(job.kind === 'source' ? 'factBuilding' : 'factFetching', ' 正在建置') +
+              (job.now ? ' <code>' + esc(job.now) + '</code>' : '') + '</span>';
+    }
     el.innerHTML = html;
   }
 
@@ -424,9 +435,10 @@ window.MIRROR_I18N = {
 
   Promise.allSettled([
     fetch('/binpkgs/x86-64/status.json').then(function (r) { return r.ok ? r.json() : null; }),
-    fetch('/distfiles-status.json').then(function (r) { return r.ok ? r.json() : null; })
+    fetch('/distfiles-status.json').then(function (r) { return r.ok ? r.json() : null; }),
+    fetch('/build-status.json').then(function (r) { return r.ok ? r.json() : null; })
   ]).then(function (rs) {
-    data = [rs[0].value, rs[1].value];
+    data = [rs[0].value, rs[1].value, rs[2].value];
     render();
   });
 })();

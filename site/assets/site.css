@@ -340,6 +340,8 @@ h2:first-of-type { margin-top: 2rem; }
 
 /* 手动配置 / 快速配置，见 mode-switch.js。放在大标题下面，因为它决定整段
    长什么样，藏在某个代码框的角上没人会发现。 */
+.facts .job code { font-size: 0.82em; color: var(--fg-soft); }
+
 .mode-pick {
   display: flex; gap: 0.25rem; margin: -0.3rem 0 1.1rem;
 }

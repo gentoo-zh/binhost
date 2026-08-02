@@ -61,6 +61,10 @@ echo "overlay $(git -C "${OVERLAY}" rev-parse --short HEAD)"
 
 export BINHOST_LOCKED=1
 
+./build/build-progress.sh watch "${LOGDIR}/whole.log" &
+progress=$!
+trap 'kill "${progress}" 2>/dev/null; ./build/build-progress.sh finish' EXIT
+
 if ! ./build/run-full.sh; then
     alert "binhost 构建阶段失败（$(hostname)）"
     exit 1
