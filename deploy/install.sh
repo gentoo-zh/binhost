@@ -40,6 +40,10 @@ MONITORS="${MONITORS:-}"
 SSH_PORT="${SSH_PORT:-60001}"
 cd "$(dirname "$0")/.."
 
+# 工作区脏的时候标出来：部署的内容和这个提交并不相同，比对得出一致会是假的。
+COMMIT="$(git rev-parse HEAD)"
+git diff --quiet && git diff --cached --quiet || COMMIT="${COMMIT}-dirty"
+
 say() { printf '\n=== %s ===\n' "$1"; }
 
 say "上传"
@@ -67,6 +71,9 @@ sudo install -m644 ebuilds.py          /usr/local/lib/binhost/ebuilds.py
 sudo install -m644 packages.txt        /usr/local/lib/binhost/packages.txt
 sudo install -m644 excluded.txt        /usr/local/lib/binhost/excluded.txt
 sudo install -m755 audit-distfiles.py  /usr/local/lib/binhost/audit-distfiles.py
+# 记下装的是哪个提交。两台机器上的脚本都是拷贝，没有这一行就没有任何一处能说出
+# 它落后了——建置机为此跑了五天旧代码。status.sh 每天比对一次。
+printf %s '${COMMIT}' | sudo install -m644 /dev/stdin /usr/local/lib/binhost/VERSION
 
 echo '--- rsync'
 sudo install -m644 rsyncd.conf /etc/rsyncd.conf

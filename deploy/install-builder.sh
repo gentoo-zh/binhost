@@ -22,6 +22,11 @@ BUILD_USER="${BUILD_USER:-adminc3b9c6}"
 
 cd "$(dirname "$0")/.."
 
+# 记下装的是哪个提交，见 install.sh 里同样的一行
+# 工作区脏的时候标出来：部署的内容和这个提交并不相同，比对得出一致会是假的。
+COMMIT="$(git rev-parse HEAD)"
+git diff --quiet && git diff --cached --quiet || COMMIT="${COMMIT}-dirty"
+
 say() { printf '\n=== %s ===\n' "$1"; }
 
 # Deploying into a running build is not safe. bash reads a script by byte offset
@@ -52,6 +57,7 @@ sudo install -dm755 '${ROOT}' '${ROOT}/logs' '${ROOT}/stage'
 sudo rsync -a --delete '${tmp}/' '${ROOT}/build/'
 rm -rf '${tmp}'
 sudo install -m755 '${ROOT}/build/status.sh' /usr/local/bin/binhost-status
+printf %s '${COMMIT}' | sudo install -m644 /dev/stdin '${ROOT}/build/VERSION'
 
 echo '--- overlay 副本'
 # Ownership has to match the user that runs it. The timer runs as ${BUILD_USER},
