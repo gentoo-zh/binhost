@@ -20,6 +20,7 @@ push() {
 
 snapshot() {
     local log="$1" line now kind done_ total plan
+    [[ -e ${log} ]] || { printf '{"state":"running","done":0,"total":0,"plan":0,"now":"","kind":"prepare","generated":%s}\n' "$(date +%s)"; return; }
     line=$(grep -E '^>>> Emerging' "${log}" 2>/dev/null | tail -1)
     now=$(sed -E 's/.*\) ([^:]+).*/\1/' <<< "${line}")
     kind=source
@@ -35,7 +36,7 @@ snapshot() {
 case "${1:-}" in
 watch)
     log="${2:?需要日志路径}"
-    while [[ -e ${log} ]]; do
+    while :; do
         snapshot "${log}" | push
         sleep "${EVERY}"
     done

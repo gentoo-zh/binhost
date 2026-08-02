@@ -331,6 +331,7 @@
 window.MIRROR_I18N = {
   'zh-tw': {
 
+    factPreparing: ' 建置準備中',
     factBuilding: ' 正在建置',
     factFetching: ' 正在取二進位套件',
     modeManual: '手動設定',
@@ -352,6 +353,7 @@ window.MIRROR_I18N = {
   },
   'en': {
 
+    factPreparing: ' preparing',
     factBuilding: ' building',
     factFetching: ' fetching binaries',
     modeManual: 'Step by step',
@@ -421,9 +423,13 @@ window.MIRROR_I18N = {
     var bin = data[0], dist = data[1], job = data[2], html = '';
     if (bin && bin.packages) html += fact(bin.packages, s('factPkgs', ' 个二进制包'), bin.generated);
     if (dist && dist.files) html += fact(dist.files, s('factDist', ' 个 distfiles 文件'), dist.generated);
-    if (job && job.state === 'running' && job.total) {
-      html += '<span class="job"><b class="num">' + job.done + '/' + job.total + '</b>' +
-              s(job.kind === 'source' ? 'factBuilding' : 'factFetching', ' 正在建置') +
+    if (job && job.state === 'running') {
+      var what = job.kind === 'prepare' ? ['factPreparing', ' 建置准备中']
+               : job.kind === 'source' ? ['factBuilding', ' 正在建置']
+               : ['factFetching', ' 正在取二进制包'];
+      html += '<span class="job">' +
+              (job.total ? '<b class="num">' + job.done + '/' + job.total + '</b>' : '') +
+              s(what[0], what[1]) +
               (job.now ? ' <code>' + esc(job.now) + '</code>' : '') + '</span>';
     }
     el.innerHTML = html;
