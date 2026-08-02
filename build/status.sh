@@ -59,18 +59,25 @@ elif [[ -d ${SITE_WORK}/.git ]]; then
     fetched=$(stat -c %Y "${SITE_WORK}/.git/FETCH_HEAD" 2>/dev/null || echo 0)
     age_h=$(( ($(date +%s) - fetched) / 3600 ))
     here_site=$(git -C "${SITE_WORK}" rev-parse HEAD 2>/dev/null)
-    served=$(md5sum "${SITE_DEST}/index.html" 2>/dev/null | cut -d' ' -f1)
-    onbox=$(md5sum "${SITE_WORK}/site/index.html" 2>/dev/null | cut -d' ' -f1)
+    marked=$(cat "${SITE_WORK}/.synced" 2>/dev/null || true)
+    drift=$(diff -rq "${SITE_WORK}/site/assets" "${SITE_DEST}/assets" 2>&1 | wc -l)
+    pages=0
+    for f in "${SITE_WORK}"/site/*.html; do
+        cmp -s "${f}" "${SITE_DEST}/$(basename "${f}")" || pages=$((pages + 1))
+    done
     if (( fetched == 0 )); then
         bad "站点同步" "${SITE_WORK}/.git/FETCH_HEAD 不存在，同步从未执行"
     elif (( age_h >= SITE_STALE_H )); then
         bad "站点同步" "上次拉取在 ${age_h} 小时前，五分钟一次的同步已停止"
-    elif [[ -z ${served} || -z ${onbox} ]]; then
-        bad "站点同步" "index.html 在仓库副本或发布目录里读不到，无法比对"
-    elif [[ ${served} != "${onbox}" ]]; then
-        bad "站点同步" "仓库副本与发布目录不一致，rsync 未完成"
-    elif [[ -r ${SITE_WORK}/site/gentoo-zh-binhost.asc && -r ${SITE_DEST}/gentoo-zh-binhost.asc ]] &&
-         ! cmp -s "${SITE_WORK}/site/gentoo-zh-binhost.asc" "${SITE_DEST}/gentoo-zh-binhost.asc"; then
+    elif [[ ${marked} != "${here_site}" ]]; then
+        bad "站点同步" "仓库副本在 ${here_site:0:8}，上次完成的是 ${marked:0:8}，最近一轮未完成"
+    elif (( drift )); then
+        bad "站点同步" "assets 有 ${drift} 处与仓库副本不一致，rsync 未完成"
+    elif (( pages )); then
+        bad "站点同步" "${pages} 个页面与仓库副本不一致，rsync 未完成"
+    elif [[ ! -r ${SITE_DEST}/gentoo-zh-binhost.asc ]]; then
+        bad "站点同步" "发布目录里没有公钥，用户按站点第 1 步无法获取它"
+    elif ! cmp -s "${SITE_WORK}/site/gentoo-zh-binhost.asc" "${SITE_DEST}/gentoo-zh-binhost.asc"; then
         bad "站点同步" "仓库里的公钥与已发布的不一致，指纹守卫可能拦下了它"
     else
         note "站点同步" "${here_site:0:8}，${age_h} 小时内已拉取"
@@ -78,23 +85,38 @@ elif [[ -d ${SITE_WORK}/.git ]]; then
 fi
 
 if [[ -d ${SIGNING_GNUPGHOME} ]]; then
-    keys=$(sudo gpg --homedir "${SIGNING_GNUPGHOME}" --list-keys --with-colons 2>/dev/null)
-    gpg_rc=$?
-    expiry=$(awk -F: '/^pub/{print $7; exit}' <<< "${keys}")
-    if (( gpg_rc != 0 )) || ! grep -q '^pub:' <<< "${keys}"; then
-        bad "signing key" "读不到 ${SIGNING_GNUPGHOME} 里的公钥"
-    elif [[ -n ${expiry} && ${expiry} != 0 ]]; then
-        left=$(( (expiry - $(date +%s)) / 86400 ))
-        if (( left < KEY_WARN_DAYS )); then
-            bad "signing key" "expires in ${left}d"
-        else
-            note "signing key" "expires in ${left}d"
-        fi
+    if [[ -z ${SIGNING_KEY:-} ]]; then
+        SIGNING_KEY=$(sed -n 's/^Environment=SIGNING_KEY=//p' \
+            /etc/systemd/system/binhost-build.service 2>/dev/null | tail -1)
+    fi
+    if [[ -z ${SIGNING_KEY:-} ]]; then
+        bad "signing key" "无法确定应使用的密钥指纹，SIGNING_KEY 未设置"
     else
-        note "signing key" "no expiry"
+        secret=$(sudo gpg --homedir "${SIGNING_GNUPGHOME}" --with-colons \
+                 --list-secret-keys "${SIGNING_KEY}" 2>/dev/null)
+        gpg_rc=$?
+        caps=$(awk -F: '/^sec:/{print $12; exit}' <<< "${secret}")
+        trust=$(awk -F: '/^sec:/{print $2; exit}' <<< "${secret}")
+        expiry=$(awk -F: '/^sec:/{print $7; exit}' <<< "${secret}")
+        if (( gpg_rc != 0 )) || ! grep -q '^sec:' <<< "${secret}"; then
+            bad "signing key" "${SIGNING_GNUPGHOME} 里没有 ${SIGNING_KEY:0:8} 的私钥"
+        elif [[ ${trust} == r ]]; then
+            bad "signing key" "${SIGNING_KEY:0:8} 已撤销"
+        elif [[ ${caps} != *s* ]]; then
+            bad "signing key" "${SIGNING_KEY:0:8} 没有签名能力（capabilities=${caps:-无}）"
+        elif [[ -n ${expiry} && ${expiry} != 0 ]]; then
+            left=$(( (expiry - $(date +%s)) / 86400 ))
+            if (( left < KEY_WARN_DAYS )); then
+                bad "signing key" "${SIGNING_KEY:0:8} 将在 ${left} 天后过期"
+            else
+                note "signing key" "${SIGNING_KEY:0:8}，${left} 天后过期"
+            fi
+        else
+            note "signing key" "${SIGNING_KEY:0:8}，无过期时间"
+        fi
     fi
 else
-    note "signing key" "not on this host"
+    note "signing key" "本机没有该目录"
 fi
 
 if [[ -d ${DISK_PATH} ]]; then

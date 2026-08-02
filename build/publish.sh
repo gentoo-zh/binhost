@@ -8,10 +8,25 @@ STAGE="${STAGE:-/var/lib/binhost/stage/${TAG}}"
 REMOTE="${REMOTE:-mirror}"
 REMOTE_ROOT="${REMOTE_ROOT:-/srv/pub/binpkgs/${TAG}}"
 
-[[ -f ${STAGE}/Packages ]] || { echo "nothing staged at ${STAGE}" >&2; exit 1; }
+MAX_RETIRE_SHARE="${MAX_RETIRE_SHARE:-50}"
+
+[[ -f ${STAGE}/Packages ]] || { echo "暂存区 ${STAGE} 里没有索引" >&2; exit 1; }
 
 mapfile -t paths < <(awk '/^PATH: /{print $2}' "${STAGE}/Packages")
-(( ${#paths[@]} )) || { echo "index lists no packages" >&2; exit 1; }
+(( ${#paths[@]} )) || { echo "索引里没有列出任何包" >&2; exit 1; }
+
+declared=$(awk '/^PACKAGES: /{print $2; exit}' "${STAGE}/Packages")
+if [[ ${declared} =~ ^[0-9]+$ ]] && (( declared != ${#paths[@]} )); then
+    echo "索引头部写 ${declared} 个，实际列出 ${#paths[@]} 个，中止发布" >&2
+    exit 1
+fi
+
+missing=0
+for p in "${paths[@]}"; do
+    [[ -s ${STAGE}/${p} ]] || { echo "!! 索引列出但暂存区里没有或为空：${p}" >&2
+                                missing=$((missing + 1)); }
+done
+(( missing )) && { echo "${missing} 个包不在暂存区，中止发布" >&2; exit 1; }
 
 echo ">>> 发布 ${#paths[@]} 个包到 ${REMOTE}:${REMOTE_ROOT}"
 
@@ -20,7 +35,7 @@ ssh "${REMOTE}" "install -dm755 ${REMOTE_ROOT}"
 
 printf '%s\n' "${paths[@]}" |
     rsync -a --info=stats2 --files-from=- "${STAGE}/" "${REMOTE}:${REMOTE_ROOT}/" |
-    grep -E "files transferred|Total transferred file size" | sed 's/^/    /'
+    { grep -E "files transferred|Total transferred file size" || true; } | sed 's/^/    /'
 
 rsync -a "${STAGE}/Packages" "${REMOTE}:${REMOTE_ROOT}/.Packages.new"
 rsync -a "${STAGE}/Packages.gz" "${REMOTE}:${REMOTE_ROOT}/.Packages.gz.new"
@@ -47,13 +62,29 @@ retired=$(printf '%s\n' "${paths[@]}" | ssh "${REMOTE}" "
         exit 1
     fi
     cd ${REMOTE_ROOT} || exit 1
-    find . -name '*.gpkg.tar' -printf '%P\n' |
-        grep -vxF -f /tmp/binhost-keep-${TAG}.txt |
-        tee /tmp/binhost-retire-${TAG}.txt |
-        tr '\\n' '\\0' | xargs -0r rm -f
+    find . -name '*.gpkg.tar' -printf '%P\n' | sort > /tmp/binhost-have-${TAG}.txt
+    have=\$(wc -l < /tmp/binhost-have-${TAG}.txt)
+    grep -vxF -f /tmp/binhost-keep-${TAG}.txt /tmp/binhost-have-${TAG}.txt \
+        > /tmp/binhost-retire-${TAG}.txt || true
+    n=\$(wc -l < /tmp/binhost-retire-${TAG}.txt)
+    if [ \"\${have}\" -gt 0 ] && [ \$(( n * 100 )) -gt \$(( have * ${MAX_RETIRE_SHARE} )) ] &&
+       [ -z '${FORCE_RETIRE:-}' ]; then
+        echo \"本轮要清理 \${n}/\${have} 个，超过 ${MAX_RETIRE_SHARE}%，未清理\" >&2
+        echo \"确认无误后以 FORCE_RETIRE=1 重新执行\" >&2
+        rm -f /tmp/binhost-keep-${TAG}.txt /tmp/binhost-have-${TAG}.txt /tmp/binhost-retire-${TAG}.txt
+        exit 3
+    fi
+    tr '\\n' '\\0' < /tmp/binhost-retire-${TAG}.txt | xargs -0r rm -f
     find . -mindepth 1 -type d -empty -delete
-    wc -l < /tmp/binhost-retire-${TAG}.txt
-    rm -f /tmp/binhost-keep-${TAG}.txt /tmp/binhost-retire-${TAG}.txt")
+    echo \"\${n}\"
+    rm -f /tmp/binhost-keep-${TAG}.txt /tmp/binhost-have-${TAG}.txt /tmp/binhost-retire-${TAG}.txt") || {
+    rc=$?
+    if (( rc == 3 )); then
+        echo ">>> 已发布 ${#paths[@]} 个；清理被上限拦下，索引与包体都已就位" >&2
+        exit 3
+    fi
+    exit "${rc}"
+}
 
 echo ">>> 已发布 ${#paths[@]} 个，清理 ${retired} 个"
 

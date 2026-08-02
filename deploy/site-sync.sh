@@ -6,6 +6,14 @@ REPO="${REPO:-https://github.com/gentoo-zh/binhost}"
 WORK="${WORK:-/var/lib/binhost-site}"
 DEST="${DEST:-/srv/mirrors}"
 BRANCH="${BRANCH:-master}"
+LOCK="${LOCK:-${WORK}.lock}"
+
+if [[ -z ${SITE_SYNC_LOCKED:-} ]]; then
+    mkdir -p "$(dirname "${LOCK}")"
+    exec {lockfd}>"${LOCK}"
+    flock -n "${lockfd}" || { echo "另一次站点同步正在进行（${LOCK}）"; exit 0; }
+    export SITE_SYNC_LOCKED=1
+fi
 
 fresh=0
 if [[ -d ${WORK}/.git ]]; then
@@ -26,6 +34,7 @@ synced=$(cat "${DONE}" 2>/dev/null || true)
 
 rsync -a --safe-links --delete "${WORK}/site/assets/" "${DEST}/assets/"
 FPR_FILE="${FPR_FILE:-/etc/binhost/signing-key.fpr}"
+key_ok=0
 if [[ -r ${FPR_FILE} ]]; then
     mapfile -t want < <(tr -d ' \r' < "${FPR_FILE}" | grep -oE '[0-9A-Fa-f]{40}' | tr 'a-f' 'A-F')
     mapfile -t got < <(gpg --with-colons --show-keys "${WORK}/site/gentoo-zh-binhost.asc" 2>/dev/null |
@@ -36,8 +45,12 @@ if [[ -r ${FPR_FILE} ]]; then
     done
     if (( ${#want[@]} && ${#got[@]} && ${#unexpected[@]} == 0 )); then
         rsync -a --safe-links "${WORK}/site/gentoo-zh-binhost.asc" "${DEST}/"
+        key_ok=1
     else
-        echo "!! 公钥没有同步：仓库里是 ${got[*]:-空}，本机记录是 ${want[*]:-空}，其中不认得 ${unexpected[*]:-无}" >&2
+        echo "!! 公钥未同步" >&2
+        echo "   本机记录的指纹：${want[*]:-无}" >&2
+        echo "   仓库中的指纹：${got[*]:-无}" >&2
+        echo "   记录中没有的指纹：${unexpected[*]:-无}" >&2
     fi
 else
     echo "!! ${FPR_FILE} 不存在，公钥未同步" >&2
@@ -52,5 +65,11 @@ for f in "${DEST}"/*.html; do
     rm -f "${f}"
 done
 
-printf '%s' "${after}" > "${DONE}"
-echo "site updated ${before:0:7} -> ${after:0:7}"
+if (( key_ok )); then
+    printf '%s' "${after}" > "${DONE}"
+    echo "site updated ${before:0:7} -> ${after:0:7}"
+else
+    rm -f "${DONE}"
+    echo "!! 公钥未通过校验，页面已更新到 ${after:0:7}，下一轮会重试公钥" >&2
+    exit 1
+fi

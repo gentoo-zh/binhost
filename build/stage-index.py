@@ -45,6 +45,17 @@ def has_ebuild(overlay, cpv):
     return (d / f"{name}-r0.ebuild").exists()
 
 
+def safe_path(value):
+    if not value or value != value.strip():
+        return None
+    p = pathlib.PurePosixPath(value)
+    if p.is_absolute() or "\0" in value:
+        return None
+    if any(part in ("", "..") for part in p.parts):
+        return None
+    return p
+
+
 def select(entries, overlay=None, excluded=None):
     excluded = read_excluded() if excluded is None else excluded
     masked = read_mask(overlay) if overlay is not None else set()
@@ -53,6 +64,9 @@ def select(entries, overlay=None, excluded=None):
 
     for f, s in entries:
         cpv = f["CPV"]
+
+        if safe_path(f.get("PATH", "")) is None:
+            return [], skipped, f"索引里的 PATH 不合法：{cpv} -> {f.get('PATH', '')!r}"
 
         if f.get("REPO") != "gentoo-zh":
             skipped += 1

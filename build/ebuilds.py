@@ -64,9 +64,21 @@ def keywords_of(text):
     return kw[-1] if kw else None
 
 
+RESTRICT_ASSIGN = re.compile(
+    r'^[ \t]*RESTRICT(\+?)=(?:"([^"]*)"|\'([^\']*)\'|([^\s#]+))', re.M)
+
+
+def restrict_tokens(text):
+    cur = []
+    for m in RESTRICT_ASSIGN.finditer(text):
+        val = next((g for g in m.groups()[1:] if g is not None), "")
+        cur = cur + val.split() if m.group(1) else val.split()
+    return set(cur)
+
+
 def restricts_bindist(text):
-    return any("bindist" in r
-               for r in re.findall(r'^\s*RESTRICT="([^"]*)"', text, re.M))
+    return any("bindist" in (next((g for g in m.groups()[1:] if g is not None), ""))
+               for m in RESTRICT_ASSIGN.finditer(text))
 
 
 def inherits(text):
