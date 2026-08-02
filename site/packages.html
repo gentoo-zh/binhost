@@ -134,6 +134,7 @@
 <script>
 window.MIRROR_I18N = {
   'zh-cn': {
+    unknown: '取不到',
     loading: '加载中…',
     failed: '加载失败：',
     thPkg: '包',
@@ -169,7 +170,8 @@ window.MIRROR_I18N = {
     noJs: '这张表由脚本渲染。纯文本一份在 <a href="/packages.txt">/packages.txt</a>。'
   },
   'zh-tw': {
-    pending: '待建置', excluded: '不建置', updBin: '二進位套件更新於 ', updDist: 'distfiles 更新於 ', fltAll: '全部', fltBin: '僅二進位套件', fltDist: '僅 distfiles', title: '套件列表',
+
+    unknown: '不明',    pending: '待建置', excluded: '不建置', updBin: '二進位套件更新於 ', updDist: 'distfiles 更新於 ', fltAll: '全部', fltBin: '僅二進位套件', fltDist: '僅 distfiles', title: '套件列表',
     lead: '標籤的含義見下方圖例，滑鼠停留查看詳情。',
     loading: '載入中…', failed: '載入失敗：', thPkg: '套件', thDesc: '說明', thVer: '版本', thSize: '體積', thBin: '二進位套件', thDist: 'Distfiles', countFmt: 'overlay {n} 個套件\n其中有二進位套件 {b} 個\n其中有 distfiles {d} 個', none: '沒有符合的套件。',
     lgBuilt: '已發布',
@@ -190,7 +192,8 @@ window.MIRROR_I18N = {
     noJs: '這張表由指令碼算繪。純文字一份在 <a href="/packages.txt">/packages.txt</a>。'
   },
   'en': {
-    pending: 'pending', excluded: 'excluded', updBin: 'binaries updated ', updDist: 'distfiles updated ', fltAll: 'All', fltBin: 'Binaries', fltDist: 'Distfiles', title: 'Packages',
+
+    unknown: 'unknown',    pending: 'pending', excluded: 'excluded', updBin: 'binaries updated ', updDist: 'distfiles updated ', fltAll: 'All', fltBin: 'Binaries', fltDist: 'Distfiles', title: 'Packages',
     lead: 'The legend below explains each tag; hover for detail.',
     loading: 'Loading…', failed: 'Could not load: ', thPkg: 'Package', thDesc: 'Description', thVer: 'Version', thSize: 'Size', thBin: 'Binary', thDist: 'Distfiles',
     countFmt: 'overlay {n} packages\n{b} with a binary package\n{d} with distfiles', none: 'No matching packages.',
@@ -270,6 +273,8 @@ function parsePackages(text) {
 let rows = [];
 let filter = "all";
 let distGenerated = 0, binGenerated = 0;
+let binFailed = false;
+let distFailed = false;
 
 function fmtTime(unix) {
   // UTC+8：站点的用户主要在中国大陆、台湾、新加坡、马来西亚。
@@ -358,7 +363,9 @@ function counts() {
   const b = rows.filter(function (r) { return r.ver; }).length;
   const d = rows.filter(function (r) { return r.dist; }).length;
   document.getElementById("count").textContent = t("countFmt")
-    .replace("{n}", rows.length).replace("{b}", b).replace("{d}", d);
+    .replace("{n}", rows.length)
+    .replace("{b}", binFailed ? t("unknown") : b)
+    .replace("{d}", distFailed ? t("unknown") : d);
 
   const u = [];
   if (binGenerated) u.push(t("updBin") + fmtTime(binGenerated));
@@ -384,18 +391,22 @@ Promise.all([
   }),
   // 索引不存在（还没发布过）不算错误，当成「一个都没构建」
   fetch("/binpkgs/x86-64/Packages")
-    .then(function (r) { return r.ok ? r.text() : ""; })
-    .catch(function () { return ""; }),
+    .then(function (r) { return r.ok ? r.text() : null; })
+    .catch(function () { return null; }),
   // 镜像上实际存在的 distfile 文件名。文件散在两级哈希目录里，
   // 页面自己遍历要几百个请求，所以服务器端预先算好一份。
   fetch("/distfiles-index.json")
-    .then(function (r) { return r.ok ? r.json() : { files: [] }; })
-    .catch(function () { return { files: [] }; })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .catch(function () { return null; })
 ]).then(function (res) {
-  const built = parsePackages(res[1]);
-  const have = new Set(res[2].files || []);
-  distGenerated = res[2].generated || 0;
-  binGenerated = (/^TIMESTAMP: (\d+)/m.exec(res[1]) || [])[1] || 0;
+  // 取不到和「一个都没有」不是同一件事。原来两者都变成空集合，页面照常渲染成
+  // 零个二进制包、零个 distfile，读者分不出是镜像空了还是这一份索引挂了。
+  binFailed = res[1] === null;
+  distFailed = res[2] === null;
+  const built = parsePackages(res[1] || "");
+  const have = new Set((res[2] || {}).files || []);
+  distGenerated = (res[2] || {}).generated || 0;
+  binGenerated = (/^TIMESTAMP: (\d+)/m.exec(res[1] || "") || [])[1] || 0;
   rows = res[0].packages.map(function (p) {
     const b = built[p.cp] || {};
     // 齐全才算有：缺一个源码文件，这个包照样编不了
