@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=c62a2308">
+<link rel="stylesheet" href="/assets/site.css?v=83b73584">
 <script src="/assets/early.js?v=0888406a"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -124,13 +124,18 @@ window.MIRROR_I18N = {
   }
 };
 </script>
-<script src="/assets/i18n.js?v=cb8ac6e5"></script>
+<script src="/assets/i18n.js?v=2b75be78"></script>
 
 <script>
 
 if (!location.pathname.endsWith("/")) location.replace(location.pathname + "/");
 
-const path = decodeURIComponent(location.pathname);
+let path;
+try {
+  path = decodeURIComponent(location.pathname);
+} catch (e) {
+  path = location.pathname;
+}
 
 const ROOT = "/files/";
 
@@ -160,8 +165,8 @@ function crumbs() {
 
   let acc = "";
   const links = path.split("/").filter(Boolean).map(function (p) {
-    acc += "/" + p;
-    return '<a href="' + encodeURI(acc) + '/">' + esc(p) + "</a>";
+    acc += "/" + encodeURIComponent(p);
+    return '<a href="' + acc + '/">' + esc(p) + "</a>";
   });
   document.getElementById("crumbs").innerHTML =
     ['<a href="' + ROOT + '">' + t("navFiles") + "</a>"].concat(links).join(" / ");

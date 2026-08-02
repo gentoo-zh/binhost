@@ -371,6 +371,7 @@ a { color: var(--primary); text-decoration: none; }
   transition: opacity 0.18s ease, transform 0.18s ease;
 }
 #copy-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#copy-toast.failed { background: var(--surface); color: var(--fg); border: 1px solid var(--border); }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 

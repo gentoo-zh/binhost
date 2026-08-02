@@ -11,6 +11,11 @@
     'en': { light: 'Light', dark: 'Dark', system: 'System' }
   };
   var COPIED = { 'zh-cn': '已复制', 'zh-tw': '已複製', 'en': 'Copied' };
+  var COPY_FAILED = {
+    'zh-cn': '复制失败，请手动选取',
+    'zh-tw': '複製失敗，請手動選取',
+    'en': 'Copy failed, select the text manually'
+  };
 
   var T = {};
   (function () {
@@ -58,6 +63,7 @@
     var code = b.dataset.lang;
     if (enabled.indexOf(code) < 0) { b.hidden = true; return; }
     langBtns[code] = b;
+    b.setAttribute('aria-pressed', 'false');
     b.addEventListener('click', function () { applyLang(code); });
   });
 
@@ -95,7 +101,9 @@
     var title = THEME_WORD[curLang] + THEME_SEP[curLang] + THEME_LABEL[curLang][themeMode];
     themeBtn.title = title; themeBtn.setAttribute('aria-label', title);
     ['light', 'dark', 'system'].forEach(function (m) {
-      if (items[m]) items[m].lastChild.textContent = THEME_LABEL[curLang][m];
+      if (!items[m]) return;
+      items[m].lastChild.textContent = THEME_LABEL[curLang][m];
+      items[m].setAttribute('aria-checked', m === themeMode ? 'true' : 'false');
     });
   }
   function applyTheme(mode) {
@@ -117,7 +125,10 @@
     document.querySelectorAll('[data-langblock]').forEach(function (el) { el.hidden = (el.getAttribute('data-langblock') !== l); });
     document.querySelectorAll('[data-langblock-inline]').forEach(function (el) { el.hidden = (el.getAttribute('data-langblock-inline') !== l); });
     document.documentElement.setAttribute('data-lang', l);
-    Object.keys(langBtns).forEach(function (k) { langBtns[k].title = LANG_NAME[k]; });
+    Object.keys(langBtns).forEach(function (k) {
+      langBtns[k].title = LANG_NAME[k];
+      langBtns[k].setAttribute('aria-pressed', k === l ? 'true' : 'false');
+    });
     var pageTitle = val(l, 'title');
     if (pageTitle) document.title = pageTitle + ' — distfiles.gentoozh.org';
     renderTheme();
@@ -134,12 +145,13 @@
   {
     var toast = document.getElementById('copy-toast');
     var timer;
-    var flash = function () {
+    var flash = function (okay) {
       if (!toast) return;
-      toast.textContent = COPIED[curLang];
+      toast.textContent = okay ? COPIED[curLang] : COPY_FAILED[curLang];
+      toast.classList.toggle('failed', !okay);
       toast.classList.add('show');
       clearTimeout(timer);
-      timer = setTimeout(function () { toast.classList.remove('show'); }, 1200);
+      timer = setTimeout(function () { toast.classList.remove('show'); }, okay ? 1200 : 2600);
     };
     var value = function (el) {
       var v = el.getAttribute('data-copy');
@@ -156,12 +168,18 @@
     };
     var copy = function (el) {
       var v = value(el);
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(v).then(flash, flash);
-      else {
-        var t = document.createElement('textarea'); t.value = v; document.body.appendChild(t); t.select();
-        try { document.execCommand('copy'); } catch (e) {}
-        document.body.removeChild(t); flash();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(v).then(
+          function () { flash(true); },
+          function () { flash(false); });
+        return;
       }
+      var t = document.createElement('textarea');
+      t.value = v; document.body.appendChild(t); t.select();
+      var okay = false;
+      try { okay = document.execCommand('copy'); } catch (e) { okay = false; }
+      document.body.removeChild(t);
+      flash(!!okay);
     };
     document.addEventListener('click', function (e) {
       var chip = e.target.closest ? e.target.closest('.copy-chip') : null;
