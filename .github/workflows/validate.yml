@@ -8,7 +8,7 @@ on:
 jobs:
   packages:
     runs-on: ubuntu-latest
-    container: gentoo/stage3:amd64
+    container: gentoo/stage3@sha256:7453ebe0a87f90ab16beed03c7f579a3cbb9ba4985e8cc310086277329b2290c  # gentoo/stage3:amd64
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
@@ -165,7 +165,7 @@ jobs:
 
   nginx:
     runs-on: ubuntu-latest
-    container: nginx:mainline
+    container: nginx@sha256:5a88c9c45479443d7be2eadc894b4ed0a9801bae03d97a5760ae13b5c2005942  # nginx:mainline
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Parse nginx config

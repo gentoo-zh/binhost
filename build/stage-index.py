@@ -7,6 +7,7 @@ import os
 import pathlib
 import re
 import shutil
+import stat
 import sys
 import time
 
@@ -43,6 +44,31 @@ def has_ebuild(overlay, cpv):
     if (d / f"{name}.ebuild").exists():
         return True
     return (d / f"{name}-r0.ebuild").exists()
+
+
+def safe_source(pkgdir, rel):
+    src = pkgdir / rel
+    try:
+        st = src.lstat()
+    except OSError:
+        return None, f"{rel}: 无法读取"
+    if stat.S_ISLNK(st.st_mode):
+        return None, f"{rel}: 是符号链接"
+    if not stat.S_ISREG(st.st_mode):
+        return None, f"{rel}: 不是普通文件"
+    root = pkgdir.resolve(strict=True)
+    try:
+        real = src.resolve(strict=True)
+    except OSError:
+        return None, f"{rel}: 无法解析"
+    if real != root / rel:
+        return None, f"{rel}: 解析后落在 {real}，不在 {root} 之下"
+    for part in rel.parents:
+        if part == pathlib.PurePosixPath("."):
+            continue
+        if (pkgdir / part).is_symlink():
+            return None, f"{rel}: 路径中的 {part} 是符号链接"
+    return src, ""
 
 
 def safe_path(value):
@@ -126,9 +152,23 @@ def main(pkgdir, stage, overlay=None, rev=""):
 
     stanzas = []
     for _, f, s in kept:
-        dst = stage / f["PATH"]
+        rel = safe_path(f["PATH"])
+        src, why = safe_source(pkgdir, rel)
+        if src is None:
+            sys.exit(f"拒绝 stage：{why}")
+        dst = stage / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(pkgdir / f["PATH"], dst)
+        with open(src, "rb", opener=lambda p, fl: os.open(p, fl | os.O_NOFOLLOW)) as fh:
+            before = os.fstat(fh.fileno())
+            with open(dst, "wb") as out:
+                shutil.copyfileobj(fh, out)
+            after = os.fstat(fh.fileno())
+        if (before.st_ino, before.st_dev, before.st_size) != (
+                after.st_ino, after.st_dev, after.st_size):
+            sys.exit(f"拒绝 stage：{rel} 在复制期间被换掉")
+        if dst.stat().st_size != before.st_size:
+            sys.exit(f"拒绝 stage：{rel} 复制后大小不符")
+        shutil.copystat(src, dst, follow_symlinks=False)
         stanzas.append(s)
 
     (stage / "Packages").write_text(

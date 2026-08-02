@@ -21,6 +21,7 @@ MONITORS_FILE="${MONITORS_FILE:-/usr/local/lib/binhost/MONITORS}"
 SITE_WORK="${SITE_WORK:-/var/lib/binhost-site}"
 SITE_STALE_H="${SITE_STALE_H:-2}"
 SITE_DEST="${SITE_DEST:-/srv/mirrors}"
+BUILD_STALE_H="${BUILD_STALE_H:-3}"
 
 problems=0
 failures=()
@@ -90,7 +91,7 @@ if [[ -d ${SIGNING_GNUPGHOME} ]]; then
             /etc/systemd/system/binhost-build.service 2>/dev/null | tail -1)
     fi
     if [[ -z ${SIGNING_KEY:-} ]]; then
-        bad "signing key" "无法确定应使用的密钥指纹，SIGNING_KEY 未设置"
+        bad "签名密钥" "无法确定应使用的密钥指纹，SIGNING_KEY 未设置"
     else
         secret=$(sudo gpg --homedir "${SIGNING_GNUPGHOME}" --with-colons \
                  --list-secret-keys "${SIGNING_KEY}" 2>/dev/null)
@@ -99,24 +100,24 @@ if [[ -d ${SIGNING_GNUPGHOME} ]]; then
         trust=$(awk -F: '/^sec:/{print $2; exit}' <<< "${secret}")
         expiry=$(awk -F: '/^sec:/{print $7; exit}' <<< "${secret}")
         if (( gpg_rc != 0 )) || ! grep -q '^sec:' <<< "${secret}"; then
-            bad "signing key" "${SIGNING_GNUPGHOME} 里没有 ${SIGNING_KEY:0:8} 的私钥"
+            bad "签名密钥" "${SIGNING_GNUPGHOME} 里没有 ${SIGNING_KEY:0:8} 的私钥"
         elif [[ ${trust} == r ]]; then
-            bad "signing key" "${SIGNING_KEY:0:8} 已撤销"
+            bad "签名密钥" "${SIGNING_KEY:0:8} 已撤销"
         elif [[ ${caps} != *s* ]]; then
-            bad "signing key" "${SIGNING_KEY:0:8} 没有签名能力（capabilities=${caps:-无}）"
+            bad "签名密钥" "${SIGNING_KEY:0:8} 没有签名能力（capabilities=${caps:-无}）"
         elif [[ -n ${expiry} && ${expiry} != 0 ]]; then
             left=$(( (expiry - $(date +%s)) / 86400 ))
             if (( left < KEY_WARN_DAYS )); then
-                bad "signing key" "${SIGNING_KEY:0:8} 将在 ${left} 天后过期"
+                bad "签名密钥" "${SIGNING_KEY:0:8} 将在 ${left} 天后过期"
             else
-                note "signing key" "${SIGNING_KEY:0:8}，${left} 天后过期"
+                note "签名密钥" "${SIGNING_KEY:0:8}，${left} 天后过期"
             fi
         else
-            note "signing key" "${SIGNING_KEY:0:8}，无过期时间"
+            note "签名密钥" "${SIGNING_KEY:0:8}，无过期时间"
         fi
     fi
 else
-    note "signing key" "本机没有该目录"
+    note "签名密钥" "本机没有该目录"
 fi
 
 if [[ -d ${DISK_PATH} ]]; then
@@ -135,30 +136,30 @@ expiry=$(echo | openssl s_client -connect "${host}:443" -servername "${host}" 2>
 if [[ -n ${expiry} ]]; then
     left=$(days_until "${expiry}")
     if (( left < CERT_WARN_DAYS )); then
-        bad "TLS certificate" "expires in ${left}d"
+        bad "TLS 证书" "${left} 天后过期"
     else
-        note "TLS certificate" "expires in ${left}d"
+        note "TLS 证书" "${left} 天后过期"
     fi
 else
-    bad "TLS certificate" "could not read"
+    bad "TLS 证书" "无法读取"
 fi
 
 head=$(curl -fsS --max-time 15 -r 0-2047 "${SITE}/binpkgs/${TAG}/Packages" 2>/dev/null)
 if [[ -z ${head} ]]; then
-    bad "index" "not published"
+    bad "索引" "尚未发布"
 else
     ts=$(grep -m1 '^TIMESTAMP: ' <<< "${head}" | awk '{print $2}')
     n=$(grep -m1 '^PACKAGES: ' <<< "${head}" | awk '{print $2}')
     if [[ ! ${ts} =~ ^[0-9]+$ ]]; then
-        bad "index" "TIMESTAMP 无法解析"
+        bad "索引" "TIMESTAMP 无法解析"
     else
         age=$(( ( $(date +%s) - ts ) / 86400 ))
         if (( age >= INDEX_MAX_AGE_D )); then
-            bad "index" "${age}d 未更新（超过 ${INDEX_MAX_AGE_D}d）"
+            bad "索引" "${age} 天未更新（超过 ${INDEX_MAX_AGE_D} 天）"
         elif [[ ! ${n} =~ ^[0-9]+$ ]] || (( n == 0 )); then
-            bad "index" "索引里一个包都没有"
+            bad "索引" "里面一个包都没有"
         else
-            note "index" "${n} packages, ${age}d old"
+            note "索引" "${n} 个包，${age} 天前"
         fi
     fi
 fi
@@ -170,12 +171,12 @@ if [[ -n ${head:-} ]]; then
         code=$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' -L \
                "${SITE}/binpkgs/${TAG}/${path}" 2>/dev/null)
         if [[ ${code} == 200 ]]; then
-            note "package fetch" "ok"
+            note "取包" "正常"
         else
-            bad "package fetch" "HTTP ${code}"
+            bad "取包" "HTTP ${code}"
         fi
     else
-        bad "package fetch" "索引里无法获取一条 PATH"
+        bad "取包" "索引里无法获取一条 PATH"
     fi
 fi
 
@@ -192,15 +193,15 @@ else
     else
         dage=$(( ( $(date +%s) - dts ) / 3600 ))
         if (( dage >= DIST_MAX_AGE_H )); then
-            bad "distfiles" "${dage}h 未同步（超过 ${DIST_MAX_AGE_H}h）"
+            bad "distfiles" "${dage} 小时未同步（超过 ${DIST_MAX_AGE_H} 小时）"
         else
-            note "distfiles" "${dn} files, ${dage}h old"
+            note "distfiles" "${dn} 个文件，${dage} 小时前"
         fi
     fi
 fi
 
 if ! command -v node_exporter >/dev/null 2>&1; then
-    note "node_exporter" "not on this host"
+    note "node_exporter" "本机没有安装"
 elif ! curl -fsS --max-time 10 -o /dev/null "http://127.0.0.1:${EXPORTER_PORT}/metrics"; then
     bad "node_exporter" "本机 ${EXPORTER_PORT} 没有回应"
 else
@@ -211,7 +212,7 @@ else
         bad "node_exporter" "防火墙没有放行 ${EXPORTER_PORT} 的规则"
     else
         if ! set_out=$(sudo -n nft list set inet filter monitor_hosts 2>/dev/null); then
-            bad "node_exporter" "读不到 monitor_hosts 集合"
+            bad "node_exporter" "无法读取 monitor_hosts 集合"
         else
             monitors=$(grep -Eo '[0-9]+(\.[0-9]+){3}' <<< "${set_out}" | wc -l)
             want=0
@@ -229,27 +230,50 @@ else
 fi
 
 
+job=$(curl -fsS --max-time 15 "${SITE}/build-status.json" 2>/dev/null)
+if [[ -z ${job} ]]; then
+    bad "建置状态" "无法获取 build-status.json"
+else
+    jstate=$(grep -o '"state":"[a-z]*"' <<< "${job}" | cut -d'"' -f4)
+    jts=$(grep -o '"generated":[0-9]*' <<< "${job}" | cut -d: -f2)
+    if [[ ! ${jts} =~ ^[0-9]+$ ]]; then
+        bad "建置状态" "generated 无法解析"
+    else
+        jage=$(( ( $(date +%s) - jts ) / 3600 ))
+        if [[ ${jstate} == failed ]]; then
+            bad "建置状态" "上一轮建置失败（${jage} 小时前）"
+        elif [[ ${jstate} == running ]] && (( jage >= BUILD_STALE_H )); then
+            bad "建置状态" "running 已 ${jage} 小时未更新，进度推送可能已停止"
+        elif (( jage >= HEARTBEAT_MAX_H )); then
+            bad "建置状态" "${jage} 小时未更新（阈值 ${HEARTBEAT_MAX_H}h）"
+        else
+            note "建置状态" "${jstate:-未知}，${jage} 小时前"
+        fi
+    fi
+fi
+
 if [[ -w $(dirname "${HEARTBEAT}") ]] 2>/dev/null; then
     date +%s > "${HEARTBEAT}"
 fi
 
 stamp=$(curl -fsS --max-time 15 "${SITE}/.health" 2>/dev/null | tr -dc '0-9')
 if [[ -z ${stamp} ]]; then
-    bad "heartbeat" "无法获取 ${SITE}/.health"
+    bad "心跳" "无法获取 ${SITE}/.health"
 else
     age_h=$(( ( $(date +%s) - stamp ) / 3600 ))
     if (( age_h >= HEARTBEAT_MAX_H )); then
-        bad "heartbeat" "${age_h}h 未更新（阈值 ${HEARTBEAT_MAX_H}h）"
+        bad "心跳" "${age_h} 小时未更新（阈值 ${HEARTBEAT_MAX_H} 小时）"
     else
-        note "heartbeat" "${age_h}h 前"
+        note "心跳" "${age_h} 小时前"
     fi
 fi
 
 
 if (( problems > 0 )) && [[ ! -r ${ALERT_CONF} ]]; then
-    echo "!! 有 ${problems} 项未通过，但 ${ALERT_CONF} 读不到，告警传送失败" >&2
+    echo "!! 有 ${problems} 项未通过，但 ${ALERT_CONF} 无法读取，告警传送失败" >&2
 fi
 
+sent=0
 if (( problems > 0 )) && [[ ${BINHOST_ALERT:-} == 1 ]] && [[ -r ${ALERT_CONF} ]]; then
     # shellcheck source=/dev/null
     . "${ALERT_CONF}"
@@ -261,12 +285,20 @@ if (( problems > 0 )) && [[ ${BINHOST_ALERT:-} == 1 ]] && [[ -r ${ALERT_CONF} ]]
         for f in "${failures[@]}"; do
             text+=$'\n'"• ${f}"
         done
-        curl -fsS --max-time 20 -o /dev/null \
-            "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+        if curl -fsS --max-time 20 -o /dev/null \
+            --url "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=${TELEGRAM_CHAT}" \
             --data-urlencode "text=${text}" \
-            --data "disable_notification=false" || echo "!!! 告警发送失败" >&2
+            --data "disable_notification=false"
+        then
+            sent=1
+        else
+            echo "!!! 告警发送失败" >&2
+        fi
     fi
 fi
 
-exit $(( problems > 0 ))
+if (( problems > 0 )); then
+    exit $(( sent ? 10 : 1 ))
+fi
+exit 0

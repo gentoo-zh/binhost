@@ -4,7 +4,8 @@ set -euo pipefail
 
 BASE="${BASE:-https://distfiles.gentoozh.org/binpkgs/x86-64}"
 DEST="${DEST:-./x86-64}"
-MAX_REMOVE_SHARE="${MAX_REMOVE_SHARE:-50}"
+MAX_REMOVE_SHARE="${MAX_REMOVE_SHARE:-20}"
+MAX_REMOVE_COUNT="${MAX_REMOVE_COUNT:-60}"
 
 mkdir -p "${DEST}"
 
@@ -18,13 +19,23 @@ curl -fsS --max-time 60 "${BASE}/Packages.gz" -o "${tmp}/Packages.gz"
 mapfile -t paths < <(awk '/^PATH: /{print $2}' "${tmp}/Packages")
 (( ${#paths[@]} )) || { echo "索引中没有包，中止" >&2; exit 1; }
 
+heads=$(grep -c '^PACKAGES: ' "${tmp}/Packages")
+if (( heads != 1 )); then
+    echo "索引里有 ${heads} 行 PACKAGES 头部，应恰好一行，中止" >&2
+    exit 1
+fi
 declared=$(awk '/^PACKAGES: /{print $2; exit}' "${tmp}/Packages")
-if [[ ${declared} =~ ^[0-9]+$ ]] && (( declared != ${#paths[@]} )); then
+if ! [[ ${declared} =~ ^[1-9][0-9]*$ ]]; then
+    echo "索引头部的数量不是正整数：${declared:-空}，中止" >&2
+    exit 1
+fi
+if (( declared != ${#paths[@]} )); then
     echo "索引头部写 ${declared} 个，实际列出 ${#paths[@]} 个，索引不完整，中止" >&2
     exit 1
 fi
 
-if command -v gzip >/dev/null && ! cmp -s <(gzip -dc "${tmp}/Packages.gz") "${tmp}/Packages"; then
+command -v gzip >/dev/null || { echo "需要 gzip 才能核对两份索引，中止" >&2; exit 1; }
+if ! cmp -s <(gzip -dc "${tmp}/Packages.gz") "${tmp}/Packages"; then
     echo "Packages 与 Packages.gz 内容不一致，两者不是同一代，中止" >&2
     exit 1
 fi
@@ -43,9 +54,13 @@ for path in "${paths[@]}"; do
         /*|*/../*|../*|*/..|..) echo "!! 索引里的路径不合法，跳过：${path}" >&2
                                 failed=$((failed + 1)); continue ;;
     esac
+    want=${size["${path}"]:-}
+    if ! [[ ${want} =~ ^[0-9]+$ ]]; then
+        echo "!! 索引没有给出 ${path} 的 SIZE，无法核对，跳过" >&2
+        failed=$((failed + 1))
+        continue
+    fi
     if [[ -f ${DEST}/${path} ]]; then
-        want=${size["${path}"]:-}
-        [[ -z ${want} ]] && continue
         [[ $(stat -c %s "${DEST}/${path}" 2>/dev/null || echo -1) == "${want}" ]] && continue
         echo "!! ${path} 大小与索引不符，重新下载" >&2
         stale=$((stale + 1))
@@ -53,6 +68,13 @@ for path in "${paths[@]}"; do
     fi
     mkdir -p "${DEST}/$(dirname "${path}")"
     if curl -fsSL --max-time 900 "${BASE}/${path}" -o "${DEST}/${path}.part"; then
+        got=$(stat -c %s "${DEST}/${path}.part" 2>/dev/null || echo -1)
+        if [[ ${got} != "${want}" ]]; then
+            rm -f "${DEST}/${path}.part"
+            echo "!!! ${path} 下载到 ${got} 字节，索引写 ${want}" >&2
+            failed=$((failed + 1))
+            continue
+        fi
         mv -f "${DEST}/${path}.part" "${DEST}/${path}"
         new=$((new + 1))
     else
@@ -82,8 +104,11 @@ while IFS= read -r -d '' f; do
     [[ -v wanted["${rel}"] ]] || retire+=("${f}")
 done < <(find "${DEST}" -name '*.gpkg.tar' -print0)
 
-if (( have > 0 && ${#retire[@]} * 100 > have * MAX_REMOVE_SHARE )) && [[ -z ${FORCE_REMOVE:-} ]]; then
-    echo "!! 本轮要清理 ${#retire[@]}/${have} 个，超过 ${MAX_REMOVE_SHARE}%，未清理" >&2
+over=0
+(( ${#retire[@]} > 0 && have > 0 && ${#retire[@]} * 100 >= have * MAX_REMOVE_SHARE )) && over=1
+(( ${#retire[@]} >= MAX_REMOVE_COUNT )) && over=1
+if (( over )) && [[ ${FORCE_REMOVE:-0} != 1 ]]; then
+    echo "!! 本轮要清理 ${#retire[@]}/${have} 个，达到 ${MAX_REMOVE_SHARE}% 或 ${MAX_REMOVE_COUNT} 个的上限，未清理" >&2
     echo "   索引与已下载的包都已就位，确认无误后以 FORCE_REMOVE=1 重新执行" >&2
     exit 3
 fi

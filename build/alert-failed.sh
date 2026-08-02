@@ -19,6 +19,10 @@ if [[ ${FORCE:-0} != 1 && ${result} == success ]]; then
     echo "${UNIT} 的结果是 success，不发告警" >&2
     exit 0
 fi
+if [[ ${FORCE:-0} != 1 && ${code} == "${ALERTED_EXIT:-10}" ]]; then
+    echo "${UNIT} 已自行告警（退出码 ${code}），不发第二条" >&2
+    exit 0
+fi
 started=$(field ExecMainStartTimestamp)
 finished=$(field ExecMainExitTimestamp)
 
@@ -64,7 +68,7 @@ if (( ${#text} > 3500 )); then
 fi
 
 if ! curl -fsS --max-time 20 -o /dev/null \
-    "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+    --url "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
     --data-urlencode "chat_id=${TELEGRAM_CHAT}" \
     --data-urlencode "text=${text}"
 then

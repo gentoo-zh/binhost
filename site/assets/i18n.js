@@ -71,9 +71,12 @@
   var themeBtn = themeWrap && themeWrap.querySelector('.theme-btn');
   var menu = themeWrap && themeWrap.querySelector('.menu');
   var items = {};
+  var order = [];
   if (menu) {
     menu.querySelectorAll('.menu-item').forEach(function (it) {
       items[it.dataset.mode] = it;
+      order.push(it);
+      it.setAttribute('tabindex', '-1');
       it.addEventListener('click', function () { applyTheme(it.dataset.mode); closeMenu(); themeBtn.focus(); });
     });
   }
@@ -81,9 +84,40 @@
     themeBtn.addEventListener('click', function (e) {
       e.stopPropagation(); if (menu.hidden) openMenu(); else closeMenu();
     });
+    themeBtn.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      openMenu();
+      focusItem(e.key === 'ArrowUp' ? order.length - 1 : indexOfCurrent());
+    });
   }
   document.addEventListener('click', function (e) { if (themeWrap && !themeWrap.contains(e.target)) closeMenu(); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
+
+  function indexOfCurrent() {
+    var i = order.indexOf(items[themeMode]);
+    return i < 0 ? 0 : i;
+  }
+  function focusItem(i) {
+    if (!order.length) return;
+    var n = ((i % order.length) + order.length) % order.length;
+    order.forEach(function (it, k) { it.setAttribute('tabindex', k === n ? '0' : '-1'); });
+    order[n].focus();
+  }
+  if (menu) {
+    menu.addEventListener('keydown', function (e) {
+      var here = order.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown') { e.preventDefault(); focusItem(here + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); focusItem(here - 1); }
+      else if (e.key === 'Home') { e.preventDefault(); focusItem(0); }
+      else if (e.key === 'End') { e.preventDefault(); focusItem(order.length - 1); }
+      else if (e.key === 'Tab') { closeMenu(); }
+    });
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || !menu || menu.hidden) return;
+    closeMenu();
+    if (themeBtn) themeBtn.focus();
+  });
 
   function openMenu() {
     if (!menu) return;

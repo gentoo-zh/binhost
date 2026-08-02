@@ -50,11 +50,16 @@ sudo install -m644 rsyncd.conf /etc/rsyncd.conf
 
 echo '--- 防火墙'
 listening=\$(sudo sshd -T 2>/dev/null | awk '/^port /{print \$2}')
-if [ -n \"\${listening}\" ] && ! echo \"\${listening}\" | grep -qx '${SSH_PORT}' &&
-   [ -z '${SKIP_SSH_PORT_CHECK:-}' ]; then
+if [ '${SKIP_SSH_PORT_CHECK:-0}' = 1 ]; then
+    echo '   !! SKIP_SSH_PORT_CHECK=1：跳过端口一致性检查' >&2
+    echo \"   即将 flush ruleset 并只放行 ${SSH_PORT}；若与实际不符，当前连线会断且没有第二条路进来\" >&2
+elif [ -z \"\${listening}\" ]; then
+    echo '!! 无法从 sshd -T 取得实际监听端口，不能确认防火墙会放行它' >&2
+    echo '   套用后可能切断当前连线，已中止' >&2
+    exit 1
+elif ! echo \"\${listening}\" | grep -qx '${SSH_PORT}'; then
     echo \"!! sshd 实际监听 \${listening}，而防火墙只会放行 ${SSH_PORT}\" >&2
     echo '   套用后当前连线会断，且没有第二条路进来，已中止' >&2
-    echo '   确认无误时以 SKIP_SSH_PORT_CHECK=1 重新执行' >&2
     exit 1
 fi
 sed 's/__SSH_PORT__/${SSH_PORT}/g' nftables.conf > nftables.conf.real

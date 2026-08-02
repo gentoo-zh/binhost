@@ -28,6 +28,11 @@ CASES = [
     ("shell 单行注释", "run.sh", "# 这一步搞定之后继续\ntrue\n", "comment"),
     ("python 行末注释", "gen.py", "x = 1  # 装上就行\n", "comment"),
     ("markdown 正文", "README.md", "装上就行。\n", "comment"),
+
+    ("任何中文注释", "run.sh", "# 这是中文代码注释\ntrue\n", "comment"),
+    ("python 中文注释", "gen.py", "# 中文说明\nx = 1\n", "comment"),
+    ("js 中文注释", "assets/util.js", "// 中文说明\nvar y = 1;\n", "comment"),
+    ("单独的跑", "run.sh", 'echo "跑 deploy/install.sh"\n', "emitted"),
 ]
 
 CLEAN = {
@@ -77,6 +82,23 @@ for name, rel, body, kind in CASES:
         else:
             print(f"  ✗ {name}：塞了口语词，检查器仍报全绿")
             bad += 1
+
+# 站点正文走的是 main() 那条路，不是注释也不是字串常量
+with tempfile.TemporaryDirectory() as base:
+    site = pathlib.Path(base) / "site"
+    site.mkdir()
+    (site / "ok.html").write_text("<p>先执行一次配置</p>\n")
+    if cc.main(str(site)) == 0:
+        print("  ✓ 站点正文用词正确时不报")
+    else:
+        print("  ✗ 站点正文用词正确时被误报")
+        bad += 1
+    (site / "bad.html").write_text("<p>先跑一次配置</p>\n")
+    if cc.main(str(site)) != 0:
+        print("  ✓ 站点正文里单独的跑会被抓到")
+    else:
+        print("  ✗ 站点正文里单独的跑没有被抓到")
+        bad += 1
 
 if bad:
     print(f"\n>>> {bad} 项未通过")

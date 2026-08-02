@@ -19,7 +19,7 @@ on_error() {
     alert "binhost 本轮失败（$(hostname)）
 第 ${line} 行，退出码 ${rc}
 ${cmd}"
-    exit "${rc}"
+    alert_exit "${rc}"
 }
 trap 'on_error "$?" "${LINENO}" "${BASH_COMMAND}"' ERR
 
@@ -31,7 +31,7 @@ exec 9>"${LOCK}"
 if ! flock -n 9; then
     echo "另一轮构建正在进行（${LOCK}），这一轮跳过" >&2
     alert "binhost 这一轮被上一轮阻塞（$(hostname)）：上一轮已超过一个调度间隔"
-    exit 1
+    alert_exit
 fi
 
 git -C "${OVERLAY}" fetch --quiet origin master
@@ -54,12 +54,12 @@ trap 'on_exit "$?"' EXIT
 
 if ! ./build/run-full.sh; then
     alert "binhost 构建阶段失败（$(hostname)）"
-    exit 1
+    alert_exit
 fi
 
 if ! ./build/publish.sh; then
     alert "binhost 发布阶段失败（$(hostname)）：包已构建，未同步到镜像机"
-    exit 1
+    alert_exit
 fi
 
 if ! python3 ./build/check-versions.py \

@@ -8,12 +8,14 @@ import shutil
 import sys
 import time
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from ebuilds import restrict_tokens                        # noqa: E402
+HERE = pathlib.Path(__file__).resolve().parent
+sys.path[:0] = [str(HERE), str(HERE.parent / "build")]
+from ebuilds import restrict_tokens, restrict_uncertain    # noqa: E402
 
 
 def scan(overlay):
     users = {}
+    unsure = set()
     for man in overlay.glob("*/*/Manifest"):
         d = man.parent
         ebuilds = list(d.glob("*.ebuild"))
@@ -21,21 +23,27 @@ def scan(overlay):
             continue
         pn = d.name
         by_version = {}
+        vague = {}
         for e in ebuilds:
             ver = e.name[len(pn) + 1:-len(".ebuild")]
-            by_version[ver] = "mirror" in restrict_tokens(
-                e.read_text(errors="replace"))
+            text = e.read_text(errors="replace")
+            by_version[ver] = "mirror" in restrict_tokens(text)
+            vague[ver] = restrict_uncertain(text)
         fallback = any(by_version.values())
+        fallback_vague = any(vague.values())
 
         for line in man.read_text(errors="replace").splitlines():
             if not line.startswith("DIST "):
                 continue
             name = line.split()[1]
             hit = [v for v in by_version if v in name]
-            restricted = by_version[max(hit, key=len)] if hit else fallback
+            pick = max(hit, key=len) if hit else None
+            restricted = by_version[pick] if pick else fallback
+            if (vague[pick] if pick else fallback_vague):
+                unsure.add(name)
             users.setdefault(name, []).append(
                 (str(d.relative_to(overlay)), restricted))
-    return users
+    return users, unsure
 
 
 GRACE_SECONDS = 7 * 24 * 3600
@@ -151,7 +159,7 @@ def main(overlay, dest):
     if not (overlay / "profiles" / "repo_name").exists():
         sys.exit(f"不是 ebuild 仓库：{overlay}")
 
-    users = scan(overlay)
+    users, unsure = scan(overlay)
     paths = {p.name: p for p in dest.rglob("*") if p.is_file() and p.name not in MARKERS}
     have = set(paths)
 
@@ -178,6 +186,9 @@ def main(overlay, dest):
     mirrorable = {f for f, us in users.items() if any(not r for _, r in us)} - unfetchable
     never = {f for f, us in users.items() if us and all(r for _, r in us)}
 
+    mirrorable -= unsure
+    never -= unsure
+
     missing = sorted(mirrorable - have)
     extra = sorted(never & have)
     orphan = sorted(have - set(users))
@@ -189,7 +200,7 @@ def main(overlay, dest):
         refused = (f"本轮 {len(orphan)}/{len(have)} 个文件无人引用，"
                    f"超过 {MAX_REAP_SHARE:.0%}")
 
-    spent, budget = 0, 0
+    spent, budget, reserved = 0, 0, 0
     if not refused:
         try:
             spent = recent_deletions(0)
@@ -197,6 +208,15 @@ def main(overlay, dest):
             refused = f"{e}，跨轮预算无依据"
         else:
             budget = max(0, int(len(have) * MAX_REAP_SHARE) - spent)
+
+    if not refused and budget:
+        reserved = min(budget, len(orphan))
+        try:
+            recent_deletions(reserved)
+        except LedgerError as e:
+            refused = f"{e}，额度无法预留"
+            reserved = 0
+
     deleted, failed = ([], []) if refused else reap(orphan, paths, budget=budget)
 
     restricted, restricted_failed = [], []
@@ -212,19 +232,25 @@ def main(overlay, dest):
                 continue
             (restricted if recycle(path) else restricted_failed).append(f)
 
-    recent = spent
-    if deleted:
+    recent = spent + reserved
+    if reserved != len(deleted):
         try:
-            recent = recent_deletions(len(deleted))
+            recent = recent_deletions(len(deleted) - reserved)
         except LedgerError as e:
-            print(f"!! 帐本未记下本轮的 {len(deleted)} 个：{e}", file=sys.stderr)
+            print(f"!! 帐本未能核销预留额度：{e}", file=sys.stderr)
             failed = failed + deleted
     if not refused and budget == 0 and orphan:
         refused = (f"最近 {WINDOW_HOURS} 小时累计清理 {spent} 个，"
                    f"已达镜像的 {MAX_REAP_SHARE:.0%}，本轮未清理")
 
     print(f"overlay 引用 {len(users)}，其中可镜像 {len(mirrorable)}，"
-          f"不可镜像 {len(never)}，无法取得 {len(unfetchable)}")
+          f"不可镜像 {len(never)}，无法取得 {len(unfetchable)}，"
+          f"RESTRICT 算不准 {len(unsure)}")
+    if unsure:
+        print(f"!! {len(unsure)} 个文件的 RESTRICT 写在条件式或函式里，"
+              f"静态无法解析出有效值；本轮既不清理也不当作可公开", file=sys.stderr)
+        for f in sorted(unsure)[:10]:
+            print(f"   算不准 {f}  <- {[p for p, _ in users.get(f, [])]}", file=sys.stderr)
     print(f"镜像上 {len(have)}，缺 {len(missing)}，禁止镜像 {len(extra)}，"
           f"已无人引用 {len(orphan)}，本轮清理 {len(deleted) + len(restricted)}"
           f"（其中禁止镜像 {len(restricted)}）")

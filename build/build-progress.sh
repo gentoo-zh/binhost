@@ -8,7 +8,7 @@ OUT="${OUT:-build-status.json}"
 EVERY="${EVERY:-60}"
 
 push() {
-    # shellcheck disable=SC2029  # SITE_ROOT 与 OUT 要在本地展开
+    # shellcheck disable=SC2029
     if ! ssh "${REMOTE}" "cat > ${SITE_ROOT}/.${OUT}.new &&
                           mv -f ${SITE_ROOT}/.${OUT}.new ${SITE_ROOT}/${OUT}"; then
         echo "!! 建置进度未能送到 ${REMOTE}" >&2

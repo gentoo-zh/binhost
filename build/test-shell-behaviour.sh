@@ -1,5 +1,4 @@
 #!/bin/bash
-# 行为。bash -n 与 shellcheck 只看语法，删除预算、DONE 标记、锁、索引一致性
 
 set -uo pipefail
 
@@ -33,7 +32,7 @@ setup_publish() {
     mkdir -p "${d}/stage" "${d}/remote" "${d}/bin"
     cat > "${d}/bin/ssh" <<'EOF'
 #!/bin/bash
-shift          # 丢掉主机名
+shift
 exec bash -c "$*"
 EOF
     cat > "${d}/bin/rsync" <<'EOF'
@@ -65,17 +64,17 @@ EOF
 
 stage_index() {
     local dir="$1" n="$2" declared="${3:-$2}"
+    mkdir -p "${dir}/stage/app-misc"
     {
         echo "PACKAGES: ${declared}"
         echo "TIMESTAMP: 1754150400"
         echo
         for ((i = 0; i < n; i++)); do
-            printf 'CPV: app-misc/p%d-1.0\nPATH: app-misc/p%d-1.0-1.gpkg.tar\n\n' "$i" "$i"
-            mkdir -p "${dir}/stage/app-misc"
             echo x > "${dir}/stage/app-misc/p${i}-1.0-1.gpkg.tar"
+            printf 'CPV: app-misc/p%d-1.0\nPATH: app-misc/p%d-1.0-1.gpkg.tar\nSIZE: 2\n\n' "$i" "$i"
         done
     } > "${dir}/stage/Packages"
-    : > "${dir}/stage/Packages.gz"
+    gzip -c "${dir}/stage/Packages" > "${dir}/stage/Packages.gz"
 }
 
 echo "== publish.sh"
@@ -125,6 +124,72 @@ ok "退役的那一个被删掉" "$(test -e "${d}/remote/app-misc/gone-1.0-1.gpk
 ok "索引里的都还在" "$(find "${d}/remote" -name 'p*.gpkg.tar' | wc -l)" "10"
 rm -rf "${d}"
 
+d=$(setup_publish)
+stage_index "${d}" 3
+sed -i 's/^PACKAGES: 3$/PACKAGES: broken/' "${d}/stage/Packages"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "头部不是数字时中止" "$?" "1"
+contains "并且说明原因" "${out}" "不是正整数"
+rm -rf "${d}"
+
+d=$(setup_publish)
+stage_index "${d}" 3
+sed -i '/^PACKAGES: 3$/d' "${d}/stage/Packages"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "头部缺失时中止" "$?" "1"
+rm -rf "${d}"
+
+d=$(setup_publish)
+stage_index "${d}" 3
+sed -i '2a PACKAGES: 3' "${d}/stage/Packages"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "头部出现两次时中止" "$?" "1"
+contains "并且说明原因" "${out}" "应恰好一行"
+rm -rf "${d}"
+
+d=$(setup_publish)
+stage_index "${d}" 3
+printf 'truncated' > "${d}/stage/app-misc/p1-1.0-1.gpkg.tar"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "暂存区文件大小与索引不符时中止" "$?" "1"
+contains "并且指出是哪一个" "${out}" "p1-1.0-1.gpkg.tar"
+rm -rf "${d}"
+
+d=$(setup_publish)
+stage_index "${d}" 3
+printf 'PACKAGES: 3\n' | gzip -c > "${d}/stage/Packages.gz"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "两份索引不同代时中止" "$?" "1"
+contains "并且说明原因" "${out}" "内容不一致"
+rm -rf "${d}"
+
+d=$(setup_publish)
+stage_index "${d}" 8
+mkdir -p "${d}/remote/app-misc"
+for ((i = 0; i < 8; i++)); do echo x > "${d}/remote/app-misc/p${i}-1.0-1.gpkg.tar"; done
+for ((i = 0; i < 2; i++)); do echo x > "${d}/remote/app-misc/old${i}-1.0-1.gpkg.tar"; done
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "恰好等于比例上限时也拦下" "$?" "3"
+ok "并且一个都没删" "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "2"
+rm -rf "${d}"
+
+d=$(setup_publish)
+stage_index "${d}" 400
+mkdir -p "${d}/remote/app-misc"
+for ((i = 0; i < 400; i++)); do echo x > "${d}/remote/app-misc/p${i}-1.0-1.gpkg.tar"; done
+for ((i = 0; i < 70; i++)); do echo x > "${d}/remote/app-misc/old${i}-1.0-1.gpkg.tar"; done
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "比例没超但绝对数量超时仍拦下" "$?" "3"
+ok "并且一个都没删" "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "70"
+rm -rf "${d}"
+
 echo
 echo "== mirror-sync.sh"
 
@@ -133,7 +198,7 @@ setup_mirror() {
     mkdir -p "${d}/src" "${d}/dest" "${d}/bin"
     cat > "${d}/bin/curl" <<EOF
 #!/bin/bash
-# 只认 -o <路径> 与最后那个网址，其余选项忽略
+# Only -o <path> and the trailing URL matter here
 out=""
 url=""
 while [ \$# -gt 0 ]; do
@@ -208,6 +273,47 @@ ok "FORCE_REMOVE=1 时照常清理" "$?" "0"
 ok "清理后旧包不再存在" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "0"
 rm -rf "${d}"
 
+d=$(setup_mirror)
+mirror_index "${d}" 3
+sed -i 's/^SIZE: 2$/SIZE: 999/' "${d}/src/Packages"
+gzip -c "${d}/src/Packages" > "${d}/src/Packages.gz"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
+      bash deploy/mirror-sync.sh 2>&1)
+ok "新下载的大小与索引不符时以非零结束" "$?" "1"
+ok "并且不留下半截文件" "$(find "${d}/dest" -name '*.part' -o -name '*.gpkg.tar' | wc -l)" "0"
+ok "并且不换入新索引" "$(test -e "${d}/dest/Packages" && echo 有 || echo 无)" "无"
+rm -rf "${d}"
+
+d=$(setup_mirror)
+mirror_index "${d}" 3
+sed -i '/^SIZE: /d' "${d}/src/Packages"
+gzip -c "${d}/src/Packages" > "${d}/src/Packages.gz"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
+      bash deploy/mirror-sync.sh 2>&1)
+ok "索引没有 SIZE 时以非零结束" "$?" "1"
+contains "并且说明原因" "${out}" "没有给出"
+rm -rf "${d}"
+
+d=$(setup_mirror)
+mirror_index "${d}" 3
+sed -i 's/^PACKAGES: 3$/PACKAGES: broken/' "${d}/src/Packages"
+gzip -c "${d}/src/Packages" > "${d}/src/Packages.gz"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
+      bash deploy/mirror-sync.sh 2>&1)
+ok "头部不是数字时中止" "$?" "1"
+contains "并且说明原因" "${out}" "不是正整数"
+rm -rf "${d}"
+
+d=$(setup_mirror)
+mirror_index "${d}" 8
+mkdir -p "${d}/dest/app-misc"
+for ((i = 0; i < 2; i++)); do echo x > "${d}/dest/app-misc/old${i}-1.0-1.gpkg.tar"; done
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
+      bash deploy/mirror-sync.sh 2>&1)
+ok "恰好等于比例上限时也拦下" "$?" "3"
+ok "并且一个都没删" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "2"
+rm -rf "${d}"
+
 echo
 echo "== site-sync.sh"
 
@@ -254,7 +360,8 @@ out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" WORK="${d}/work" DEST="${d}/dest" 
 ok "指纹不符时以非零结束" "$?" "1"
 ok "并且不写 DONE，下一轮会重试" "$(test -e "${d}/work/.synced" && echo 有 || echo 无)" "无"
 ok "公钥没有发布" "$(test -e "${d}/dest/gentoo-zh-binhost.asc" && echo 有 || echo 无)" "无"
-ok "页面照常发布" "$(test -e "${d}/dest/index.html" && echo 有 || echo 无)" "有"
+ok "页面也没有发布，本轮不切换任何内容" "$(test -e "${d}/dest/index.html" && echo 有 || echo 无)" "无"
+ok "assets 也没有发布" "$(test -d "${d}/dest/assets" && echo 有 || echo 无)" "无"
 contains "输出分开列出两侧指纹" "${out}" "本机记录的指纹"
 rm -rf "${d}"
 

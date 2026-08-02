@@ -65,20 +65,45 @@ def keywords_of(text):
 
 
 RESTRICT_ASSIGN = re.compile(
-    r'^[ \t]*RESTRICT(\+?)=(?:"([^"]*)"|\'([^\']*)\'|([^\s#]+))', re.M)
+    r'(?P<pre>^[^\n#]*?)RESTRICT(?P<plus>\+?)='
+    r'(?:"(?P<dq>[^"]*)"|\'(?P<sq>[^\']*)\'|(?P<bare>[^\s#;)]+))', re.M)
+
+BLOCK_OPEN = re.compile(r"^\s*(if|for|while|until|case)\b|\{\s*$|\(\)\s*\{")
+BLOCK_CLOSE = ("fi", "done", "esac", "}", ";;")
+
+
+def _assignments(text):
+    for m in RESTRICT_ASSIGN.finditer(text):
+        val = next((m.group(k) for k in ("dq", "sq", "bare")
+                    if m.group(k) is not None), "")
+        yield m, val
 
 
 def restrict_tokens(text):
     cur = []
-    for m in RESTRICT_ASSIGN.finditer(text):
-        val = next((g for g in m.groups()[1:] if g is not None), "")
-        cur = cur + val.split() if m.group(1) else val.split()
+    for m, val in _assignments(text):
+        cur = cur + val.split() if m.group("plus") else val.split()
     return set(cur)
 
 
+def restrict_uncertain(text):
+    for m, _ in _assignments(text):
+        if m.group("pre").strip():
+            return True
+        depth = 0
+        for line in text[:m.start()].splitlines():
+            s = line.strip()
+            if BLOCK_OPEN.search(line):
+                depth += 1
+            elif s in BLOCK_CLOSE:
+                depth = max(0, depth - 1)
+        if depth:
+            return True
+    return False
+
+
 def restricts_bindist(text):
-    return any("bindist" in (next((g for g in m.groups()[1:] if g is not None), ""))
-               for m in RESTRICT_ASSIGN.finditer(text))
+    return any("bindist" in val for _, val in _assignments(text))
 
 
 def inherits(text):

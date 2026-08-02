@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=83b73584">
+<link rel="stylesheet" href="/assets/site.css?v=277bacb1">
 <script src="/assets/early.js?v=0888406a"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -342,7 +342,7 @@ window.MIRROR_I18N = {
     distNote: '這裡只有 overlay 的原始碼，不能替代官方來源，因此是追加而非替換。位址不寫 <code>distfiles/</code>，portage 會自己補上。這裡把鏡像都列出：<code>GENTOO_MIRRORS</code> 是按順序嘗試的列表，選中的無法取得時會落到後面的位址。',
     distOptOut: '因版權等原因不希望某個套件被鏡像時，在其 ebuild 中加入 <code>RESTRICT="mirror"</code>，同步工具會跳過。',
     step1: '匯入簽章公鑰', step2: '加入倉庫', step3: '打開 getbinpkg（附加）',
-    keyAlt: '不想裝這個套件，也可以直接下載公鑰檔案，見 <a href="/faq#key-download">FAQ</a>。',
+    keyAlt: '也可不安裝該套件，直接下載公鑰檔案，見 <a href="/faq#key-download">FAQ</a>。',
     keyNote: '<code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。沒有它，上面三條 gpg 命令會以 <code>no writable keyring found</code> 失敗——gpg 不會自己建這個目錄，而 portage 只在第一次取二進位套件時才會呼叫它，那已經是第 2、3 步之後了。簽章用的是 getuto 建立的 Portage Local Trust Key，口令在 <code>/etc/portage/gnupg/pass</code>，因此要用 <code>--passphrase-file</code> 讀。驗簽以 <code>portage</code> 使用者執行，該使用者對 trustdb 沒有寫入權限，所以 trustdb 要預先算好。',
     factPkgs: ' 個二進位套件', factDist: ' 個 distfiles 檔案', factTime: '更新於 ',
     h2contact: '聯絡', ctForum: '論壇'
@@ -371,7 +371,7 @@ window.MIRROR_I18N = {
   }
 };
 </script>
-<script src="/assets/i18n.js?v=2b75be78"></script>
+<script src="/assets/i18n.js?v=7deb9357"></script>
 <script src="/assets/mode-switch.js?v=08d5c31f"></script>
 <script src="/assets/sudo-switch.js?v=1ebc6dc8"></script>
 <script src="/assets/source-switch.js?v=65dbd639"></script>

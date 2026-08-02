@@ -1,5 +1,10 @@
 # shellcheck shell=bash
 
+ALERTED_EXIT=10
+ALERT_SENT=0
+
+alert_exit() { exit "$(( ALERT_SENT ? ALERTED_EXIT : ${1:-1} ))"; }
+
 alert() {
     local conf="${ALERT_CONF:-/etc/binhost/alert.conf}"
 
@@ -26,11 +31,13 @@ alert() {
 …（超过 3500 字，已截断，完整内容见构建日志）"
     fi
 
-    if ! curl -fsS --max-time 20 -o /dev/null \
-        "https://api.telegram.org/bot${token}/sendMessage" \
+    if curl -fsS --max-time 20 -o /dev/null \
+        --url "https://api.telegram.org/bot${token}/sendMessage" \
         --data-urlencode "chat_id=${chat}" \
         --data-urlencode "text=${text}"
     then
+        ALERT_SENT=1
+    else
         echo "!! 告警发送失败（${#text} 字）" >&2
     fi
 }

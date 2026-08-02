@@ -32,29 +32,30 @@ synced=$(cat "${DONE}" 2>/dev/null || true)
 
 (( fresh )) || [[ ${before} != "${after}" ]] || [[ ${synced} != "${after}" ]] || exit 0
 
-rsync -a --safe-links --delete "${WORK}/site/assets/" "${DEST}/assets/"
 FPR_FILE="${FPR_FILE:-/etc/binhost/signing-key.fpr}"
-key_ok=0
-if [[ -r ${FPR_FILE} ]]; then
-    mapfile -t want < <(tr -d ' \r' < "${FPR_FILE}" | grep -oE '[0-9A-Fa-f]{40}' | tr 'a-f' 'A-F')
-    mapfile -t got < <(gpg --with-colons --show-keys "${WORK}/site/gentoo-zh-binhost.asc" 2>/dev/null |
-                       awk -F: '/^fpr:/{print $10}')
-    unexpected=()
-    for g in "${got[@]}"; do
-        [[ " ${want[*]} " == *" ${g} "* ]] || unexpected+=("${g}")
-    done
-    if (( ${#want[@]} && ${#got[@]} && ${#unexpected[@]} == 0 )); then
-        rsync -a --safe-links "${WORK}/site/gentoo-zh-binhost.asc" "${DEST}/"
-        key_ok=1
-    else
-        echo "!! 公钥未同步" >&2
-        echo "   本机记录的指纹：${want[*]:-无}" >&2
-        echo "   仓库中的指纹：${got[*]:-无}" >&2
-        echo "   记录中没有的指纹：${unexpected[*]:-无}" >&2
-    fi
-else
-    echo "!! ${FPR_FILE} 不存在，公钥未同步" >&2
+if [[ ! -r ${FPR_FILE} ]]; then
+    echo "!! ${FPR_FILE} 不存在，本轮不发布任何内容" >&2
+    rm -f "${DONE}"
+    exit 1
 fi
+mapfile -t want < <(tr -d ' \r' < "${FPR_FILE}" | grep -oE '[0-9A-Fa-f]{40}' | tr 'a-f' 'A-F')
+mapfile -t got < <(gpg --with-colons --show-keys "${WORK}/site/gentoo-zh-binhost.asc" 2>/dev/null |
+                   awk -F: '/^fpr:/{print $10}')
+unexpected=()
+for g in "${got[@]}"; do
+    [[ " ${want[*]} " == *" ${g} "* ]] || unexpected+=("${g}")
+done
+if (( ${#want[@]} == 0 || ${#got[@]} == 0 || ${#unexpected[@]} )); then
+    echo "!! 公钥未通过校验，本轮不发布任何内容" >&2
+    echo "   本机记录的指纹：${want[*]:-无}" >&2
+    echo "   仓库中的指纹：${got[*]:-无}" >&2
+    echo "   记录中没有的指纹：${unexpected[*]:-无}" >&2
+    rm -f "${DONE}"
+    exit 1
+fi
+
+rsync -a --safe-links --delete "${WORK}/site/assets/" "${DEST}/assets/"
+rsync -a --safe-links "${WORK}/site/gentoo-zh-binhost.asc" "${DEST}/"
 
 rsync -a --safe-links --include='*.html' --include='robots.txt' --exclude='*' "${WORK}/site/" "${DEST}/"
 
@@ -65,11 +66,5 @@ for f in "${DEST}"/*.html; do
     rm -f "${f}"
 done
 
-if (( key_ok )); then
-    printf '%s' "${after}" > "${DONE}"
-    echo "site updated ${before:0:7} -> ${after:0:7}"
-else
-    rm -f "${DONE}"
-    echo "!! 公钥未通过校验，页面已更新到 ${after:0:7}，下一轮会重试公钥" >&2
-    exit 1
-fi
+printf '%s' "${after}" > "${DONE}"
+echo "site updated ${before:0:7} -> ${after:0:7}"

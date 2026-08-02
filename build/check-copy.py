@@ -66,6 +66,8 @@ COLLOQUIAL_EMIT = COLLOQUIAL + [
     "那一步", "这一步", "這一步", "弄", "搞", "整个儿",
 ]
 
+BARE_RUN = re.compile(r"跑(?![步道车馬马])")
+
 COMMENT = {
     ".sh": r"#(.*)$",
     ".py": r"#(.*)$",
@@ -120,6 +122,9 @@ def check_emitted(root):
             continue
         hits = []
         for line, chunk in emitted_chunks(f.read_text(errors="replace"), f.suffix):
+            if BARE_RUN.search(chunk):
+                hits.append(f"{line}: 「跑」应写成执行或运行  {chunk.strip()[:60]}")
+                continue
             for w in COLLOQUIAL_EMIT:
                 if w in chunk:
                     hits.append(f"{line}: 口语词「{w}」  {chunk.strip()[:60]}")
@@ -133,17 +138,30 @@ def check_emitted(root):
 
 
 BLOCK = re.compile(r"/\*([\s\S]*?)\*/|<!--([\s\S]*?)-->")
+BLOCK_LANGS = {".css", ".html", ".js"}
+QUOTED_SPAN = re.compile(
+    r'"(?:[^"\\\n]|\\.)*"'
+    r"|'(?:[^'\\\n]|\\.)*'")
 
 
-def comment_chunks(text, pat):
+def mask_strings(line):
+    """把字串内容换成空格。注释符号出现在字串里时不是注释：
+
+    ${#paths[@]} 与 print(f"  # {kind}") 都会被逐行的 #(.*)$ 当成注释。
+    """
+    line = re.sub(r"\$\{#", "$${", line)
+    return QUOTED_SPAN.sub(lambda m: " " * len(m.group(0)), line)
+
+
+def comment_chunks(text, pat, blocks=False):
     out = []
     if pat is None:
         return list(enumerate(text.splitlines(), 1))
-    for m in BLOCK.finditer(text):
+    for m in (BLOCK.finditer(text) if blocks else ()):
         s = next((g for g in m.groups() if g is not None), "")
         out.append((text[:m.start()].count("\n") + 1, s))
     for i, line in enumerate(text.splitlines(), 1):
-        m = re.search(pat, line)
+        m = re.search(pat, mask_strings(line))
         if m:
             out.append((i, next((g for g in m.groups() if g), "")))
     return out
@@ -167,7 +185,10 @@ def check_comments(root):
         except UnicodeDecodeError:
             continue
         hits = []
-        for line, chunk in comment_chunks(text, pat):
+        for line, chunk in comment_chunks(text, pat, f.suffix in BLOCK_LANGS):
+            if pat is not None and CJK.search(chunk):
+                hits.append(f"{line}: 注释里有中文  {chunk.strip()[:60]}")
+                continue
             for w in COLLOQUIAL:
                 if w in chunk:
                     hits.append(f"{line}: 口语词「{w}」  {chunk.strip()[:60]}")
@@ -196,6 +217,8 @@ def main(dirname):
         for pat, why in FILLER:
             for m in re.finditer(pat, text):
                 hits.append(f"{why}: {m.group(0)[:20]}")
+        for m in BARE_RUN.finditer(text):
+            hits.append(f"「跑」应写成执行或运行: {text[max(0, m.start() - 6):m.start() + 6]}")
 
         chars = len(re.sub(r"\s", "", text))
         dashes = text.count("——")

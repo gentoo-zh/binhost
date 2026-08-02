@@ -113,7 +113,7 @@ case("bump 之后旧版本退场", lambda: (
     cpvs(run([stanza("dev-util/gitea-cli-0.14.2"), stanza("dev-util/gitea-cli-0.15.0")],
              overlay_has=["dev-util/gitea-cli-0.15.0"])[0]) == ["dev-util/gitea-cli-0.15.0"]))
 
-case("目录还在但这个版本没了，照样过滤", lambda: (
+case("目录还在但这个版本已移除，仍应过滤", lambda: (
     run([stanza("app-misc/a-1")], overlay_has=["app-misc/a-2"])[0] == []))
 
 case("同一个包的多个版本都在 overlay 里就都保留", lambda: (
@@ -182,6 +182,47 @@ case("正常的相对路径照常通过", lambda: (
 case("拒绝时一个包都不 stage", lambda: (
     run([stanza("app-misc/a-1", PATH="app-misc/ok.gpkg.tar"),
          stanza("app-misc/b-1", PATH="/etc/passwd")])[0] == []))
+
+def _escape(shape):
+    import os
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        pkg = d / "pkgdir"
+        (pkg / "app-misc").mkdir(parents=True)
+        stage = d / "stage"
+        stage.mkdir()
+        (d / "OUTSIDE").write_text("outside\n")
+        target = pkg / "app-misc" / "a-1.gpkg.tar"
+        if shape == "final":
+            os.symlink(d / "OUTSIDE", target)
+        elif shape == "relative":
+            os.symlink("../../OUTSIDE", target)
+        elif shape == "intermediate":
+            (pkg / "app-misc").rmdir()
+            real = d / "elsewhere"
+            real.mkdir()
+            (real / "a-1.gpkg.tar").write_text("outside\n")
+            os.symlink(real, pkg / "app-misc")
+        elif shape == "fifo":
+            os.mkfifo(target)
+        else:
+            target.write_text("inside\n")
+        (pkg / "Packages").write_text(
+            HEADER + "\n\n" + stanza("app-misc/a-1", PATH="app-misc/a-1.gpkg.tar") + "\n")
+        try:
+            rc = stage_index.main(str(pkg), str(stage))
+        except SystemExit as e:
+            rc = e.code
+        out = stage / "app-misc" / "a-1.gpkg.tar"
+        leaked = out.exists() and "outside" in out.read_text(errors="replace")
+        return rc, leaked
+
+
+for _shape in ("final", "relative", "intermediate", "fifo"):
+    case(f"来源是 {_shape} symlink 时拒绝且不泄漏",
+         (lambda s=_shape: (lambda r: r[0] not in (0, None) and not r[1])(_escape(s))))
+
+case("正常文件照常 stage", lambda: _escape("plain")[0] in (0, None))
 
 bad = 0
 for name, fn in CASES:
