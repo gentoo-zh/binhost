@@ -126,6 +126,9 @@
     root.setAttribute('data-theme-mode', mode);
     if (mode === 'light' || mode === 'dark') root.setAttribute('data-theme', mode);
     else root.removeAttribute('data-theme');
+    // early.js 在首屏之前写过一次。这里不跟着改，滚动条与原生表单控件会
+    // 停在换主题之前那一套配色。
+    root.style.colorScheme = mode === 'system' ? 'light dark' : mode;
     store('mirror-theme', mode);
     renderTheme();
   }
