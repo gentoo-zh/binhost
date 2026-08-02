@@ -156,7 +156,7 @@ def recycle(path):
         return False
 
 
-def reap(orphan, paths, grace=None):
+def reap(orphan, paths, grace=None, budget=None):
     """Delete orphans past the grace period; return what this round removed.
 
     After a bump nothing references the old source file any more, and
@@ -188,6 +188,7 @@ def reap(orphan, paths, grace=None):
     seen = {f: t for f, t in seen.items() if f in orphan}   # referenced again, so forget it
     deleted = []
     failed = []
+    held = 0
     for f in orphan:
         first = seen.setdefault(f, now)
         if now - first < grace:
@@ -195,10 +196,15 @@ def reap(orphan, paths, grace=None):
         path = paths.get(f)
         if path is None:
             continue
+        if budget is not None and len(deleted) >= budget:
+            held += 1
+            continue
         if recycle(path):
             deleted.append(f)
         else:
             failed.append(f)
+    if held:
+        print(f"!! 达到额度上限，本轮保留 {held} 个未清理", file=sys.stderr)
     for f in deleted:
         seen.pop(f, None)
 
@@ -259,7 +265,11 @@ def main(overlay, dest):
         refused = (f"本轮 {len(orphan)}/{len(have)} 个文件无人引用，"
                    f"超过 {MAX_REAP_SHARE:.0%}")
 
-    deleted, failed = ([], []) if refused else reap(orphan, paths)
+    # 额度在删除之前算。原来先删再核对累计值，于是这道闸门只能在文件已经不存在
+    # 之后报错：连续两轮各删三成，第二轮报了超限，而那一批已经没了。
+    spent = recent_deletions(0)
+    budget = max(0, int(len(have) * MAX_REAP_SHARE) - spent)
+    deleted, failed = ([], []) if refused else reap(orphan, paths, budget=budget)
 
     # RESTRICT=mirror 的文件不等宽限期。孤儿要等，是因为一次 bump 会让旧文件
     # 短暂无人引用，等一周就能看出是不是误判；而「所有引用方都禁止镜像」是上游
@@ -285,9 +295,9 @@ def main(overlay, dest):
     # 按轮计的上限拦不住连着来的几轮：每轮 30% 两轮就是一半个镜像，一次都不会
     # 被拒绝。所以再核对最近这段时间总共清掉了多少。
     recent = recent_deletions(len(deleted))
-    if not refused and recent > len(have) * MAX_REAP_SHARE:
-        refused = (f"最近 {WINDOW_HOURS} 小时累计清理 {recent} 个，"
-                   f"超过镜像的 {MAX_REAP_SHARE:.0%}，后续暂停")
+    if not refused and budget == 0 and orphan:
+        refused = (f"最近 {WINDOW_HOURS} 小时累计清理 {spent} 个，"
+                   f"已达镜像的 {MAX_REAP_SHARE:.0%}，本轮未清理")
 
     print(f"overlay 引用 {len(users)}，其中可镜像 {len(mirrorable)}，"
           f"不可镜像 {len(never)}，无法取得 {len(unfetchable)}")
