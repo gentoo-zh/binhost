@@ -33,6 +33,7 @@ location ^~ /_ls/ {
 	alias /srv/pub/;
 	autoindex on;
 	autoindex_format json;
+	include /etc/nginx/conf.d/headers-files.inc;
 	autoindex_localtime off;   # 输出 GMT，前端统一转本地时间
 	# 目录里有 index.html 时 nginx 会返回它而不是列表，站点首页正好就在被列的
 	# 根目录下。指向一个不会存在的文件名，让 autoindex 始终接管。
@@ -84,6 +85,7 @@ location ^~ /binpkgs/ {
 	# 包体单独记一份日志，方便看哪些包真的有人装
 	location ~ \.gpkg\.tar$ {
 		root /srv/pub;
+		access_log /var/log/nginx/mirror.log mirror;
 		access_log /var/log/nginx/binpkg.log mirror;
 		include /etc/nginx/conf.d/headers-files.inc;
 	}
@@ -126,6 +128,8 @@ location = /.health {
 #
 # 只有根这一层。往下的真实地址是 /binpkgs/、/distfiles/，/files/ 下面没有内容，
 # 让它返回页面外壳只会显示一个「路径不存在」，状态码却是 200。
+location = /distfiles { return 301 /distfiles/; }
+location = /binpkgs { return 301 /binpkgs/; }
 location = /files { return 301 /files/; }
 location = /files/ {
 	add_header Cache-Control "no-cache";
