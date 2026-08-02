@@ -339,6 +339,46 @@ case("累计额度在删除之前就生效", lambda: (
 case("额度用完之后一个都不再删", lambda: (
     lambda r: r[0][-1] == 0)(_budget_rounds()))
 
+def _fetch_probe():
+    """回传这一份 overlay 里被判成可镜像的文件名。"""
+    import tempfile as _t, pathlib as _p
+    with _t.TemporaryDirectory() as tmp:
+        ov = _p.Path(tmp)
+        (ov / "profiles").mkdir(parents=True)
+        (ov / "profiles" / "repo_name").write_text("gentoo-zh\n")
+        (ov / "profiles" / "package.mask").write_text("")
+        d = ov / "app-misc" / "b"
+        d.mkdir(parents=True)
+        (d / "b-1.0.ebuild").write_text('EAPI=8\nSLOT="0"\nRESTRICT="fetch"\n')
+        (d / "b-2.0.ebuild").write_text('EAPI=8\nSLOT="0"\n')
+        (d / "Manifest").write_text(
+            "DIST b-1.0.tar.gz 1 BLAKE2B x SHA512 y\n"
+            "DIST b-2.0.tar.gz 1 BLAKE2B x SHA512 y\n")
+        dist = _p.Path(tmp) / "dist" / "ab"
+        dist.mkdir(parents=True)
+        old = (audit.STATE, audit.RECYCLE, audit.LEDGER, audit.GRACE_SECONDS)
+        audit.STATE = str(ov / "s.json"); audit.RECYCLE = str(ov / "rec")
+        audit.LEDGER = str(ov / "l.json"); audit.GRACE_SECONDS = 0
+        import io, contextlib
+        buf = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(io.StringIO()):
+                audit.main(str(ov), str(_p.Path(tmp) / "dist"))
+        finally:
+            audit.STATE, audit.RECYCLE, audit.LEDGER, audit.GRACE_SECONDS = old
+        return buf.getvalue()
+
+
+# fetch 限制按版本归属：一个包里 8.391 带 fetch、21.0.1 不带，21.0.1 的文件
+# 缺档仍然要报出来。按整个目录取或时它会被当成取不到，从此不再报。
+case("fetch 限制不跨版本传染", lambda: (
+    lambda r: "b-2.0.tar.gz" in r
+)(_fetch_probe()))
+
+case("带 fetch 的那个版本自己算取不到", lambda: (
+    lambda r: "b-1.0.tar.gz" not in r
+)(_fetch_probe()))
+
 for name, fn in CASES:
     try:
         ok = bool(fn())
