@@ -1,19 +1,4 @@
 #!/usr/bin/env python3
-"""Build site/packages.json from the overlay and the binhost package list.
-
-The page covers the whole overlay, not just the binhost list: distfiles are
-mirrored for every package that has any, which is far more packages than the
-binhost builds. Listing only the binhost candidates would understate distfiles
-coverage by more than half.
-
-这里只输出「在不在收录清单里」这个布尔。页面上的三态——已构建 / 待构建 /
-不收录——是把这个布尔和线上的 Packages 索引合起来算的：清单说该有，索引里
-没有，那就是还没构建。哪些真的构建出来了由页面按索引判断，不写进这份 JSON。
-
-`INDEX` 指向 Packages 索引时，索引里出现过的包一律保留一行。构建一个包会把
-它属于本 overlay 的依赖一并编出来（acct-user、virtual 这类），那些包不在清单
-里也没有源码文件，按下面的规则本会被跳过，页面上就查不到已经发布的包。
-"""
 
 import json
 import os
@@ -23,12 +8,10 @@ import sys
 
 try:
     from portage.versions import catpkgsplit, vercmp
-except ImportError:  # 没有 portage 就没法正确比版本，宁可停下也不要读错 ebuild
+except ImportError:
     sys.exit("需要 sys-apps/portage：版本比较用 portage.versions.vercmp")
 import time
 
-# Shared module in the same directory. Only it and a couple of scripts are
-# installed on the mirror, so it pulls in nothing extra.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ebuilds import (                                       # noqa: E402
     ATOM, BUILD_ECLASS, PREBUILT_ECLASS,
@@ -37,8 +20,6 @@ from ebuilds import (                                       # noqa: E402
 )
 
 
-# The paths are overridable: the layout differs between the repository and the
-# mirror, so this must not assume where it was put.
 HERE = pathlib.Path(__file__).resolve().parent
 LIST = pathlib.Path(os.environ.get("LIST", HERE / "packages.txt"))
 EXCLUDED = pathlib.Path(os.environ.get("EXCLUDED", HERE / "excluded.txt"))
@@ -55,16 +36,8 @@ def field(text, name):
 
 
 def why_not_listed(cp, text, masked):
-    """Why a package is not on the collection list.
-
-    返回一个代号而不是句子：页面要按语言翻译，服务器这边不该决定用词。
-    顺序就是判定的优先级——被 mask 的包连 keyword 都不用看。
-    """
     if cp in masked:
         return "masked"
-    # 三处判断都走 ebuilds.py，不再各写一份。原来这里的 RESTRICT 正则是
-    # [^"]* 而 ebuilds.py 是 [^"\n]*，多行写法只有这边认得，于是页面标着
-    # bindist 而 validate.py 那道唯一的再散布闸门放行。
     kw = keywords_of(text)
     if kw is not None and not accepts_amd64(kw):
         return "nokeyword"
@@ -81,8 +54,6 @@ def why_not_listed(cp, text, masked):
 
 
 def read_excluded():
-    """category/package -> reason. A package that cannot be built or
-    redistributed needs a stated reason on the site."""
     out = {}
     if not EXCLUDED.exists():
         return out
@@ -96,11 +67,6 @@ def read_excluded():
 
 
 def read_built():
-    """category/package seen in the Packages index. A missing index counts as
-    empty.
-
-    刚部署、还没发布过第一批包的时候索引本来就没有，那不是错误。
-    """
     if not INDEX:
         return set()
     p = pathlib.Path(INDEX)
@@ -115,7 +81,6 @@ def read_built():
 
 
 def mirrored():
-    """镜像上实际有的 distfiles。无法获取时回 None，调用方据此退回只看 Manifest。"""
     try:
         return set(json.loads(DIST_INDEX.read_text())["files"])
     except (OSError, ValueError, KeyError):
@@ -154,10 +119,6 @@ def main(overlay):
         if manifest.exists():
             dist = re.findall(r"^DIST (\S+)", manifest.read_text(errors="ignore"), re.M)
 
-        # A package with no source files, not on the binhost list and never
-        # built is not covered by this mirror at all -- acct-group and
-        # acct-user only define users and groups. Listing it would suggest the
-        # mirror is incomplete.
         if not dist and cp not in wanted and cp not in built:
             continue
 
@@ -171,13 +132,8 @@ def main(overlay):
             "binhost": cp in wanted,
             "dist": sorted(set(dist)),
         }
-        # A package on neither list used to show a bare dash on the page, which
-        # says nothing. That is most of the four hundred-odd rows, so work out
-        # the category.
         if cp not in wanted and cp not in excluded:
             row["why"] = why_not_listed(cp, text, masked)
-        # An explicitly excluded package needs its reason, or the page cannot
-        # be told apart from one nobody ever mentioned.
         if cp in excluded:
             row["excluded"] = excluded[cp]
         out.append(row)
@@ -187,12 +143,8 @@ def main(overlay):
     tmp.write_text(json.dumps(
         {"generated": int(time.time()), "packages": out},
         ensure_ascii=False, separators=(",", ":")))
-    # Overwriting in place lets the page read half-written JSON. Write a
-    # temporary file and rename.
     os.replace(tmp, OUT)
 
-    # 纯文本一份。包列表页的表格是脚本画的，文字浏览器和 curl 只看得到
-    # 「加载中」，而这个站点的使用者相当一部分就在终端里。
     txt = OUT.with_name("packages.txt")
     lines = [f"# gentoo-zh overlay，{len(out)} 个包",
              f"# 生成于 {time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime())}",
@@ -214,10 +166,6 @@ def main(overlay):
         print(f"!!! {len(missing)} listed but not in {overlay}:")
         for cp in missing:
             print(f"      {cp}")
-        # The exit code has to carry out. On the mirror this step is wrapped by
-        # daily.sh's step, which alerts only on a non-zero exit. Printing
-        # without returning leaves a list that has drifted from the overlay
-        # unnoticed.
         return 1
     return 0
 

@@ -6,14 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=fbe35479">
-<script src="/assets/early.js?v=5e6859c6"></script>
+<link rel="stylesheet" href="/assets/site.css?v=c62a2308">
+<script src="/assets/early.js?v=0888406a"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://distfiles.gentoozh.org/assets/logo.webp">
 <meta name="twitter:card" content="summary">
 <!-- /chrome:head -->
-<!-- 数据请求原来排在所有脚本之后才开始，实测晚三百多毫秒。 -->
 <link rel="preload" href="/packages.json" as="fetch" crossorigin>
 <link rel="preload" href="/binpkgs/x86-64/Packages" as="fetch" crossorigin>
 <link rel="preload" href="/distfiles-index.json" as="fetch" crossorigin>
@@ -129,8 +128,8 @@
 </footer>
 <!-- /chrome:foot -->
 
-<script src="/assets/util.js?v=9373bf4f"></script>
-<script src="/assets/strings.js?v=b3051929"></script>
+<script src="/assets/util.js?v=08651886"></script>
+<script src="/assets/strings.js?v=2c951eff"></script>
 <script>
 window.MIRROR_I18N = {
   'zh-cn': {
@@ -216,21 +215,14 @@ window.MIRROR_I18N = {
   }
 };
 </script>
-<script src="/assets/i18n.js?v=4cbd0156"></script>
+<script src="/assets/i18n.js?v=cb8ac6e5"></script>
 
 <script>
-// 两个数据源：packages.json 是收录清单（构建之前就存在），
-// Packages 是 portage 的索引，说明哪些真的已经构建出来了。
-// 清单以前者为准，后者只补版本和体积。反过来则未构建的包会整个消失。
 
-// 路径和文件名都进 innerHTML。路径来自 URL，任何以斜杠结尾的地址 nginx 都
-// 回这个页面；文件名来自 ebuild 的 Manifest。两者都不是我们能约束的内容。
 
-// 串由 i18n.js 统一查表，页面不再自己存一份。
 function t(key) { return (window.MIRROR_T && window.MIRROR_T(key)) || key; }
 
 
-// CPV 拆成 category/name 和版本。版本从第一个「-数字」开头的段起。
 function splitCPV(cpv) {
   const parts = cpv.split("-");
   for (let i = 1; i < parts.length; i++) {
@@ -241,8 +233,6 @@ function splitCPV(cpv) {
   return [cpv, ""];
 }
 
-// 按 - 和 . 拆段，数字段按数值比，非数字段按字符串比。不是完整的 PMS 比较，
-// 但足以在同一个包的几个版本之间挑出最高的那个。
 function cmpVer(a, b) {
   const pa = String(a).split(/[-.]/), pb = String(b).split(/[-.]/);
   for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
@@ -261,8 +251,6 @@ function parsePackages(text) {
     if (!cpv) return;
     const size = /^SIZE: (\d+)$/m.exec(stanza);
     const [cp, ver] = splitCPV(cpv[1].trim());
-    // 同一个包可能有多个实例（不同 USE），留版本最高的那个。
-    // 按段比较而不是整串比字符串：字符串序会把 1.9 排在 1.10 后面。
     if (!built[cp] || cmpVer(ver, built[cp].ver) > 0) {
       built[cp] = { ver: ver, size: size ? +size[1] : 0 };
     }
@@ -277,17 +265,12 @@ let binFailed = false;
 let distFailed = false;
 
 function fmtTime(unix) {
-  // UTC+8：站点的用户主要在中国大陆、台湾、新加坡、马来西亚。
-  //
-  // 先转成数字再算。索引里的 TIMESTAMP 是正则抓出来的字符串，直接相加会变成
-  // 字符串拼接，Date 拿到的数越界，toISOString 抛 RangeError，整页加载失败。
   const n = Number(unix);
   if (!n) return "";
   return new Date((n + 8 * 3600) * 1000)
     .toISOString().slice(0, 16).replace("T", " ") + " UTC+8";
 }
 
-// 把命中的那一段圈出来。先转义再拼标签，反过来就等于把说明当 HTML 送进页面。
 function mark(text, q) {
   const i = text.toLowerCase().indexOf(q);
   if (i < 0) return esc(text);
@@ -298,9 +281,6 @@ function mark(text, q) {
 function render() {
   const q = document.getElementById("q").value.trim().toLowerCase();
   let hit = rows;
-  // 按 r.ver 筛，和下面 counts() 里的 b 同一个口径：这个筛选问的是「现在能装
-  // 什么」，不是「我们打算构建什么」。按 r.binhost 筛时，行数会比标题上那个
-  // 数字多出待构建的那些。
   if (filter === "bin") hit = hit.filter(function (r) { return r.ver; });
   else if (filter === "dist") hit = hit.filter(function (r) { return r.dist; });
   if (q) hit = hit.filter(function (r) {
@@ -321,21 +301,12 @@ function render() {
   msg.hidden = true;
   document.getElementById("rows").innerHTML =
     hit.map(function (r) {
-      // 连 overlay 自己的树。overlay 的包大多不在 packages.gentoo.org 上，
-      // 那边给的是 404。
       const url = "https://github.com/gentoo-zh/overlay/tree/master/" + r.cp;
       return '<tr>' +
         '<td class="name"><a href="' + esc(url) + '">' + esc(r.cp).replace("/", "/<wbr>") + '</a>' +
-          // 窄屏把说明那一列整列藏了，而搜索照样比对说明。名字里没有这个词的包
-          // 就这样出现在结果里，没有任何线索说明为什么。只在「靠说明命中」的
-          // 行补一句，命中的词标出来；说明列看得见的宽度上由 CSS 藏掉。
           (q && r.cp.toLowerCase().indexOf(q) < 0
             ? '<span class="hit-desc">' + mark(r.desc, q) + '</span>' : '') +
         '</td>' +
-        // 排除的包把原因直接写在说明后面。原来只挂 title，浏览器原生提示要停
-        // 一两秒才出来，样式也改不了，手机上根本没有 hover。
-        // 排除原因跟在说明后面。不再写「不构建：」前缀——右边那一列的标签
-        // 已经是这三个字，重复一遍还会撞出「：::gentoo」这样三个冒号连排。
         '<td class="desc" title="' +
           esc(r.desc + (r.excluded ? "　" + r.excluded : "")) + '">' +
           esc(r.desc) +
@@ -346,8 +317,6 @@ function render() {
           (r.ver ? '\u2713'
                  : r.excluded ? '<span class="pend">' + t("excluded") + '</span>'
                  : r.binhost ? '<span class="pend">' + t("pending") + '</span>'
-                 // 不收录的包原本只有一个破折号，什么都不说。四百多行里这样的
-                 // 占一大半，标签直接写明是哪一类。
                  : r.why ? '<span class="pend why-tag" title="' + esc(t("whyLong_" + r.why)) + '">' +
                              t("why_" + r.why) + '</span>'
                  : '\u2014') + '</td>' +
@@ -358,8 +327,6 @@ function render() {
 }
 
 function counts() {
-  // 三个数量口径不同：overlay 全部、已发布二进制包、源码文件齐全的。收录清单
-  // 的数量不写在这里——它只说明我们打算构建什么，读者要的是现在能装什么。
   const b = rows.filter(function (r) { return r.ver; }).length;
   const d = rows.filter(function (r) { return r.dist; }).length;
   document.getElementById("count").textContent = t("countFmt")
@@ -374,8 +341,6 @@ function counts() {
 
 }
 
-// 按钮的标记写在页面里，文案由 i18n.js 按 data-i18n 换。原来整排是这里画的，
-// 所以要等数据回来才出现，出现的一刻把下面的内容推下去。
 function markFilter() {
   document.querySelectorAll("#filters .filter").forEach(function (b) {
     b.classList.toggle("on", b.dataset.f === filter);
@@ -384,23 +349,16 @@ function markFilter() {
 
 Promise.all([
   fetch("/packages.json").then(function (r) {
-    // 索引不存在时 nginx 回的是 404.html 的 HTML，r.json() 抛的是 SyntaxError，
-    // 用户看到的是「Unexpected token '<'」。同页另外两个 fetch 都查了 .ok。
     if (!r.ok) throw new Error("HTTP " + r.status);
     return r.json();
   }),
-  // 索引不存在（还没发布过）不算错误，当成「一个都没构建」
   fetch("/binpkgs/x86-64/Packages")
     .then(function (r) { return r.ok ? r.text() : null; })
     .catch(function () { return null; }),
-  // 镜像上实际存在的 distfile 文件名。文件散在两级哈希目录里，
-  // 页面自己遍历要几百个请求，所以服务器端预先算好一份。
   fetch("/distfiles-index.json")
     .then(function (r) { return r.ok ? r.json() : null; })
     .catch(function () { return null; })
 ]).then(function (res) {
-  // 无法获取和「一个都没有」不是同一件事。原来两者都变成空集合，页面照常渲染成
-  // 零个二进制包、零个 distfile，读者分不出是镜像空了还是这一份索引挂了。
   binFailed = res[1] === null;
   distFailed = res[2] === null;
   const built = parsePackages(res[1] || "");
@@ -409,7 +367,6 @@ Promise.all([
   binGenerated = (/^TIMESTAMP: (\d+)/m.exec(res[1] || "") || [])[1] || 0;
   rows = res[0].packages.map(function (p) {
     const b = built[p.cp] || {};
-    // 齐全才算有：缺一个源码文件，这个包照样编不了
     const dist = p.dist && p.dist.length > 0 && p.dist.every(function (f) { return have.has(f); });
     return { cp: p.cp, desc: p.desc, binhost: p.binhost, excluded: p.excluded || "",
              why: p.why || "", ver: b.ver || "", size: b.size || 0, dist: dist };
@@ -430,7 +387,6 @@ document.getElementById("filters").addEventListener("click", function (e) {
   counts(); render();
 });
 
-// 切语言时把自绘的部分重画一次。
 document.addEventListener('langchange', function () {
   if (rows.length) { counts(); render(); }
 });

@@ -5,18 +5,10 @@ OnFailure=binhost-alert@%N.service
 
 [Service]
 Type=oneshot
-# 以拥有这些资源的用户跑，不是 root：overlay 副本、docker 配置、到镜像机的
-# ssh 密钥都属于它。以 root 执行时 git 报 dubious ownership，第一行就中断，
-# publish.sh 也找不到 mirror 这个别名。装的时候按实际用户改。
 User=adminc3b9c6
 Group=adminc3b9c6
-# 这台机器还跑别的活。构建本身在容器里已经限了 --load-average，
-# 这里再降一档优先级，别让它把交互式操作拖慢。
 Nice=10
 IOSchedulingClass=idle
 ExecStart=/var/lib/binhost/build/cycle.sh
 Environment=SIGNING_KEY=6A0726AF1476A2F382C6AC6638A0234EC16AD42E
-# 不设上限时卡住的一轮会一直 activating：下一次定时触发被锁挡在门外，
-# 而没有任何人知道。全量重建最久已执行 13 小时，18 小时留足余量又短于定时周期，
-# 超时由 systemd 判失败，OnFailure 那条负责通知。
 TimeoutStartSec=18h

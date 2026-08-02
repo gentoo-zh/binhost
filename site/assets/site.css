@@ -1,23 +1,14 @@
-/* distfiles.gentoozh.org */
-/* hidden 的 UA 规则是 display: none，元素自己写了 display 就盖掉了。站上因此
-   已经单独补过两次（菜单、包列表），这里统一一条。 */
 [hidden] { display: none !important; }
 
-/* [data-theme="light"] 一并声明：design.html 用带该属性的探针 div 读色值，
-   只有 :root 时它读到的是继承来的当前主题，系统深色时浅色那组色块显示的
-   是深色值。写成选择器列表而不是再抄一份，两份浅色调色板要靠人盯着同步。 */
 :root,
 [data-theme="light"] {
   color-scheme: light dark;
 
-  /* 强调色取自 gentoozh.org 的 hsl(255 55% 70%)，色相与 Gentoo 官方紫
-     #54487a 一致。全站只有这一个强调色相。 */
   --accent: #5b43a3;
   --accent-dim: #6f5f9b;
   --accent-weak: #f3f0f9;
   --ok: #2f7d4f;
 
-  /* 中性色偏一点点紫，避免纯灰的死板；不用 Tailwind 那套蓝灰。 */
   --bg: #fcfcfd;
   --surface: #ffffff;
   --border: #e1e0e6;
@@ -30,13 +21,10 @@
   --sans: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans CJK SC","Microsoft YaHei",sans-serif;
   --mono: ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
 
-  /* 兼容尚未改完的旧选择器，逐步移除 */
   --primary: var(--accent);
   --card: var(--surface);
   --panel: var(--surface);
   --panel-head: var(--bg);
-  /* 代码块只用一个色相：值用强调色，其余靠中性色的明暗分层。
-     原来值是青绿，和紫色是两个色相，跟设计语言里写的不一致。 */
   --c-sec: var(--accent);      /* 段名 [gentoo-zh] */
   --c-key: var(--fg);          /* 键、命令 */
   --c-val: var(--accent);      /* 值、地址 */
@@ -45,9 +33,6 @@
   --shadow: none;
 }
 
-/* 深色调色板写两份：一份跟随系统，一份对应手动选择。纯 CSS 里合并不了——
-   其中一份在 media query 内。check-css.py 会比对两份是否一致，改一处漏一处
-   会红，不必靠人记得。 */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
@@ -109,21 +94,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* --- 顶栏 --- */
 
-/* 简体是文档原文，英文与繁体要等 body 末尾的 i18n.js 换完。浏览器不保证等到
-   那时才开始画，于是英文访客会先看到一屏简体再跳成英文。lang-early.js 在 <head>
-   里同步判断访客要哪门语言，只有需要换的时候才加这个类，i18n.js 换完立刻去掉。
-   简体访客一帧都不必等。 */
 html.lang-swap body { visibility: hidden; }
 
-/* 顶栏高度。util.js 量出实际值写回来，这里是它启动之前的初值，也是
-   没有脚本时的取值——顶栏单行时就是这个高度。 */
 :root {
   --nav-h: 3.2rem;
 }
 
-/* 跳到正文。平时不占位，键盘 Tab 到它才出现——否则要按四五次才能越过导航栏。 */
 .skip {
   position: absolute; left: -9999px; top: 0; z-index: 60;
   background: var(--surface); color: var(--fg);
@@ -146,8 +123,6 @@ html.lang-swap body { visibility: hidden; }
 .nav-title { font-weight: 700; font-size: 0.95rem; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nav-links {
   display: flex; align-items: center; gap: 0.1rem;
-  /* margin-left: auto 把链接连同后面的语言、主题一起推到右边。
-     用 flex: 1 时它会占满中间，链接就贴在品牌旁边。 */
   flex: 0 1 auto; margin-left: auto;
   min-width: 0; overflow-x: auto; scrollbar-width: none;
 }
@@ -159,8 +134,6 @@ html.lang-swap body { visibility: hidden; }
 }
 .nav-link:hover { background: var(--hover); color: var(--fg); }
 
-/* i18n.js 注入的语言按钮与主题菜单。样式必须跟着脚本一起带，
-   缺了这段控件会退化成浏览器默认的灰色方块。 */
 .lang { display: inline-flex; align-items: center; }
 .lang-btn {
   border: none; background: transparent; color: var(--fg-soft); font: inherit;
@@ -168,8 +141,6 @@ html.lang-swap body { visibility: hidden; }
   border-radius: 4px; cursor: pointer; line-height: 1;
 }
 .lang-btn:hover { background: var(--hover); color: var(--fg); }
-/* 当前项由 <html> 上的属性决定，early.js 在第一次绘制前就写好了。原来是
-   i18n.js 加 class，要等到 body 末尾，高亮会晚一拍才出现。 */
 [data-lang="zh-cn"] .lang-btn[data-lang="zh-cn"],
 [data-lang="zh-tw"] .lang-btn[data-lang="zh-tw"],
 [data-lang="en"] .lang-btn[data-lang="en"] { color: var(--primary); }
@@ -197,17 +168,13 @@ html.lang-swap body { visibility: hidden; }
 [data-theme-mode="dark"] .menu-item[data-mode="dark"],
 [data-theme-mode="system"] .menu-item[data-mode="system"] { color: var(--primary); font-weight: 600; }
 
-/* 三个图标都在标记里，按当前模式显示一个。这样按钮不必等脚本才画出来。 */
 .theme-btn .ico { display: none; }
 [data-theme-mode="light"] .theme-btn .ico-light,
 [data-theme-mode="dark"] .theme-btn .ico-dark,
 [data-theme-mode="system"] .theme-btn .ico-system { display: inline-flex; }
 .menu-item svg { flex: none; }
 
-/* --- 正文 --- */
 
-/* 列表页放宽：780px 是给正文定的行长，一张 431 行的表在这个宽度里
-   说明栏会被压成两行，行高参差不齐。 */
 .wrap.wide, .foot.wide .foot-inner, .nav.wide .nav-inner { max-width: 1100px; }
 .wrap { max-width: 780px; margin: 0 auto; padding: 2.75rem 1.25rem 3rem; position: relative; }
 .title { font-size: 1.6rem; line-height: 1.35; letter-spacing: -0.01em; font-weight: 600; color: var(--fg); margin: 0 0 0.35rem; }
@@ -243,7 +210,6 @@ h2:first-of-type { margin-top: 2rem; }
 }
 .uri .copy-chip:hover { background: var(--chip); color: var(--fg); }
 
-/* --- 配置步骤 --- */
 
 .step { margin-top: 1.4rem; }
 .step:first-of-type { margin-top: 0; }
@@ -251,21 +217,14 @@ h2:first-of-type { margin-top: 2rem; }
   display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
   margin: 0 0 0.45rem; font-size: 0.9rem; font-weight: 600; color: var(--fg);
 }
-/* 高度由内容撑出来，上下用对称内边距，而不是固定 1.3rem 再居中。
-   固定高度加 flex/grid 居中，对齐的是行盒不是字形：等宽字体的 ascent
-   比 descent 大得多，数字会明显偏上。 */
 .step-title .n {
   flex: none; min-width: 1.35em;
   border-radius: 4px; text-align: center;
   background: var(--accent-weak); color: var(--accent);
   font: 600 0.74rem/1 var(--mono);
-  /* 上下不对称：line-height 为 1 时行盒（11.8px）比字体自然高度（ascent 10
-     + descent 4）矮，基线因此上移，数字的墨迹中心比盒中心高约 1.2px。
-     两者差 0.2em 正好把这段补平。实测得来，换字体要重新量。 */
   padding: 0.44em 0.3em 0.24em;
 }
 
-/* 文件名做成标题栏，而不是浮在框外面的一行字 */
 .code {
   border: 1px solid var(--border); border-radius: 4px; overflow: hidden;
 }
@@ -278,10 +237,6 @@ h2:first-of-type { margin-top: 2rem; }
   font-family: var(--mono); font-size: 0.74rem; color: var(--fg-soft);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-/* 镜像选择。sync-uri 只接受一个地址，用户必须挑一个，并排写两块等于让人自己
-   判断该抄哪一块，所以就地切换。
-   放在代码框上方而不是标题栏里：标题栏是一行 flex，镜像多起来会和路径挤在
-   一起；这里可以换行，加一个镜像就是加一个 button。 */
 .src-pick {
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem;
   margin: 0 0 0.5rem;
@@ -306,10 +261,6 @@ h2:first-of-type { margin-top: 2rem; }
   margin: 0; padding: 0.9rem 1rem; overflow-x: auto; background: var(--panel);
   font-family: var(--mono); font-size: 0.8rem; line-height: 1.8; color: var(--fg-body);
 }
-/* 代码块与地址栏横向滚动时会露出滚动条，而浏览器给的是系统默认样式：深色主题下
-   一条浅灰的粗条横在代码块底下，全站只有这一处不跟主题走。条子本身要留着——它是
-   「这里还能往右看」的唯一提示，像 .desc 那样整个藏掉，长命令就没人知道没读完。
-   所以是调细、调成主题色，不是藏起来。 */
 .code pre, .uri code {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
@@ -323,23 +274,15 @@ h2:first-of-type { margin-top: 2rem; }
   background: var(--fg-soft);
 }
 
-/* 配置片段是静态的，用几个 span 上色就够，不值得为此引入高亮库 */
 .code .sec { color: var(--c-sec); font-weight: 600; }
 .code .key { color: var(--c-key); }
 .code .val { color: var(--c-val); }
 .code .flag { color: var(--c-flag); }
-/* 提示符只表示身份，不可选中，复制时不会带上 */
-/* 提示符用伪元素生成。user-select: none 在 Chrome 上够用，iOS Safari 与
-   Firefox 选中一整段时照样把它复制走，而 # 粘进 shell 会把整行注释掉。
-   伪元素的内容不在 DOM 文本里，任何浏览器都无法获取。 */
 .code .prompt::before { content: "# "; }
 [data-sudo="on"] .code .prompt::before { content: "$ "; }
-/* 下载不需要 root，这一条不跟着切 */
 .code .prompt.user::before { content: "$ "; }
 .code .prompt { color: var(--c-prompt); user-select: none; }
 
-/* 手动配置 / 快速配置，见 mode-switch.js。放在大标题下面，因为它决定整段
-   长什么样，藏在某个代码框的角上没人会发现。 */
 .facts .job code { font-size: 0.82em; color: var(--fg-soft); }
 
 .mode-pick {
@@ -355,11 +298,7 @@ h2:first-of-type { margin-top: 2rem; }
 .mode.on { background: var(--panel-head); border-color: var(--fg-soft); color: var(--fg); }
 
 
-/* root / sudo。放在标题栏里而不是自己占一行：一个代码块上方原来叠着三排按钮，
-   而它管的就是这一块，跟复制放在一起才是它该在的位置。 */
 .code-head .head-btn {
-  /* 标题栏是 space-between，三个孩子会摊开，sudo 落到正中间。推到右边跟复制
-     并排，左边留给路径。 */
   margin-left: auto;
   flex: none; border: 1px solid var(--border); border-radius: 0.3rem;
   background: transparent;
@@ -367,26 +306,18 @@ h2:first-of-type { margin-top: 2rem; }
   font-size: 0.72rem; padding: 0.16rem 0.5rem;
 }
 .code-head .head-btn:hover { border-color: var(--fg-soft); color: var(--fg); }
-/* 按下去要一眼看得出来：它改的是复制出去的命令，看错了会以 root 跑一段以为
-   加了 sudo 的内容。用主色描边加淡底，填实那一块在这种小标题栏里太重。 */
 .code-head .head-btn[aria-pressed="true"] {
   background: var(--accent-weak); border-color: var(--accent); color: var(--accent);
 }
-/* 四个条目排 2×2。auto-fit 在这个宽度下会排成 3+1，落单一个不好看 */
 
 .note { font-size: 0.88rem; line-height: 1.8; color: var(--fg-soft); }
 .note code, p code, li code, td code {
   font-family: var(--mono); font-size: 0.86em; background: var(--chip);
   padding: 0.08rem 0.34rem; border-radius: 0.3rem; color: var(--fg-body);
-  /* 原来是 white-space: nowrap。短片段确实不该断行，但正文里也有整条 URL：
-     窄屏上它顶出容器，而 iOS Safari 对行内元素既不换行也不给滚动条，地址
-     后半截看不到也选不中。anywhere 只在放不下时才断，放得下的照旧一行。 */
   overflow-wrap: anywhere;
 }
 a { color: var(--primary); text-decoration: none; }
-/* 一律不加 hover 下划线，链接靠颜色区分就够了 */
 
-/* --- 页脚 --- */
 
 .foot { margin-top: 2.6rem; border-top: 1px solid var(--border); }
 .foot-inner {
@@ -397,28 +328,16 @@ a { color: var(--primary); text-decoration: none; }
 }
 .foot-brand { font-weight: 600; color: var(--fg-soft); }
 .foot-links { display: flex; gap: 1.1rem; flex-wrap: wrap; }
-/* 页脚链接是次要信息，用正文色而不是主色，免得整行都在抢注意力 */
 .foot-links a { color: var(--fg-soft); }
 .foot-links a:hover { color: var(--primary); text-decoration: none; }
 
-/* --- 目录浏览 --- */
 
 .crumbs {
   font-family: var(--mono); font-size: 0.82rem; line-height: 1.65; color: var(--fg-soft);
   margin: 0 0 1rem; word-break: break-all; min-height: calc(1.65 * 0.82rem);
 }
-/* 文件浏览器的标题也是脚本填的，留一行。 */
 #where { min-height: calc(1.35 * 1.6rem); }
-/* 表格宽过视口时让它自己横向滚，不要把整个页面撑出横向滚动条 */
-/* 这里原来是 overflow-x: auto。overflow-x 一旦不是 visible，overflow-y 的
-   visible 就会被算成 auto，#out 因此成了滚动容器，表头的 sticky 黏的是它而不是
-   视口——滚下去表头照样跟着跑掉。实测七个宽度（320 到 1280），媒体查询会按宽度
-   收起体积、版本、说明三列，表格本来就不会撑破视口，这个 overflow 用不上。 */
 #out { overflow-x: visible; }
-/* 还在加载时表格是空的，留出表头那一行的高度即可，别让下面的内容先顶上来。 */
-/* 固定列宽。auto 布局下列宽由内容决定，表格还空着时按表头文字算，数据一到
-   重新分配，表头就横向跳一次。fixed 之下宽度只看这里写的值，从第一帧起不变。
-   没写宽度的列平分剩余宽度：名称与说明各占一半，和原来的比例接近。 */
 .listing {
   width: 100%; table-layout: fixed; border-collapse: collapse;
   font-family: var(--mono); font-size: 0.84rem;
@@ -429,10 +348,6 @@ a { color: var(--primary); text-decoration: none; }
   padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border);
 }
 
-/* 表头留在视口里。四百多行的表格滚下去之后，那几列 ✓ 与 — 没有表头就认不出
-   是哪一列。top 要让开顶栏——顶栏自己也是 sticky，不让开就滚到它底下去了；
-   顶栏在窄屏会折成两行，高度由 util.js 量出来写进 --nav-h。
-   border-collapse 下 sticky 元素的边框不跟着走，那条分隔线改用 inset 阴影画。 */
 .listing thead th {
   position: sticky; top: var(--nav-h, 3.2rem); z-index: 5;
   background: var(--bg); border-bottom: 0;
@@ -441,8 +356,6 @@ a { color: var(--primary); text-decoration: none; }
 .listing td { padding: 0.36rem 0.6rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .listing tr:hover td { background: var(--hover); }
 
-/* 窄屏下这张表会被 html 的 overflow-x: clip 切掉：单元格是 nowrap，撑出去的
-   部分没有滚动条也看不到。这里放的是路径与说明，换行不影响读。 */
 .listing.wrap { table-layout: auto; }
 .listing.wrap td { white-space: normal; word-break: break-all; }
 .listing td.name { white-space: normal; word-break: break-all; }
@@ -450,7 +363,6 @@ a { color: var(--primary); text-decoration: none; }
 .listing a.dir::after { content: "/"; color: var(--fg-soft); }
 .msg { color: var(--fg-soft); padding: 2rem 0; }
 
-/* --- 复制提示 --- */
 
 #copy-toast {
   position: fixed; left: 50%; bottom: 1.6rem; transform: translateX(-50%) translateY(0.8rem);
@@ -462,13 +374,9 @@ a { color: var(--primary); text-decoration: none; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
-/* --- 交互反馈 ---
-   可点的内容要看得出可点，按下去要有回应。悬停变色、聚焦有描边、
-   点击有位移。除此之外没有动画。 */
 
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
-/* 导航、语言按钮、页脚已经用底色或颜色表示悬停，再加下划线是重复的反馈。 */
 .nav-link:hover, .nav-brand:hover, .lang-btn:hover, .icon-btn:hover,
 .foot-links a:hover, .menu-item:hover { text-decoration: none; }
 
@@ -483,14 +391,8 @@ button, .copy-chip, .nav-link, .lang-btn, .icon-btn, .filter {
 }
 button:active, .copy-chip:active { transform: translateY(1px); }
 
-/* 表格行悬停：一行几十个字符，没有底色很难对上列 */
 .listing tbody tr:hover td { background: var(--hover); }
 
-/* 数据带：包数、更新时间这类事实，放在标题下方一行 */
-/* 两列网格：一行一个来源，数量与时间各占一列，时间因此左对齐成一竖排。
-   用 flex 换行时两行的时间会错开。 */
-/* 内容是取回数据之后才填的，所以高度先按最终行数留出来：两行，行高由里面
-   那个大一档的数字决定。不留时页面会在数据到达时整块往下扩。 */
 .facts {
   display: grid; grid-template-columns: auto auto;
   justify-content: start; gap: 0.35rem 1.75rem;
@@ -499,12 +401,9 @@ button:active, .copy-chip:active { transform: translateY(1px); }
   min-height: calc(2 * 1.75 * 0.95rem + 0.35rem);
 }
 .facts span { display: inline-flex; align-items: baseline; gap: 0.3em; }
-/* 数量用强调色、字号大一档：这一行的信息量集中在两个数字上，
-   全用次要色时要逐字读才找得到。时间用正文色，说明文字保持次要色。 */
 .facts .num { color: var(--accent); font-size: 0.95rem; font-weight: 600; }
 .facts b { font-weight: 500; color: var(--fg-body); }
 
-/* 联系方式：一行一条，不用卡片网格 */
 .links { border-top: 1px solid var(--border); margin: 0.5rem 0 0; }
 .links div {
   display: flex; gap: 1rem; align-items: baseline;
@@ -513,7 +412,6 @@ button:active, .copy-chip:active { transform: translateY(1px); }
 .links dt { flex: none; width: 7rem; font-size: 0.86rem; color: var(--fg-body); }
 .links dd { margin: 0; font-family: var(--mono); font-size: 0.82rem; }
 
-/* --- FAQ --- */
 
 .qa h2 {
   font-size: 0.9rem; font-weight: 600; color: var(--fg); letter-spacing: 0;
@@ -524,9 +422,7 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 .qa h2:first-child { margin-top: 1.4rem; }
 .qa p { margin: 0; font-size: 0.9rem; line-height: 1.8; color: var(--fg-soft); max-width: 62ch; }
 
-/* --- 包列表 --- */
 
-/* 名字给 label 不给 placeholder：一打字它就没了，扫版面的人也从来看不到它。 */
 .search-label {
   display: block; font-size: 0.82rem; color: var(--fg-soft); margin-bottom: 0.3rem;
 }
@@ -535,23 +431,14 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
   border: 1px solid var(--border); border-radius: 4px; background: var(--card);
   color: var(--fg); font: inherit; font-size: 0.9rem; padding: 0.55rem 0.85rem;
 }
-/* 焦点环走上面统一的 :focus-visible。原来 outline:none 换 1px 边框变色，
-   键盘上认不出来，而站里其它控件都是那一套。 */
 .search:focus-visible { border-color: var(--primary); }
-/* 计数与更新时间按行给：三个数量口径不同，挤成一行无法解析区别。
-   pre-line 让脚本仍用 textContent 输出，不必为换行改成 innerHTML。 */
 .count {
   font-size: 0.82rem; color: var(--fg-soft); margin: 0 0 0.7rem;
   white-space: pre-line; line-height: 1.65;
 }
-/* 同样先留出行数：统计三行，更新时间两行。三种语言的行数一致。 */
 #count { min-height: calc(3 * 1.65 * 0.82rem); }
 #updated { min-height: calc(2 * 1.65 * 0.82rem); }
 
-/* 目录页让名称列吃满宽度，包列表要反过来：说明才是长的那列。宽度写在下面
-   那组固定列宽里。 */
-/* 只在 <wbr> 标出的斜线处断。包名里没有空格，所以不加 <wbr> 就等于 nowrap，
-   那样这一栏的最小宽度会等于最长的那个包名，把说明挤成三行、版本挤出屏幕。 */
 .pkgs td.name {
   white-space: normal; word-break: normal; overflow-wrap: normal;
   width: auto;   /* 盖掉 .listing td.name 的 width:100%，那是给文件名用的 */
@@ -559,23 +446,17 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 
 
 .pkgs td.desc, .pkgs th.desc { white-space: normal; color: var(--fg-soft); }
-/* 一行不换行，行高统一：四百多行的表格里，参差的行高比读不全一句话更碍事。
-   截断改成横向滚动，长说明在格子里划一下就能读完，不必再点进包页面。
-   滚动条藏起来——每行一条会把表格切成一片横线。 */
 .pkgs td.desc {
   white-space: nowrap; max-width: 0;
   overflow-x: auto; overflow-y: hidden;
   scrollbar-width: none;
 }
 .pkgs td.desc::-webkit-scrollbar { display: none; }
-/* 不收录的原因跟在说明后面，压暗一档，读的时候不会和说明本身混起来。 */
 .pkgs td.desc .why { color: var(--fg-soft); font-style: italic; opacity: 0.85; }
-/* 不收录的类别标签。压得比「待构建」更暗——那是等得到的，这是等不到的。 */
 .pkgs td.mark .why-tag { color: var(--fg-soft); font-style: normal; opacity: 0.75; }
 .pkgs td.ver, .pkgs th.ver { text-align: right; white-space: nowrap; }
 
 
-/* 靠说明命中的那一句。说明列看得见时它是多余的，藏起来。 */
 .pkgs .hit-desc { display: none; }
 .pkgs mark {
   background: var(--accent-weak); color: var(--fg);
@@ -583,7 +464,6 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 }
 
 
-/* 指纹放在步骤标题旁，导入完可以直接对一眼 */
 .fpr-box { margin-left: auto; display: flex; align-items: center; gap: 0.35rem; }
 .fpr {
   font-family: var(--mono); font-size: 0.68rem;
@@ -597,25 +477,18 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 }
 .fpr-copy:hover { color: var(--fg); }
 
-/* 对勾列。窄到只放得下一个符号，别让它抢名称列的宽度 */
-/* 两个状态列按表头文字定宽：里面的内容（对勾、不构建这类标签）都比表头窄。 */
 .listing th.mark, .listing td.mark { text-align: center; white-space: nowrap; }
-/* 只留说明列不写宽度：fixed 布局下多个 auto 列 Chrome 不平分，会把剩余
-   全给其中一个。名称列给百分比，窄屏收起别的列之后它按比例放大。 */
 .pkgs th:first-child { width: 33%; }
 .pkgs th.mark { width: 6rem; }
 .pkgs th.ver { width: 10.5rem; }
 .pkgs th.size { width: 4rem; }
-/* 文件浏览器：大小与修改时间定宽，名称吃掉剩下的。 */
 #out .listing th.size { width: 4.5rem; }
 #out .listing th.date { width: 9.5rem; }
 .listing td.mark.yes { color: var(--ok); font-weight: 600; }
 .listing td.mark.no { color: var(--fg-soft); }
 
-/* 过滤按钮 */
 .filters { display: flex; gap: 0.4rem; margin: 0 0 0.6rem; flex-wrap: wrap; }
 
-/* 表格里四种状态的含义。符号本身没有自解释性，列表页第一次看会猜。 */
 .legend {
   display: grid;
   grid-template-columns: max-content 1fr;
@@ -640,33 +513,18 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 }
 .filter:hover { color: var(--fg); }
 .filter.on { border-color: var(--primary); color: var(--primary); font-weight: 600; }
-/* 「待构建」比破折号长，别让它把这列撑开 */
 .listing td.mark .pend { font-size: 0.74rem; font-style: italic; }
 
-/* --- 断点 ---
-   一条列隐藏阶梯加一个布局断点，全部放在基准规则之后：同权重下后面的赢，
-   混在基准规则中间会被下面的基准规则盖掉。指纹那条就这样失效过一次。
-
-   62rem  藏体积列（放得下时包名不断行）
-   52rem  藏版本列，指纹改成占满一行按分组换行
-   44rem  藏说明列与文件浏览器的日期列，显示搜索命中的那一句，标题缩一档
-   34rem  手机布局：顶栏折两行，内边距与代码字号收紧
-*/
-/* 宽到放得下就不断行。说明栏声明了 width:100%，会把剩余宽度全吃掉，
-   包名栏因此缩到最小内容宽度，明明有空间也照断。 */
 @media (min-width: 62rem) {
   .pkgs td.name { white-space: nowrap; }
 }
 
 @media (max-width: 62rem) {
-  /* 状态列才是这张表的重点，先牺牲体积再牺牲版本 */
   .pkgs td.size, .pkgs th.size { display: none; }
 }
 
 @media (max-width: 52rem) {
   .pkgs td.ver, .pkgs th.ver { display: none; }
-  /* 一行放不下四十位十六进制。指纹是核对公钥的唯一依据，不能隐藏，改成占满
-     一行按分组换行，复制键跟在后面。 */
   .fpr-box { margin-left: 0; width: 100%; }
   .fpr { white-space: normal; }
 }
@@ -674,7 +532,6 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 @media (max-width: 44rem) {
   .listing td.date, .listing th.date { display: none; }
   .pkgs td.desc, .pkgs th.desc { display: none; }
-  /* 说明列没了，搜索却还在比对说明，得让这一行自己说明白为什么被搜出来 */
   .pkgs .hit-desc {
     display: block; margin-top: 0.2rem;
     font-size: 0.78rem; line-height: 1.35;
@@ -682,35 +539,24 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
   }
 }
 
-/* --- 窄屏 --- */
 @media (max-width: 34rem) {
-  /* 手机上两个状态列各占 6rem 时，名称列只剩不到 100px，而标签又是 nowrap
-     的，会把表格撑出视口。收窄并允许标签折行。 */
   .pkgs th.mark { width: 4.5rem; }
   .pkgs td.mark { white-space: normal; }
-  /* 固定列宽之下放不下的包名会盖到右边一列上。斜线处的 <wbr> 是首选断点，
-     一个词还是超宽时允许在任意字符断开。 */
   .pkgs td.name { overflow-wrap: anywhere; }
 
   .wrap { padding: 2.25rem 1rem 2.5rem; }
 
   .title { font-size: 1.45rem; }
 
-  /* 顶栏压成两行：品牌与语言/主题一行，导航链接一行。
-     链接横向可滑，不换行，避免一个链接单独占一行。 */
   .nav-inner { flex-wrap: wrap; padding: 0.7rem 1rem 0.55rem; row-gap: 0.5rem; }
-  /* basis 用 0：auto 会让浏览器优先换行而不是缩短品牌名，
-     结果工具被挤到第二行、链接到第三行。 */
   .nav-brand { flex: 1 1 0; min-width: 0; }
   .nav-tools { flex: none; margin-left: auto; }
-  /* 手机上链接单独一行，靠左排 */
   .nav-links { flex: 1 0 100%; order: 3; gap: 0; margin: 0 -0.4rem; }
   .nav-link { padding: 0.3rem 0.4rem; }
 
   .step { margin-top: 1.2rem; }
   .code pre { font-size: 0.72rem; padding: 0.7rem 0.75rem; }
   .code-head .path { font-size: 0.68rem; }
-  /* 换行之后标签独占一整条太空。压成小标签，地址与复制按钮一行。 */
   .uri { flex-wrap: wrap; }
   .uri .k {
     width: 100%; border-right: 0; border-bottom: 1px solid var(--border);
@@ -721,5 +567,4 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
   .foot-inner { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
 }
 
-/* 任何宽度都不该出现整页横向滚动：内容自己滚，页面不动 */
 html, body { max-width: 100%; overflow-x: clip; }

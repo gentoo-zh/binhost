@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""add-package.py 的用例。
-
-newcomers workflow 无人值守地拿它改 packages.txt，改错了会以 PR 的形式送出去，
-而 PR 上不会有检查跑。它最早的一版按字节排序，把 net-proxy/Xray 挪到了
-net-proxy/bore 前面。
-"""
 import pathlib
 import subprocess
 import sys

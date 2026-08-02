@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""Cases for stage-index.py.
-
-This is the last filter between the build cache and what users install, so each
-rule it applies gets a case: whose package it is, which instance of a rebuilt
-version, what must stop the round, and what the index header ends up saying.
-"""
 
 import importlib.util
 import pathlib
@@ -18,10 +12,6 @@ spec = importlib.util.spec_from_file_location(
 stage_index = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(stage_index)
 
-# The header portage actually writes has no REPO_REVISIONS line -- it puts that
-# per package. The fixture used to include one, which is why a substitution that
-# silently does nothing when the line is absent passed the tests while the
-# published index carried no revision at all.
 HEADER = "ACCEPT_KEYWORDS: ~amd64\nPACKAGES: 999\nTIMESTAMP: 1\nVERSION: 0"
 HEADER_WITH_REV = HEADER + '\nREPO_REVISIONS: {}'
 
@@ -37,14 +27,6 @@ def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None):
 
 
 def run(stanzas, overlay_has=None, excluded=frozenset(), masked=()):
-    """Parse and select.
-
-    overlay_has lists the cpv the overlay carries, as ebuilds rather than bare
-    directories: the filter asks per version, so a fixture that only made
-    directories would pass no matter which versions were named. excluded is
-    passed explicitly so the cases do not depend on what build/excluded.txt
-    happens to hold today.
-    """
     _, entries = stage_index.parse(HEADER + "\n\n" + "\n\n".join(stanzas) + "\n")
     if overlay_has is None:
         return stage_index.select(entries, excluded=excluded)
@@ -126,8 +108,6 @@ case("未提供 overlay 时不做该项过滤", lambda: (
 case("带 revision 的版本号可解析出 cp", lambda: (
     run([stanza("app-misc/a-1.2.3-r4")], overlay_has=["app-misc/a-1.2.3-r4"])[0] != []))
 
-# 一次 bump 的实况：新版加进 overlay，旧版的 ebuild 被删掉，目录还在。
-# 只看目录时旧版会一直发下去，dev-util/gitea-cli 就这样带着 0.14.2 发了很久。
 case("bump 之后旧版本退场", lambda: (
     cpvs(run([stanza("dev-util/gitea-cli-0.14.2"), stanza("dev-util/gitea-cli-0.15.0")],
              overlay_has=["dev-util/gitea-cli-0.15.0"])[0]) == ["dev-util/gitea-cli-0.15.0"]))
@@ -139,18 +119,13 @@ case("同一个包的多个版本都在 overlay 里就都保留", lambda: (
     cpvs(run([stanza("app-misc/a-1"), stanza("app-misc/a-2")],
              overlay_has=["app-misc/a-1", "app-misc/a-2"])[0]) == ["app-misc/a-1", "app-misc/a-2"]))
 
-# portage 写 CPV 时会去掉 -r0，ebuild 文件名里却可能留着
 case("ebuild 带 -r0 而 CPV 不带时仍然匹配", lambda: (
     run([stanza("app-misc/a-1")], overlay_has=["app-misc/a-1-r0"])[0] != []))
 
-# 只查子字串在不在时，把替换改成追加也照样过，而那会在发布出去的索引里留下
-# 两行 PACKAGES。
 case("头部 PACKAGES 重写为实际数量", lambda: (
     lambda h: re.findall(r"^PACKAGES: .*$", h, re.M) == ["PACKAGES: 7"]
 )(stage_index.rewrite_header(HEADER, 7, "")))
 
-# 只断言「不等于夹具里那个 1」时，把 int(time.time()) 换成写死的 0 也照样过，
-# 而那个值是 publish.sh 读进 status.json 给首页当「更新于」的。
 case("头部 TIMESTAMP 重写为本代时间", lambda: (
     lambda got: abs(got - int(time.time())) <= 5
 )(int(re.search(r"^TIMESTAMP: (\d+)$",

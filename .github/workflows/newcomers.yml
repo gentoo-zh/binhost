@@ -1,19 +1,7 @@
-# overlay 里出现了有构建系统、但不在收录清单上的包，就开一个 PR 把它加进去。
-#
-# 收不收是个判断，原来这个判断只出现在每晚构建的日志和 Telegram 告警里，要人
-# 自己去改清单。改成开 PR：合并就是收录，关掉就是不收，两边都不用再动手改文件。
-#
-# 判断新包只要 overlay 和 packages.txt，不需要构建出来的索引，所以整件事在这里
-# 做，建置机不必拿着能写仓库的凭据。
-#
-# 分两个 job，因为两边要的环境不一样：认 ebuild 要 portage 的 vercmp，只有
-# stage3 里有；开 PR 要 git 和 gh，stage3 里没有。所以 stage3 那边把话说完
-# ——哪些包该提、加进去之后清单还验得过——ubuntu 这边只负责提交和开 PR。
 name: newcomers
 
 on:
   schedule:
-    # 每天 UTC 09:00，构建（UTC 08:00）完成之后
     - cron: "0 9 * * *"
   workflow_dispatch:
 
@@ -30,8 +18,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # stage3 里没有 git，取 tarball 就够：这里只看包在不在树里、ebuild 长
-      # 什么样，用不到提交记录
       - name: Fetch the overlay
         run: |
           mkdir -p /tmp/overlay
@@ -45,8 +31,6 @@ jobs:
           python3 build/check-versions.py --newcomers /tmp/overlay build/packages.txt > /tmp/new.txt
           cat /tmp/new.txt
 
-          # 加进去之后清单还得验得过。验不过的不提：PR 上不会有检查跑
-          # （GITHUB_TOKEN 开的 PR 不触发 workflow），送出去就没人拦了。
           : > /tmp/ok.txt
           cp build/packages.txt /tmp/packages.orig
           while read -r cp ver; do
@@ -62,7 +46,6 @@ jobs:
           done < /tmp/new.txt
           cp /tmp/packages.orig build/packages.txt
 
-          # 一行一个原子，交给下一个 job
           {
             echo "rows<<EOF"
             cat /tmp/ok.txt
@@ -74,7 +57,6 @@ jobs:
     if: needs.find.outputs.rows != ''
     runs-on: ubuntu-latest
     steps:
-      # 要在 master 上开分支，浅克隆只有触发的那一个 ref
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
@@ -89,12 +71,9 @@ jobs:
           git config user.name "Zakk"
           git config user.email "zakk@gentoozh.org"
 
-          # 每个分支都从这里长出来，不是从上一个分支
           base=$(git rev-parse HEAD)
           : > /tmp/urls.txt
 
-          # 先读进数组再循环：git 和 gh 会读 stdin，用 while read 喂时第一轮
-          # 之后清单就被它们吃掉了
           mapfile -t rows <<< "${ROWS}"
 
           for row in "${rows[@]}"; do
@@ -103,8 +82,6 @@ jobs:
             ver=${row#* }
             branch="newcomer/${cp//\//-}"
 
-            # 已经开过就不再开。分支还在说明上一次的 PR 还没被处理，重复开只会
-            # 让人更不想看。
             if git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1; then
               echo "  ${cp} 已经有 ${branch}，跳过"
               continue
@@ -113,14 +90,11 @@ jobs:
             git checkout -q -B "${branch}" "${base}"
             python3 build/add-package.py "${cp}"
 
-            # 没改动就没什么可提。git commit -a 在这种时候会失败，set -e 一退
-            # 出，后面的包一个都轮不到。
             if git diff --quiet -- build/packages.txt; then
               echo "  ${cp} 清单没有变化，跳过"
               continue
             fi
 
-            # 只提这一个文件：-a 会把其他改动的文件一起卷进来
             git commit -q -m "build: add ${cp}" -- build/packages.txt
             git push -q origin "${branch}"
 
@@ -130,8 +104,6 @@ jobs:
               "合并即收录，下一轮构建会带上它；不收就关掉这个 PR，并把它连同原因写进 \`build/excluded.txt\`，否则每天还会再开一次。" \
               "" \
               "清单顺序不分大小写，这里只插一行，没有重排。加进去之后 \`validate.py\` 已执行，PR 上不会再跑：GITHUB_TOKEN 开的 PR 不触发 workflow。")
-            # 分支已经推上去了，开 PR 失败就把它删掉。留着会让下一轮那条
-            # 「分支还在说明上次的 PR 还没被处理」命中，这个包从此不再提出来。
             if ! gh pr create --base master --head "${branch}" \
                  --title "build: add ${cp}" --body "${body}" >> /tmp/urls.txt; then
               echo "  ${cp} 开 PR 失败，撤掉分支 ${branch}"
@@ -152,7 +124,6 @@ jobs:
           TELEGRAM_CHAT: ${{ secrets.TELEGRAM_CHAT }}
           URLS: ${{ steps.prs.outputs.urls }}
         run: |
-          # 没配 secret 就跳过：这一步是通知，不该让它拦住开 PR
           [ -n "${TELEGRAM_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT:-}" ] || exit 0
           [ -n "${URLS:-}" ] || exit 0
           text=$(printf '%s\n%s' "overlay 有新包待判断，合并即收录，不收就关掉：" "${URLS}")

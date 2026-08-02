@@ -1,19 +1,6 @@
-/* 镜像站共享 i18n 引擎 + 统一的语言/主题切换控件。
- *
- * 两页共用一份。加一门语言只改这里的 LANGS/LANG_NAME/THEME_* 数据 + 各页的翻译。
- *
- * 页面侧约定（引入本脚本前声明 window.MIRROR_I18N；共用串在 strings.js）：
- *   1) 逐串翻译：元素加 data-i18n="key"（纯文本）或 data-i18n-html="key"（含标签）。
- *      简体取自文档原文；其它语言由 window.MIRROR_I18N[lang][key] 提供，缺则回落简体。
- *   2) 整段翻译：同一段内容写多份 <div data-langblock="zh-cn"> / "zh-tw" / "en">，
- *      非当前语言的 hidden。行内同理用 data-langblock-inline。简体段直接写在 HTML。
- *   控件的标记在页面里，本脚本只做绑定；#copy-toast 存在时才挂点击复制。
- *   无脚本 / 文本浏览器下控件整段不存在，页面保持干净（简体原文可读）。
- */
 (function () {
   'use strict';
 
-  /* 站点统一的语言与主题文案（加语言只动这几行） */
   var LANGS = [['zh-cn', '简'], ['zh-tw', '繁'], ['en', 'EN']];
   var LANG_NAME = { 'zh-cn': '简体中文', 'zh-tw': '繁體中文', 'en': 'English' };
   var THEME_WORD = { 'zh-cn': '主题', 'zh-tw': '主題', 'en': 'Theme' };
@@ -25,7 +12,6 @@
   };
   var COPIED = { 'zh-cn': '已复制', 'zh-tw': '已複製', 'en': 'Copied' };
 
-  /* 翻译来源：共用串 + 页面自己的表，同名以页面为准 */
   var T = {};
   (function () {
     var common = window.MIRROR_I18N_COMMON || {};
@@ -36,27 +22,22 @@
       Object.keys(page[l] || {}).forEach(function (k) { T[l][k] = page[l][k]; });
     });
   })();
-  /* 简体的来源有两处：页面上带 data-i18n 的元素（正文），以及页面自己表里的
-     zh-cn 一节（只给脚本读、正文里没有对应元素的那些串）。后者原来是一个
-     hidden 的 div，而文字浏览器不套 CSS，那一整库模板字符串会直接倒在页尾。 */
   var CN = {};
   Object.keys((window.MIRROR_I18N || {})['zh-cn'] || {}).forEach(function (k) {
     CN[k] = window.MIRROR_I18N['zh-cn'][k];
   });
   document.querySelectorAll('[data-i18n]').forEach(function (el) { CN[el.dataset.i18n] = el.textContent; });
   document.querySelectorAll('[data-i18n-html]').forEach(function (el) { CN[el.dataset.i18nHtml] = el.innerHTML; });
-  /* 链接地址也分语言：gentoozh.org 按语言分路径。 */
   document.querySelectorAll('[data-i18n-href]').forEach(function (el) { CN[el.dataset.i18nHref] = el.getAttribute('href'); });
   function val(l, key) {
     if (l === 'zh-cn') return CN[key];
     var tbl = T[l] || {};
-    return (key in tbl) ? tbl[key] : CN[key];   // 缺翻译则回落简体，绝不显示 undefined
+    return (key in tbl) ? tbl[key] : CN[key];
   }
 
   function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function read(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 
-  /* 页面可用 window.MIRROR_LANGS 限定支持的语言（默认全部）。 */
   var enabled = window.MIRROR_LANGS || LANGS.map(function (p) { return p[0]; });
   var LANG_LIST = LANGS.filter(function (p) { return enabled.indexOf(p[0]) >= 0; });
 
@@ -72,8 +53,6 @@
   var curLang = detectLang();
   var themeMode = read('mirror-theme') || 'system';
 
-  /* 控件的标记写在页面里，这里只做绑定。原来是脚本创建再插进去，所以顶栏会
-     晚一拍才变样，当前项和图标也跟着晚。 */
   var langBtns = {};
   document.querySelectorAll('.lang-btn').forEach(function (b) {
     var code = b.dataset.lang;
@@ -111,7 +90,6 @@
     themeBtn.setAttribute('aria-expanded', 'false');
   }
 
-  /* 图标与当前项由 <html> 上的 data-theme-mode 决定，CSS 自己挑，这里只管文案。 */
   function renderTheme() {
     if (!themeBtn) return;
     var title = THEME_WORD[curLang] + THEME_SEP[curLang] + THEME_LABEL[curLang][themeMode];
@@ -126,8 +104,6 @@
     root.setAttribute('data-theme-mode', mode);
     if (mode === 'light' || mode === 'dark') root.setAttribute('data-theme', mode);
     else root.removeAttribute('data-theme');
-    // early.js 在首屏之前写过一次。这里不跟着改，滚动条与原生表单控件会
-    // 停在换主题之前那一套配色。
     root.style.colorScheme = mode === 'system' ? 'light dark' : mode;
     store('mirror-theme', mode);
     renderTheme();
@@ -142,32 +118,19 @@
     document.querySelectorAll('[data-langblock-inline]').forEach(function (el) { el.hidden = (el.getAttribute('data-langblock-inline') !== l); });
     document.documentElement.setAttribute('data-lang', l);
     Object.keys(langBtns).forEach(function (k) { langBtns[k].title = LANG_NAME[k]; });
-    /* 浏览器标签页的标题原来只有 HTML 里那一份，切语言之后仍是中文。
-       每页的 i18n 表本来就有 title，取它拼上站名；没有 title 的页面
-       （首页、文件浏览器）只用站名。 */
     var pageTitle = val(l, 'title');
-    /* 没有 title 键的页面保持 HTML 里那一份，否则切一次语言就把它抹成站名。 */
     if (pageTitle) document.title = pageTitle + ' — distfiles.gentoozh.org';
     renderTheme();
     store('mirror-lang', l);
-    /* 页面里由脚本自绘的内容（首页那几个数字、包列表的表格）不带 data-i18n，
-       applyLang 遍历不到。广播一次，让它们自己重画。 */
     document.dispatchEvent(new CustomEvent('langchange', { detail: l }));
   }
 
-  /* 页面里自绘的表格要取当前语言的串。原来是从一个 hidden 的 div 里读回来，
-     那个 div 在文字浏览器里会整块显示出来。 */
   window.MIRROR_T = function (key) { return val(curLang, key); };
 
   applyTheme(themeMode);
   applyLang(curLang);
-  /* early.js 为了不让访客看见换语言前那一屏，先把正文阻止了。换完揭开。
-     它自己也有个 1.5 秒的兜底，那是留给本脚本没启动的情形。 */
   document.documentElement.classList.remove('lang-swap');
 
-  /* 点击复制。提示条是可选的：整段逻辑原来包在 if (toast) 里，于是 faq 页
-     加了一个复制按钮却没有那个 div，按钮按下去毫无反应也毫无报错。功能不该
-     取决于一个装饰元素在不在。 */
   {
     var toast = document.getElementById('copy-toast');
     var timer;
@@ -178,8 +141,6 @@
       clearTimeout(timer);
       timer = setTimeout(function () { toast.classList.remove('show'); }, 1200);
     };
-    /* 代码块的复制内容当场从看得见的那一份读，不预先算。预先算要有人在切镜像、
-       切分页之后各自去更新，两个写入方，漏一个就复制到另一份的内容。 */
     var value = function (el) {
       var v = el.getAttribute('data-copy');
       if (v !== null) return v;
@@ -187,8 +148,6 @@
       if (!box) return '';
       var pre = box.querySelector('pre[data-pane]:not([hidden])') || box.querySelector('pre');
       if (!pre) return '';
-      /* 藏起来的内容不复制。hidden 的文本照样在 textContent 里，看得见的是一份、
-         复制到的是另一份，正是复制按钮最不该出的错。 */
       var clone = pre.cloneNode(true);
       Array.prototype.forEach.call(clone.querySelectorAll('[hidden]'), function (el) {
         el.parentNode.removeChild(el);

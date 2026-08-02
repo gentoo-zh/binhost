@@ -6,14 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=fbe35479">
-<script src="/assets/early.js?v=5e6859c6"></script>
+<link rel="stylesheet" href="/assets/site.css?v=c62a2308">
+<script src="/assets/early.js?v=0888406a"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://distfiles.gentoozh.org/assets/logo.webp">
 <meta name="twitter:card" content="summary">
 <!-- /chrome:head -->
-<!-- 数据请求原来排在所有脚本之后才开始，实测晚三百多毫秒。 -->
 <link rel="preload" href="/binpkgs/x86-64/status.json" as="fetch" crossorigin>
 <link rel="preload" href="/distfiles-status.json" as="fetch" crossorigin>
 <link rel="preload" href="/build-status.json" as="fetch" crossorigin>
@@ -89,7 +88,6 @@
   </p>
 
   <div class="step">
-    <!-- data-src-list：镜像都留在列表里，选中的排到最前面。%s 换成排好序的地址 -->
     <div class="src-pick" data-src-switch="dist" data-src-list='"${GENTOO_MIRRORS} %s"'
          role="group" aria-label="优先取用的镜像">
       <span class="src-label" data-i18n="srcLabelFirst">优先</span>
@@ -230,8 +228,6 @@
   <div class="step">
     <p class="step-title"><span class="n">2</span><span data-i18n="step2">添加仓库</span></p>
 
-    <!-- 加一个镜像就是加一个 button，写上 data-uri。选中的那个决定本页所有
-         sync-uri 的显示与复制内容 -->
     <div class="src-pick" data-src-switch="repo" role="group" aria-label="镜像">
       <span class="src-label" data-i18n="srcLabel">镜像</span>
       <button type="button" class="src-opt on" data-i18n="srcCernet" data-src-default="zh-cn"
@@ -325,8 +321,8 @@
 
 <div id="copy-toast" aria-hidden="true"></div>
 
-<script src="/assets/util.js?v=9373bf4f"></script>
-<script src="/assets/strings.js?v=b3051929"></script>
+<script src="/assets/util.js?v=08651886"></script>
+<script src="/assets/strings.js?v=2c951eff"></script>
 <script>
 window.MIRROR_I18N = {
   'zh-tw': {
@@ -375,35 +371,21 @@ window.MIRROR_I18N = {
   }
 };
 </script>
-<script src="/assets/i18n.js?v=4cbd0156"></script>
-<!-- 在 i18n.js 之后：applyLang 会重写 .src-opt 的文字，切换脚本只改
-     data-uri 与选中态，两者不冲突 -->
-<script src="/assets/mode-switch.js?v=39a1905b"></script>
-<script src="/assets/sudo-switch.js?v=89d1a2ad"></script>
-<script src="/assets/source-switch.js?v=309b2e30"></script>
+<script src="/assets/i18n.js?v=cb8ac6e5"></script>
+<script src="/assets/mode-switch.js?v=08d5c31f"></script>
+<script src="/assets/sudo-switch.js?v=1ebc6dc8"></script>
+<script src="/assets/source-switch.js?v=65dbd639"></script>
 
 <script>
-/* 两个来源各写了一个小状态文件：二进制包由 publish.sh 写，distfiles 由
-   distfiles-index.sh 写。读各自的索引也能拿到这几个数，但 Packages 有
-   160 KB、distfiles 索引有一千多个文件名，为四个数字传这些不值得。 */
 (function () {
   var langTable = window.MIRROR_I18N || {};
-  /* 语言从 i18n.js 广播的事件拿，不自己读 localStorage：localStorage 被禁用时
-     i18n.js 会退回按 navigator 判定，两边就会得出不同的语言。 */
-  /* 从 <html lang> 起步，而不是 null。i18n.js 在本段之前就载入并同步完成
-     applyLang，langchange 那次派送早于下面的监听器注册，于是 curLang 一直是
-     null，s() 永远回退到简体：繁中与英文的访客首屏看到的是简体那一行，要手动
-     点一次语言键才会改。 */
   var curLang = document.documentElement.lang || null;
   function s(key, fallback) {
     var t = curLang && langTable[curLang];
     return (t && key in t) ? t[key] : fallback;
   }
 
-  /* UTC+8。这个站点的用户主要在中国大陆、台湾、新加坡、马来西亚，都是 +8。
-     不写时区会被当成本地时间读错，所以标出来。 */
   function stamp(unix) {
-    /* 先转成数字：来源换成字符串时相加会变成拼接，Date 越界后抛 RangeError。 */
     var n = Number(unix);
     if (!n) return '';
     return new Date((n + 8 * 3600) * 1000)
@@ -435,8 +417,6 @@ window.MIRROR_I18N = {
     el.innerHTML = html;
   }
 
-  /* 数据只取一次，切语言时重画。原先在 then 里直接写 innerHTML，切了语言这一行
-     还是原来那句。 */
   document.addEventListener('langchange', function (e) { curLang = e.detail; render(); });
 
   Promise.allSettled([

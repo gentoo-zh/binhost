@@ -1,8 +1,3 @@
-# 镜像机上我们自己产生的日志。install.sh 装到 /etc/logrotate.d/binhost。
-#
-# nginx 的 /var/log/nginx/*.log 由 nginx ebuild 自带的配置管，不重复写。
-# net-misc/rsync 自带的配置管的是 /var/log/rsync.log，我们的 rsyncd.conf
-# 写的是 rsyncd.log，差一个字母，那份配置一直管着一个不存在的文件。
 
 /var/log/rsyncd.log {
 	weekly
@@ -12,12 +7,9 @@
 	delaycompress
 	notifempty
 	missingok
-	# rsyncd 常驻并持有文件句柄，只能截断不能改名
 	copytruncate
 }
 
-# daily.sh 每小时往 run.log 追加一轮的输出，emirrordist 自己写另外几份。
-# 一轮只有几行，实测 run.log 长期在 10 KB 量级，按周轮转足够，不设大小上限。
 /var/log/emirrordist/*.log {
 	weekly
 	rotate 8

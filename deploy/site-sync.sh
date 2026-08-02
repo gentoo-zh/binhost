@@ -1,16 +1,4 @@
 #!/bin/bash
-# Pull the published site onto the mirror. Runs from cron on the mirror itself.
-#
-# The mirror pulls rather than CI pushing, so nothing outside holds a key that
-# reaches this machine. A change lands within the poll interval instead of
-# instantly, which for a static site costs nothing.
-#
-# Only site content. The nginx configuration stays a manual root operation: a
-# repository push must not be able to change how the server behaves.
-#
-# --safe-links on every transfer for the same reason. rsync -a includes -l and
-# nginx has no disable_symlinks here, so site/assets/x -> / would publish every
-# world-readable file on the machine under /assets/x/.
 
 set -euo pipefail
 
@@ -19,9 +7,6 @@ WORK="${WORK:-/var/lib/binhost-site}"
 DEST="${DEST:-/srv/mirrors}"
 BRANCH="${BRANCH:-master}"
 
-# A fresh clone has nothing to compare against, so it must always deploy --
-# otherwise a newly provisioned mirror waits for the next upstream commit
-# before it ever serves the site.
 fresh=0
 if [[ -d ${WORK}/.git ]]; then
     git -C "${WORK}" fetch --quiet origin "${BRANCH}"
@@ -34,28 +19,12 @@ before=$(git -C "${WORK}" rev-parse HEAD)
 git -C "${WORK}" reset --quiet --hard "origin/${BRANCH}"
 after=$(git -C "${WORK}" rev-parse HEAD)
 
-# 记下上一次真正同步完成的提交。原来只比 HEAD：rsync 失败之后 HEAD 已经是新的，
-# 下一次比对相等就直接退出，除非又有新提交，否则永远不会重试。
 DONE="${DONE:-${WORK}/.synced}"
 synced=$(cat "${DONE}" 2>/dev/null || true)
 
 (( fresh )) || [[ ${before} != "${after}" ]] || [[ ${synced} != "${after}" ]] || exit 0
 
-# --delete only inside assets/: everything else in DEST belongs to the package
-# publisher, and wiping it would take the repository down with the site.
 rsync -a --safe-links --delete "${WORK}/site/assets/" "${DEST}/assets/"
-# packages.json is not here: gen-packages.py on the mirror produces it from the
-# overlay, so its content follows the overlay rather than this repository's
-# commits.
-#
-# 签名公钥是用户导入的信任锚。走这条五分钟一次的自动通道，能改仓库的人就能
-# 换掉它而镜像照跟，用户看到的仍是我们的域名。所以只有指纹与本机记录一致时
-# 才同步，那份记录读自机器，不读自仓库。
-#
-# 文件里的每一把都要在记录里，有一把对上不算数：轮替时 .asc 会同时装着新旧
-# 两把，所以记录这一侧允许一行一个列多把。放宽成「有一把对上就放行」比只看
-# 第一把更糟——把自己的公钥连同我们的一起放进去就能通过，而站点第 1 步的
-# --lsign-key 会签到排在前面的那一把。实测确认过。
 FPR_FILE="${FPR_FILE:-/etc/binhost/signing-key.fpr}"
 if [[ -r ${FPR_FILE} ]]; then
     mapfile -t want < <(tr -d ' \r' < "${FPR_FILE}" | grep -oE '[0-9A-Fa-f]{40}' | tr 'a-f' 'A-F')
@@ -65,8 +34,6 @@ if [[ -r ${FPR_FILE} ]]; then
     for g in "${got[@]}"; do
         [[ " ${want[*]} " == *" ${g} "* ]] || unexpected+=("${g}")
     done
-    # 记录为空、文件里一把钥匙都无法解析，都要拦住。原来这两种情形下
-    # 比对的是两个空串，反而放行。
     if (( ${#want[@]} && ${#got[@]} && ${#unexpected[@]} == 0 )); then
         rsync -a --safe-links "${WORK}/site/gentoo-zh-binhost.asc" "${DEST}/"
     else
@@ -76,18 +43,8 @@ else
     echo "!! ${FPR_FILE} 不存在，公钥未同步" >&2
 fi
 
-# --include/--exclude rather than naming files one by one: missing a new page
-# only means it does not go live, while naming a deleted one makes rsync return
-# 23 and, under set -e, stops the whole sync. site/*.html with --delete is not
-# an option either, because DEST also holds the published packages and
-# distfiles.
 rsync -a --safe-links --include='*.html' --include='robots.txt' --exclude='*' "${WORK}/site/" "${DEST}/"
 
-# A page deleted from the repository used to stay served for good: rsync without
-# --delete only ever adds. /mirror went on answering 200 with the old table for
-# as long as nobody looked. Compare the two sets by name instead -- only the
-# top-level .html files DEST got from here, never a directory, so the published
-# packages are out of reach of this.
 for f in "${DEST}"/*.html; do
     [ -e "${f}" ] || continue
     [ -e "${WORK}/site/$(basename "${f}")" ] && continue

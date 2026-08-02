@@ -1,9 +1,4 @@
 #!/bin/bash
-# 把这一轮的进度推给镜像机，页面据此显示「正在建置」。
-#
-#   build-progress.sh watch <log>    直到日志所属的那一轮结束
-#   build-progress.sh finish         标成完成
-#
 
 set -uo pipefail
 

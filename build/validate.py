@@ -1,17 +1,9 @@
 #!/usr/bin/env python3
-"""Check packages.txt against the overlay.
-
-Run by CI on every pull request. The point is that someone proposing a package
-finds out here, not three hours into a build, and not after something
-undistributable has already been published.
-"""
 
 import pathlib
 import re
 import sys
 
-# Shared module in the same directory. Only it and a couple of scripts are
-# installed on the mirror, so it pulls in nothing extra.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ebuilds import (                                       # noqa: E402
     ATOM, BUILD_ECLASS, PREBUILT_ECLASS,
@@ -27,8 +19,6 @@ EXCLUDED = HERE / "excluded.txt"
 
 
 def read_excluded():
-    """category/package -> reason. A missing reason is an error: it is written
-    down for whoever comes next."""
     out = {}
     if not EXCLUDED.exists():
         return out
@@ -58,18 +48,12 @@ def main(overlay):
         elif not reason:
             errors.append(f"{EXCLUDED.name}:{lineno}: {cp} 没写原因")
         elif not (overlay / cp).is_dir():
-            # The package is gone from the overlay, so this entry should go
-            # too, or the list only grows.
             notes.append(f"{EXCLUDED.name}:{lineno}: {cp} 已不在 overlay 里，可以删掉这条")
 
     for lineno, raw in enumerate(LIST.read_text().splitlines(), 1):
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
-        # The build script matches the raw line (grep -E '^...$') while this
-        # matches after stripping. Trailing whitespace would pass CI and then
-        # silently drop a package from the build, so be strict about the raw
-        # line too.
         if raw != line:
             errors.append(f"{LIST.name}:{lineno}: 行首或行尾有多余空白: {raw!r}")
             continue
@@ -90,8 +74,6 @@ def main(overlay):
             errors.append(f"{LIST.name}:{lineno}: duplicate of line {seen[cp]}: {cp}")
         seen[cp] = lineno
 
-    # Compare case-insensitively. In ASCII order net-proxy/Xray sorts before
-    # net-proxy/v2rayA, but the list is kept in the order a reader expects.
     names = [cp.lower() for _, cp in atoms]
     if names != sorted(names):
         for i in range(1, len(names)):
@@ -108,9 +90,6 @@ def main(overlay):
             errors.append(f"{LIST.name}:{lineno}: not in the overlay: {cp}")
             continue
 
-        # A package the overlay masks itself usually says masked for removal.
-        # Taking it on only produces all ebuilds masked at build time, and then
-        # the package is deleted and the list keeps a dead entry.
         if cp in masked:
             errors.append(f"{LIST.name}:{lineno}: overlay 的 package.mask 屏蔽了它: {cp}")
             continue
@@ -121,25 +100,14 @@ def main(overlay):
 
         text = eb.read_text(errors="ignore")
 
-        # RESTRICT=bindist means upstream forbids redistributing what we build.
-        # ACCEPT_LICENSE also gates this at build time, but by then someone has
-        # already spent review effort on the pull request.
         if restricts_bindist(text):
             errors.append(f"{LIST.name}:{lineno}: RESTRICT=bindist, cannot be redistributed: {cp}")
 
-        # The build machine is amd64 and builds nothing else. A package that
-        # does not keyword amd64 cannot be built there, so it would fail the
-        # same way every round while looking like a build problem.
-        # check-versions.newcomers already applies this when it suggests a
-        # package; these two disagreed, and this side is the one that gates a
-        # pull request.
         kw = keywords_of(text)
         if kw is not None and not accepts_amd64(kw):
             errors.append(
                 f"{LIST.name}:{lineno}: KEYWORDS 里没有 amd64，建置机上装不了: {cp}")
 
-        # A prebuilt repackage has nothing to compile, so a binary package of it
-        # saves the user only the unpack. Same rule newcomers uses.
         eclasses = inherits(text)
         if eclasses & PREBUILT_ECLASS:
             notes.append(f"  {cp:<44} 预编译重打包，收益有限")
