@@ -96,13 +96,11 @@ def select(entries, overlay=None, excluded=None):
             skipped += 1
             continue
 
-        # Anything built once stays in PKGDIR forever, and the publisher deletes
-        # by what the index names, so without this it would be served
-        # indefinitely. The question is asked per version, not per package: a
-        # bump adds the new ebuild and drops the old one while the directory
-        # stays, and asking only about the directory left the dropped version
-        # published with no ebuild behind it. dev-util/gitea-cli was served at
-        # 0.14.2 that way for as long as it had been bumped to 0.15.0.
+        # Anything built once stays in PKGDIR forever and the publisher deletes
+        # by what the index names, so without this it is served indefinitely.
+        # Asked per version, not per package: a bump adds the new ebuild and
+        # drops the old one while the directory stays, so a directory-wide
+        # question keeps publishing the dropped version.
         if overlay is not None and not has_ebuild(overlay, cpv):
             skipped += 1
             continue

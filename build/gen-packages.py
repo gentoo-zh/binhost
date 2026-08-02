@@ -62,14 +62,6 @@ def why_not_listed(cp, text, masked):
     """
     if cp in masked:
         return "masked"
-    # KEYWORDS is often indented inside an if block, and can come entirely from
-    # an eclass, as with acct-group. Anchoring at the line start would take all
-    # of those for having no keywords. When none is found, do not guess: leave
-    # it to the checks below.
-    #
-    # The last assignment wins when one ebuild has several, as in bash.
-    # liblol-glibc writes a long list of arches and then overrides it with
-    # -* ~loong.
     # 三处判断都走 ebuilds.py，不再各写一份。原来这里的 RESTRICT 正则是
     # [^"]* 而 ebuilds.py 是 [^"\n]*，多行写法只有这边认得，于是页面标着
     # bindist 而 validate.py 那道唯一的再散布闸门放行。

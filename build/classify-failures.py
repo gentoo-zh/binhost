@@ -15,16 +15,11 @@ import sys
 
 # (category, is it the ebuild's problem, pattern)
 #
-# The order matters: what is certain first, what may point at someone else
-# after.
-#
-# `ERROR: ... failed (xxx phase)` always concerns this package, while
-# `masked by: ... license` is printed by emerge for any package in the
-# dependency graph a licence blocks, not only the one that failed. The licence
-# rule used to come first and match the whole log, so one blocked dependency
-# was enough to file a real build failure under a licence problem -- and that
-# category is printed as a line ready to paste into excluded.txt, which would
-# exclude a package permanently for the wrong reason.
+# Order matters, certain first. `ERROR: ... failed (xxx phase)` always concerns
+# this package, while `masked by: ... license` is printed for any package in the
+# dependency graph a licence blocks. With the licence rule first, one blocked
+# dependency filed a real build failure as a licence problem -- and that
+# category prints a line ready to paste into excluded.txt.
 RULES = [
     ("构建失败", True,
      re.compile(r"^\s*\*\s*ERROR:.*failed \(\w+ phase\)", re.M)),
