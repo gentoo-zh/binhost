@@ -55,6 +55,7 @@ location ^~ /binpkgs/ {
 
 	location ~ \.gpkg\.tar$ {
 		root /srv/pub;
+		gzip off;
 		access_log /var/log/nginx/mirror.log mirror;
 		access_log /var/log/nginx/binpkg.log mirror;
 		include /etc/nginx/conf.d/headers-files.inc;
