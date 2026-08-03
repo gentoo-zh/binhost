@@ -108,7 +108,11 @@ if "${EMERGE[@]}" "${atoms[@]}" > /var/log/binhost/whole.log 2>&1; then
 else
     echo "!!! 整体失败，退回逐包（每包一份日志）"
     tail -5 /var/log/binhost/whole.log | sed 's/^/    /'
+    i=0
     for atom in "${atoms[@]}"; do
+        i=$(( i + 1 ))
+        printf '%s %s %s\n' "${i}" "${#atoms[@]}" "${atom}" \
+            > /var/log/binhost/progress
         echo "::: ${atom}"
         log=/var/log/binhost/${atom//\//_}.log
         if ! "${EMERGE[@]}" "${atom}" > "${log}" 2>&1; then
@@ -119,6 +123,7 @@ else
             rm -f "${log}"
         fi
     done
+    rm -f /var/log/binhost/progress
 fi
 
 emaint binhost --fix
