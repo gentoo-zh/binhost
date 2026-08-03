@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=b6a7f656">
+<link rel="stylesheet" href="/assets/site.css?v=369ad2d5">
 <script src="/assets/early.js?v=0888406a"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -65,10 +65,14 @@
 
   <h1 class="title" data-i18n="title">包列表</h1>
   <p class="lead" data-i18n-html="lead">
-    收录清单里的 overlay 包见下表，它们所需的 ::gentoo 运行期依赖见本页末尾一节；
-    两张表都由脚本渲染，纯文本查阅 <a href="/packages.txt">/packages.txt</a> 与
-    <a href="/deps.txt">/deps.txt</a>。标签的含义见下方图例，鼠标停留查看详情。
+    本页有两张互不相干的表：收录清单里的 overlay 包，以及它们所需的 ::gentoo
+    运行期依赖。搜索、筛选与计数只作用于第一张。纯文本查阅
+    <a href="/packages.txt">/packages.txt</a> 与 <a href="/deps.txt">/deps.txt</a>。
   </p>
+
+  <p class="jump" hidden><a href="#deps" id="depsJump"></a></p>
+
+  <h2 id="overlay" data-i18n="h2overlay">overlay 包</h2>
 
   <label class="search-label" for="q" data-i18n="ph">搜索包名或说明</label>
   <input class="search" id="q" type="search" autocomplete="off">
@@ -94,7 +98,6 @@
 
   <p class="count" id="count"></p>
   <p class="count" id="updated"></p>
-  <p class="jump" hidden><a href="#deps" id="depsJump"></a></p>
   <div id="out">
     <table class="listing pkgs">
       <thead>
@@ -122,11 +125,11 @@
       <a href="/deps.txt">/deps.txt</a>。
     </p>
     <p class="count" id="depsCount"></p>
-    <table class="listing">
+    <table class="listing deps-table">
       <thead>
         <tr>
           <th data-i18n="thPkg">包</th>
-          <th class="ver" data-i18n="thSlot">Slot</th>
+          <th class="slot" data-i18n="thSlot">Slot</th>
           <th class="ver" data-i18n="thVer">版本</th>
         </tr>
       </thead>
@@ -168,7 +171,8 @@ window.MIRROR_I18N = {
     h2deps: '::gentoo 依赖',
     depsLead: '收录清单里的 overlay 包在运行时需要这些 gentoo 主仓库的包，本站因此一并构建发布。范围只到这些包的运行期依赖，不替代 Gentoo 官方 binhost。纯文本查阅 <a href="/deps.txt">/deps.txt</a>。',
     depsCount: ' 个 ::gentoo 包',
-    depsJump: '另有 {n} 个 ::gentoo 依赖，见本页末尾 ↓',
+    depsJump: '跳到 ::gentoo 依赖（{n} 个）↓',
+    h2overlay: 'overlay 包',
     depsStale: '本站的数据尚未更新到含这一项的版本，暂时无法列出',
     thSlot: 'Slot',
     updBin: '二进制包更新于 ',
@@ -200,12 +204,13 @@ window.MIRROR_I18N = {
   'zh-tw': {
 
     unknown: '不明',    pending: '待建置', excluded: '不建置', updBin: '二進位套件更新於 ', updDist: 'distfiles 更新於 ', fltAll: '全部', fltBin: '僅二進位套件', fltDist: '僅 distfiles', title: '套件列表',
-    lead: '收錄清單裡的 overlay 套件見下表，它們所需的 ::gentoo 執行期依賴見本頁末尾一節；兩張表都由指令碼算繪，純文字查閱 <a href="/packages.txt">/packages.txt</a> 與 <a href="/deps.txt">/deps.txt</a>。標籤的含義見下方圖例，滑鼠停留查看詳情。',
+    lead: '本頁有兩張互不相干的表：收錄清單裡的 overlay 套件，以及它們所需的 ::gentoo 執行期依賴。搜尋、篩選與計數只作用於第一張。純文字查閱 <a href="/packages.txt">/packages.txt</a> 與 <a href="/deps.txt">/deps.txt</a>。',
     loading: '載入中…', failed: '載入失敗：', thPkg: '套件', thDesc: '說明', thVer: '版本', thSize: '體積', thBin: '二進位套件', thDist: 'Distfiles',
     h2deps: '::gentoo 依賴',
     depsLead: '收錄清單裡的 overlay 套件在執行時需要這些 gentoo 主倉庫的套件，本站因此一併建置發布。範圍只到這些套件的執行期依賴，不取代 Gentoo 官方 binhost。純文字查閱 <a href="/deps.txt">/deps.txt</a>。',
     depsCount: ' 個 ::gentoo 套件',
-    depsJump: '另有 {n} 個 ::gentoo 依賴，見本頁末尾 ↓',
+    depsJump: '跳到 ::gentoo 依賴（{n} 個）↓',
+    h2overlay: 'overlay 套件',
     depsStale: '本站的資料尚未更新到含這一項的版本，暫時無法列出',
     thSlot: 'Slot', countFmt: 'overlay {n} 個套件\n其中有二進位套件 {b} 個\n其中有 distfiles {d} 個', none: '沒有符合的套件。',
     lgBuilt: '已發布',
@@ -231,10 +236,11 @@ window.MIRROR_I18N = {
     h2deps: '::gentoo dependencies',
     depsLead: 'The overlay packages on the build list need these packages from the gentoo repository at runtime, so this host builds and publishes them too. The scope stops at those runtime dependencies; this is not a replacement for the official Gentoo binhost. Plain text at <a href="/deps.txt">/deps.txt</a>.',
     depsCount: ' ::gentoo packages',
-    depsJump: '{n} ::gentoo dependencies, at the end of this page ↓',
+    depsJump: 'Jump to the {n} ::gentoo dependencies ↓',
+    h2overlay: 'Overlay packages',
     depsStale: 'This host has not yet been updated to the data version that carries this list.',
     thSlot: 'Slot',
-    lead: 'The overlay packages on the build list are in the table below; the ::gentoo runtime dependencies they need are in a section at the end of this page. Both tables are rendered by a script; plain text at <a href="/packages.txt">/packages.txt</a> and <a href="/deps.txt">/deps.txt</a>. The legend below explains each tag; hover for detail.',
+    lead: 'This page holds two unrelated tables: the overlay packages on the build list, and the ::gentoo runtime dependencies they need. Search, filters and counts apply to the first one only. Plain text at <a href="/packages.txt">/packages.txt</a> and <a href="/deps.txt">/deps.txt</a>.',
     loading: 'Loading…', failed: 'Could not load: ', thPkg: 'Package', thDesc: 'Description', thVer: 'Version', thSize: 'Size', thBin: 'Binary', thDist: 'Distfiles',
     countFmt: 'overlay {n} packages\n{b} with a binary package\n{d} with distfiles', none: 'No matching packages.',
     lgBuilt: 'Published.',
@@ -481,9 +487,11 @@ function renderDeps(data) {
   jump.textContent = t("depsJump").replace("{n}", deps.length);
   jump.parentElement.hidden = !deps.length;
   rows.innerHTML = deps.map(function (d) {
-    return "<tr><td class=\"cp\">" + esc(d.cp) + "</td>" +
-           "<td class=\"ver\">" + esc(d.slot || "0") + "</td>" +
-           "<td class=\"ver\">" + esc(d.ver) + "</td></tr>";
+    const url = "https://packages.gentoo.org/packages/" + d.cp;
+    return '<tr><td class="name"><a href="' + esc(url) + '">' +
+           esc(d.cp).replace("/", "/<wbr>") + "</a></td>" +
+           '<td class="slot">' + esc(d.slot || "0") + "</td>" +
+           '<td class="ver">' + esc(d.ver) + "</td></tr>";
   }).join("");
 }
 

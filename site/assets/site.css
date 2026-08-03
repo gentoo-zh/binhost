@@ -394,6 +394,15 @@ button:active, .copy-chip:active { transform: translateY(1px); }
 
 .listing tbody tr:hover td { background: var(--hover); }
 
+/* the package name is the only column that can grow; without a width the
+   fixed-width columns get squeezed and the name draws over them */
+.deps-table { table-layout: fixed; width: 100%; }
+/* .listing td is nowrap, and wine slots carry a full version, so a fixed
+   layout would draw the text over the next column */
+.deps-table td, .deps-table th { white-space: normal; overflow-wrap: anywhere; }
+.deps-table td.slot, .deps-table th.slot { width: 4rem; }
+.deps-table td.ver, .deps-table th.ver { width: 8rem; }
+
 .facts {
   display: grid; grid-template-columns: auto auto;
   justify-content: start; gap: 0.35rem 1.75rem;
@@ -401,7 +410,11 @@ button:active, .copy-chip:active { transform: translateY(1px); }
   font-family: var(--mono); font-size: 0.78rem; line-height: 1.75; color: var(--fg-soft);
   min-height: calc(2 * 1.75 * 0.95rem + 0.35rem);
 }
-.facts span { display: inline-flex; align-items: baseline; gap: 0.3em; white-space: nowrap; }
+.facts > span { display: inline-flex; align-items: baseline; gap: 0.3em; flex-wrap: wrap; }
+.facts .part, .facts .when { display: inline-flex; align-items: baseline; gap: 0.3em;
+  white-space: nowrap; }
+.facts .sep { color: var(--fg-soft); opacity: 0.5; margin: 0 0.15em; }
+.facts .who { color: var(--fg-body); margin-right: 0.55em; white-space: nowrap; }
 .facts .num { color: var(--accent); font-size: 0.95rem; font-weight: 600; }
 .facts b { font-weight: 500; color: var(--fg-body); }
 
@@ -438,7 +451,7 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
   white-space: pre-line; line-height: 1.65;
 }
 #count { min-height: calc(3 * 1.65 * 0.82rem); }
-.jump { font-size: 0.82rem; margin: -0.4rem 0 1.1rem; }
+.jump { font-size: 0.82rem; margin: -0.5rem 0 1.4rem; }
 .jump a { color: var(--accent); text-decoration: none; }
 .jump a:hover { text-decoration: underline; }
 #updated { min-height: calc(2 * 1.65 * 0.82rem); }
@@ -544,6 +557,10 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 }
 
 @media (max-width: 34rem) {
+  /* leave the name column as much width as the other two can spare */
+  .deps-table td.slot, .deps-table th.slot { width: 3.4rem; }
+  .deps-table td.ver, .deps-table th.ver { width: 6.4rem; }
+
   /* two columns leave the timestamp too little room and it breaks mid-value */
   .facts { grid-template-columns: auto; gap: 0.1rem; }
   .facts .job { margin-top: 0.35rem; }
