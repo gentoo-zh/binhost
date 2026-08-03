@@ -79,7 +79,15 @@ has "本轮确认过就不回滚" '/run/binhost-firewall-confirmed 2>/dev/null)"
 has "回滚会还原备份" "nft -f /run/binhost-firewall-rollback.rules" "${tmp}/remote.sh"
 has "回滚脚本与会话脱钩" "setsid" "${tmp}/remote.sh"
 has "日志里的中文没有被反斜线破坏" 'logger -t binhost "防火墙在 300 秒内未确认' "${tmp}/remote.sh"
-lacks "远端脚本里不保存规则，留给确认之后" "rc-service nftables save" "${tmp}/remote.sh"
+grep -n 'nft -f /etc/nftables.conf' "${tmp}/remote.sh" > "${tmp}/apply2" || true
+grep -n 'rc-service nftables save' "${tmp}/remote.sh" > "${tmp}/save" || true
+applied2=$(cut -d: -f1 < "${tmp}/apply2" | head -1)
+saved=$(cut -d: -f1 < "${tmp}/save" | head -1)
+if [ -z "${saved}" ]; then
+    ok "套用规则之前不保存" 1 1
+else
+    ok "套用规则之前不保存" "$(( applied2 < saved ))" "1"
+fi
 
 grep -n 'nft -f /etc/nftables.conf' "${tmp}/remote.sh" > "${tmp}/apply" || true
 grep -n 'setsid' "${tmp}/remote.sh" > "${tmp}/arm" || true
@@ -118,6 +126,19 @@ rm -rf "${td}"
 
 has "武装时写下本轮世代" "sudo install -m644 /dev/stdin '/run/binhost-firewall-generation'" "${tmp}/remote.sh"
 has "定时器先比对世代" '/run/binhost-firewall-generation 2>/dev/null)" = "' "${tmp}/remote.sh"
+
+echo
+echo "== 确认排在套用规则之后、其余安装步骤之前"
+
+# install.sh splits the remote script in two, with the confirm in between
+first=$(grep -n 'rc-update add nftables default' "${ROOT}/deploy/install.sh" | head -1 | cut -d: -f1)
+conf=$(grep -n 'say "确认防火墙' "${ROOT}/deploy/install.sh" | head -1 | cut -d: -f1)
+nginx=$(grep -n "echo '--- nginx'" "${ROOT}/deploy/install.sh" | head -1 | cut -d: -f1)
+ok "确认排在防火墙之后" "$(( first < conf ))" "1"
+ok "确认排在 nginx 等步骤之前" "$(( conf < nginx ))" "1"
+has "先保存成功才写确认档" "rc-service nftables save >/dev/null 2>&1 &&" "${ROOT}/deploy/install.sh"
+has "回滚前先校验备份可用" "nft -c -f /run/binhost-firewall-rollback.rules" "${tmp}/remote.sh"
+has "回滚失败要记录到日志" "防火墙回滚失败" "${tmp}/remote.sh"
 
 echo
 echo "== 确认动作在本地执行，不在远端脚本里"

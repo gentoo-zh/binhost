@@ -83,13 +83,32 @@ printf %s '${GEN}' | sudo install -m644 /dev/stdin '${GEN_FILE}'
 sudo setsid sh -c 'sleep ${ROLLBACK_S}
     [ \"\$(cat ${GEN_FILE} 2>/dev/null)\" = \"${GEN}\" ] || exit 0
     [ \"\$(cat ${CONFIRM} 2>/dev/null)\" = \"${GEN}\" ] && exit 0
-    nft flush ruleset
-    nft -f ${ROLLBACK_FILE}
-    logger -t binhost \"防火墙在 ${ROLLBACK_S} 秒内未确认，已回滚到套用前的规则\"' \\
+    if nft -c -f ${ROLLBACK_FILE} && nft flush ruleset && nft -f ${ROLLBACK_FILE}; then
+        logger -t binhost \"防火墙在 ${ROLLBACK_S} 秒内未确认，已回滚到套用前的规则\"
+    else
+        logger -t binhost \"防火墙回滚失败，当前规则可能不可用，需要带外介入\"
+    fi' \\
     </dev/null >/dev/null 2>&1 &
 echo '    已备份现有规则，${ROLLBACK_S} 秒内未确认就自动回滚（本轮 ${GEN}）'
 sudo nft -f /etc/nftables.conf
 sudo rc-update add nftables default 2>/dev/null || true
+"
+
+say "确认防火墙没有把自己关在外面"
+if ssh -o ConnectTimeout=15 -o BatchMode=yes "${REMOTE}" \
+       "sudo rc-service nftables save >/dev/null 2>&1 &&
+        printf %s '${GEN}' | sudo install -m644 /dev/stdin '${CONFIRM}'"; then
+    echo "  另开一条连线成功，规则已保存"
+else
+    echo "!! 无法另开一条连线，或规则未能保存" >&2
+    echo "   ${ROLLBACK_S} 秒内会自动回滚到套用前的规则，之后再试" >&2
+    exit 1
+fi
+
+
+# shellcheck disable=SC2029  # tmp is meant to expand locally
+ssh "${REMOTE}" "set -euo pipefail
+cd '${tmp}'
 
 echo '--- nginx'
 sudo install -dm755 /etc/portage/package.use
@@ -150,7 +169,8 @@ mon='${MONITORS}'
 if [ -n \"\${mon}\" ]; then
     sudo nft flush set inet filter monitor_hosts
     for ip in \${mon}; do sudo nft add element inet filter monitor_hosts { \$ip }; done
-    echo \"  monitor_hosts: \${mon}（随后与防火墙规则一并保存）\"
+    sudo rc-service nftables save >/dev/null
+    echo \"  monitor_hosts: \${mon}\"
 fi
 printf %s \"\${mon}\" | sudo install -m644 /dev/stdin /usr/local/lib/binhost/MONITORS
 
@@ -190,17 +210,6 @@ sudo rc-service node_exporter restart >/dev/null 2>&1 ||
 [ \${svc_bad} -eq 0 ] || { echo "!! 关键服务未能启动" >&2; exit 1; }
 rm -rf '${tmp}'
 "
-
-say "确认防火墙没有把自己关在外面"
-if ssh -o ConnectTimeout=15 -o BatchMode=yes "${REMOTE}" \
-       "printf %s '${GEN}' | sudo install -m644 /dev/stdin '${CONFIRM}' &&
-        sudo rc-service nftables save >/dev/null 2>&1"; then
-    echo "  另开一条连线成功，规则已保存"
-else
-    echo "!! 无法另开一条连线，规则未保存" >&2
-    echo "   ${ROLLBACK_S} 秒内会自动回滚到套用前的规则，之后再试" >&2
-    exit 1
-fi
 
 say "完成"
 echo "站点内容由 deploy/site-sync.sh 自己拉，五分钟内会出现。"
