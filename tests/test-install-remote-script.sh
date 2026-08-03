@@ -132,7 +132,7 @@ echo "== 确认排在套用规则之后、其余安装步骤之前"
 
 # install.sh splits the remote script in two, with the confirm in between
 first=$(grep -n 'rc-update add nftables default' "${ROOT}/deploy/install.sh" | head -1 | cut -d: -f1)
-conf=$(grep -n 'say "确认防火墙' "${ROOT}/deploy/install.sh" | head -1 | cut -d: -f1)
+conf=$(grep -n 'say "验证新的 SSH 连线' "${ROOT}/deploy/install.sh" | head -1 | cut -d: -f1)
 nginx=$(grep -n "echo '--- nginx'" "${ROOT}/deploy/install.sh" | head -1 | cut -d: -f1)
 ok "确认排在防火墙之后" "$(( first < conf ))" "1"
 ok "确认排在 nginx 等步骤之前" "$(( conf < nginx ))" "1"
@@ -143,7 +143,7 @@ has "回滚失败要记录到日志" "防火墙回滚失败" "${tmp}/remote.sh"
 echo
 echo "== 确认动作在本地执行，不在远端脚本里"
 # shellcheck disable=SC2016  # we grep for a literal ${VAR}, not its value
-has "本地会另开一条连线确认" "sudo install -m644 /dev/stdin '\${CONFIRM}'" "${ROOT}/deploy/install.sh"
+has "本地会建立第二条连线确认" "sudo install -m644 /dev/stdin '\${CONFIRM}'" "${ROOT}/deploy/install.sh"
 has "确认之后才保存规则" "rc-service nftables save" "${ROOT}/deploy/install.sh"
 
 echo

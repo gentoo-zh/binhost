@@ -35,14 +35,15 @@ python3 build/validate.py /var/db/repos/gentoo-zh
 
 - **`RESTRICT=bindist`**：上游不允许再分发构建产物，CI 会直接拒绝。
 - **许可证不允许再分发**：构建时 `ACCEPT_LICENSE="-* @BINARY-REDISTRIBUTABLE"` 会拦截，但应在 PR 阶段即予说明。
-- **不属于本 overlay 的包**：此处仅分发 gentoo-zh overlay 自身的包，::gentoo 的包请使用[官方 binhost](https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart)。
+- **不属于本 overlay 的包**：收录清单只接受 gentoo-zh overlay 自身的包。::gentoo 的包不受理申请，但它若是已收录包的运行期依赖，会随之一并发布；其余请使用[官方 binhost](https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart)。
 
 ## 合并之后
 
 合并不等于立即可用。包在下一轮构建时产出，构建由 binhost-build.timer 在每日 16:00（Asia/Shanghai）触发，另有最多 15 分钟的随机延迟，产物签名后发布。
 
-清单决定构建什么。构建一个包会把它的依赖一并编出来，其中属于本 overlay 的
-那些也会随之发布，因此实际发布数多于清单条数。
+清单决定构建什么。构建一个包会把它的依赖一并编出来，其中属于本 overlay 的、
+以及运行期依赖里属于 `::gentoo` 的，都会随之发布，因此实际发布数多于清单条数。
+只在构建期用到的依赖不发布。
 
 ## 站点与脚本
 

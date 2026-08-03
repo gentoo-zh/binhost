@@ -30,7 +30,7 @@ jobs:
           set -euo pipefail
           python3 build/check-versions.py --retire /tmp/overlay build/packages.txt > /tmp/out.txt
           listed=$(grep -cvE '^\s*(#|$)' build/packages.txt)
-          echo ">>> 清单 ${listed} 个，该移出 $(wc -l < /tmp/out.txt) 个"
+          echo ">>> 清单 ${listed} 个，应移除 $(wc -l < /tmp/out.txt) 个"
           cat /tmp/out.txt
           {
             echo "rows<<EOF"

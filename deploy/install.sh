@@ -94,14 +94,14 @@ sudo nft -f /etc/nftables.conf
 sudo rc-update add nftables default 2>/dev/null || true
 "
 
-say "确认防火墙没有把自己关在外面"
+say "验证新的 SSH 连线仍可建立"
 if ssh -o ConnectTimeout=15 -o BatchMode=yes "${REMOTE}" \
        "sudo rc-service nftables save >/dev/null 2>&1 &&
         printf %s '${GEN}' | sudo install -m644 /dev/stdin '${CONFIRM}'"; then
-    echo "  另开一条连线成功，规则已保存"
+    echo "  第二条 SSH 连线已建立，规则已保存"
 else
-    echo "!! 无法另开一条连线，或规则未能保存" >&2
-    echo "   ${ROLLBACK_S} 秒内会自动回滚到套用前的规则，之后再试" >&2
+    echo "!! 无法建立第二条 SSH 连线，或规则未能保存" >&2
+    echo "   ${ROLLBACK_S} 秒内会自动回滚到套用前的规则，回滚完成后重新执行" >&2
     exit 1
 fi
 
@@ -212,7 +212,7 @@ rm -rf '${tmp}'
 "
 
 say "完成"
-echo "站点内容由 deploy/site-sync.sh 自己拉，五分钟内会出现。"
+echo "站点内容由 site-sync.sh 同步，五分钟内会出现。"
 echo "尚需手动设置：/etc/binhost/alert.conf、TLS 证书。"
 if [ -n "${MONITORS}" ]; then
     echo "monitor_hosts: ${MONITORS}"
