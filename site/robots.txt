@@ -1,14 +1,18 @@
-# 这里是镜像站，欢迎下游镜像取用。文件树不设限制：robots.txt 只是对愿意读它的
-# 客户端提要求，而 wget -m 恰好也读，禁掉 /distfiles/ 会把用 HTTP 递归同步的
-# 镜像一并挡在外面。搜索引擎不索引单个文件由 X-Robots-Tag 处理，那个头下载
-# 工具不认，不影响取用。
+# This is a mirror and downstream mirrors are welcome to take from it. The file
+# tree is not restricted: robots.txt only asks clients that choose to read it,
+# and wget -m happens to read it, so disallowing /distfiles/ would shut out
+# anyone syncing over HTTP. Keeping individual files out of search results is
+# handled by X-Robots-Tag, which download tools ignore.
 #
-# 整树同步用 rsync 更省两边的力气：
-#   rsync rsync://distfiles.gentoozh.org/gentoo-zh/
+# Syncing the whole tree over rsync costs both sides less:
+#
+#   rsync -a --delete rsync://distfiles.gentoozh.org/gentoo-zh/ /srv/mirror/
+#
+# Directory listings are one front end rendered per URL, so indexing them only
+# yields many entries with identical content; /_ls/ is the interface it reads
+# those listings from, not a page for people.
 
 User-agent: *
-# 目录浏览是同一份前端按 URL 渲染的，收录进去只会得到一堆内容相同的条目；
-# /_ls/ 是它取目录用的接口，不是给人看的。
 Disallow: /_ls/
 Disallow: /files/
 Allow: /

@@ -35,16 +35,60 @@ FILLER = [
 ]
 
 
+from html.parser import HTMLParser                        # noqa: E402
+
+VISIBLE_ATTRS = {"title", "aria-label", "placeholder", "alt", "content", "value"}
+SKIP_TAGS = {"script", "style"}
+SPECIMEN = "data-specimen"
+
+
+class Visible(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.parts = []
+        self.skip = 0
+        self.specimen = []
+
+    def handle_starttag(self, tag, attrs):
+        names = {n for n, _ in attrs}
+        if tag in SKIP_TAGS or SPECIMEN in names:
+            self.skip += 1
+            self.specimen.append(tag)
+            return
+        if self.skip:
+            self.specimen.append(tag)
+            return
+        for name, value in attrs:
+            if name in VISIBLE_ATTRS and value:
+                self.parts.append(value)
+
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+
+    def handle_endtag(self, tag):
+        if self.specimen and self.specimen[-1] == tag:
+            self.specimen.pop()
+            if not self.specimen:
+                self.skip = 0
+            elif tag in SKIP_TAGS:
+                self.skip = max(0, self.skip - 1)
+
+    def handle_data(self, data):
+        if not self.skip:
+            self.parts.append(data)
+
+
 def visible_text(html):
-    body = re.sub(r"<(script|style)\b[\s\S]*?</\1>", "", html)
-    body = re.sub(r"<title>[\s\S]*?</title>", "", body)
-    body = re.sub(r'<table class="spec"[\s\S]*?</table>', "", body)
-    body = re.sub(r'<[^>]*class="rule-dont"[^>]*>[\s\S]*?</[a-z]+>', "", body)
-    body = re.sub(r"<pre[\s\S]*?</pre>", "", body)
-    body = re.sub(r"<[^>]+>", " ", body)
+    """页面上人看得到的每一段文字：正文、属性、i18n 表里的串。
+
+    此前用正则整段删掉 title、pre、table.spec、rule-dont，属性也完全不看，
+    于是这些位置的用词从来没被检查过。
+    """
+    v = Visible()
+    v.feed(html)
     tables = "\n".join(re.findall(r"window\.MIRROR_I18N = \{[\s\S]*?\n\};", html))
     tables = re.sub(r"<[^>]+>", " ", tables)
-    return body + "\n" + tables
+    return "\n".join(v.parts) + "\n" + tables
 
 
 COLLOQUIAL = [
@@ -74,6 +118,7 @@ COLLOQUIAL_EMIT = COLLOQUIAL + [
 BARE_RUN = re.compile(r"跑(?![步道车馬马])")
 
 COMMENT = {
+    ".txt": r"#(.*)$",
     ".sh": r"#(.*)$",
     ".py": r"#(.*)$",
     ".js": r"//(.*)$",
@@ -88,12 +133,13 @@ COMMENT = {
     ".html": r"<!--(.*?)-->|/\*(.*?)\*/|(?<![:\w])//(.*)$",
 }
 
-NO_SUFFIX = {"cron.d-binhost", "logrotate-binhost", "rsyncd.conf", "nftables.conf"}
+NO_SUFFIX = {"cron.d-binhost", "logrotate-binhost", "rsyncd.conf",
+             "nftables.conf", "robots.txt", "excluded.txt", "packages.txt"}
 
 
-SELF = {"check-copy.py", "copy-fixtures.json"}
+SELF = {"check-copy.py", "copy-fixtures.json", "test-check-copy.py"}
 
-EMIT_SUFFIX = (".sh", ".py", ".js", ".yml", ".yaml", ".html", ".css")
+EMIT_SUFFIX = (".sh", ".py", ".js", ".yml", ".yaml", ".html", ".css", ".txt")
 CJK = re.compile(r'[\u4e00-\u9fff]')
 
 STRINGS = re.compile(
@@ -172,6 +218,14 @@ def comment_chunks(text, pat, blocks=False):
     return out
 
 
+DOCSTRING = re.compile(r'^\s*(?:[rubf]{0,2})("""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\')',
+                       re.M)
+
+
+def docstrings(text):
+    return [(text[:m.start()].count("\n") + 1, m.group(1)) for m in DOCSTRING.finditer(text)]
+
+
 def check_comments(root):
     bad = 0
     for f in sorted(pathlib.Path(root).rglob("*")):
@@ -190,7 +244,10 @@ def check_comments(root):
         except UnicodeDecodeError:
             continue
         hits = []
-        for line, chunk in comment_chunks(text, pat, f.suffix in BLOCK_LANGS):
+        chunks = comment_chunks(text, pat, f.suffix in BLOCK_LANGS)
+        if f.suffix == ".py":
+            chunks = chunks + docstrings(text)
+        for line, chunk in chunks:
             if pat is not None and CJK.search(chunk):
                 hits.append(f"{line}: 注释里有中文  {chunk.strip()[:60]}")
                 continue
@@ -230,6 +287,7 @@ def main(dirname):
         if chars and dashes > max(1, chars // 1000):
             hits.append(f"破折号 {dashes} 处，{chars} 字，超过每千字 1 次")
         for line in text.split("\n"):
+            line = line.replace(" — distfiles.gentoozh.org", "")
             if re.search(r"[\u4e00-\u9fff]", line) and re.search(r"\S — \S", line):
                 hits.append("中文里出现 em dash 加空格，改用全角——")
                 break

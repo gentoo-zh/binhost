@@ -43,12 +43,21 @@ with tempfile.TemporaryDirectory() as base:
     else:
         print("  ✓ 合规的样本不报错")
 
-for name, rel, body, _kind in CASES:
+for name, rel, body, kind in CASES:
     with tempfile.TemporaryDirectory() as base:
         for r, b in CLEAN.items():
             plant(base, r, b)
         plant(base, rel, CLEAN.get(rel, "") + body)
-        n, out = run(base)
+        if kind == "visible":
+            site = pathlib.Path(base) / "site"
+            site.mkdir(exist_ok=True)
+            (site / "probe.html").write_text(body)
+            with contextlib.redirect_stdout(io.StringIO()), \
+                 contextlib.redirect_stderr(io.StringIO()):
+                n = cc.main(str(site))
+            out = ""
+        else:
+            n, out = run(base)
         if n:
             print(f"  ✓ {name}")
         else:

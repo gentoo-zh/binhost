@@ -119,6 +119,42 @@
    "assets/util.js",
    "var m = '把命中的词圈出来';\n",
    "emitted"
+  ],
+  [
+   "HTML title 属性",
+   "page.html",
+   "<a title=\"值得注意的是这一点\">x</a>\n",
+   "visible"
+  ],
+  [
+   "HTML aria-label",
+   "page.html",
+   "<button aria-label=\"总的来说没问题\">x</button>\n",
+   "visible"
+  ],
+  [
+   "HTML meta content",
+   "page.html",
+   "<meta name=\"description\" content=\"这不仅是镜像更是服务\">\n",
+   "visible"
+  ],
+  [
+   "pre 里的中文说明",
+   "page.html",
+   "<pre>先跑一次配置</pre>\n",
+   "visible"
+  ],
+  [
+   ".txt 里的中文注释",
+   "notes.txt",
+   "# 这是中文注释\n",
+   "comment"
+  ],
+  [
+   "python docstring 里的中文",
+   "gen.py",
+   "def f():\n    \"\"\"中文说明\"\"\"\n    return 1\n",
+   "comment"
   ]
  ],
  "clean": {
@@ -128,7 +164,8 @@
   "wf.yml": "run: echo \"已发布\"\n",
   "page.html": "<!-- chrome:head -->\n<p>未找到请求的资源。</p>\n",
   "assets/site.css": "body{}\n",
-  "README.md": "在构建机上运行。\n"
+  "README.md": "在构建机上运行。\n",
+  "notes.txt": "# English note\n"
  },
  "site": {
   "ok": "<p>先执行一次配置</p>\n",
