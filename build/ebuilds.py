@@ -17,6 +17,15 @@ BUILD_ECLASS = {
 }
 PREBUILT_ECLASS = {"unpacker", "rpm", "java-pkg-simple"}
 
+COMPILE_PHASE = re.compile(r"^(src_configure|src_compile)\s*\(\)", re.M)
+
+
+def builds_from_source(text):
+    ecl = inherits(text)
+    if ecl & PREBUILT_ECLASS:
+        return False
+    return bool(ecl & BUILD_ECLASS) or bool(COMPILE_PHASE.search(text))
+
 
 def read_mask(overlay):
     p = pathlib.Path(overlay) / "profiles" / "package.mask"
