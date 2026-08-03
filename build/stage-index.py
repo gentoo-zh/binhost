@@ -13,8 +13,8 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from ebuilds import (                                       # noqa: E402
-    Masks, MetadataUnavailable, index_db, pinned_portdbapi, read_mask,
-    runtime_atoms, split_cpv, vercmp,
+    Masks, MetadataUnavailable, candidate_key, index_db, pinned_portdbapi,
+    read_mask, runtime_atoms, split_cpv, vercmp,
 )
 from portage.dep import paren_enclose                       # noqa: E402
 
@@ -118,45 +118,52 @@ def effective_bindist(cpv, f, lookup):
     return "yes" if "bindist" in restrict.split() else "no"
 
 
-def newest_per_slot(db, cpvs):
-    """One CPV per slot, the newest, which is what a resolver would install."""
+def preferred(db, matches):
+    """One candidate per slot: newest version, this overlay before the tree.
+
+    A resolver installs one package per slot, so pulling in every match would
+    publish versions nothing actually depends on. When both trees carry the
+    same version the overlay's build is the one our own packages were built
+    against.
+    """
     best = {}
-    for cpv in cpvs:
-        slot = db.aux_get(cpv, ["SLOT"])[0].split("/", 1)[0]
+    for pkg in matches:
+        slot = db.aux_get(pkg, ["SLOT"])[0].split("/", 1)[0]
         cur = best.get(slot)
-        if cur is None or vercmp(split_cpv(cpv)[1], split_cpv(cur)[1]) > 0:
-            best[slot] = cpv
-    return set(best.values())
+        if cur is None or _better(pkg, cur):
+            best[slot] = pkg
+    return {candidate_key(p) for p in best.values()}
 
 
-def runtime_closure(entries, seeds):
-    """(CPVs reachable from seeds, the atoms the index cannot satisfy).
+def _better(pkg, other):
+    cmp = vercmp(split_cpv(str(pkg))[1], split_cpv(str(other))[1])
+    if cmp != 0:
+        return cmp > 0
+    if (pkg.repo == "gentoo-zh") != (other.repo == "gentoo-zh"):
+        return pkg.repo == "gentoo-zh"
+    return (pkg.build_id or 0) > (other.build_id or 0)
+
+
+def runtime_closure(candidates, seeds):
+    """(candidate keys reachable from seeds, the atoms nothing can satisfy).
 
     Build-time dependencies are deliberately left out: someone installing a
     binary package never needs the compiler that produced it.
 
     Atoms keep their version, slot, repository and USE constraints and are
-    matched against the index by Portage. Of the matches only the newest in
-    each slot is taken, so a bare atom no longer drags in every older version
-    that happens to still be in the cache.
-
-    A || group is satisfied by the first branch the index can satisfy in full.
-    When no branch can be, the group is reported and nothing from it is
-    published, because publishing every branch would ship packages the seed
-    does not depend on.
+    matched by Portage against the candidates. Only publishable candidates are
+    passed in, so a || branch whose packages may not be redistributed simply
+    does not match and the next branch is taken.
 
     Whatever the build machine did not package, glibc and the rest of the
-    stage3 base, has no match and is reported too. A caller must not claim the
+    stage3 base, has no match and is reported. A caller must not claim the
     published set is dependency complete while that list is not empty.
     """
-    fields = {}
-    for f, _ in entries:
-        fields[f["CPV"]] = f
-    db = index_db(fields.values())
+    db = index_db(f for _bid, f, _s in candidates.values())
     unresolved = {}
 
     def resolve(node):
-        """The CPVs this node needs, or None when the index cannot satisfy it."""
+        """The candidates this node needs, or None when nothing satisfies it."""
         if isinstance(node, list):
             if node and node[0] == "||":
                 for branch in node[1:]:
@@ -174,27 +181,27 @@ def runtime_closure(entries, seeds):
         if node.blocker:
             return set()
         matched = db.match(node)
-        return newest_per_slot(db, matched) if matched else None
+        return preferred(db, matched) if matched else None
 
     seen = set()
     queue = list(seeds)
     while queue:
-        cpv = queue.pop()
-        if cpv in seen or cpv not in fields:
+        key = queue.pop()
+        if key in seen or key not in candidates:
             continue
-        seen.add(cpv)
-        text = " ".join(fields[cpv].get(k, "") for k in RUNTIME_FIELDS)
-        nodes = runtime_atoms(text)
+        seen.add(key)
+        f = candidates[key][1]
+        nodes = runtime_atoms(" ".join(f.get(k, "") for k in RUNTIME_FIELDS))
         if nodes is None:
-            unresolved.setdefault(f"<{cpv} 的依赖无法解析>", set()).add(cpv)
+            unresolved.setdefault(f"<{key[0]} 的依赖无法解析>", set()).add(key[0])
             continue
         for node in nodes:
             got = resolve(node)
             if got is None:
                 unresolved.setdefault(paren_enclose([node], opconvert=True),
-                                      set()).add(cpv)
+                                      set()).add(key[0])
                 continue
-            queue.extend(c for c in got if c not in seen)
+            queue.extend(k for k in got if k not in seen)
     return seen, unresolved
 
 
@@ -210,7 +217,6 @@ def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None):
             return [], 0, f"Portage metadata unavailable, nothing published: {e}", [], {}
     if with_deps is None:
         with_deps = os.environ.get("PUBLISH_DEPS", "1") == "1"
-    best = {}
     skipped = 0
     refused = []
 
@@ -218,6 +224,32 @@ def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None):
         if safe_path(f.get("PATH", "")) is None:
             return ([], skipped,
                     f"索引里的 PATH 不合法：{f['CPV']} -> {f.get('PATH', '')!r}", [], {})
+
+    # One candidate per (CPV, repository). Keying on the CPV alone lets a
+    # stanza from the other tree win on BUILD_ID and be published in place of
+    # the one an overlay seed authorised.
+    newest = {}
+    for f, s in entries:
+        key = (f["CPV"], f.get("REPO", ""))
+        bid = int(f.get("BUILD_ID", 0))
+        prev = newest.get(key)
+        if prev is None:
+            newest[key] = (bid, f, s)
+            continue
+        skipped += 1
+        if bid > prev[0]:
+            newest[key] = (bid, f, s)
+
+    # Publishing policy is applied before anything reads the candidates, so a
+    # dependency can never be resolved to something we then refuse to publish.
+    candidates = {}
+    for key, (bid, f, s) in newest.items():
+        state = effective_bindist(key[0], f, lookup)
+        if state != "no":
+            refused.append((key[0], str(safe_path(f.get("PATH", ""))), state))
+            skipped += 1
+            continue
+        candidates[key] = (bid, f, s)
 
     def ours(f):
         cpv = f["CPV"]
@@ -230,35 +262,14 @@ def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None):
             return False
         return not (ver is not None and masked.masks(cp, ver))
 
-    seeds = {f["CPV"] for f, _ in entries if ours(f)}
+    seeds = {key for key, (_b, f, _s) in candidates.items() if ours(f)}
     if with_deps:
-        keep, unresolved = runtime_closure(entries, seeds)
+        keep, unresolved = runtime_closure(candidates, seeds)
     else:
         keep, unresolved = set(seeds), {}
 
-    for f, s in entries:
-        cpv = f["CPV"]
-
-        if cpv not in keep:
-            skipped += 1
-            continue
-
-        state = effective_bindist(cpv, f, lookup)
-        if state != "no":
-            refused.append((cpv, str(safe_path(f.get("PATH", ""))), state))
-            skipped += 1
-            continue
-
-        bid = int(f.get("BUILD_ID", 0))
-        prev = best.get(cpv)
-        if prev and prev[0] >= bid:
-            skipped += 1
-            continue
-        if prev:
-            skipped += 1
-        best[cpv] = (bid, f, s)
-
-    return list(best.values()), skipped, None, refused, unresolved
+    skipped += len(candidates) - len(keep)
+    return ([candidates[k] for k in sorted(keep)], skipped, None, refused, unresolved)
 
 
 def rewrite_header(header, count, rev):

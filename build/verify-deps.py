@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-verify-deps.py <Packages>
+verify-deps.py <Packages> [--installed <cpv list>]
 
-Checks the published index against itself: every runtime dependency of every
-stanza must either match a published CPV, or name a package the index does not
-carry at all, which is the stage3 base the consumer already has.
+Checks an index against itself: every runtime dependency of every stanza must
+match a published CPV, or name a package the base system already provides.
 
-A dependency whose package is in the index but whose version, slot, repository
-or USE constraint no match satisfies is a real defect: staging published a
-version nothing can use. That is what makes this exit non-zero.
+The base system is read from --installed, the package list the build container
+wrote from its own vdb. Without that file there is no way to tell a dependency
+the consumer already has from one this round failed to build, so every atom the
+index cannot satisfy counts as a finding.
 """
 
 import pathlib
@@ -49,36 +49,59 @@ def parse(text):
     return out
 
 
-def cp_of(atom):
-    bare = re.sub(r"^[<>=~!]*", "", str(atom)).split("[")[0]
-    bare = bare.split("::")[0].split(":")[0]
-    return split_cpv(bare)[0]
+def read_installed(path):
+    """CPs the build root already provides, or None when not supplied."""
+    if not path:
+        return None
+    p = pathlib.Path(path)
+    if not p.exists():
+        raise FileNotFoundError(path)
+    out = set()
+    for line in p.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#"):
+            out.add(split_cpv(line)[0] or line)
+    return out
 
 
-def check(fields):
+def check(fields, installed=None):
     """(unsatisfied, absent, seen).
 
-    unsatisfied: atoms whose package is published but no version satisfies.
-    absent: atoms for packages the index does not carry at all.
+    unsatisfied: atoms nothing published satisfies and the base system does
+    not provide either. Both a wrong version of a carried package and a
+    package nobody has count here.
+    base: atoms the base system provides, which the consumer already has.
     seen: every atom the index names, so a stale exception can be told from
     one that simply does not apply to this index.
+
+    With no installed list every unmatched atom is a finding: guessing that an
+    absent package must be part of the base system is what hid failed builds.
     """
     db = index_db(fields)
-    carried = {split_cpv(f["CPV"])[0] for f in fields}
-    unsatisfied, absent, seen = {}, {}, set()
+    unsatisfied, base, seen = {}, {}, set()
 
-    def walk(node, cpv):
+    def walk(node, cpv, out):
+        """True when the index satisfies this node. Failures land in out."""
         if isinstance(node, list):
             if node and node[0] == "||":
-                return any(walk(b, cpv) for b in node[1:])
-            return all(walk(c, cpv) for c in node)
+                # Each branch gets its own diagnostics. A branch that failed is
+                # only a finding when no branch at all could be satisfied.
+                tries = []
+                for branch in node[1:]:
+                    mine = []
+                    if walk(branch, cpv, mine):
+                        return True
+                    tries.append(mine)
+                for mine in tries:
+                    out.extend(mine)
+                return False
+            return all([walk(c, cpv, out) for c in node])
         if node.blocker:
             return True
         seen.add(str(node))
         if db.match(node):
             return True
-        bucket = unsatisfied if cp_of(node) in carried else absent
-        bucket.setdefault(str(node), set()).add(cpv)
+        out.append(node)
         return False
 
     for f in fields:
@@ -88,29 +111,40 @@ def check(fields):
             unsatisfied.setdefault(f"<{cpv} 的依赖无法解析>", set()).add(cpv)
             continue
         for node in nodes:
-            walk(node, cpv)
-    return unsatisfied, absent, seen
+            missing = []
+            walk(node, cpv, missing)
+            for atom in missing:
+                by_base = installed is not None and atom.cp in installed
+                bucket = base if by_base else unsatisfied
+                bucket.setdefault(str(atom), set()).add(cpv)
+    return unsatisfied, base, seen
 
 
-def main(path, exceptions=None):
+def main(path, exceptions=None, installed=None):
     fields = parse(pathlib.Path(path).read_text())
     if not fields:
         sys.exit(f"{path} 中没有任何 stanza")
-    unsatisfied, absent, seen = check(fields)
+    try:
+        have = read_installed(installed)
+    except FileNotFoundError as e:
+        sys.exit(f"读不到基础系统清单 {e}，无法判定缺失的依赖，本轮不通过")
+    unsatisfied, base, seen = check(fields, have)
     known = read_exceptions(exceptions)
 
     accepted = {a for a in unsatisfied if a in known}
     stale = sorted((set(known) & seen) - set(unsatisfied))
     unsatisfied = {a: w for a, w in unsatisfied.items() if a not in known}
 
-    print(f"索引 {len(fields)} 个，运行期依赖里 {len(absent)} 个原子指向索引不收录的包，"
-          f"由基础系统提供；{len(accepted)} 个是已列出的例外")
+    if have is None:
+        print("!! 未提供基础系统清单，索引之外的依赖一律计为未满足", file=sys.stderr)
+    print(f"索引 {len(fields)} 个，{len(base)} 个原子由基础系统提供，"
+          f"{len(accepted)} 个是已列出的例外")
     for atom in stale:
         print(f"!! 例外 {atom} 本轮已能满足，应从 dep-exceptions.txt 删除",
               file=sys.stderr)
     if unsatisfied:
-        print(f"!! {len(unsatisfied)} 个原子的包已发布，但没有一个已发布版本满足它",
-              file=sys.stderr)
+        print(f"!! {len(unsatisfied)} 个运行期依赖没有一个已发布版本满足，"
+              f"基础系统也不提供", file=sys.stderr)
         for atom, who in sorted(unsatisfied.items())[:20]:
             print(f"   {atom}  <- {' '.join(sorted(who)[:3])}", file=sys.stderr)
         return 1
@@ -118,5 +152,11 @@ def main(path, exceptions=None):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1] if len(sys.argv) > 1
-                  else "/srv/pub/binpkgs/x86-64/Packages"))
+    args = sys.argv[1:]
+    inst = None
+    if "--installed" in args:
+        i = args.index("--installed")
+        inst = args[i + 1] if i + 1 < len(args) else None
+        del args[i:i + 2]
+    sys.exit(main(args[0] if args else "/srv/pub/binpkgs/x86-64/Packages",
+                  installed=inst))

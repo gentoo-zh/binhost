@@ -133,6 +133,7 @@ if [[ -s ${QUARANTINE} ]]; then
     echo ">>> 实际移除 ${gone} 个"
 fi
 
+rsync -a "${STAGE}/installed.txt" "${REMOTE}:${REMOTE_ROOT}/installed.txt"
 rsync -a "${STAGE}/Packages" "${REMOTE}:${REMOTE_ROOT}/.Packages.new"
 rsync -a "${STAGE}/Packages.gz" "${REMOTE}:${REMOTE_ROOT}/.Packages.gz.new"
 
