@@ -146,7 +146,7 @@ def build_overlay(root, packages, src_style="url"):
 
 
 def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False,
-             grace=0, src_style="url"):
+             grace=0, src_style="url", ledger_blocked=False):
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
         ov = build_overlay(d / "overlay", packages, src_style)
@@ -162,6 +162,10 @@ def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False,
         audit.RECYCLE = str(d / "recycle")
         audit.GRACE_SECONDS = grace
         audit.LEDGER = str(d / "reaped.json")
+        if ledger_blocked:
+            blocked = d / "noledger"
+            blocked.write_text("不是目录")
+            audit.LEDGER = str(blocked / "reaped.json")
         if preload:
             (d / "recycle").mkdir(parents=True, exist_ok=True)
             for name, content in preload.items():
@@ -172,7 +176,7 @@ def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False,
             audit.RECYCLE = str(blocked / "recycle")
         buf = io.StringIO()
         try:
-            with contextlib.redirect_stdout(buf):
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
                 rc = audit.main(str(ov), str(d / "dist"),
                                 aux=fixture_aux(packages, src_style))
         finally:
@@ -310,6 +314,35 @@ def _budget_rounds():
         audit.LEDGER, audit.STATE, audit.RECYCLE, audit.GRACE_SECONDS = old
     return got, cap
 
+
+def _lock_unavailable():
+    """The ledger directory is a plain file, so the lock cannot be created."""
+    import tempfile as _t, pathlib as _p
+    with _t.TemporaryDirectory() as tmp:
+        d = _p.Path(tmp)
+        blocked = d / "blocked"
+        blocked.write_text("不是目录")
+        old = audit.LEDGER
+        audit.LEDGER = str(blocked / "reaped.json")
+        try:
+            audit.recent_deletions(0)
+        except audit.LedgerError as e:
+            return str(e)
+        except Exception as e:                              # noqa: BLE001
+            return f"其他异常 {type(e).__name__}"
+        finally:
+            audit.LEDGER = old
+        return None
+
+
+case("拿不到帐本锁时抛错，不是照常清理", lambda: (
+    (lambda m: m is not None and "本轮不做任何清理" in m)(_lock_unavailable())))
+
+case("拿不到帐本锁时整轮拒绝清理", lambda: (
+    lambda r: r[0] == 1 and r[2] == [] and "拒绝清理" in r[3]
+)(run_main({f"app-misc/p{i}": {"1.0": [f"p{i}.tar.gz"]} for i in range(20)},
+           [f"p{i}.tar.gz" for i in range(20)] + ["old.tar.gz"],
+           ledger_blocked=True)))
 
 case("累计额度在删除之前就生效", lambda: (
     lambda r: sum(r[0]) <= r[1])(_budget_rounds()))

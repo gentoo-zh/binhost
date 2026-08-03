@@ -30,14 +30,17 @@ if (( ${#want[@]} == 0 || ${#got[@]} == 0 || ${#unexpected[@]} )); then
     exit 1
 fi
 
-rsync -a --checksum --safe-links --delete "${SRC}/assets/" "${DEST}/assets/"
-rsync -a --checksum --safe-links "${SRC}/gentoo-zh-binhost.asc" "${DEST}/"
-rsync -a --checksum --safe-links --include='*.html' --include='robots.txt' --exclude='*' \
+# One rsync, so a failure cannot leave assets from one generation beside pages
+# from another. --delay-updates renames everything in at the end, which keeps
+# that window down to the renames themselves.
+#
+# --delete only considers what the includes select. DEST also holds the
+# published packages, and rsync does not delete excluded paths unless asked
+# with --delete-excluded, so those stay.
+rsync -a --checksum --safe-links --delete --delay-updates \
+    --include='/assets/***' \
+    --include='/gentoo-zh-binhost.asc' \
+    --include='/*.html' \
+    --include='/robots.txt' \
+    --exclude='*' \
     "${SRC}/" "${DEST}/"
-
-for f in "${DEST}"/*.html; do
-    [ -e "${f}" ] || continue
-    [ -e "${SRC}/$(basename "${f}")" ] && continue
-    echo "  移除来源中已不存在的页面：$(basename "${f}")"
-    rm -f "${f}"
-done
