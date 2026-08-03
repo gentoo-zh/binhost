@@ -74,7 +74,7 @@ def main(overlay, index, listfile):
     have = published(index)
 
     masked = read_mask(overlay)
-    stale, absent, gone, blocked, live = [], [], [], [], []
+    stale, absent, gone, blocked, live, banned = [], [], [], [], [], []
     for cp in sorted(wanted):
         pkgdir = overlay / cp
         if not pkgdir.is_dir():
@@ -87,6 +87,9 @@ def main(overlay, index, listfile):
         if eb is None:
             live.append(cp)
             continue
+        if restricts_bindist(eb.read_text(errors="ignore")):
+            banned.append(cp)
+            continue
         cur = version_of(eb, pkgdir.name)
         got = have.get(cp)
         if got is None:
@@ -98,7 +101,8 @@ def main(overlay, index, listfile):
 
     print(f">>> 版本核对：清单 {len(wanted)}，索引 {len(have)}，落后 {len(stale)}，"
           f"缺 {len(absent)}，overlay 里没有 {len(gone)}，已屏蔽 {len(blocked)}，"
-          f"只有 9999 的 {len(live)}，未收录的新包 {len(fresh)}")
+          f"只有 9999 的 {len(live)}，不可再散布的 {len(banned)}，"
+          f"未收录的新包 {len(fresh)}")
     for cp, got, cur in stale:
         print(f"    落后   {cp}  索引 {got}  overlay {cur}")
     for cp, cur in absent:
@@ -109,10 +113,12 @@ def main(overlay, index, listfile):
         print(f"    已屏蔽 {cp}  overlay 的 package.mask 屏蔽了它，该移出清单")
     for cp in live:
         print(f"    仅 9999 {cp}  只有 live ebuild，建不出可发布的版本")
+    for cp in banned:
+        print(f"    不可散布 {cp}  上游加了 RESTRICT=bindist，已跳过发布，该移出清单")
     for cp, ver in fresh:
         print(f"    新包   {cp}  {ver}  有构建系统但不在清单，需要判断是否收录")
 
-    return 1 if (stale or absent or gone or blocked or live) else 0
+    return 1 if (stale or absent or gone or blocked or live or banned) else 0
 
 
 def list_newcomers(overlay, listfile):

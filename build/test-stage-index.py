@@ -67,11 +67,11 @@ case("混合输入时仅保留本仓库的产物", lambda: (
     cpvs(run([stanza("app-misc/a-1"), stanza("dev-libs/b-1", repo="gentoo")])[0])
     == ["app-misc/a-1"]))
 
-case("RESTRICT=bindist 中止本轮", lambda: (
-    run([stanza("app-misc/a-1", restrict="bindist mirror")])[2] is not None))
+case("RESTRICT=bindist 不进索引", lambda: (
+    cpvs(run([stanza("app-misc/a-1", restrict="bindist mirror")])[0]) == []))
 
-case("RESTRICT 为其他值时不中止", lambda: (
-    run([stanza("app-misc/a-1", restrict="mirror strip")])[2] is None))
+case("RESTRICT 为其他值时照常收录", lambda: (
+    cpvs(run([stanza("app-misc/a-1", restrict="mirror strip")])[0]) == ["app-misc/a-1"]))
 
 case("同一版本多实例仅保留 BUILD_ID 最大者", lambda: (
     len(run([stanza("app-misc/a-1", build_id=1),
@@ -257,6 +257,17 @@ case("目的地的目标档案是 symlink 时拒绝且不写出去",
      lambda: (lambda r: r[0] not in (0, None) and not r[1])(_dest_escape("file")))
 case("目的地干净时照常写入",
      lambda: _dest_escape("clean")[0] in (0, None))
+
+case("某个包被加了 bindist 时只跳过它", lambda: (
+    lambda r: cpvs(r[0]) == ["app-misc/a-1", "app-misc/c-1"]
+              and r[2] is None and r[3] == ["app-misc/b-1"]
+)(run([stanza("app-misc/a-1"),
+       stanza("app-misc/b-1", restrict="bindist"),
+       stanza("app-misc/c-1")])))
+
+case("bindist 的那一个不会进索引", lambda: (
+    "app-misc/b-1" not in cpvs(run([stanza("app-misc/a-1"),
+                                    stanza("app-misc/b-1", restrict="bindist")])[0])))
 
 bad = 0
 for name, fn in CASES:
