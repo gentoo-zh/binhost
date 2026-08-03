@@ -147,9 +147,20 @@ sudo rc-update add cronie default 2>/dev/null || true
 sudo rc-update add rsyncd default 2>/dev/null || true
 sudo rc-update add nginx  default 2>/dev/null || true
 svc_bad=0
-for s in cronie rsyncd nginx; do
-    sudo rc-service \$s restart >/dev/null 2>&1 || { echo "    !! \$s 未能启动"; svc_bad=1; }
+for s in cronie rsyncd; do
+    if sudo rc-service \$s status >/dev/null 2>&1; then
+        echo "    \$s 已在运行，配置由它自己每次读取，不重启"
+    else
+        sudo rc-service \$s start >/dev/null 2>&1 || { echo "    !! \$s 未能启动"; svc_bad=1; }
+    fi
 done
+if sudo rc-service nginx status >/dev/null 2>&1; then
+    sudo rc-service nginx reload >/dev/null 2>&1 ||
+        { echo "    !! nginx 未能重新载入配置"; svc_bad=1; }
+    echo "    nginx 已重新载入配置，进行中的下载不受影响"
+else
+    sudo rc-service nginx start >/dev/null 2>&1 || { echo "    !! nginx 未能启动"; svc_bad=1; }
+fi
 sudo rc-service node_exporter restart >/dev/null 2>&1 ||
     echo "    !! node_exporter 未能启动（可选）"
 [ \${svc_bad} -eq 0 ] || { echo "!! 关键服务未能启动" >&2; exit 1; }
