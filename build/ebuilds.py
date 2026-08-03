@@ -126,18 +126,32 @@ def index_db(fields):
 
     Version, revision, slot, sub-slot, repository and USE dependencies are all
     handled by Portage's own matching rather than by taking atoms apart here.
+
+    Matches come back as objects carrying repo and build_id, which is what lets
+    a caller find the exact stanza again. The same CPV can exist in both trees,
+    so multi_instance is on; without it one silently replaces the other.
     """
     import portage
     from portage.dbapi.virtual import fakedbapi
     # exclusive_slots would keep only the newest build per slot, and then an
     # exact atom on an older cached version would match nothing at all.
-    db = fakedbapi(settings=portage.settings, exclusive_slots=False)
+    db = fakedbapi(settings=portage.settings, exclusive_slots=False,
+                   multi_instance=True)
     for f in fields:
         meta = {k: f.get(k, "") for k in INDEX_FIELDS}
         meta["repository"] = f.get("REPO", "")
-        cpv = _pkg_str(f["CPV"], metadata=meta, settings=portage.settings)
+        meta["BUILD_ID"] = f.get("BUILD_ID", "0")
+        meta["BUILD_TIME"] = f.get("BUILD_TIME", "0")
+        cpv = _pkg_str(f["CPV"], metadata=meta, settings=portage.settings,
+                       repo=meta["repository"] or None,
+                       build_id=int(meta["BUILD_ID"] or 0))
         db.cpv_inject(cpv, metadata=meta)
     return db
+
+
+def candidate_key(pkg):
+    """(CPV, REPO) for a match, which is how a stanza is identified."""
+    return str(pkg), getattr(pkg, "repo", "") or ""
 
 
 def version_of(ebuild, pn):

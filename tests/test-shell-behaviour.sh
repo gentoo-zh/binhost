@@ -75,6 +75,7 @@ stage_index() {
         done
     } > "${dir}/stage/Packages"
     gzip -c "${dir}/stage/Packages" > "${dir}/stage/Packages.gz"
+    printf 'sys-libs/glibc-2.43-r2\n' > "${dir}/stage/installed.txt"
 }
 
 echo "== 两条发布路径确实执行同一支 publish-site.sh"

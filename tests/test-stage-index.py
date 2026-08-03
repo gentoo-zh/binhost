@@ -422,6 +422,7 @@ def deps_excluded():
 LIB = stanza("dev-libs/lib-1", repo="gentoo")
 DEEP = stanza("dev-libs/deep-1", repo="gentoo")
 TOOL = stanza("dev-util/tool-1", repo="gentoo")
+OTHER = stanza("dev-libs/other-1", repo="gentoo")
 UNUSED = stanza("app-misc/unused-1", repo="gentoo")
 
 case("不开依赖时，::gentoo 的一律不发", lambda: (
@@ -513,6 +514,53 @@ case("万用版本匹配带 revision 的版本", lambda: (
     deps([stanza("app-misc/a-1", rdepend="=dev-libs/lib-1*"),
           stanza("dev-libs/lib-1-r1", repo="gentoo")])
     == ["app-misc/a-1", "dev-libs/lib-1-r1"]))
+
+case("同一个 CPV 跨仓库时，发布的是种子所在仓库的那一份", lambda: (
+    (lambda r: [(f["CPV"], f["REPO"]) for _b, f, _s in r[0]]
+     == [("app-misc/a-1", "gentoo-zh")])(
+        run([stanza("app-misc/a-1", repo="gentoo-zh", build_id=1),
+             stanza("app-misc/a-1", repo="gentoo", build_id=2)], with_deps=True))))
+
+case("BUILD_ID 只在同一个仓库内比较", lambda: (
+    (lambda r: sorted((f["REPO"], b) for b, f, _s in r[0])
+     == [("gentoo-zh", 15)])(
+        run([stanza("app-misc/a-1", repo="gentoo-zh", build_id=9),
+             stanza("app-misc/a-1", repo="gentoo-zh", build_id=15)], with_deps=True))))
+
+case("依赖同时存在于两个仓库时，取 overlay 的那一份", lambda: (
+    (lambda r: sorted((f["CPV"], f["REPO"]) for _b, f, _s in r[0])
+     == [("app-misc/a-1", "gentoo-zh"), ("dev-libs/lib-1", "gentoo-zh")])(
+        run([stanza("app-misc/a-1", rdepend="dev-libs/lib"),
+             stanza("dev-libs/lib-1", repo="gentoo-zh", build_id=1),
+             stanza("dev-libs/lib-1", repo="gentoo", build_id=2)],
+            overlay_has=["app-misc/a-1"]))))
+
+case("::gentoo 限定的依赖取主树那一份", lambda: (
+    (lambda r: sorted((f["CPV"], f["REPO"]) for _b, f, _s in r[0])
+     == [("app-misc/a-1", "gentoo-zh"), ("dev-libs/lib-1", "gentoo")])(
+        run([stanza("app-misc/a-1", rdepend="dev-libs/lib::gentoo"),
+             stanza("dev-libs/lib-1", repo="gentoo-zh", build_id=1),
+             stanza("dev-libs/lib-1", repo="gentoo", build_id=2)],
+            overlay_has=["app-misc/a-1"]))))
+
+case("闭包读的是最终要发布的那一份 stanza", lambda: (
+    deps([stanza("app-misc/a-1", build_id=15, rdepend="dev-libs/other"),
+          stanza("app-misc/a-1", build_id=9, rdepend="dev-libs/lib"),
+          LIB, OTHER])
+    == ["app-misc/a-1", "dev-libs/other-1"]))
+
+case("或组第一个分支不可散布时改选第二个", lambda: (
+    sorted(f["CPV"] for _b, f, _s in run(
+        [stanza("app-misc/a-1", rdepend="|| ( dev-libs/lib dev-libs/deep )"),
+         LIB, DEEP], with_deps=True,
+        restricts={("dev-libs/lib-1", "gentoo"): "bindist"})[0])
+    == ["app-misc/a-1", "dev-libs/deep-1"]))
+
+case("不可散布的候选不进闭包，也不因此少发别的", lambda: (
+    (lambda r: [c for c, _p, _s in r[3]] == ["dev-libs/lib-1"])(
+        run([stanza("app-misc/a-1", rdepend="|| ( dev-libs/lib dev-libs/deep )"),
+             LIB, DEEP], with_deps=True,
+            restricts={("dev-libs/lib-1", "gentoo"): "bindist"}))))
 
 case("精确版本指到旧的那一个时也要发", lambda: (
     deps([stanza("app-misc/a-1", rdepend="=dev-libs/lib-1"),

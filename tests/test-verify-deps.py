@@ -29,21 +29,30 @@ def stanza(cpv, repo="gentoo-zh", rdepend=None, slot="0", use=None, iuse=None,
     return "\n".join(lines)
 
 
-def run(stanzas):
+def run(stanzas, installed=None):
     fields = verify.parse(HEADER + "\n\n" + "\n\n".join(stanzas) + "\n")
-    return verify.check(fields)
+    return verify.check(fields, installed)
 
 
-def run_main(stanzas, exceptions=None):
+def run_main(stanzas, exceptions=None, installed="", no_installed_file=False):
     import contextlib, io, tempfile
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
         (d / "Packages").write_text(HEADER + "\n\n" + "\n\n".join(stanzas) + "\n")
         exc = d / "exc.txt"
         exc.write_text(exceptions or "")
+        inst = str(d / "installed.txt")
+        if no_installed_file:
+            inst = str(d / "missing.txt")
+        else:
+            (d / "installed.txt").write_text(installed)
         out, err = io.StringIO(), io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            rc = verify.main(str(d / "Packages"), exceptions=str(exc))
+        try:
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                rc = verify.main(str(d / "Packages"), exceptions=str(exc),
+                                 installed=inst)
+        except SystemExit as e:
+            return 2, out.getvalue(), f"{err.getvalue()}{e}"
         return rc, out.getvalue(), err.getvalue()
 
 
@@ -57,10 +66,19 @@ def case(name, fn):
 case("依赖有可匹配的已发布版本时通过", lambda: (
     (lambda r: not r[0] and not r[1])(
         run([stanza("app-misc/a-1", rdepend=">=dev-libs/lib-1"),
-             stanza("dev-libs/lib-2", repo="gentoo")]))))
+             stanza("dev-libs/lib-2", repo="gentoo")], installed=set()))))
 
-case("索引不收录的包算基础系统，不算缺陷", lambda: (
+case("基础系统清单里有的包不算缺陷", lambda: (
     (lambda r: not r[0] and set(r[1]) == {"sys-libs/glibc"})(
+        run([stanza("app-misc/a-1", rdepend="sys-libs/glibc")],
+            installed={"sys-libs/glibc"}))))
+
+case("索引与基础系统都没有的包算缺陷，不再默认成基础系统", lambda: (
+    (lambda r: set(r[0]) == {"sys-libs/glibc"} and not r[1])(
+        run([stanza("app-misc/a-1", rdepend="sys-libs/glibc")], installed=set()))))
+
+case("没有基础系统清单时一律计为未满足", lambda: (
+    (lambda r: set(r[0]) == {"sys-libs/glibc"} and not r[1])(
         run([stanza("app-misc/a-1", rdepend="sys-libs/glibc")]))))
 
 case("包在索引里但版本不满足时算缺陷", lambda: (
@@ -78,6 +96,22 @@ case("USE 依赖不满足时算缺陷", lambda: (
         run([stanza("app-misc/a-1", rdepend="dev-libs/lib[foo]"),
              stanza("dev-libs/lib-1", repo="gentoo", use="bar", iuse="foo bar")]))))
 
+case("或组后面的分支满足时，前面失败的分支不算发现", lambda: (
+    (lambda r: not r[0] and not r[1])(
+        run([stanza("app-misc/a-1", rdepend="|| ( >=dev-libs/lib-9 dev-libs/other )"),
+             stanza("dev-libs/lib-1", repo="gentoo"),
+             stanza("dev-libs/other-1", repo="gentoo")]))))
+
+case("万用版本按 Atom 的 cp 归类，不是当成没这个包", lambda: (
+    (lambda r: set(r[0]) == {"=dev-libs/a-2*"} and not r[1])(
+        run([stanza("app-misc/a-1", rdepend="=dev-libs/a-2*"),
+             stanza("dev-libs/a-1", repo="gentoo")]))))
+
+case("带 slot 与 use 的原子同样按 cp 归类", lambda: (
+    (lambda r: set(r[0]) == {"dev-libs/a:9"})(
+        run([stanza("app-misc/a-1", rdepend="dev-libs/a:9"),
+             stanza("dev-libs/a-1", repo="gentoo")]))))
+
 case("或组只要有一个分支满足就算通过", lambda: (
     (lambda r: not r[0])(
         run([stanza("app-misc/a-1", rdepend="|| ( dev-libs/lib sys-libs/glibc )"),
@@ -86,7 +120,8 @@ case("或组只要有一个分支满足就算通过", lambda: (
 case("或组全部分支都不满足时，缺陷与基础系统分开记", lambda: (
     (lambda r: set(r[0]) == {">=dev-libs/lib-9"} and set(r[1]) == {"sys-libs/glibc"})(
         run([stanza("app-misc/a-1", rdepend="|| ( >=dev-libs/lib-9 sys-libs/glibc )"),
-             stanza("dev-libs/lib-1", repo="gentoo")]))))
+             stanza("dev-libs/lib-1", repo="gentoo")],
+            installed={"sys-libs/glibc"}))))
 
 case("blocker 不算依赖", lambda: (
     (lambda r: not r[0] and not r[1])(
@@ -108,6 +143,15 @@ case("精确版本指到旧的那一个时算满足", lambda: (
         run([stanza("app-misc/a-1", rdepend="=dev-libs/lib-1"),
              stanza("dev-libs/lib-1", repo="gentoo"),
              stanza("dev-libs/lib-2", repo="gentoo")]))))
+
+case("基础系统清单不存在时直接判不通过", lambda: (
+    (lambda r: r[0] == 2 and "读不到基础系统清单" in r[2])(
+        run_main([stanza("app-misc/a-1", rdepend="sys-libs/glibc")],
+                 no_installed_file=True))))
+
+case("清单里列 CPV 时按 cp 归类", lambda: (
+    run_main([stanza("app-misc/a-1", rdepend="sys-libs/glibc")],
+             installed="sys-libs/glibc-2.43-r2\n")[0] == 0))
 
 case("不满足时退出码非零", lambda: (
     run_main([stanza("app-misc/a-1", rdepend=">=dev-libs/lib-2"),

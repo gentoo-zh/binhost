@@ -128,6 +128,12 @@ fi
 
 emaint binhost --fix
 
+# What the root already provides, as CPVs. A dependency the index does not
+# carry is only acceptable when it is in here. Read straight from the vdb so
+# this does not depend on portage-utils being installed.
+( cd /var/db/pkg && ls -d ./*/* 2>/dev/null | sed 's:^\./::' ) | sort -u \
+    > /var/log/binhost/installed.txt
+
 if (( ${#failed[@]} )); then
     printf '!!! %d failed:\n' "${#failed[@]}"
     printf '      %s\n' "${failed[@]}"
@@ -141,6 +147,16 @@ install -dm755 "${STAGE}.new"
 OVERLAY_REV="$(git -C "${OVERLAY}" rev-parse HEAD 2>/dev/null || echo '')" \
     GENTOO_TREE="${TREE}" \
     python3 "$(dirname "$0")/stage-index.py" "${PKGDIR}" "${STAGE}.new" "${OVERLAY}"
+
+install -m644 "${LOGDIR}/installed.txt" "${STAGE}.new/installed.txt" 2>/dev/null ||
+    die "容器没有写出 installed.txt，无法判定哪些依赖由基础系统提供"
+
+# The staged index has to satisfy its own runtime dependencies before it can
+# replace the public one. Verifying after publishing means a broken generation
+# is already reachable.
+python3 "$(dirname "$0")/verify-deps.py" "${STAGE}.new/Packages" \
+    --installed "${STAGE}.new/installed.txt" ||
+    die "staged 索引没有通过依赖验证，本轮不发布"
 
 gzip -kf "${STAGE}.new/Packages"
 
