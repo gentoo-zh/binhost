@@ -4,7 +4,9 @@ import subprocess
 import sys
 import tempfile
 
-SCRIPT = pathlib.Path(__file__).with_name("add-package.py")
+BUILD = pathlib.Path(__file__).resolve().parent.parent / "build"
+
+SCRIPT = BUILD / "add-package.py"
 
 failed = 0
 

@@ -5,7 +5,7 @@ import sys
 import tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent
-SCRIPT = HERE / "classify-failures.py"
+SCRIPT = HERE.parent / "build" / "classify-failures.py"
 
 failed = 0
 

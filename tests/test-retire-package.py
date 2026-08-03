@@ -4,7 +4,9 @@ import subprocess
 import sys
 import tempfile
 
-SCRIPT = pathlib.Path(__file__).with_name("retire-package.py")
+BUILD = pathlib.Path(__file__).resolve().parent.parent / "build"
+
+SCRIPT = BUILD / "retire-package.py"
 
 BASE = ["app-misc/aaa", "net-misc/geo", "net-proxy/bore", "sys-apps/pacman"]
 EXCL = "# 不收录的包和原因\napp-misc/old\t上游停更\n"

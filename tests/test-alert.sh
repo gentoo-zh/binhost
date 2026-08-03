@@ -2,7 +2,7 @@
 
 set -uo pipefail
 
-HERE="$(cd "$(dirname "$0")" && pwd)"
+HERE="$(cd "$(dirname "$0")/../build" && pwd)"
 tmp=$(mktemp -d)
 trap 'rm -rf "${tmp}"' EXIT
 

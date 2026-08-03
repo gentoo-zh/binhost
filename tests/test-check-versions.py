@@ -5,7 +5,9 @@ import subprocess
 import sys
 import tempfile
 
-CHECK = str(pathlib.Path(__file__).with_name("check-versions.py"))
+BUILD = pathlib.Path(__file__).resolve().parent.parent / "build"
+
+CHECK = str(BUILD / "check-versions.py")
 def make_overlay(root, packages, masked=(), body=None):
     root = pathlib.Path(root)
     for cp, vers in packages.items():

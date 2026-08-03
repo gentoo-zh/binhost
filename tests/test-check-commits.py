@@ -4,7 +4,9 @@ import subprocess
 import sys
 import tempfile
 
-CHECK = str(pathlib.Path(__file__).with_name("check-commits.py"))
+BUILD = pathlib.Path(__file__).resolve().parent.parent / "build"
+
+CHECK = str(BUILD / "check-commits.py")
 
 
 def run(subject, body="", files=("build/stage-index.py",)):
@@ -31,7 +33,7 @@ CASES = [
     ("目录名当 scope", "build: change three scripts together", "",
      ("build/a.py", "build/b.py"), True),
     ("一族文件用横线前那段", "test: change two cases together", "",
-     ("build/test-validate.py", "build/test-stage-index.py"), True),
+     ("tests/test-validate.py", "tests/test-stage-index.py"), True),
     (".github 用 ci", "ci: add a job", "", (".github/workflows/validate.yml",), True),
     ("根目录文件用小写文件名", "readme: fix a typo", "", ("README.md",), True),
     ("根目录文件用 docs", "docs: fix a typo", "", ("README.md",), True),
