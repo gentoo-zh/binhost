@@ -7,10 +7,17 @@ SITE_USER="${SITE_USER:-zakk}"
 SIGNING_FPR="${SIGNING_FPR:-}"
 MONITORS="${MONITORS:-}"
 SSH_PORT="${SSH_PORT:-60001}"
+ROLLBACK_S="${ROLLBACK_S:-300}"
+CONFIRM=/run/binhost-firewall-confirmed
+ROLLBACK_FILE=/run/binhost-firewall-rollback.rules
 cd "$(dirname "$0")/.."
 
 if ! [[ ${SSH_PORT} =~ ^[0-9]+$ ]] || (( SSH_PORT < 1 || SSH_PORT > 65535 )); then
     echo "SSH_PORT 不是 1-65535 的整数：${SSH_PORT}" >&2
+    exit 1
+fi
+if ! [[ ${ROLLBACK_S} =~ ^[0-9]+$ ]] || (( ROLLBACK_S < 30 )); then
+    echo "ROLLBACK_S 至少 30 秒：${ROLLBACK_S}" >&2
     exit 1
 fi
 
@@ -66,9 +73,17 @@ fi
 sed 's/__SSH_PORT__/${SSH_PORT}/g' nftables.conf > nftables.conf.real
 sudo nft -c -f nftables.conf.real
 sudo install -m644 nftables.conf.real /etc/nftables.conf
+sudo rm -f '${CONFIRM}'
+sudo sh -c 'nft list ruleset > ${ROLLBACK_FILE}'
+sudo setsid sh -c 'sleep ${ROLLBACK_S}
+    [ -e ${CONFIRM} ] && exit 0
+    nft flush ruleset
+    nft -f ${ROLLBACK_FILE}
+    logger -t binhost \"防火墙在 ${ROLLBACK_S} 秒内未确认，已回滚到套用前的规则\"' \\
+    </dev/null >/dev/null 2>&1 &
+echo '    已备份现有规则，${ROLLBACK_S} 秒内未确认就自动回滚'
 sudo nft -f /etc/nftables.conf
 sudo rc-update add nftables default 2>/dev/null || true
-sudo rc-service nftables save
 
 echo '--- nginx'
 sudo install -dm755 /etc/portage/package.use
@@ -129,8 +144,7 @@ mon='${MONITORS}'
 if [ -n \"\${mon}\" ]; then
     sudo nft flush set inet filter monitor_hosts
     for ip in \${mon}; do sudo nft add element inet filter monitor_hosts { \$ip }; done
-    sudo rc-service nftables save >/dev/null
-    echo \"  monitor_hosts: \${mon}\"
+    echo \"  monitor_hosts: \${mon}（随后与防火墙规则一并保存）\"
 fi
 printf %s \"\${mon}\" | sudo install -m644 /dev/stdin /usr/local/lib/binhost/MONITORS
 
@@ -170,6 +184,16 @@ sudo rc-service node_exporter restart >/dev/null 2>&1 ||
 [ \${svc_bad} -eq 0 ] || { echo "!! 关键服务未能启动" >&2; exit 1; }
 rm -rf '${tmp}'
 "
+
+say "确认防火墙没有把自己关在外面"
+if ssh -o ConnectTimeout=15 -o BatchMode=yes "${REMOTE}" \
+       "sudo touch ${CONFIRM} && sudo rc-service nftables save >/dev/null 2>&1"; then
+    echo "  另开一条连线成功，规则已保存"
+else
+    echo "!! 无法另开一条连线，规则未保存" >&2
+    echo "   ${ROLLBACK_S} 秒内会自动回滚到套用前的规则，之后再试" >&2
+    exit 1
+fi
 
 say "完成"
 echo "站点内容由 deploy/site-sync.sh 自己拉，五分钟内会出现。"
