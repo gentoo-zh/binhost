@@ -117,11 +117,23 @@ case("或组只要有一个分支满足就算通过", lambda: (
         run([stanza("app-misc/a-1", rdepend="|| ( dev-libs/lib sys-libs/glibc )"),
              stanza("dev-libs/lib-1", repo="gentoo")]))))
 
-case("或组全部分支都不满足时，缺陷与基础系统分开记", lambda: (
-    (lambda r: set(r[0]) == {">=dev-libs/lib-9"} and set(r[1]) == {"sys-libs/glibc"})(
+case("或组的分支由基础系统提供时，整组算满足", lambda: (
+    (lambda r: not r[0] and set(r[1]) == {"sys-libs/glibc"})(
         run([stanza("app-misc/a-1", rdepend="|| ( >=dev-libs/lib-9 sys-libs/glibc )"),
              stanza("dev-libs/lib-1", repo="gentoo")],
             installed={"sys-libs/glibc"}))))
+
+case("或组的分支索引与基础系统都没有时才算缺陷", lambda: (
+    (lambda r: set(r[0]) == {">=dev-libs/lib-9", "sys-libs/glibc"} and not r[1])(
+        run([stanza("app-misc/a-1", rdepend="|| ( >=dev-libs/lib-9 sys-libs/glibc )"),
+             stanza("dev-libs/lib-1", repo="gentoo")],
+            installed=set()))))
+
+case("USE 依赖写在或组的基础系统分支上时也算满足", lambda: (
+    (lambda r: not r[0])(
+        run([stanza("app-misc/a-1",
+                    rdepend="|| ( net-misc/iputils[arping(+)] net-analyzer/arping )")],
+            installed={"net-misc/iputils"}))))
 
 case("blocker 不算依赖", lambda: (
     (lambda r: not r[0] and not r[1])(
