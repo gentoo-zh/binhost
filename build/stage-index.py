@@ -46,29 +46,23 @@ def has_ebuild(overlay, cpv):
     return (d / f"{name}-r0.ebuild").exists()
 
 
-def safe_source(pkgdir, rel):
-    src = pkgdir / rel
+def _open_dirs(root_fd, parts, create=False):
+    fds = []
+    fd = root_fd
     try:
-        st = src.lstat()
+        for part in parts:
+            if create:
+                try:
+                    os.mkdir(part, 0o755, dir_fd=fd)
+                except FileExistsError:
+                    pass
+            fd = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+            fds.append(fd)
+        return fd, fds
     except OSError:
-        return None, f"{rel}: 无法读取"
-    if stat.S_ISLNK(st.st_mode):
-        return None, f"{rel}: 是符号链接"
-    if not stat.S_ISREG(st.st_mode):
-        return None, f"{rel}: 不是普通文件"
-    root = pkgdir.resolve(strict=True)
-    try:
-        real = src.resolve(strict=True)
-    except OSError:
-        return None, f"{rel}: 无法解析"
-    if real != root / rel:
-        return None, f"{rel}: 解析后落在 {real}，不在 {root} 之下"
-    for part in rel.parents:
-        if part == pathlib.PurePosixPath("."):
-            continue
-        if (pkgdir / part).is_symlink():
-            return None, f"{rel}: 路径中的 {part} 是符号链接"
-    return src, ""
+        for f in fds:
+            os.close(f)
+        raise
 
 
 def safe_path(value):
@@ -151,25 +145,51 @@ def main(pkgdir, stage, overlay=None, rev=""):
         sys.exit(error)
 
     stanzas = []
-    for _, f, s in kept:
-        rel = safe_path(f["PATH"])
-        src, why = safe_source(pkgdir, rel)
-        if src is None:
-            sys.exit(f"拒绝 stage：{why}")
-        dst = stage / rel
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        with open(src, "rb", opener=lambda p, fl: os.open(p, fl | os.O_NOFOLLOW)) as fh:
-            before = os.fstat(fh.fileno())
-            with open(dst, "wb") as out:
-                shutil.copyfileobj(fh, out)
-            after = os.fstat(fh.fileno())
-        if (before.st_ino, before.st_dev, before.st_size) != (
-                after.st_ino, after.st_dev, after.st_size):
-            sys.exit(f"拒绝 stage：{rel} 在复制期间被换掉")
-        if dst.stat().st_size != before.st_size:
-            sys.exit(f"拒绝 stage：{rel} 复制后大小不符")
-        shutil.copystat(src, dst, follow_symlinks=False)
-        stanzas.append(s)
+    src_root = os.open(pkgdir, os.O_RDONLY | os.O_DIRECTORY)
+    dst_root = os.open(stage, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        for _, f, s in kept:
+            rel = safe_path(f["PATH"])
+            parts = list(rel.parts)
+            name = parts.pop()
+            try:
+                src_dir, src_fds = _open_dirs(src_root, parts)
+                try:
+                    dst_dir, dst_fds = _open_dirs(dst_root, parts, create=True)
+                    try:
+                        sfd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=src_dir)
+                        try:
+                            st = os.fstat(sfd)
+                            if not stat.S_ISREG(st.st_mode):
+                                sys.exit(f"拒绝 stage：{rel} 不是普通文件")
+                            dfd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+                                          | os.O_NOFOLLOW, 0o644, dir_fd=dst_dir)
+                            try:
+                                with open(sfd, "rb", closefd=False) as fh, \
+                                     open(dfd, "wb", closefd=False) as out:
+                                    shutil.copyfileobj(fh, out)
+                                    out.flush()
+                                written = os.fstat(dfd).st_size
+                            finally:
+                                os.close(dfd)
+                            if written != os.fstat(sfd).st_size:
+                                sys.exit(f"拒绝 stage：{rel} 复制后大小不符")
+                            os.utime(name, ns=(st.st_atime_ns, st.st_mtime_ns),
+                                     dir_fd=dst_dir, follow_symlinks=False)
+                        finally:
+                            os.close(sfd)
+                    finally:
+                        for fd in dst_fds:
+                            os.close(fd)
+                finally:
+                    for fd in src_fds:
+                        os.close(fd)
+            except OSError as e:
+                sys.exit(f"拒绝 stage：{rel} 无法按路径逐层打开（{e.strerror}）")
+            stanzas.append(s)
+    finally:
+        os.close(src_root)
+        os.close(dst_root)
 
     (stage / "Packages").write_text(
         rewrite_header(header, len(stanzas), rev) + "\n\n" + "\n\n".join(stanzas) + "\n")

@@ -314,6 +314,28 @@ ok "恰好等于比例上限时也拦下" "$?" "3"
 ok "并且一个都没删" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "2"
 rm -rf "${d}"
 
+d=$(setup_mirror)
+mirror_index "${d}" 3
+mkdir -p "${d}/dest/app-misc"
+printf 'truncated' > "${d}/dest/app-misc/p1-1.0-1.gpkg.tar"
+rm -f "${d}/src/app-misc/p1-1.0-1.gpkg.tar"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
+      bash deploy/mirror-sync.sh 2>&1)
+ok "重新下载失败时以非零结束" "$?" "1"
+ok "旧档仍然保留，索引仍指得到它" \
+   "$(test -s "${d}/dest/app-misc/p1-1.0-1.gpkg.tar" && echo 在 || echo 无)" "在"
+rm -rf "${d}"
+
+d=$(setup_mirror)
+mirror_index "${d}" 100
+mkdir -p "${d}/dest/app-misc"
+for ((i = 0; i < 10; i++)); do echo x > "${d}/dest/app-misc/old${i}-1.0-1.gpkg.tar"; done
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
+      bash deploy/mirror-sync.sh 2>&1)
+ok "大量新档不会把删除比例稀释掉" "$?" "3"
+ok "并且旧档一个都没删" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "10"
+rm -rf "${d}"
+
 echo
 echo "== site-sync.sh"
 

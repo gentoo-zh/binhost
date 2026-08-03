@@ -391,7 +391,6 @@ for _name, _text, _want in UNCERTAIN_CASES:
 
 
 def _uncertain_round():
-    """RESTRICT 写在条件式里时，这一轮既不清理也不算可公开。"""
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
         ov = d / "overlay"
@@ -410,6 +409,39 @@ def _uncertain_round():
 
 
 case("RESTRICT 算不准时该文件进不确定集合", _uncertain_round)
+
+
+def _restricted_uses_budget():
+    import io as _io, contextlib as _c
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        ov = d / "overlay"
+        (ov / "profiles").mkdir(parents=True)
+        (ov / "profiles" / "repo_name").write_text("gentoo-zh\n")
+        pkg = ov / "app-misc" / "foo"
+        pkg.mkdir(parents=True)
+        (pkg / "foo-1.0.ebuild").write_text('RESTRICT="mirror"\n')
+        lines = "".join(f"DIST r{i}.tar.gz 1 BLAKE2B x SHA512 y\n" for i in range(8))
+        (pkg / "Manifest").write_text(lines)
+        dist = d / "dist" / "ab"
+        dist.mkdir(parents=True)
+        for i in range(8):
+            (dist / f"r{i}.tar.gz").write_text("x")
+        old = (audit.LEDGER, audit.STATE, audit.RECYCLE)
+        audit.LEDGER = str(d / "l.json")
+        audit.STATE = str(d / "s.json")
+        audit.RECYCLE = str(d / "rec")
+        audit.recent_deletions(999)
+        try:
+            with _c.redirect_stdout(_io.StringIO()), _c.redirect_stderr(_io.StringIO()):
+                audit.main(str(ov), str(d / "dist"))
+        finally:
+            audit.LEDGER, audit.STATE, audit.RECYCLE = old
+        return sum(1 for i in range(8) if (dist / f"r{i}.tar.gz").exists())
+
+
+case("额度用尽时禁止镜像的文件也不再回收",
+     lambda: _restricted_uses_budget() == 8)
 
 for name, fn in CASES:
     try:

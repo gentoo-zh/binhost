@@ -55,6 +55,8 @@ MAX_REAP_SHARE = 1 / 3
 
 MIN_RESTRICTED_TO_DOUBT = 20
 
+MIN_REAP_BUDGET = 5
+
 LEDGER = "/var/lib/emirrordist/reaped.json"
 WINDOW_HOURS = 24
 
@@ -207,17 +209,8 @@ def main(overlay, dest):
         except LedgerError as e:
             refused = f"{e}，跨轮预算无依据"
         else:
-            budget = max(0, int(len(have) * MAX_REAP_SHARE) - spent)
-
-    if not refused and budget:
-        reserved = min(budget, len(orphan))
-        try:
-            recent_deletions(reserved)
-        except LedgerError as e:
-            refused = f"{e}，额度无法预留"
-            reserved = 0
-
-    deleted, failed = ([], []) if refused else reap(orphan, paths, budget=budget)
+            budget = max(0, max(MIN_REAP_BUDGET,
+                                int(len(have) * MAX_REAP_SHARE)) - spent)
 
     restricted, restricted_failed = [], []
     too_many = (len(extra) > MIN_RESTRICTED_TO_DOUBT
@@ -225,17 +218,35 @@ def main(overlay, dest):
     if too_many:
         print(f"!! 本轮 {len(extra)}/{len(have)} 个文件被标为禁止镜像，"
               f"超过 {MAX_REAP_SHARE:.0%}，没有清理", file=sys.stderr)
+
+    want = len(orphan) + (0 if too_many else len(extra))
+    if not refused and budget:
+        reserved = min(budget, want)
+        try:
+            recent_deletions(reserved)
+        except LedgerError as e:
+            refused = f"{e}，额度无法预留"
+            reserved = 0
+
     if not refused and not too_many:
         for f in extra:
+            if len(restricted) >= reserved:
+                print(f"!! 达到额度上限，{len(extra) - len(restricted)} 个禁止镜像的"
+                      f"文件本轮未清理", file=sys.stderr)
+                break
             path = paths.get(f)
             if path is None:
                 continue
             (restricted if recycle(path) else restricted_failed).append(f)
 
+    left = max(0, budget - len(restricted))
+    deleted, failed = ([], []) if refused else reap(orphan, paths, budget=left)
+
     recent = spent + reserved
-    if reserved != len(deleted):
+    actually = len(deleted) + len(restricted)
+    if reserved != actually:
         try:
-            recent = recent_deletions(len(deleted) - reserved)
+            recent = recent_deletions(actually - reserved)
         except LedgerError as e:
             print(f"!! 帐本未能核销预留额度：{e}", file=sys.stderr)
             failed = failed + deleted

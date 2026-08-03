@@ -163,6 +163,9 @@ jobs:
       - name: Delete budgets, DONE markers and index consistency
         run: bash build/test-shell-behaviour.sh
 
+      - name: The same failure is not notified twice
+        run: bash build/test-status-dedup.sh
+
   nginx:
     runs-on: ubuntu-latest
     container: nginx@sha256:5a88c9c45479443d7be2eadc894b4ed0a9801bae03d97a5760ae13b5c2005942  # nginx:mainline
