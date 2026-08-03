@@ -106,6 +106,27 @@ contains "并且说明本轮不继续" "${out}" "本轮不再继续"
 rm -rf "${d}"
 
 d=$(setup_publish)
+stage_index "${d}" 2
+printf '2\n7\n' > "${d}/stage/counts.txt"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "有 counts.txt 时照常发布" "$?" "0"
+ok "status.json 分开记 overlay 与依赖数" \
+   "$(python3 -c "import json;d=json.load(open('${d}/remote/status.json'));print(d['overlay'],d['deps'])" 2>/dev/null)" \
+   "2 7"
+rm -rf "${d}"
+
+d=$(setup_publish)
+stage_index "${d}" 2
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "没有 counts.txt 时不中止" "$?" "0"
+ok "并且退回把全部算成 overlay" \
+   "$(python3 -c "import json;d=json.load(open('${d}/remote/status.json'));print(d['overlay'],d['deps'])" 2>/dev/null)" \
+   "2 0"
+rm -rf "${d}"
+
+d=$(setup_publish)
 stage_index "${d}" 4 9
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)

@@ -110,6 +110,32 @@ def split_cpv(cpv):
     return (m.group("cp"), m.group("ver")) if m else (cpv, None)
 
 
+CP_ONLY = re.compile(r"^[a-z][a-z0-9+._-]*/[A-Za-z0-9][A-Za-z0-9+._-]*$")
+
+
+def dep_atoms(text):
+    """category/package named anywhere in a dependency string.
+
+    A binary index writes fully qualified atoms such as
+    >=sys-libs/glibc-2.43-r2:2.2/2.2=, so the version, the slot and any use
+    dependency have to come off before the name is usable. Use conditionals
+    are flattened rather than evaluated: this is used to decide what to keep,
+    where naming one package too many costs disk and naming one too few
+    leaves a dependency unpublished.
+    """
+    out = set()
+    for token in text.split():
+        if token in ("(", ")", "||", "&&") or token.endswith("?"):
+            continue
+        token = token.lstrip("!<>=~").split("[", 1)[0].split(":", 1)[0].rstrip("=*")
+        if "/" not in token:
+            continue
+        cp = split_cpv(token)[0]
+        if CP_ONLY.match(cp):
+            out.add(cp)
+    return out
+
+
 def version_of(ebuild, pn):
     return ebuild.name[len(pn) + 1:-len(".ebuild")]
 

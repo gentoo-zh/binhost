@@ -12,7 +12,9 @@ import sys
 import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from ebuilds import Masks, read_mask, split_cpv  # noqa: E402
+from ebuilds import (                                       # noqa: E402
+    Masks, dep_atoms, read_mask, split_cpv,
+)
 
 
 def parse(text):
@@ -76,33 +78,69 @@ def safe_path(value):
     return p
 
 
-def select(entries, overlay=None, excluded=None):
+RUNTIME_FIELDS = ("RDEPEND", "PDEPEND")
+
+
+def runtime_closure(entries, seeds):
+    """CPVs reachable from seeds through RDEPEND and PDEPEND.
+
+    Build-time dependencies are deliberately left out: someone installing a
+    binary package never needs the compiler that produced it. Resolution is
+    against the index itself, so anything the build machine did not package
+    (glibc and the rest of the stage3 base) simply does not appear.
+    """
+    by_cp = {}
+    fields = {}
+    for f, _ in entries:
+        cpv = f["CPV"]
+        fields[cpv] = f
+        by_cp.setdefault(split_cpv(cpv)[0], []).append(cpv)
+
+    seen = set()
+    queue = list(seeds)
+    while queue:
+        cpv = queue.pop()
+        if cpv in seen or cpv not in fields:
+            continue
+        seen.add(cpv)
+        text = " ".join(fields[cpv].get(k, "") for k in RUNTIME_FIELDS)
+        for cp in dep_atoms(text):
+            queue.extend(c for c in by_cp.get(cp, []) if c not in seen)
+    return seen
+
+
+def select(entries, overlay=None, excluded=None, with_deps=None):
     excluded = read_excluded() if excluded is None else excluded
     masked = read_mask(overlay) if overlay is not None else Masks()
+    if with_deps is None:
+        with_deps = os.environ.get("PUBLISH_DEPS", "1") == "1"
     best = {}
     skipped = 0
     refused = []
 
+    for f, _ in entries:
+        if safe_path(f.get("PATH", "")) is None:
+            return ([], skipped,
+                    f"索引里的 PATH 不合法：{f['CPV']} -> {f.get('PATH', '')!r}", [])
+
+    def ours(f):
+        cpv = f["CPV"]
+        if f.get("REPO") != "gentoo-zh":
+            return False
+        if overlay is not None and not has_ebuild(overlay, cpv):
+            return False
+        cp, ver = split_cpv(cpv)
+        if cp in excluded:
+            return False
+        return not (ver is not None and masked.masks(cp, ver))
+
+    seeds = {f["CPV"] for f, _ in entries if ours(f)}
+    keep = runtime_closure(entries, seeds) if with_deps else set(seeds)
+
     for f, s in entries:
         cpv = f["CPV"]
 
-        if safe_path(f.get("PATH", "")) is None:
-            return [], skipped, f"索引里的 PATH 不合法：{cpv} -> {f.get('PATH', '')!r}", []
-
-        if f.get("REPO") != "gentoo-zh":
-            skipped += 1
-            continue
-
-        if overlay is not None and not has_ebuild(overlay, cpv):
-            skipped += 1
-            continue
-
-        cp, ver = split_cpv(cpv)
-        if cp in excluded:
-            skipped += 1
-            continue
-
-        if ver is not None and masked.masks(cp, ver):
+        if cpv not in keep:
             skipped += 1
             continue
 
@@ -201,7 +239,10 @@ def main(pkgdir, stage, overlay=None, rev=""):
 
     (stage / "Packages").write_text(
         rewrite_header(header, len(stanzas), rev) + "\n\n" + "\n\n".join(stanzas) + "\n")
-    print(f">>> staged {len(stanzas)}, skipped {skipped} not ours to publish")
+    ours = sum(1 for _, f, _ in kept if f.get("REPO") == "gentoo-zh")
+    (stage / "counts.txt").write_text(f"{ours}\n{len(stanzas) - ours}\n")
+    print(f">>> staged {len(stanzas)}（overlay {ours}，运行期依赖 {len(stanzas) - ours}），"
+          f"skipped {skipped} not ours to publish")
     if refused:
         print(f">>> 其中 {len(refused)} 个因 RESTRICT=bindist 被跳过")
     return 0

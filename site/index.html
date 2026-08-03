@@ -403,7 +403,8 @@ window.MIRROR_I18N = {
   function render() {
     if (!data) return;
     var bin = data[0], dist = data[1], job = data[2], html = '';
-    if (bin && bin.packages) html += fact(bin.packages, s('factPkgs', ' 个二进制包'), bin.generated);
+    var own = bin && (typeof bin.overlay === 'number' ? bin.overlay : bin.packages);
+    if (own) html += fact(own, s('factPkgs', ' 个二进制包'), bin.generated);
     if (dist && dist.files) html += fact(dist.files, s('factDist', ' 个 distfiles 文件'), dist.generated);
     var fresh = job && job.generated &&
                 (Date.now() / 1000 - job.generated) < 3 * 3600;

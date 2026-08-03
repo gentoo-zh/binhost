@@ -117,8 +117,15 @@ ssh "${REMOTE}" "cd ${REMOTE_ROOT} && \
 
 ts=$(awk '/^TIMESTAMP: /{print $2; exit}' "${STAGE}/Packages")
 n=$(awk '/^PACKAGES: /{print $2; exit}' "${STAGE}/Packages")
+overlay="" deps=""
+if [[ -r ${STAGE}/counts.txt ]]; then
+    { read -r overlay; read -r deps; } < "${STAGE}/counts.txt" || true
+fi
+[[ ${overlay} =~ ^[0-9]+$ ]] || overlay=${n:-0}
+[[ ${deps} =~ ^[0-9]+$ ]] || deps=0
 # shellcheck disable=SC2029  # REMOTE_ROOT is meant to expand locally
-printf '{"packages":%s,"generated":%s}\n' "${n:-0}" "${ts:-0}" |
+printf '{"packages":%s,"overlay":%s,"deps":%s,"generated":%s}\n' \
+    "${n:-0}" "${overlay}" "${deps}" "${ts:-0}" |
     ssh "${REMOTE}" "cat > ${REMOTE_ROOT}/.status.json.new &&
                      mv -f ${REMOTE_ROOT}/.status.json.new ${REMOTE_ROOT}/status.json"
 
