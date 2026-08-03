@@ -23,7 +23,7 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
       [...strings[0].matchAll(/data-i18n="([A-Za-z0-9_]+)"/g)].map(x => x[1]));
     for (const [, key] of keysInScript) {
       if (!inStrings.has(key)) {
-        console.error(`!!! ${f}: t("${key}") 无法获取，#strings 里没有这个 key`);
+        console.error(`!!! ${f}: t("${key}") 无法获取，#strings 未包含这个 key`);
         bad++;
       }
     }
@@ -93,7 +93,7 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
     const miss = [...new Set(keysInScript.map(x => x[1]))]
       .filter(k => !(k in cn) && !(k in (COMMON['zh-cn'] || {})));
     if (miss.length) {
-      console.error(`!!! ${f} [zh-cn] 脚本取得到但表里没有: ${miss.join(', ')}`);
+      console.error(`!!! ${f} [zh-cn] 脚本可取得但表中缺少: ${miss.join(', ')}`);
       bad++;
     }
   }

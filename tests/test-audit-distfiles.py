@@ -72,7 +72,7 @@ case("又被引用了就从状态里忘掉", lambda: (
 case("删除之后状态里不再保留它", lambda: (
     "a.tar.gz" not in reap(["a.tar.gz"], {"a.tar.gz": "x"}, seen={"a.tar.gz": OLD})[2]))
 
-case("文件名带方括号也能删掉", lambda: (
+case("文件名带方括号也能移除", lambda: (
     lambda r: r[0] == ["a-[1.0].tar.gz"] and r[1] == []
 )(reap(["a-[1.0].tar.gz"], {"a-[1.0].tar.gz": "x"}, seen={"a-[1.0].tar.gz": OLD})))
 

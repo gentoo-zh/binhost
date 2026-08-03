@@ -43,7 +43,7 @@ global.MutationObserver = class { observe() {} };
 
 const blocks = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
   .map((m) => m[1]);
-if (!blocks.length) { console.log("  ✗ packages.html 里没有内联脚本"); process.exit(1); }
+if (!blocks.length) { console.log("  ✗ packages.html 未包含内联脚本"); process.exit(1); }
 const script = blocks.sort((a, b) => b.length - a.length)[0] +
   "\n;globalThis.__t = { setRows: function (v) { rows = v; } };";
 (0, eval)(script);

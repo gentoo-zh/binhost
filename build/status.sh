@@ -110,7 +110,7 @@ elif [[ -d ${SITE_WORK}/.git ]]; then
     elif (( pages )); then
         bad "站点同步" "${pages} 个页面与仓库副本不一致，rsync 未完成"
     elif [[ ! -r ${SITE_DEST}/gentoo-zh-binhost.asc ]]; then
-        bad "站点同步" "发布目录里没有公钥，用户按站点第 1 步无法获取它"
+        bad "站点同步" "发布目录未包含公钥，用户按站点第 1 步无法获取它"
     elif ! cmp -s "${SITE_WORK}/site/gentoo-zh-binhost.asc" "${SITE_DEST}/gentoo-zh-binhost.asc"; then
         bad "站点同步" "仓库里的公钥与已发布的不一致，指纹守卫可能拦下了它"
     else

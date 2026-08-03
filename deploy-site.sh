@@ -10,14 +10,12 @@ stage=$(ssh "${REMOTE}" 'mktemp -d')
 # shellcheck disable=SC2064
 trap "ssh '${REMOTE}' 'rm -rf ${stage}'" EXIT
 
-rsync -a --safe-links site/assets "${REMOTE}:${stage}/"
-rsync -a --safe-links site/*.html site/robots.txt "${REMOTE}:${stage}/"
+rsync -a --safe-links site/ "${REMOTE}:${stage}/"
 
-# shellcheck disable=SC2029
-ssh "${REMOTE}" "flock -w 300 '${LOCK}' -c '
-    rsync -a --delete ${stage}/assets/ /srv/mirrors/assets/
-    rsync -a ${stage}/*.html ${stage}/robots.txt /srv/mirrors/
-'" || { echo "!! 未能取得镜像机上的站点锁（${LOCK}）" >&2; exit 1; }
+# shellcheck disable=SC2029  # stage and LOCK are meant to expand locally
+ssh "${REMOTE}" "flock -w 300 '${LOCK}' -c \
+    '/usr/local/lib/binhost/publish-site.sh ${stage} /srv/mirrors'" ||
+    { echo "!! 站点未发布：未取得站点锁，或公钥校验未通过" >&2; exit 1; }
 
 rsync -a --safe-links nginx/ "${REMOTE}:/tmp/nginx-conf/"
 ssh "${REMOTE}" '

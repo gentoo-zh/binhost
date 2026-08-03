@@ -44,6 +44,7 @@ sudo install -m755 daily.sh            /usr/local/bin/binhost-daily
 sudo install -m755 distfiles-sync.sh   /usr/local/bin/binhost-distfiles-sync
 sudo install -m755 distfiles-index.sh  /usr/local/bin/binhost-distfiles-index
 sudo install -m755 site-sync.sh        /usr/local/bin/binhost-site-sync
+sudo install -m755 publish-site.sh     /usr/local/lib/binhost/publish-site.sh
 sudo install -m755 status.sh           /usr/local/bin/binhost-status
 sudo install -m644 alert.sh            /usr/local/lib/binhost/alert.sh
 sudo install -m644 gen-packages.py     /usr/local/lib/binhost/gen-packages.py
