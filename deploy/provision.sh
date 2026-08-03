@@ -7,10 +7,36 @@ ADMIN="${ADMIN:-zakk}"
 SSH_PORT="${SSH_PORT:-60001}"
 PUBKEY="${PUBKEY:-$HOME/.ssh/gentoozh_mirror.pub}"
 
+HOST_KEY="${HOST_KEY:-}"
+KNOWN_HOSTS="${KNOWN_HOSTS:-${HOME}/.ssh/known_hosts}"
+
 [[ -r ${PUBKEY} ]] || { echo "找不到公钥 ${PUBKEY}" >&2; exit 1; }
 
 say() { printf '\n=== %s ===\n' "$1"; }
-on()  { ssh -o StrictHostKeyChecking=accept-new "${TARGET}" "$@"; }
+on()  { ssh -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="${KNOWN_HOSTS}" "${TARGET}" "$@"; }
+
+host=${TARGET#*@}
+if ! ssh-keygen -F "${host}" -f "${KNOWN_HOSTS}" >/dev/null 2>&1; then
+    if [[ -z ${HOST_KEY} ]]; then
+        echo "!! ${host} 不在 known_hosts 里，无法确认连的是哪一台" >&2
+        echo "   从供应商控制台或机房带外通道取得主机密钥指纹，再重新执行：" >&2
+        echo "   HOST_KEY=SHA256:... TARGET=${TARGET} $0" >&2
+        exit 1
+    fi
+    scanned=$(ssh-keyscan -T 15 "${host}" 2>/dev/null)
+    [[ -n ${scanned} ]] || { echo "!! 无法获取 ${host} 的主机密钥" >&2; exit 1; }
+    if ! ssh-keygen -lf - <<< "${scanned}" | awk '{print $2}' |
+         grep -qxF "${HOST_KEY}"; then
+        echo "!! ${host} 的主机密钥与 HOST_KEY 不符，可能连错了机器或被中间人接管" >&2
+        echo "   实际指纹：" >&2
+        ssh-keygen -lf - <<< "${scanned}" | awk '{print "     " $2}' >&2
+        exit 1
+    fi
+    mkdir -p "$(dirname "${KNOWN_HOSTS}")"
+    printf '%s\n' "${scanned}" >> "${KNOWN_HOSTS}"
+    echo "  ${host} 的主机密钥与带外指纹一致，已写入 known_hosts"
+fi
 
 say "现状"
 # shellcheck disable=SC2016  # single quotes are deliberate: these expand on the
@@ -20,7 +46,8 @@ say "管理员与密钥"
 on "id ${ADMIN} >/dev/null 2>&1 || useradd -m -G wheel -s /bin/bash ${ADMIN}
     install -dm700 -o ${ADMIN} -g ${ADMIN} /home/${ADMIN}/.ssh"
 # shellcheck disable=SC2029  # ADMIN is meant to expand locally
-ssh "${TARGET}" "install -m600 -o ${ADMIN} -g ${ADMIN} /dev/stdin /home/${ADMIN}/.ssh/authorized_keys" < "${PUBKEY}"
+ssh -o StrictHostKeyChecking=yes -o UserKnownHostsFile="${KNOWN_HOSTS}" \
+    "${TARGET}" "install -m600 -o ${ADMIN} -g ${ADMIN} /dev/stdin /home/${ADMIN}/.ssh/authorized_keys" < "${PUBKEY}"
 on "command -v sudo >/dev/null || emerge -q app-admin/sudo
     echo '${ADMIN} ALL=(ALL:ALL) NOPASSWD: ALL' > /etc/sudoers.d/${ADMIN}
     chmod 440 /etc/sudoers.d/${ADMIN}

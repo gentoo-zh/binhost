@@ -3,7 +3,7 @@
 set -euo pipefail
 
 TAG="${TAG:-x86-64}"
-STAGE3="${STAGE3:-gentoo/stage3:amd64-desktop-openrc}"
+STAGE3="${STAGE3:-gentoo/stage3@sha256:7f523210aa362e429cf47742c408400a0b8f8e4b618c39ab7dd691ef56f04d3a}"  # gentoo/stage3:amd64-desktop-openrc
 BASE="${BASE:-gentoo-zh/binhost-base:${TAG}}"
 TREE="${TREE:-/var/db/repos/gentoo}"
 OVERLAY="${OVERLAY:-/var/lib/binhost/overlay}"

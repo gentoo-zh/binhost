@@ -169,6 +169,9 @@ jobs:
       - name: The same failure is not notified twice
         run: bash tests/test-status-dedup.sh
 
+      - name: install.sh 送到远端的脚本能解析，防火墙有回滚
+        run: bash tests/test-install-remote-script.sh
+
   nginx:
     runs-on: ubuntu-latest
     container: nginx@sha256:5a88c9c45479443d7be2eadc894b4ed0a9801bae03d97a5760ae13b5c2005942  # nginx:mainline
