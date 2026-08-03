@@ -58,7 +58,7 @@ sudo install -dm755 -o "$(id -u)" -g "$(id -g)" \
 rm -f "${LOGDIR}"/*.log "${LOGDIR}"/failed.txt
 
 empty=$(find "${PKGDIR}" -name '*.gpkg.tar' -size 0 -print -delete | wc -l)
-(( empty )) && echo ">>> 清掉 ${empty} 个 0 字节的缓存包" 
+(( empty )) && echo ">>> 移除 ${empty} 个 0 字节的缓存包" 
 
 
 echo ">>> building from ${BASE}"

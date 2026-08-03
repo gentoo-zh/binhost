@@ -1,5 +1,5 @@
 [Unit]
-Description=把 %i 的失败推出去
+Description=转发 %i 的失败告警
 
 
 [Service]

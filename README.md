@@ -25,19 +25,24 @@ docs/     运维手册
 
 `PUBLISH=1` 会把基础镜像推到 `ghcr.io/gentoo-zh/binhost-base`。签名密钥是挂载进容器的，不在镜像里。
 
+`run-full.sh` 在基础镜像过期时自动重建它；`status.sh` 依次核对密钥、证书、索引、
+取包、distfiles、exporter 与心跳。
+
 ```bash
-SIGNING_KEY=<指纹> build/run-full.sh          # 基础镜像过期会自动重建
+SIGNING_KEY=<指纹> build/run-full.sh
 build/publish.sh
-build/status.sh                              # 密钥/证书/索引/取包/distfiles/exporter/心跳
+build/status.sh
 ```
 
 两台机器分开装。build/ 下有几支两边都要（status.sh、gen-packages.py），由各自的安装脚本分别装过去：
 
+前者装镜像机，后者装构建机：
+
 ```bash
 MONITORS='<抓 9100 的监控机>' SIGNING_FPR=<签名指纹> \
-  REMOTE=mirror ./deploy/install.sh                     # 镜像机
+  REMOTE=mirror ./deploy/install.sh
 SIGNING_KEY=<指纹> REMOTE="ssh build" \
-    ./deploy/install-builder.sh                          # 构建机
+    ./deploy/install-builder.sh
 ```
 
 构建机那边装的是构建脚本、overlay 副本与每日构建的 systemd timer，
@@ -67,7 +72,18 @@ rsync://distfiles.gentoozh.org/gentoo-zh/{binpkgs,distfiles}
 
 `build/status.sh` 检查签名密钥与证书有效期、索引新鲜度，并实际取回一个包。失败推送到 Telegram。
 
-镜像机每次运行写一个时间戳，构建机上的那份检查它多久没更新——宕机的机器报不了自己宕机。构建机那边靠索引的新旧判断：超过两轮没更新就报，另有 systemd 的 OnFailure 兜底。
+镜像机每次运行写一个时间戳，构建机上的那份核对它多久没有更新，因为宕机的机器无法自己报告宕机。构建机依据索引的新旧判断：超过两轮没有更新就报出，另有 systemd 的 `OnFailure` 作为后备通道。
+
+后备通道靠退出码区分三种结果，`build/alert-failed.sh` 只对前两种保持沉默：
+
+| 退出码 | 含义 | 后备通道 |
+|---|---|---|
+| 0 | 全部通过 | 不触发 |
+| 10 | 有故障，已直接推送 Telegram | 不再发第二条 |
+| 11 | 有故障，与上次相同且在冷却期内 | 不再发第二条 |
+| 其他非零 | 有故障但推送失败，或脚本本身出错 | 发出后备告警 |
+
+只有推送成功才记录通知时间，所以手动执行不会让定时任务误以为已经通知过。
 
 ## 加入包
 

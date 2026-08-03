@@ -78,7 +78,7 @@ def main(logdir):
     if logs is None:
         return 1
     if not logs:
-        print(f"{d} 里没有日志")
+        print(f"{d} 未产生日志")
         return 0
 
     groups = {}
@@ -113,7 +113,7 @@ def main(logdir):
                 why = ev[0] if ev else permanent[kind]
                 lines.append(f"{atom:<40s}  {why}")
     if lines:
-        print("## 这几个每轮都会以同样方式失败，可以写进 build/excluded.txt：\n")
+        print("## 以下软件包在多个周期以相同原因失败，可以写进 build/excluded.txt：\n")
         for line in lines:
             print(f"  {line}")
         print()

@@ -53,14 +53,14 @@ echo '--- 防火墙'
 listening=\$(sudo sshd -T 2>/dev/null | awk '/^port /{print \$2}')
 if [ '${SKIP_SSH_PORT_CHECK:-0}' = 1 ]; then
     echo '   !! SKIP_SSH_PORT_CHECK=1：跳过端口一致性检查' >&2
-    echo \"   即将 flush ruleset 并只放行 ${SSH_PORT}；若与实际不符，当前连线会断且没有第二条路进来\" >&2
+    echo \"   即将 flush ruleset 并只放行 ${SSH_PORT}；若与实际不符，当前连线会中断，且没有已确认的备用管理通道\" >&2
 elif [ -z \"\${listening}\" ]; then
     echo '!! 无法从 sshd -T 取得实际监听端口，不能确认防火墙会放行它' >&2
     echo '   套用后可能切断当前连线，已中止' >&2
     exit 1
 elif ! echo \"\${listening}\" | grep -qx '${SSH_PORT}'; then
     echo \"!! sshd 实际监听 \${listening}，而防火墙只会放行 ${SSH_PORT}\" >&2
-    echo '   套用后当前连线会断，且没有第二条路进来，已中止' >&2
+    echo '   套用后当前连线会中断，且没有已确认的备用管理通道，已中止' >&2
     exit 1
 fi
 sed 's/__SSH_PORT__/${SSH_PORT}/g' nftables.conf > nftables.conf.real
@@ -90,7 +90,7 @@ if sudo test -r \"\${CERT}/fullchain.pem\" && sudo test -r \"\${CERT}/privkey.pe
     sudo install -m644 distfiles.conf /etc/nginx/conf.d/distfiles.conf
 else
     if sudo grep -qs 'listen 443' /etc/nginx/conf.d/distfiles.conf; then
-        echo '    !! 无法读取证书，但现有配置在监听 443；保持原样不动' >&2
+        echo '    !! 无法读取证书，但现有配置在监听 443；保留现有配置' >&2
         echo '       证书确实已失效时，先处理证书，再重新执行本脚本' >&2
     else
         echo '    证书尚未签发，先只配置 HTTP；签发之后重新执行本脚本'
@@ -122,7 +122,7 @@ sudo sed -i 's|^\(\*/5 \* \* \* \* \)[^ ]*|\1${SITE_USER}|' /etc/cron.d/binhost
 echo '--- 监控'
 command -v node_exporter >/dev/null ||
     sudo emerge -q app-metrics/node_exporter ||
-    echo '    !! node_exporter 未安装，监控这一项先缺着'
+    echo '    !! node_exporter 未安装，监控这一项暂缺'
 sudo rc-update add node_exporter default 2>/dev/null || true
 mon='${MONITORS}'
 [ -n \"\${mon}\" ] || mon=\$(cat /usr/local/lib/binhost/MONITORS 2>/dev/null || true)
@@ -150,7 +150,7 @@ sudo rc-update add nginx  default 2>/dev/null || true
 svc_bad=0
 for s in cronie rsyncd; do
     if sudo rc-service \$s status >/dev/null 2>&1; then
-        echo "    \$s 已在运行，配置由它自己每次读取，不重启"
+        echo "    \$s 已在运行，配置在每次请求时读取，无需重启"
     else
         sudo rc-service \$s start >/dev/null 2>&1 || { echo "    !! \$s 未能启动"; svc_bad=1; }
     fi

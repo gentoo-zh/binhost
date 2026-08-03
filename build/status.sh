@@ -2,6 +2,9 @@
 
 set -uo pipefail
 
+EXIT_ALERTED=10
+EXIT_SUPPRESSED=11
+
 SITE="${SITE:-https://distfiles.gentoozh.org}"
 TAG="${TAG:-x86-64}"
 SIGNING_GNUPGHOME="${SIGNING_GNUPGHOME:-/var/lib/binhost/gnupg}"
@@ -126,7 +129,7 @@ if [[ -d ${SIGNING_GNUPGHOME} ]]; then
         trust=$(awk -F: '/^sec:/{print $2; exit}' <<< "${secret}")
         expiry=$(awk -F: '/^sec:/{print $7; exit}' <<< "${secret}")
         if (( gpg_rc != 0 )) || ! grep -q '^sec:' <<< "${secret}"; then
-            bad "签名密钥" "${SIGNING_GNUPGHOME} 里没有 ${SIGNING_KEY:0:8} 的私钥"
+            bad "签名密钥" "${SIGNING_GNUPGHOME} 未包含 ${SIGNING_KEY:0:8} 的私钥"
         elif [[ ${trust} == r ]]; then
             bad "签名密钥" "${SIGNING_KEY:0:8} 已撤销"
         elif [[ ${caps} != *s* ]]; then
@@ -143,7 +146,7 @@ if [[ -d ${SIGNING_GNUPGHOME} ]]; then
         fi
     fi
 else
-    note "签名密钥" "本机没有该目录"
+    note "签名密钥" "该目录不存在"
 fi
 
 if [[ -d ${DISK_PATH} ]]; then
@@ -183,7 +186,7 @@ else
         if (( age >= INDEX_MAX_AGE_D )); then
             bad "索引" "${age} 天未更新（超过 ${INDEX_MAX_AGE_D} 天）"
         elif [[ ! ${n} =~ ^[0-9]+$ ]] || (( n == 0 )); then
-            bad "索引" "里面一个包都没有"
+            bad "索引" "未包含任何软件包"
         else
             note "索引" "${n} 个包，${age} 天前"
         fi
@@ -229,7 +232,7 @@ fi
 if ! command -v node_exporter >/dev/null 2>&1; then
     note "node_exporter" "本机没有安装"
 elif ! curl -fsS --max-time 10 -o /dev/null "http://127.0.0.1:${EXPORTER_PORT}/metrics"; then
-    bad "node_exporter" "本机 ${EXPORTER_PORT} 没有回应"
+    bad "node_exporter" "本机 ${EXPORTER_PORT} 未响应"
 else
     rules=$(sudo -n nft list chain inet filter input 2>/dev/null)
     if [[ -z ${rules} ]]; then
@@ -371,18 +374,22 @@ if [[ ${kind} != none ]] && [[ ${BINHOST_ALERT:-} == 1 ]] && [[ -r ${ALERT_CONF}
     fi
 fi
 
-if (( sent )) || [[ ${BINHOST_ALERT:-} != 1 ]]; then
+if (( sent )); then
     if (( problems > 0 )); then
-        [[ ${kind} == none ]] || save_state "${fingerprint}" "${now}"
-    elif [[ -n ${prev_fp} ]]; then
+        save_state "${fingerprint}" "${now}"
+    else
         save_state "" "${now}"
     fi
 fi
 
 if (( problems > 0 )); then
+    if (( sent )); then
+        exit "${EXIT_ALERTED}"
+    fi
     if [[ ${kind} == none ]]; then
         echo "  （与上次相同的故障，${COOLDOWN_H} 小时内不重复通知）"
+        exit "${EXIT_SUPPRESSED}"
     fi
-    exit $(( sent ? 10 : 1 ))
+    exit 1
 fi
 exit 0

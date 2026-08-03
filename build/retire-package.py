@@ -11,7 +11,7 @@ LIST = HERE / "packages.txt"
 EXCLUDED = HERE / "excluded.txt"
 ATOM = re.compile(r"^[a-z0-9][a-z0-9+._-]*/[A-Za-z0-9][A-Za-z0-9+._-]*$")
 
-GONE = "overlay 里已没有这个包"
+GONE = "overlay 中已不存在该软件包"
 
 
 def already_excluded(cp):

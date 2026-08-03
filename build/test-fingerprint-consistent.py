@@ -78,10 +78,16 @@ signing = sorted(f for f, files in found.items() if SERVICE in files)
 if len(signing) != 1:
     fail(f"{SERVICE} 里应当只有一个指纹，实际 {len(signing)} 个")
 
+def check_carriers(fpr):
+    for f in sorted(REQUIRED - set(found[fpr]) - {SERVICE}):
+        fail(f"{f} 里没有正在签名的那把 {fpr[:8]}")
+
+
 if not shutil.which("gpg"):
-    print("  本机没有 gpg，读不到 .asc，只比对文本里的指纹是否一致")
-    if len(found) > 1:
-        fail(f"出现 {len(found)} 个不同的指纹，轮替时漏改了某一处")
+    print("  本机没有 gpg，无法读取 .asc，只核对文本内部是否自洽")
+    print(f"  未做的部分：公钥是否已发布、是否撤销、是否过期，共 {len(found)} 个指纹未比对")
+    if len(signing) == 1:
+        check_carriers(signing[0])
     sys.exit(1 if bad else 0)
 
 keys = published()
@@ -113,8 +119,7 @@ if len(signing) == 1:
         fail(f"{SERVICE} 指定的 {signing[0][:8]} 已撤销")
     if key and "S" not in key["caps"].upper():
         fail(f"{SERVICE} 指定的 {signing[0][:8]} 没有签名能力")
-    for f in sorted(REQUIRED - set(found[signing[0]]) - {SERVICE}):
-        fail(f"{f} 里没有正在签名的那把 {signing[0][:8]}")
+    check_carriers(signing[0])
 
 if len(keys) > 1:
     print(f"\n  注意：{ASC.name} 里有 {len(keys)} 把公钥，这是轮替重叠期的状态，"

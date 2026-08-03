@@ -9,10 +9,28 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ebuilds import (                                       # noqa: E402
-    ATOM, builds_from_source,
+    ATOM, bindist_state, builds_from_source,
     accepts_amd64, keywords_of, newest_ebuild,
-    read_mask, restricts_bindist, version_of, vercmp,
+    read_mask, usable_ebuilds, version_of, vercmp,
 )
+
+
+def why_unbuildable(pkgdir, masks):
+    """Reason no version can be built, or None when one still can.
+
+    Returns None as soon as any version survives, so a mask or a dropped
+    keyword on the newest version alone never retires the package.
+    """
+    versions = [(e, version_of(e, pkgdir.name))
+                for e in pkgdir.glob("*.ebuild") if "9999" not in e.name]
+    if not versions:
+        return "只有 live ebuild，无法构建可发布的版本"
+    if usable_ebuilds(pkgdir, masks):
+        return None
+    cp = f"{pkgdir.parent.name}/{pkgdir.name}"
+    if all(masks.masks(cp, v) for _, v in versions):
+        return "overlay 的 package.mask 屏蔽了全部版本"
+    return "没有接受 amd64 的版本"
 
 
 
@@ -24,19 +42,16 @@ def newcomers(overlay, wanted, masked):
         if not pkgdir.is_dir():
             continue
         cp = f"{pkgdir.parent.name}/{pkgdir.name}"
-        if cp in wanted or cp in masked or cp in excluded:
+        if cp in wanted or cp in excluded:
             continue
         if cp.startswith(("acct-", "virtual/", "app-alternatives/")) or cp.endswith("-bin"):
             continue
-        eb = newest_ebuild(pkgdir)
-        if eb is None:
+        usable = usable_ebuilds(pkgdir, masked)
+        if not usable:
             continue
-        ver = version_of(eb, pkgdir.name)
+        eb, ver = usable[0]
         text = eb.read_text(errors="ignore")
-        kw = keywords_of(text)
-        if kw is not None and not accepts_amd64(kw):
-            continue
-        if restricts_bindist(text):
+        if bindist_state(text) != "no":
             continue
         if builds_from_source(text):
             out.append((cp, ver))
@@ -81,25 +96,28 @@ def main(overlay, index, listfile):
 
     tree = os.environ.get("GENTOO_TREE", "/var/db/repos/gentoo")
     masked = read_mask(overlay)
-    stale, absent, gone, blocked, live, banned, upstreamed = [], [], [], [], [], [], []
+    stale, absent, gone, blocked = [], [], [], []
+    live, banned, upstreamed, unclear = [], [], [], []
     for cp in sorted(wanted):
         pkgdir = overlay / cp
         if not pkgdir.is_dir():
             gone.append(cp)
             continue
-        if cp in masked:
-            blocked.append(cp)
+        why = why_unbuildable(pkgdir, masked)
+        if why:
+            (live if "live ebuild" in why else blocked).append(cp)
             continue
-        eb = newest_ebuild(pkgdir)
-        if eb is None:
-            live.append(cp)
+        usable = usable_ebuilds(pkgdir, masked)
+        eb, cur = usable[0]
+        states = {bindist_state(e.read_text(errors="ignore")) for e, _ in usable}
+        if "unknown" in states:
+            unclear.append(cp)
             continue
-        if restricts_bindist(eb.read_text(errors="ignore")):
+        if states == {"yes"}:
             banned.append(cp)
             continue
         if in_gentoo(cp, tree):
             upstreamed.append(cp)
-        cur = version_of(eb, pkgdir.name)
         got = have.get(cp)
         if got is None:
             absent.append((cp, cur))
@@ -109,8 +127,9 @@ def main(overlay, index, listfile):
     fresh = newcomers(overlay, wanted, masked)
 
     print(f">>> 版本核对：清单 {len(wanted)}，索引 {len(have)}，落后 {len(stale)}，"
-          f"缺 {len(absent)}，overlay 里没有 {len(gone)}，已屏蔽 {len(blocked)}，"
+          f"缺 {len(absent)}，overlay 中不存在 {len(gone)}，已屏蔽 {len(blocked)}，"
           f"只有 9999 的 {len(live)}，不可再散布的 {len(banned)}，"
+          f"RESTRICT 无法判定的 {len(unclear)}，"
           f"::gentoo 也有的 {len(upstreamed)}，未收录的新包 {len(fresh)}")
     for cp, got, cur in stale:
         print(f"    落后   {cp}  索引 {got}  overlay {cur}")
@@ -125,13 +144,15 @@ def main(overlay, index, listfile):
         if moved:
             print(f"    疑似改分类 {cp} -> {moved[0]}  同名不同分类，两边一起改")
         else:
-            print(f"    已移除 {cp}  overlay 里找不到，包被删或改了分类，清单要跟上")
+            print(f"    已移除 {cp}  overlay 中不存在该软件包，可能被删除或改了分类，清单需同步")
     for cp in blocked:
-        print(f"    已屏蔽 {cp}  overlay 的 package.mask 屏蔽了它，该移出清单")
+        print(f"    已屏蔽 {cp}  没有一个版本可构建，该移出清单")
     for cp in live:
-        print(f"    仅 9999 {cp}  只有 live ebuild，建不出可发布的版本")
+        print(f"    仅 9999 {cp}  只有 live ebuild，无法构建可发布的版本")
     for cp in banned:
-        print(f"    不可散布 {cp}  上游加了 RESTRICT=bindist，已跳过发布，该移出清单")
+        print(f"    不可散布 {cp}  全部可用版本都是 RESTRICT=bindist，该移出清单")
+    for cp in unclear:
+        print(f"    待人工确认 {cp}  RESTRICT 用了变量或条件式，无法静态判定，未做任何处置")
     for cp in upstreamed:
         print(f"    已进主树 {cp}  ::gentoo 也有这个包，该判断是否还要自己构建")
     for cp, ver in fresh:
@@ -142,24 +163,24 @@ def main(overlay, index, listfile):
 
 def list_retirable(overlay, listfile):
     overlay = pathlib.Path(overlay)
-    tree = os.environ.get("GENTOO_TREE", "/var/db/repos/gentoo")
     wanted = {l.strip() for l in pathlib.Path(listfile).read_text().splitlines()
               if ATOM.match(l.strip())}
     masked = read_mask(overlay)
     for cp in sorted(wanted):
         pkgdir = overlay / cp
         if not pkgdir.is_dir():
-            print(f"{cp}\toverlay 里已没有这个包")
+            print(f"{cp}\toverlay 中已不存在该软件包")
             continue
-        if cp in masked:
-            print(f"{cp}\toverlay 的 package.mask 屏蔽了它")
+        why = why_unbuildable(pkgdir, masked)
+        if why:
+            print(f"{cp}\t{why}")
             continue
-        eb = newest_ebuild(pkgdir)
-        if eb is None:
-            print(f"{cp}\t只有 live ebuild，建不出可发布的版本")
-            continue
-        if restricts_bindist(eb.read_text(errors="ignore")):
-            print(f"{cp}\t上游加了 RESTRICT=bindist，不可再散布")
+        states = {bindist_state(eb.read_text(errors="ignore"))
+                  for eb, _ in usable_ebuilds(pkgdir, masked)}
+        if "unknown" in states:
+            print(f"!! {cp} 的 RESTRICT 无法静态判定，不提出退休", file=sys.stderr)
+        elif states == {"yes"}:
+            print(f"{cp}\t全部可用版本都是 RESTRICT=bindist，不可再散布")
     return 0
 
 

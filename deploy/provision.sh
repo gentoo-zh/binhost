@@ -82,7 +82,7 @@ on 'command -v logrotate >/dev/null || emerge -q app-admin/logrotate
 
 say "收紧 sshd"
 on "ssh-keygen -l -f /home/${ADMIN}/.ssh/authorized_keys >/dev/null" ||
-    { echo '!! 公钥没装好，不动 sshd' >&2; exit 1; }
+    { echo '!! 公钥安装校验失败，保留现有 sshd 配置' >&2; exit 1; }
 on "sed -i -E \
       -e 's/^#?PermitRootLogin.*/PermitRootLogin no/' \
       -e 's/^#?PasswordAuthentication.*/PasswordAuthentication no/' \

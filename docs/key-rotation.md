@@ -50,8 +50,10 @@ gpg --homedir /var/lib/binhost/gnupg --armor \
 
 **四、换成新密钥签**
 
+先把 `deploy/systemd/binhost-build.service` 的 `Environment=SIGNING_KEY=`
+换成新指纹，再执行：
+
 ```bash
-# deploy/systemd/binhost-build.service 的 Environment=SIGNING_KEY= 换成新指纹
 SIGNING_KEY=<新指纹> build/run-full.sh
 build/publish.sh
 ```
