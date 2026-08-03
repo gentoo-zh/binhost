@@ -2,6 +2,8 @@
 
 import importlib.util
 import json
+import contextlib
+import io
 import os
 import pathlib
 import sys
@@ -94,7 +96,7 @@ case("孤儿在磁盘上已经不存在时不报错", lambda: (
 
 
 
-def build_overlay(root, packages):
+def build_overlay(root, packages, src_style="url"):
     root = pathlib.Path(root)
     (root / "profiles").mkdir(parents=True, exist_ok=True)
     (root / "profiles" / "repo_name").write_text("gentoo-zh\n")
@@ -105,6 +107,11 @@ def build_overlay(root, packages):
         for ver, spec in versions.items():
             files, restrict = spec if isinstance(spec, tuple) else (spec, "")
             body = 'EAPI=8\nSLOT="0"\n'
+            if src_style == "bare":
+                body += 'SRC_URI="' + " ".join(files) + '"\n'
+            elif src_style != "none":
+                body += 'SRC_URI="' + " ".join(f"https://example.invalid/{f}"
+                                               for f in files) + '"\n'
             if restrict:
                 body += f'RESTRICT="{restrict}"\n'
             (d / f"{d.name}-{ver}.ebuild").write_text(body)
@@ -114,11 +121,30 @@ def build_overlay(root, packages):
     return root
 
 
+def text_aux(overlay):
+    """Read SRC_URI and RESTRICT straight from the fixture ebuilds.
+
+    The fixtures write literal values, so no expansion is needed; this keeps
+    the tests on the same attribution path without registering a Portage repo.
+    """
+    import re as _re
+
+    def aux(cp):
+        d = pathlib.Path(overlay) / cp
+        for eb in sorted(d.glob("*.ebuild")):
+            text = eb.read_text()
+            def field(name):
+                m = _re.search(rf'^{name}="([^"]*)"', text, _re.M)
+                return m.group(1) if m else ""
+            yield f"{cp}-{eb.stem.split('-')[-1]}", field("SRC_URI"), field("RESTRICT")
+    return aux
+
+
 def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False,
-             grace=0):
+             grace=0, src_style="url"):
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
-        ov = build_overlay(d / "overlay", packages)
+        ov = build_overlay(d / "overlay", packages, src_style)
         dist = d / "dist" / "ab"
         dist.mkdir(parents=True)
         for name in on_mirror:
@@ -139,14 +165,16 @@ def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False,
             blocked = d / "blocked"
             blocked.write_text("不是目录")
             audit.RECYCLE = str(blocked / "recycle")
+        buf = io.StringIO()
         try:
-            rc = audit.main(str(ov), str(d / "dist"))
+            with contextlib.redirect_stdout(buf):
+                rc = audit.main(str(ov), str(d / "dist"), aux=text_aux(ov))
         finally:
             audit.STATE, audit.RECYCLE, audit.GRACE_SECONDS, audit.LEDGER = old
         left = sorted(p.name for p in dist.iterdir())
         binned = sorted(p.name for p in (d / "recycle").iterdir()) \
             if (d / "recycle").is_dir() else []
-        return rc, left, binned
+        return rc, left, binned, buf.getvalue()
 
 
 case("overlay 无法读取内容时拒绝清理", lambda: (
@@ -292,8 +320,11 @@ def _fetch_probe():
         (ov / "profiles" / "package.mask").write_text("")
         d = ov / "app-misc" / "b"
         d.mkdir(parents=True)
-        (d / "b-1.0.ebuild").write_text('EAPI=8\nSLOT="0"\nRESTRICT="fetch"\n')
-        (d / "b-2.0.ebuild").write_text('EAPI=8\nSLOT="0"\n')
+        (d / "b-1.0.ebuild").write_text(
+            'EAPI=8\nSLOT="0"\nSRC_URI="https://x/b-1.0.tar.gz"\n'
+            'RESTRICT="fetch"\n')
+        (d / "b-2.0.ebuild").write_text(
+            'EAPI=8\nSLOT="0"\nSRC_URI="https://x/b-2.0.tar.gz"\n')
         (d / "Manifest").write_text(
             "DIST b-1.0.tar.gz 1 BLAKE2B x SHA512 y\n"
             "DIST b-2.0.tar.gz 1 BLAKE2B x SHA512 y\n")
@@ -306,7 +337,7 @@ def _fetch_probe():
         buf = io.StringIO()
         try:
             with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(io.StringIO()):
-                audit.main(str(ov), str(_p.Path(tmp) / "dist"))
+                audit.main(str(ov), str(_p.Path(tmp) / "dist"), aux=text_aux(ov))
         finally:
             audit.STATE, audit.RECYCLE, audit.LEDGER, audit.GRACE_SECONDS = old
         return buf.getvalue()
@@ -320,211 +351,96 @@ case("带 fetch 的那个版本自己算无法获取", lambda: (
     lambda r: "b-1.0.tar.gz" not in r
 )(_fetch_probe()))
 
-RESTRICT_CASES = [
-    ("直接单行赋值", 'RESTRICT="mirror"\n', True),
-    ("注释掉的赋值不算", '# RESTRICT="mirror"\nSLOT="0"\n', False),
-    ("后一次赋值覆盖前一次", 'RESTRICT="mirror"\nRESTRICT=""\n', False),
-    ("引号内跨行", 'RESTRICT="\n\tmirror\n"\n', True),
-    ("+= 追加", 'RESTRICT="bindist"\nRESTRICT+=" mirror"\n', True),
-    ("+= 之后再整个覆盖", 'RESTRICT="mirror"\nRESTRICT="bindist"\n', False),
-    ("条件式里的赋值", 'if [[ -n ${X} ]]; then\n\tRESTRICT="mirror"\nfi\n', True),
-    ("单引号", "RESTRICT='mirror'\n", True),
-    ("不带引号", "RESTRICT=mirror\n", True),
-    ("别处出现 mirror 不算", 'HOMEPAGE="https://mirror.example.org"\n', False),
-]
-for _name, _text, _want in RESTRICT_CASES:
-    case(f"RESTRICT 解析：{_name}",
-         (lambda text=_text, want=_want:
-          ("mirror" in audit.restrict_tokens(text)) is want))
-
-
-def _ledger(content, writable=True):
+def scan_with(pkgs):
+    """pkgs: {cp: [(cpv, SRC_URI, RESTRICT)]}; the Manifest is derived from SRC_URI."""
     with tempfile.TemporaryDirectory() as tmp:
-        base = pathlib.Path(tmp)
-        if writable:
-            f = base / "reaped.json"
-            if content is not None:
-                f.write_text(content)
-        else:
-            (base / "wall").write_text("")
-            f = base / "wall" / "reaped.json"
-        old = audit.LEDGER
-        audit.LEDGER = str(f)
-        try:
-            return audit.recent_deletions(1)
-        finally:
-            audit.LEDGER = old
-
-
-def _raises(fn):
-    try:
-        fn()
-    except audit.LedgerError:
-        return True
-    except Exception:                                       # noqa: BLE001
-        return False
-    return False
-
-
-case("帐本不存在时按首轮处理", lambda: _ledger(None) == 1)
-case("帐本内容损坏时抛出，不当成空帐本",
-     lambda: _raises(lambda: _ledger("{ 坏掉的 json")))
-case("帐本不是清单时抛出",
-     lambda: _raises(lambda: _ledger('{"a": 1}')))
-case("帐本写不进时抛出",
-     lambda: _raises(lambda: _ledger("[]", writable=False)))
-case("帐本正常时累加",
-     lambda: _ledger(f'[[{int(time.time())}, 5]]') == 6)
-
-UNCERTAIN_CASES = [
-    ("条件式里的赋值", 'RESTRICT=""\nif use x; then\n\tRESTRICT="mirror"\nfi\n', True),
-    ("未呼叫的函式", 'RESTRICT=""\nf() {\n\tRESTRICT="mirror"\n}\n', True),
-    ("case 分支里", 'case ${X} in\n\ta) RESTRICT="mirror" ;;\nesac\n', True),
-    ("行内 && 之后", 'true && RESTRICT="mirror"\n', True),
-    ("顶层赋值", 'RESTRICT="mirror"\n', False),
-    ("if 区块之后的顶层赋值", 'if true; then\n\tX=1\nfi\nRESTRICT="mirror"\n', False),
-    ("引号内跨行但顶层", 'RESTRICT="\n\tmirror\n"\n', False),
-]
-for _name, _text, _want in UNCERTAIN_CASES:
-    case(f"RESTRICT 是否算得准：{_name}",
-         (lambda text=_text, want=_want: audit.restrict_uncertain(text) is want))
-
-
-def _uncertain_round():
-    with tempfile.TemporaryDirectory() as tmp:
-        d = pathlib.Path(tmp)
-        ov = d / "overlay"
+        ov = pathlib.Path(tmp)
         (ov / "profiles").mkdir(parents=True)
         (ov / "profiles" / "repo_name").write_text("gentoo-zh\n")
-        pkg = ov / "app-misc" / "foo"
-        pkg.mkdir(parents=True)
-        (pkg / "foo-1.0.ebuild").write_text(
-            'RESTRICT=""\nif use x; then\n\tRESTRICT="mirror"\nfi\n')
-        (pkg / "Manifest").write_text("DIST foo-1.0.tar.gz 1 BLAKE2B x SHA512 y\n")
-        dist = d / "dist" / "ab"
-        dist.mkdir(parents=True)
-        (dist / "foo-1.0.tar.gz").write_text("x")
-        users, unsure = audit.scan(ov)
-        return "foo-1.0.tar.gz" in unsure and (dist / "foo-1.0.tar.gz").exists()
+        for cp, rows in pkgs.items():
+            d = ov / cp
+            d.mkdir(parents=True, exist_ok=True)
+            names = set()
+            for _, src, _ in rows:
+                if src:
+                    names |= audit.distfiles_of(src) or set()
+            (d / "Manifest").write_text(
+                "".join(f"DIST {n} 1 BLAKE2B x SHA512 y\n" for n in sorted(names)))
+
+        def aux(cp):
+            yield from pkgs[cp]
+        return audit.scan(ov, aux)
 
 
-case("RESTRICT 算不准时该文件进不确定集合", _uncertain_round)
+case("SRC_URI 的改名形式按改名后的文件归属", lambda: (
+    (lambda r: set(r[0]) == {"pkg-1.tar.gz"} and not r[1])(
+        scan_with({"app-misc/pkg": [
+            ("app-misc/pkg-1", "https://x/v1.tar.gz -> pkg-1.tar.gz", "")]}))))
+
+case("条件式里的文件也算被引用", lambda: (
+    set(scan_with({"app-misc/pkg": [
+        ("app-misc/pkg-1", "https://x/a.tar nls? ( https://x/b.tar )", "")]})[0])
+    == {"a.tar", "b.tar"}))
+
+case("无版本号的文件名同样归属正确", lambda: (
+    set(scan_with({"app-misc/pkg": [
+        ("app-misc/pkg-1", "https://x/noversion.zip", "")]})[0])
+    == {"noversion.zip"}))
 
 
-def _restricted_uses_budget():
-    import io as _io, contextlib as _c
+def scan_with_manifest(pkgs, manifests):
     with tempfile.TemporaryDirectory() as tmp:
-        d = pathlib.Path(tmp)
-        ov = d / "overlay"
+        ov = pathlib.Path(tmp)
         (ov / "profiles").mkdir(parents=True)
         (ov / "profiles" / "repo_name").write_text("gentoo-zh\n")
-        pkg = ov / "app-misc" / "foo"
-        pkg.mkdir(parents=True)
-        (pkg / "foo-1.0.ebuild").write_text('RESTRICT="mirror"\n')
-        lines = "".join(f"DIST r{i}.tar.gz 1 BLAKE2B x SHA512 y\n" for i in range(8))
-        (pkg / "Manifest").write_text(lines)
-        dist = d / "dist" / "ab"
-        dist.mkdir(parents=True)
-        for i in range(8):
-            (dist / f"r{i}.tar.gz").write_text("x")
-        old = (audit.LEDGER, audit.STATE, audit.RECYCLE)
-        audit.LEDGER = str(d / "l.json")
-        audit.STATE = str(d / "s.json")
-        audit.RECYCLE = str(d / "rec")
-        audit.recent_deletions(999)
-        try:
-            with _c.redirect_stdout(_io.StringIO()), _c.redirect_stderr(_io.StringIO()):
-                audit.main(str(ov), str(d / "dist"))
-        finally:
-            audit.LEDGER, audit.STATE, audit.RECYCLE = old
-        return sum(1 for i in range(8) if (dist / f"r{i}.tar.gz").exists())
+        for cp, names in manifests.items():
+            d = ov / cp
+            d.mkdir(parents=True, exist_ok=True)
+            (d / "Manifest").write_text(
+                "".join(f"DIST {n} 1 BLAKE2B x SHA512 y\n" for n in names))
+
+        def aux(cp):
+            yield from pkgs[cp]
+        return audit.scan(ov, aux)
 
 
-case("额度用尽时禁止镜像的文件也不再回收",
-     lambda: _restricted_uses_budget() == 8)
+case("裸文件名按 SRC_URI 归属，不落入不确定", lambda: (
+    (lambda r: r[0]["manual.zip"] == [("app-misc/m", False)] and not r[1])(
+        scan_with_manifest({"app-misc/m": [("app-misc/m-1", "manual.zip", "")]},
+                           {"app-misc/m": ["manual.zip"]}))))
 
-def _state_write_is_atomic():
-    """A failed write must leave the old content intact and no temp file."""
-    with tempfile.TemporaryDirectory() as tmp:
-        d = pathlib.Path(tmp)
-        f = d / "orphans.json"
-        f.write_text('{"old": 1}')
-        try:
-            audit.write_atomic(f, "x" * 10)
-        except OSError:
-            pass
-        good = f.read_text() == "x" * 10
-        f2 = d / "sub"
-        f2.mkdir()
-        (f2 / "keep").write_text("keep")
-        try:
-            audit.write_atomic(f2, "boom")
-            failed = False
-        except OSError:
-            failed = True
-        leftovers = list(d.glob("*.new")) + list(d.glob("**/*.new"))
-        return good and failed and not leftovers and (f2 / "keep").read_text() == "keep"
+case("metadata 无法读取时归入不确定，且仍记为受限", lambda: (
+    (lambda r: r[1] == {"z.tar"} and r[0]["z.tar"] == [("app-misc/z", True)])(
+        scan_with_manifest({"app-misc/z": [("app-misc/z-1", None, None)]},
+                           {"app-misc/z": ["z.tar"]}))))
 
+case("SRC_URI 为空时同样归入不确定", lambda: (
+    (lambda r: r[1] == {"y.tar"} and r[0]["y.tar"] == [("app-misc/y", True)])(
+        scan_with_manifest({"app-misc/y": [("app-misc/y-1", "", "")]},
+                           {"app-misc/y": ["y.tar"]}))))
 
-def _ledger_takes_a_lock():
-    """While the parent holds the lock the child must wait, not write."""
-    import fcntl
-    import subprocess
-    with tempfile.TemporaryDirectory() as tmp:
-        d = pathlib.Path(tmp)
-        ledger = d / "reaped.json"
-        ledger.write_text("[]")
-        lock = pathlib.Path(f"{ledger}.lock")
-        fd = os.open(lock, os.O_WRONLY | os.O_CREAT, 0o644)
-        fcntl.flock(fd, fcntl.LOCK_EX)
-        code = (f"import importlib.util,sys;"
-                f"s=importlib.util.spec_from_file_location('a', {str(TARGET)!r});"
-                f"m=importlib.util.module_from_spec(s);s.loader.exec_module(m);"
-                f"m.LEDGER={str(ledger)!r};m.recent_deletions(1)")
-        proc = subprocess.Popen([sys.executable, "-c", code],
-                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        try:
-            proc.wait(timeout=2)
-            blocked = False
-        except subprocess.TimeoutExpired:
-            blocked = True
-        fcntl.flock(fd, fcntl.LOCK_UN)
-        os.close(fd)
-        try:
-            proc.wait(timeout=15)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            return False
-        rows = json.loads(ledger.read_text())
-        return blocked and len(rows) == 1
+case("裸文件名的 SRC_URI 也能归属，不会当成无人引用而回收", lambda: (
+    lambda r: "manual.zip" in r[1] and r[2] == []
+)(run_main({**{f"app-misc/f{i}": {"1.0": [f"f{i}.tar.gz"]} for i in range(9)}, "app-misc/m": {"1.0": ["manual.zip"]}},
+           ["manual.zip"] + [f"f{i}.tar.gz" for i in range(9)],
+           aged={"manual.zip": 10 ** 7}, src_style="bare")))
 
+case("ebuild 没有 SRC_URI 时归入不确定，超过宽限期也不删", lambda: (
+    lambda r: "mystery.tar.gz" in r[1] and r[2] == []
+)(run_main({"app-misc/m": {"1.0": ["mystery.tar.gz"]}},
+           ["mystery.tar.gz"] + [f"f{i}.tar.gz" for i in range(9)],
+           aged={"mystery.tar.gz": 10 ** 7}, src_style="none")))
 
-def _reap_uses_atomic_write():
-    """reap must go through the atomic writer, not write_text."""
-    with tempfile.TemporaryDirectory() as tmp:
-        d = pathlib.Path(tmp)
-        state = d / "orphans.json"
-        seen_calls = []
-        real = audit.write_atomic
+case("共用文件有一方禁止镜像时，已在镜像上的要下架", lambda: (
+    lambda r: r[2] == ["s.tar"]
+)(run_main({"app-misc/a": {"1.0": ["s.tar"]},
+            "app-misc/b": {"1.0": (["s.tar"], "mirror")}}, ["s.tar"],
+           aged={"s.tar": 10 ** 7})))
 
-        def spy(path, text):
-            seen_calls.append(pathlib.Path(path))
-            return real(path, text)
-
-        old_state, old_recycle = audit.STATE, audit.RECYCLE
-        audit.STATE, audit.write_atomic = str(state), spy
-        audit.RECYCLE = str(d / "recycle")
-        try:
-            audit.reap([], {}, grace=0)
-        finally:
-            audit.STATE, audit.RECYCLE = old_state, old_recycle
-            audit.write_atomic = real
-        return state in seen_calls and not list(d.glob("*.new"))
-
-
-case("状态档写入是原子替换，失败不留半截", _state_write_is_atomic)
-case("reap 写状态档走的是原子写", _reap_uses_atomic_write)
-case("账本读改写全程持锁，别人持锁时要等", _ledger_takes_a_lock)
+case("共用文件有一方禁止镜像时，也不该报成缺失", lambda: (
+    lambda r: "缺 0" in r[3]
+)(run_main({"app-misc/a": {"1.0": ["s.tar"]},
+            "app-misc/b": {"1.0": (["s.tar"], "mirror")}}, [])))
 
 for name, fn in CASES:
     try:
