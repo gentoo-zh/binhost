@@ -2,4 +2,3 @@
 # line: atom<TAB>reason. verify-deps.py only fails on entries not listed here.
 # An entry the index can satisfy again is reported as stale and should go.
 
-app-emulation/wine-vanilla[abi_x86_32,abi_x86_64]	容器是 ABI_X86=64，本站的 wine-vanilla 没有 32 位部分，virtual/wine 需要由使用者自行构建

@@ -74,14 +74,24 @@ def check(fields, installed=None):
     seen: every atom the index names, so a stale exception can be told from
     one that simply does not apply to this index.
 
+    The base system is matched by package name only: installed.txt carries no
+    slot or USE metadata, so checking the whole atom against it would reject
+    packages the root plainly has.
+
     With no installed list every unmatched atom is a finding: guessing that an
     absent package must be part of the base system is what hid failed builds.
     """
     db = index_db(fields)
     unsatisfied, base, seen = {}, {}, set()
 
-    def walk(node, cpv, out):
-        """True when the index satisfies this node. Failures land in out."""
+    def satisfied(node, cpv, out):
+        """True when the index or the base system satisfies this node.
+
+        The base system counts here rather than after the walk: a || group
+        whose only usable branch is a base system package is satisfied, and
+        judging its branches on the index alone reports the whole group as
+        missing.
+        """
         if isinstance(node, list):
             if node and node[0] == "||":
                 # Each branch gets its own diagnostics. A branch that failed is
@@ -89,17 +99,20 @@ def check(fields, installed=None):
                 tries = []
                 for branch in node[1:]:
                     mine = []
-                    if walk(branch, cpv, mine):
+                    if satisfied(branch, cpv, mine):
                         return True
                     tries.append(mine)
                 for mine in tries:
                     out.extend(mine)
                 return False
-            return all([walk(c, cpv, out) for c in node])
+            return all([satisfied(c, cpv, out) for c in node])
         if node.blocker:
             return True
         seen.add(str(node))
         if db.match(node):
+            return True
+        if installed is not None and node.cp in installed:
+            base.setdefault(str(node), set()).add(cpv)
             return True
         out.append(node)
         return False
@@ -112,11 +125,9 @@ def check(fields, installed=None):
             continue
         for node in nodes:
             missing = []
-            walk(node, cpv, missing)
+            satisfied(node, cpv, missing)
             for atom in missing:
-                by_base = installed is not None and atom.cp in installed
-                bucket = base if by_base else unsatisfied
-                bucket.setdefault(str(atom), set()).add(cpv)
+                unsatisfied.setdefault(str(atom), set()).add(cpv)
     return unsatisfied, base, seen
 
 
