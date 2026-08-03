@@ -83,7 +83,7 @@ for (const name of ORDER) {
   try {
     (0, eval)(fs.readFileSync(file, "utf8"));
   } catch (e) {
-    console.error(`!!! ${file} 载入时失败: ${e.message}`);
+    console.error(`!!! ${file} 载入时失败： ${e.message}`);
     process.exit(1);
   }
   loaded++;

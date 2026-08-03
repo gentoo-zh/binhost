@@ -45,12 +45,12 @@ for name, got in sorted(pages.items()):
         missing = [x for x in ref[part] if x not in got[part]]
         extra = [x for x in got[part] if x not in ref[part]]
         for x in missing:
-            print(f"      少: {x[0]}  {x[1] or x[3]}")
+            print(f"      少： {x[0]}  {x[1] or x[3]}")
         for x in extra:
-            print(f"      多: {x[0]}  {x[1] or x[3]}")
+            print(f"      多： {x[0]}  {x[1] or x[3]}")
         if not missing and not extra:
-            print(f"      顺序不同: {[x[0] for x in got[part]]}")
+            print(f"      顺序不同： {[x[0] for x in got[part]]}")
 
 if bad:
     sys.exit(1)
-print(f"  导航栏与页脚: {len(pages)} 个页面一致")
+print(f"  导航栏与页脚： {len(pages)} 个页面一致")

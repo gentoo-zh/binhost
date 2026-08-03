@@ -50,7 +50,7 @@ def main():
         print("!!! " + b, file=sys.stderr)
     if bad:
         return 1
-    print("  镜像选择器: markup 一致")
+    print("  镜像选择器： markup 一致")
     return 0
 
 

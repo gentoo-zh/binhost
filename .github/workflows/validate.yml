@@ -284,6 +284,6 @@ jobs:
       - name: Parse the cron table
         run: |
           awk 'NF && $1 !~ /^#/ {
-                 if (NF < 7) { print "!! 字段不足: " $0; bad=1 }
+                 if (NF < 7) { print "!! 字段不足： " $0; bad=1 }
                } END { exit bad }' deploy/cron.d-binhost
           echo "  cron.d-binhost 字段完整"

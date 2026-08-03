@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-SRC="${1:?用法: $0 <site 目录> [目标目录]}"
+SRC="${1:?用法： $0 <site 目录> [目标目录]}"
 DEST="${2:-${DEST:-/srv/mirrors}}"
 FPR_FILE="${FPR_FILE:-/etc/binhost/signing-key.fpr}"
 

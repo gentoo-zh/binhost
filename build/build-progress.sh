@@ -43,12 +43,12 @@ finish)
     state="${2:-done}"
     case "${state}" in
         done|failed) ;;
-        *) echo "用法: $0 finish [done|failed]" >&2; exit 1 ;;
+        *) echo "用法： $0 finish [done|failed]" >&2; exit 1 ;;
     esac
     printf '{"state":"%s","generated":%s}\n' "${state}" "$(date +%s)" | push
     ;;
 *)
-    echo "用法: $0 watch <log> | $0 finish [done|failed]" >&2
+    echo "用法： $0 watch <log> | $0 finish [done|failed]" >&2
     exit 1
     ;;
 esac

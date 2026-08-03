@@ -50,7 +50,7 @@ def main():
         print("    执行 python3 build/render-chrome.py 重新生成", file=sys.stderr)
         return 1
     if check:
-        print("  共用部分: 各页与模板一致")
+        print("  共用部分： 各页与模板一致")
     return 0
 
 

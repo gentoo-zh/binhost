@@ -391,7 +391,7 @@ for ((i = 0; i < 2; i++)); do echo x > "${d}/remote/app-misc/old${i}-1.0-1.gpkg.
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
 ok "恰好等于比例上限时也拦下" "$?" "3"
-ok "并且一个都没删" "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "2"
+ok "并且未删除任何旧包" "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "2"
 rm -rf "${d}"
 
 d=$(setup_publish)
@@ -402,7 +402,7 @@ for ((i = 0; i < 70; i++)); do echo x > "${d}/remote/app-misc/old${i}-1.0-1.gpkg
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
 ok "比例没超但绝对数量超时仍拦下" "$?" "3"
-ok "并且一个都没删" "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "70"
+ok "并且未删除任何旧包" "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "70"
 rm -rf "${d}"
 
 echo
@@ -481,7 +481,7 @@ for ((i = 0; i < 20; i++)); do echo x > "${d}/dest/app-misc/old${i}-1.0-1.gpkg.t
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
       bash deploy/mirror-sync.sh 2>&1)
 ok "清理比例超上限时以 3 退出" "$?" "3"
-ok "并且一个都没删" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "20"
+ok "并且未删除任何旧包" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "20"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
       FORCE_REMOVE=1 bash deploy/mirror-sync.sh 2>&1)
 ok "FORCE_REMOVE=1 时照常清理" "$?" "0"
@@ -526,7 +526,7 @@ for ((i = 0; i < 2; i++)); do echo x > "${d}/dest/app-misc/old${i}-1.0-1.gpkg.ta
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
       bash deploy/mirror-sync.sh 2>&1)
 ok "恰好等于比例上限时也拦下" "$?" "3"
-ok "并且一个都没删" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "2"
+ok "并且未删除任何旧包" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "2"
 rm -rf "${d}"
 
 d=$(setup_mirror)

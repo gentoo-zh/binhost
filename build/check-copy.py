@@ -269,12 +269,12 @@ def main(dirname):
                 hits.append(f"{why}: {m.group(0).strip()[:26]}")
         for w in WORDS:
             if w in text:
-                hits.append(f"禁止词: {w}")
+                hits.append(f"禁止词： {w}")
         for pat, why in FILLER:
             for m in re.finditer(pat, text):
                 hits.append(f"{why}: {m.group(0)[:20]}")
         for m in BARE_RUN.finditer(text):
-            hits.append(f"应写成执行或运行，不用单字: {text[max(0, m.start() - 6):m.start() + 6]}")
+            hits.append(f"应写成执行或运行，不用单字： {text[max(0, m.start() - 6):m.start() + 6]}")
 
         chars = len(re.sub(r"\s", "", text))
         dashes = text.count("——")
@@ -301,7 +301,7 @@ def main(dirname):
     bad += check_comments(pathlib.Path(dirname).parent)
     bad += check_emitted(pathlib.Path(dirname).parent)
     if not bad:
-        print("  代码注释与输出字符串: 无口语词")
+        print("  代码注释与输出字符串： 无口语词")
     return 1 if bad else 0
 
 
