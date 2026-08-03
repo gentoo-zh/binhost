@@ -57,8 +57,12 @@ if [[ -n ${VERSION_FILE} && -r ${VERSION_FILE} ]]; then
     here=$(tr -d ' \n' < "${VERSION_FILE}")
     there=$(curl -fsS --max-time 20 "${REPO_API}" 2>/dev/null |
             sed -n 's/^  "sha": "\([0-9a-f]\{40\}\)",$/\1/p' | head -1)
-    if [[ -z ${there} ]]; then
-        note "部署版本" "${here:0:8}，远端不可达，未比对"
+    if [[ ${here} == *-dirty ]]; then
+        bad "部署版本" "${here:0:8} 是从未提交的工作树装的，无法核对"
+    elif [[ ! ${here} =~ ^[0-9a-f]{40}$ ]]; then
+        bad "部署版本" "VERSION 不是提交号：${here:0:16}"
+    elif [[ -z ${there} ]]; then
+        bad "部署版本" "${here:0:8}，无法获取目标版本，本次未能核对"
     elif [[ ${here} == "${there}" ]]; then
         note "部署版本" "${here:0:8}，与目标版本一致"
     elif [[ -z ${TRACKED} ]]; then
@@ -72,7 +76,7 @@ if [[ -n ${VERSION_FILE} && -r ${VERSION_FILE} ]]; then
             grep -q "^${path}" <<< "${changed}" && { hit="${path}"; break; }
         done
         if [[ -z ${changed} ]]; then
-            note "部署版本" "${here:0:8}，无法取得差异，未比对"
+            bad "部署版本" "已部署 ${here:0:8}，目标版本 ${there:0:8}，无法获取两者差异，不能判断本机是否落后"
         elif [[ -n ${hit} ]]; then
             bad "部署版本" "已部署 ${here:0:8}，目标版本 ${there:0:8}，${hit} 已变更"
         else

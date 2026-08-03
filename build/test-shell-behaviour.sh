@@ -77,6 +77,39 @@ stage_index() {
     gzip -c "${dir}/stage/Packages" > "${dir}/stage/Packages.gz"
 }
 
+echo "== status.sh 的部署版本核对"
+
+version_probe() {
+    local ver="$1" sha_out="$2" d out
+    d=$(mktemp -d); mkdir -p "${d}/bin"
+    cat > "${d}/bin/curl" <<EOF
+#!/bin/bash
+case "\$*" in
+  *commits/master*) ${sha_out} ;;
+esac
+exit 22
+EOF
+    printf '#!/bin/bash\nexit 1\n' > "${d}/bin/sudo"
+    printf '#!/bin/bash\nexit 1\n' > "${d}/bin/openssl"
+    chmod +x "${d}/bin"/*
+    printf '%s\n' "${ver}" > "${d}/VERSION"
+    out=$( cd "${ROOT}" && PATH="${d}/bin:${PATH}" ALERT_CONF=/nonexistent \
+        STATE_FILE="${d}/state" VERSION_FILE="${d}/VERSION" \
+        SIGNING_GNUPGHOME="${d}/nokey" DISK_PATH="${d}/nodisk" \
+        HEARTBEAT="${d}/nowhere/.health" SITE_WORK="${d}/nowork" \
+        SITE_DEST="${d}/nodest" MONITORS_FILE="${d}/nomon" \
+        bash build/status.sh 2>&1 | grep '部署版本' )
+    rm -rf "${d}"
+    case "${out}" in *'<--'*) echo failed ;; *) echo passed ;; esac
+}
+
+SHA40=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+SAME='echo "  \"sha\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\","'
+ok "VERSION 带 -dirty 时算故障" "$(version_probe "${SHA40}-dirty" 'exit 22')" "failed"
+ok "VERSION 不是提交号时算故障" "$(version_probe not-a-sha 'exit 22')" "failed"
+ok "无法获取目标版本时算故障，不再当成通过" "$(version_probe "${SHA40}" 'exit 22')" "failed"
+ok "版本一致时才算通过" "$(version_probe "${SHA40}" "${SAME}")" "passed"
+
 echo "== publish.sh"
 
 d=$(setup_publish)

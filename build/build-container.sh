@@ -145,6 +145,8 @@ echo ">>> staged at ${STAGE} (previous generation kept at ${STAGE}.old)"
 
 if [[ -s ${LOGDIR}/failed.txt ]]; then
     python3 "$(dirname "$0")/classify-failures.py" "${LOGDIR}" | tee "${LOGDIR}/report.txt"
+else
+    rm -f "${LOGDIR}/report.txt"
 fi
 
 }

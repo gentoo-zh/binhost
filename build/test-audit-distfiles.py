@@ -443,6 +443,89 @@ def _restricted_uses_budget():
 case("额度用尽时禁止镜像的文件也不再回收",
      lambda: _restricted_uses_budget() == 8)
 
+def _state_write_is_atomic():
+    """A failed write must leave the old content intact and no temp file."""
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        f = d / "orphans.json"
+        f.write_text('{"old": 1}')
+        try:
+            audit.write_atomic(f, "x" * 10)
+        except OSError:
+            pass
+        good = f.read_text() == "x" * 10
+        f2 = d / "sub"
+        f2.mkdir()
+        (f2 / "keep").write_text("keep")
+        try:
+            audit.write_atomic(f2, "boom")
+            failed = False
+        except OSError:
+            failed = True
+        leftovers = list(d.glob("*.new")) + list(d.glob("**/*.new"))
+        return good and failed and not leftovers and (f2 / "keep").read_text() == "keep"
+
+
+def _ledger_takes_a_lock():
+    """While the parent holds the lock the child must wait, not write."""
+    import fcntl
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        ledger = d / "reaped.json"
+        ledger.write_text("[]")
+        lock = pathlib.Path(f"{ledger}.lock")
+        fd = os.open(lock, os.O_WRONLY | os.O_CREAT, 0o644)
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        code = (f"import importlib.util,sys;"
+                f"s=importlib.util.spec_from_file_location('a', {str(TARGET)!r});"
+                f"m=importlib.util.module_from_spec(s);s.loader.exec_module(m);"
+                f"m.LEDGER={str(ledger)!r};m.recent_deletions(1)")
+        proc = subprocess.Popen([sys.executable, "-c", code],
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            proc.wait(timeout=2)
+            blocked = False
+        except subprocess.TimeoutExpired:
+            blocked = True
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
+        try:
+            proc.wait(timeout=15)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            return False
+        rows = json.loads(ledger.read_text())
+        return blocked and len(rows) == 1
+
+
+def _reap_uses_atomic_write():
+    """reap must go through the atomic writer, not write_text."""
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        state = d / "orphans.json"
+        seen_calls = []
+        real = audit.write_atomic
+
+        def spy(path, text):
+            seen_calls.append(pathlib.Path(path))
+            return real(path, text)
+
+        old_state, old_recycle = audit.STATE, audit.RECYCLE
+        audit.STATE, audit.write_atomic = str(state), spy
+        audit.RECYCLE = str(d / "recycle")
+        try:
+            audit.reap([], {}, grace=0)
+        finally:
+            audit.STATE, audit.RECYCLE = old_state, old_recycle
+            audit.write_atomic = real
+        return state in seen_calls and not list(d.glob("*.new"))
+
+
+case("状态档写入是原子替换，失败不留半截", _state_write_is_atomic)
+case("reap 写状态档走的是原子写", _reap_uses_atomic_write)
+case("账本读改写全程持锁，别人持锁时要等", _ledger_takes_a_lock)
+
 for name, fn in CASES:
     try:
         ok = bool(fn())
