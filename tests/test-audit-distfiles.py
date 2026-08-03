@@ -335,6 +335,60 @@ def _lock_unavailable():
         return None
 
 
+def _concurrent_reap():
+    """Two runs over the same orphan state, one after the other holds the lock.
+
+    Serialised here rather than truly parallel, because what has to hold is
+    that the second run reads what the first wrote, not that they overlap.
+    """
+    import tempfile as _t, pathlib as _p
+    with _t.TemporaryDirectory() as tmp:
+        d = _p.Path(tmp)
+        files = d / "f"
+        files.mkdir()
+        (files / "x.tar.gz").write_text("x")
+        old = (audit.STATE, audit.RECYCLE, audit.LEDGER)
+        audit.STATE = str(d / "orphans.json")
+        audit.RECYCLE = str(d / "recycle")
+        audit.LEDGER = str(d / "reaped.json")
+        try:
+            paths = {"x.tar.gz": files / "x.tar.gz"}
+            audit.reap({"x.tar.gz"}, paths, grace=10 ** 6)
+            first = json.loads(_p.Path(audit.STATE).read_text())["x.tar.gz"]
+            audit.reap({"x.tar.gz"}, paths, grace=10 ** 6)
+            second = json.loads(_p.Path(audit.STATE).read_text())["x.tar.gz"]
+        finally:
+            audit.STATE, audit.RECYCLE, audit.LEDGER = old
+        return first, second
+
+
+case("第二次执行沿用第一次记下的时间，不会把宽限期重置", lambda: (
+    (lambda r: r[0] == r[1])(_concurrent_reap())))
+
+
+def _reap_lock_unavailable():
+    import tempfile as _t, pathlib as _p
+    with _t.TemporaryDirectory() as tmp:
+        d = _p.Path(tmp)
+        blocked = d / "blocked"
+        blocked.write_text("不是目录")
+        old = audit.STATE
+        audit.STATE = str(blocked / "orphans.json")
+        try:
+            audit.reap(set(), {})
+        except audit.LedgerError as e:
+            return str(e)
+        except Exception as e:                              # noqa: BLE001
+            return f"其他异常 {type(e).__name__}"
+        finally:
+            audit.STATE = old
+        return None
+
+
+case("孤儿状态的锁建不出来时同样抛错", lambda: (
+    _reap_lock_unavailable() is not None))
+
+
 case("拿不到帐本锁时抛错，不是照常清理", lambda: (
     (lambda m: m is not None and "本轮不做任何清理" in m)(_lock_unavailable())))
 
