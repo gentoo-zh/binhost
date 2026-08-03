@@ -80,33 +80,54 @@ def read_built():
     return out
 
 
-def read_deps():
-    """The ::gentoo packages in the index, newest version of each.
+class IndexUnreadable(Exception):
+    pass
 
-    They are published alongside the overlay's own packages but are not part of
-    the build list, so the site has to name them separately rather than let a
-    reader take the overlay list for the whole index.
+
+def read_deps():
+    """Every ::gentoo package the index publishes, one entry per CPV.
+
+    Keyed by CPV rather than by package, because staging publishes more than
+    one version of the same package whenever two slots or two exact atoms are
+    depended on, and dropping the older one would name a version that is not
+    the one a consumer gets.
+
+    Only REPO: gentoo counts. A stanza from any other repository is a state
+    this script does not know how to describe, so it stops rather than file it
+    under the main tree.
     """
     if not INDEX:
         return []
     p = pathlib.Path(INDEX)
     if not p.exists():
-        return []
-    best = {}
-    for s in p.read_text(errors="ignore").split("\n\n")[1:]:
+        raise IndexUnreadable(f"{p} 不存在")
+    try:
+        text = p.read_text(errors="ignore")
+    except OSError as e:
+        raise IndexUnreadable(f"{p} 读取失败：{e}") from e
+
+    out, others = [], set()
+    for s in text.split("\n\n")[1:]:
         f = dict(STANZA.findall(s))
         cpv = f.get("CPV")
-        if not cpv or f.get("REPO") == "gentoo-zh":
+        if not cpv:
+            continue
+        repo = f.get("REPO", "")
+        if repo == "gentoo-zh":
+            continue
+        if repo != "gentoo":
+            others.add(repo or "（无 REPO 字段）")
             continue
         parts = catpkgsplit(cpv)
         if not parts:
-            continue
-        cp = f"{parts[0]}/{parts[1]}"
+            raise IndexUnreadable(f"无法解析 CPV：{cpv}")
         ver = parts[2] + ("-" + parts[3] if parts[3] != "r0" else "")
-        cur = best.get(cp)
-        if cur is None or vercmp(ver, cur) > 0:
-            best[cp] = ver
-    return [{"cp": cp, "ver": v} for cp, v in sorted(best.items())]
+        out.append({"cp": f"{parts[0]}/{parts[1]}", "ver": ver,
+                    "slot": f.get("SLOT", "0").split("/", 1)[0]})
+    if others:
+        raise IndexUnreadable(f"索引里有未知仓库的产物：{' '.join(sorted(others))}")
+    out.sort(key=lambda d: (d["cp"], d["slot"], d["ver"]))
+    return out
 
 
 def mirrored():
@@ -133,7 +154,12 @@ def main(overlay):
 
     excluded = read_excluded()
     built = read_built()
-    deps = read_deps()
+    try:
+        deps = read_deps()
+    except IndexUnreadable as e:
+        print(f"!!! 索引无法使用：{e}", file=sys.stderr)
+        print("!!! 未写出任何文件，保留上一份有效输出", file=sys.stderr)
+        return 1
     masked = read_mask(overlay)
     out, missing = [], sorted(wanted)
     for pkgdir in sorted(overlay.glob("*/*")):
@@ -179,7 +205,8 @@ def main(overlay):
 
     tmp = OUT.with_suffix(".json.new")
     tmp.write_text(json.dumps(
-        {"generated": int(time.time()), "packages": out, "deps": deps},
+        {"schema": 2, "generated": int(time.time()), "packages": out,
+         "deps": deps},
         ensure_ascii=False, separators=(",", ":")))
     os.replace(tmp, OUT)
 
@@ -199,17 +226,22 @@ def main(overlay):
         else:
             mark = "src" if all(f in have for f in pkg["dist"]) else "--"
         lines.append(f"{pkg['cp']:<44} {mark}  {pkg['desc']}".rstrip())
-    if deps:
-        lines += ["",
-                  f"# ::gentoo 运行期依赖，{len(deps)} 个",
-                  "# 这些包来自 gentoo 主仓库，因为本站的包用得到才一并发布，"
-                  "不构成完整的官方 binhost",
-                  ""]
-        lines += [f"{d['cp']:<44} {d['ver']}" for d in deps]
-
     tmp_txt = txt.with_suffix(".txt.new")
     tmp_txt.write_text("\n".join(lines) + "\n")
     os.replace(tmp_txt, txt)
+
+    # A separate file rather than a second section: the second column in
+    # packages.txt is a status, and reusing it for a version would break
+    # anything reading the file line by line.
+    dep_txt = OUT.with_name("deps.txt")
+    dep_lines = [f"# 随 gentoo-zh 的包一并发布的 ::gentoo 运行期依赖，{len(deps)} 个",
+                 f"# 生成于 {time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime())}",
+                 "# 第二列 slot，第三列版本；不替代 Gentoo 官方 binhost",
+                 ""]
+    dep_lines += [f"{d['cp']:<44} {d['slot']:<8} {d['ver']}" for d in deps]
+    tmp_dep = dep_txt.with_suffix(".txt.new")
+    tmp_dep.write_text("\n".join(dep_lines) + "\n")
+    os.replace(tmp_dep, dep_txt)
 
     with_dist = sum(1 for p in out if p["dist"])
     print(f">>> {len(out)} packages ({sum(p['binhost'] for p in out)} on the binhost "
