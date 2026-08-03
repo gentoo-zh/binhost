@@ -368,6 +368,16 @@ rm -rf "${d}"
 d=$(setup_site)
 fake_gpg "${d}" AAAA0000000000000000000000000000000000AA
 echo AAAA0000000000000000000000000000000000AA > "${d}/fpr"
+rm -rf "${d}/work"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" WORK="${d}/work" DEST="${d}/dest" \
+      FPR_FILE="${d}/fpr" LOCK="${d}/work.lock" bash deploy/site-sync.sh 2>&1)
+ok "锁不在 WORK 里，首次 clone 不会撞到非空目录" \
+   "$(test -e "${d}/work/.lock" && echo 在 || echo 无)" "无"
+rm -rf "${d}"
+
+d=$(setup_site)
+fake_gpg "${d}" AAAA0000000000000000000000000000000000AA
+echo AAAA0000000000000000000000000000000000AA > "${d}/fpr"
 : > "${d}/lock"
 exec {held}>"${d}/lock"
 flock -n "${held}"
