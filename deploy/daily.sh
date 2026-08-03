@@ -57,6 +57,7 @@ if step "distfiles 同步" /usr/local/bin/binhost-distfiles-sync; then
         python3 "${LIB}/gen-packages.py" "${OVERLAY}"
 
     step "distfiles 对账" python3 "${LIB}/audit-distfiles.py" "${OVERLAY}" "${DISTDIR}"
+    step "依赖反向验证" python3 "${LIB}/verify-deps.py" /srv/pub/binpkgs/x86-64/Packages
 fi
 
 if [[ -s ${FAILURES} ]]; then

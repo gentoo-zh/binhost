@@ -13,8 +13,10 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from ebuilds import (                                       # noqa: E402
-    Masks, dep_atoms, read_mask, split_cpv,
+    Masks, MetadataUnavailable, index_db, pinned_portdbapi, read_mask,
+    runtime_atoms, split_cpv, vercmp,
 )
+from portage.dep import paren_enclose                       # noqa: E402
 
 
 def parse(text):
@@ -83,37 +85,14 @@ GENTOO_TREE = os.environ.get("GENTOO_TREE", "/var/db/repos/gentoo")
 RUNTIME_FIELDS = ("RDEPEND", "PDEPEND", "IDEPEND")
 
 
-class MetadataUnavailable(Exception):
-    pass
-
-
 def portage_restrict(overlay):
     """(cpv, repo) -> RESTRICT from Portage metadata, eclasses included.
 
     The repository is selected per stanza because the same CPV can exist in
-    both trees with different RESTRICT. Locations are pinned to the trees this
-    build used rather than whichever checkouts the host has registered, and are
-    passed through an explicit config so the result does not depend on whether
-    something else imported portage first.
-
-    USE conditionals are left unevaluated, so bindist behind any flag counts.
+    both trees with different RESTRICT. USE conditionals are left unevaluated,
+    so bindist behind any flag counts.
     """
-    env = dict(os.environ)
-    env["PORTAGE_REPOSITORIES"] = (
-        "[DEFAULT]\nmain-repo = gentoo\n\n"
-        f"[gentoo]\nlocation = {GENTOO_TREE}\n\n"
-        f"[gentoo-zh]\nlocation = {overlay}\nmasters = gentoo\n")
-    try:
-        import portage
-        db = portage.portdbapi(mysettings=portage.config(env=env))
-        for name, want in (("gentoo", GENTOO_TREE), ("gentoo-zh", str(overlay))):
-            got = db.getRepositoryPath(name)
-            if got != want:
-                raise MetadataUnavailable(f"{name} resolved to {got}, expected {want}")
-    except MetadataUnavailable:
-        raise
-    except Exception as e:                                 # noqa: BLE001
-        raise MetadataUnavailable(str(e)) from e
+    db = pinned_portdbapi(overlay, GENTOO_TREE)
 
     def get(cpv, repo):
         try:
@@ -139,20 +118,63 @@ def effective_bindist(cpv, f, lookup):
     return "yes" if "bindist" in restrict.split() else "no"
 
 
+def newest_per_slot(db, cpvs):
+    """One CPV per slot, the newest, which is what a resolver would install."""
+    best = {}
+    for cpv in cpvs:
+        slot = db.aux_get(cpv, ["SLOT"])[0].split("/", 1)[0]
+        cur = best.get(slot)
+        if cur is None or vercmp(split_cpv(cpv)[1], split_cpv(cur)[1]) > 0:
+            best[slot] = cpv
+    return set(best.values())
+
+
 def runtime_closure(entries, seeds):
-    """CPVs reachable from seeds through RDEPEND and PDEPEND.
+    """(CPVs reachable from seeds, the atoms the index cannot satisfy).
 
     Build-time dependencies are deliberately left out: someone installing a
-    binary package never needs the compiler that produced it. Resolution is
-    against the index itself, so anything the build machine did not package
-    (glibc and the rest of the stage3 base) simply does not appear.
+    binary package never needs the compiler that produced it.
+
+    Atoms keep their version, slot, repository and USE constraints and are
+    matched against the index by Portage. Of the matches only the newest in
+    each slot is taken, so a bare atom no longer drags in every older version
+    that happens to still be in the cache.
+
+    A || group is satisfied by the first branch the index can satisfy in full.
+    When no branch can be, the group is reported and nothing from it is
+    published, because publishing every branch would ship packages the seed
+    does not depend on.
+
+    Whatever the build machine did not package, glibc and the rest of the
+    stage3 base, has no match and is reported too. A caller must not claim the
+    published set is dependency complete while that list is not empty.
     """
-    by_cp = {}
     fields = {}
     for f, _ in entries:
-        cpv = f["CPV"]
-        fields[cpv] = f
-        by_cp.setdefault(split_cpv(cpv)[0], []).append(cpv)
+        fields[f["CPV"]] = f
+    db = index_db(fields.values())
+    unresolved = {}
+
+    def resolve(node):
+        """The CPVs this node needs, or None when the index cannot satisfy it."""
+        if isinstance(node, list):
+            if node and node[0] == "||":
+                for branch in node[1:]:
+                    got = resolve(branch)
+                    if got is not None:
+                        return got
+                return None
+            out = set()
+            for child in node:
+                got = resolve(child)
+                if got is None:
+                    return None
+                out |= got
+            return out
+        if node.blocker:
+            return set()
+        matched = db.match(node)
+        return newest_per_slot(db, matched) if matched else None
 
     seen = set()
     queue = list(seeds)
@@ -162,9 +184,18 @@ def runtime_closure(entries, seeds):
             continue
         seen.add(cpv)
         text = " ".join(fields[cpv].get(k, "") for k in RUNTIME_FIELDS)
-        for cp in dep_atoms(text):
-            queue.extend(c for c in by_cp.get(cp, []) if c not in seen)
-    return seen
+        nodes = runtime_atoms(text)
+        if nodes is None:
+            unresolved.setdefault(f"<{cpv} 的依赖无法解析>", set()).add(cpv)
+            continue
+        for node in nodes:
+            got = resolve(node)
+            if got is None:
+                unresolved.setdefault(paren_enclose([node], opconvert=True),
+                                      set()).add(cpv)
+                continue
+            queue.extend(c for c in got if c not in seen)
+    return seen, unresolved
 
 
 def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None):
@@ -176,7 +207,7 @@ def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None):
                 raise MetadataUnavailable("no overlay to resolve gentoo-zh against")
             lookup = portage_restrict(overlay)
         except MetadataUnavailable as e:
-            return [], 0, f"Portage metadata unavailable, nothing published: {e}", []
+            return [], 0, f"Portage metadata unavailable, nothing published: {e}", [], {}
     if with_deps is None:
         with_deps = os.environ.get("PUBLISH_DEPS", "1") == "1"
     best = {}
@@ -186,7 +217,7 @@ def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None):
     for f, _ in entries:
         if safe_path(f.get("PATH", "")) is None:
             return ([], skipped,
-                    f"索引里的 PATH 不合法：{f['CPV']} -> {f.get('PATH', '')!r}", [])
+                    f"索引里的 PATH 不合法：{f['CPV']} -> {f.get('PATH', '')!r}", [], {})
 
     def ours(f):
         cpv = f["CPV"]
@@ -200,7 +231,10 @@ def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None):
         return not (ver is not None and masked.masks(cp, ver))
 
     seeds = {f["CPV"] for f, _ in entries if ours(f)}
-    keep = runtime_closure(entries, seeds) if with_deps else set(seeds)
+    if with_deps:
+        keep, unresolved = runtime_closure(entries, seeds)
+    else:
+        keep, unresolved = set(seeds), {}
 
     for f, s in entries:
         cpv = f["CPV"]
@@ -224,7 +258,7 @@ def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None):
             skipped += 1
         best[cpv] = (bid, f, s)
 
-    return list(best.values()), skipped, None, refused
+    return list(best.values()), skipped, None, refused, unresolved
 
 
 def rewrite_header(header, count, rev):
@@ -247,7 +281,7 @@ def main(pkgdir, stage, overlay=None, rev="", lookup=None):
     overlay = pathlib.Path(overlay) if overlay else None
 
     header, entries = parse((pkgdir / "Packages").read_text())
-    kept, skipped, error, refused = select(entries, overlay, lookup=lookup)
+    kept, skipped, error, refused, unresolved = select(entries, overlay, lookup=lookup)
     if error:
         sys.exit(error)
     for cpv, _, state in refused:
@@ -308,12 +342,20 @@ def main(pkgdir, stage, overlay=None, rev="", lookup=None):
 
     (stage / "Packages").write_text(
         rewrite_header(header, len(stanzas), rev) + "\n\n" + "\n\n".join(stanzas) + "\n")
+    (stage / "unresolved.txt").write_text(
+        "".join(f"{atom}\t{' '.join(sorted(who))}\n"
+                for atom, who in sorted(unresolved.items())))
+
     ours = sum(1 for _, f, _ in kept if f.get("REPO") == "gentoo-zh")
     (stage / "counts.txt").write_text(f"{ours}\n{len(stanzas) - ours}\n")
     print(f">>> staged {len(stanzas)}（overlay {ours}，运行期依赖 {len(stanzas) - ours}），"
           f"skipped {skipped} not ours to publish")
     if refused:
         print(f">>> 其中 {len(refused)} 个因不可散布或无法确认被跳过")
+    if unresolved:
+        print(f">>> {len(unresolved)} 个依赖原子在索引中没有匹配，"
+              f"由基础系统提供或未建置，见 unresolved.txt；"
+              f"因此不能宣称已发布的内容依赖完整")
     return 0
 
 

@@ -6,9 +6,9 @@ import re
 import sys
 
 try:
-    from portage.dep import Atom, match_from_list
+    from portage.dep import Atom, match_from_list, use_reduce
     from portage.exception import InvalidAtom, PortageException
-    from portage.versions import vercmp
+    from portage.versions import _pkg_str, vercmp
 except ImportError:
     sys.exit("需要 sys-apps/portage：原子匹配与版本比较都用 portage 提供的实现")
 
@@ -95,29 +95,49 @@ def split_cpv(cpv):
 CP_ONLY = re.compile(r"^[a-z][a-z0-9+._-]*/[A-Za-z0-9][A-Za-z0-9+._-]*$")
 
 
-def dep_atoms(text):
-    """category/package named anywhere in a dependency string.
+def runtime_atoms(text):
+    """The dependency atoms in a binary package's runtime fields.
 
-    A binary index writes fully qualified atoms such as
-    >=sys-libs/glibc-2.43-r2:2.2/2.2=, so the version, the slot and any use
-    dependency have to come off before the name is usable. Use conditionals
-    are flattened rather than evaluated: this is used to decide what to keep,
-    where naming one package too many costs disk and naming one too few
-    leaves a dependency unpublished.
+    USE conditionals are kept unevaluated and every branch is taken: a binary
+    package's own fields are already evaluated, so anything left applies.
+    || groups survive as a ["||", ...] node for the caller to decide.
+
+    No EAPI is imposed. The index carries ::repo qualified atoms, which no
+    EAPI allows in an ebuild but Portage writes into binary package metadata.
     """
-    out = set()
-    for token in text.split():
-        if token in ("(", ")", "||", "&&") or token.endswith("?"):
-            continue
-        if token.startswith("!"):
-            continue
-        token = token.lstrip("<>=~").split("[", 1)[0].split(":", 1)[0].rstrip("=*")
-        if "/" not in token:
-            continue
-        cp = split_cpv(token)[0]
-        if CP_ONLY.match(cp):
-            out.add(cp)
-    return out
+    try:
+        return use_reduce(text, matchall=True, opconvert=True, eapi=None,
+                          token_class=Atom, is_valid_flag=lambda f: True)
+    except PortageException:
+        return None
+
+
+INDEX_FIELDS = ("SLOT", "USE", "IUSE", "KEYWORDS", "EAPI")
+"""The stanza fields atom matching reads.
+
+USE and IUSE decide use dependencies, and EAPI decides how a missing IUSE is
+read; with neither IUSE nor EAPI present a [flag] dependency matches nothing.
+Most stanzas carry no SLOT, which portage already reads as slot 0.
+"""
+
+
+def index_db(fields):
+    """A fakedbapi holding the index, so atoms match through Portage.
+
+    Version, revision, slot, sub-slot, repository and USE dependencies are all
+    handled by Portage's own matching rather than by taking atoms apart here.
+    """
+    import portage
+    from portage.dbapi.virtual import fakedbapi
+    # exclusive_slots would keep only the newest build per slot, and then an
+    # exact atom on an older cached version would match nothing at all.
+    db = fakedbapi(settings=portage.settings, exclusive_slots=False)
+    for f in fields:
+        meta = {k: f.get(k, "") for k in INDEX_FIELDS}
+        meta["repository"] = f.get("REPO", "")
+        cpv = _pkg_str(f["CPV"], metadata=meta, settings=portage.settings)
+        db.cpv_inject(cpv, metadata=meta)
+    return db
 
 
 def version_of(ebuild, pn):
