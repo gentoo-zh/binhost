@@ -63,7 +63,7 @@ ssh -o StrictHostKeyChecking=yes -o UserKnownHostsFile="${KNOWN_HOSTS}" \
 on "command -v sudo >/dev/null || emerge -q app-admin/sudo
     echo '${ADMIN} ALL=(ALL:ALL) NOPASSWD: ALL' > /etc/sudoers.d/${ADMIN}
     chmod 440 /etc/sudoers.d/${ADMIN}
-    visudo -c >/dev/null && echo '  sudoers 语法 ok'"
+    visudo -c >/dev/null && echo '  sudoers 语法检查通过'"
 
 say "locale"
 # shellcheck disable=SC2016
@@ -131,7 +131,7 @@ on "sed -i -E \
 
 say "完成"
 echo "接下来："
-echo "  1. 另开一个终端确认 ssh -i ${PUBKEY%.pub} -p ${SSH_PORT} ${ADMIN}@${TARGET#*@} 能登录"
+echo "  1. 在第二个终端执行登录验证：ssh -i ${PUBKEY%.pub} -p ${SSH_PORT} ${ADMIN}@${TARGET#*@}"
 echo "  2. 确认之后再重启 sshd：ssh ${TARGET} 'rc-service sshd restart'"
 echo "     当前这个连接不会中断，重启前请保持它作为退路"
 echo "  3. 执行 deploy/install.sh 安装服务"

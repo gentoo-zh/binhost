@@ -252,7 +252,7 @@ else
             [[ -r ${MONITORS_FILE} ]] &&
                 want=$(grep -Eo '[0-9]+(\.[0-9]+){3}' "${MONITORS_FILE}" | wc -l)
             if (( monitors > 0 )); then
-                note "node_exporter" "ok，放行 ${monitors} 个抓取源"
+                note "node_exporter" "检查通过，放行 ${monitors} 个抓取源"
             elif (( want > 0 )); then
                 bad "node_exporter" "安装时配置了 ${want} 个抓取源，当前集合为空"
             else
@@ -282,9 +282,9 @@ else
         if [[ ${jstate} == failed ]]; then
             bad "建置状态" "上一轮建置失败（${jage} 小时前）"
         elif [[ ${jstate} == running ]] && (( page >= BUILD_STALE_H )); then
-            bad "建置状态" "${jphase:-未知} 阶段已 ${page} 小时没有进展，建置可能卡住"
+            bad "建置状态" "${jphase:-未知} 阶段已 ${page} 小时没有进展"
         elif [[ ${jstate} == running ]] && (( jage >= BUILD_STALE_H )); then
-            bad "建置状态" "running 已 ${jage} 小时未更新，进度推送可能已停止"
+            bad "建置状态" "进度状态已 ${jage} 小时未更新"
         elif (( jage >= HEARTBEAT_MAX_H )); then
             bad "建置状态" "${jage} 小时未更新（阈值 ${HEARTBEAT_MAX_H}h）"
         else
