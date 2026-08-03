@@ -208,6 +208,43 @@ ok "VERSION 不是提交号时算故障" "$(version_probe not-a-sha 'exit 22')" 
 ok "无法获取目标版本时算故障，不再当成通过" "$(version_probe "${SHA40}" 'exit 22')" "failed"
 ok "版本一致时才算通过" "$(version_probe "${SHA40}" "${SAME}")" "passed"
 
+echo "== status.sh 对 node_exporter 抓取源的判定"
+
+exporter_probe() {
+    local elements="$1" d out
+    d=$(mktemp -d); mkdir -p "${d}/bin"
+    cat > "${d}/bin/nft" <<EOF
+#!/bin/bash
+case "\$*" in
+  *"chain inet filter input"*) echo "  tcp dport 9100 ip saddr @monitor_hosts accept" ;;
+  *"set inet filter monitor_hosts"*) printf "set monitor_hosts {\n type ipv4_addr\n${elements}\n}\n" ;;
+esac
+EOF
+    cat > "${d}/bin/sudo" <<'EOF'
+#!/bin/bash
+while [ "${1#-}" != "$1" ]; do shift; done
+exec "$@"
+EOF
+    printf '#!/bin/bash\nexit 0\n' > "${d}/bin/node_exporter"
+    cat > "${d}/bin/curl" <<'EOF'
+#!/bin/bash
+for a in "$@"; do case "$a" in *127.0.0.1:9100*) exit 0;; esac; done
+exit 22
+EOF
+    chmod +x "${d}/bin"/*
+    out=$( cd "${ROOT}" && PATH="${d}/bin:${PATH}" ALERT_CONF=/nonexistent \
+        STATE_FILE="${d}/s" VERSION_FILE="${d}/v" SIGNING_GNUPGHOME="${d}/nokey" \
+        DISK_PATH="${d}/nodisk" HEARTBEAT="${d}/nowhere/.health" \
+        SITE_WORK="${d}/nowork" SITE_DEST="${d}/nodest" MONITORS_FILE="${d}/nomon" \
+        bash build/status.sh 2>&1 | grep node_exporter )
+    rm -rf "${d}"
+    case "${out}" in *'<--'*) echo failed ;; *) echo passed ;; esac
+}
+
+ok "抓取源清单为空时算故障" "$(exporter_probe "")" "failed"
+ok "有抓取源时才算通过" \
+   "$(exporter_probe " elements = { 1.2.3.4, 5.6.7.8 }")" "passed"
+
 echo "== publish.sh"
 
 d=$(setup_publish)

@@ -10,6 +10,7 @@ SSH_PORT="${SSH_PORT:-60001}"
 ROLLBACK_S="${ROLLBACK_S:-300}"
 CONFIRM=/run/binhost-firewall-confirmed
 ROLLBACK_FILE=/run/binhost-firewall-rollback.rules
+GEN_FILE=/run/binhost-firewall-generation
 cd "$(dirname "$0")/.."
 
 if ! [[ ${SSH_PORT} =~ ^[0-9]+$ ]] || (( SSH_PORT < 1 || SSH_PORT > 65535 )); then
@@ -20,6 +21,8 @@ if ! [[ ${ROLLBACK_S} =~ ^[0-9]+$ ]] || (( ROLLBACK_S < 30 )); then
     echo "ROLLBACK_S 至少 30 秒：${ROLLBACK_S}" >&2
     exit 1
 fi
+
+GEN="$(date +%s)-$$"
 
 COMMIT="$(git rev-parse HEAD)"
 git diff --quiet && git diff --cached --quiet || COMMIT="${COMMIT}-dirty"
@@ -76,13 +79,15 @@ sudo nft -c -f nftables.conf.real
 sudo install -m644 nftables.conf.real /etc/nftables.conf
 sudo rm -f '${CONFIRM}'
 sudo sh -c 'nft list ruleset > ${ROLLBACK_FILE}'
+printf %s '${GEN}' | sudo install -m644 /dev/stdin '${GEN_FILE}'
 sudo setsid sh -c 'sleep ${ROLLBACK_S}
-    [ -e ${CONFIRM} ] && exit 0
+    [ \"\$(cat ${GEN_FILE} 2>/dev/null)\" = \"${GEN}\" ] || exit 0
+    [ \"\$(cat ${CONFIRM} 2>/dev/null)\" = \"${GEN}\" ] && exit 0
     nft flush ruleset
     nft -f ${ROLLBACK_FILE}
     logger -t binhost \"防火墙在 ${ROLLBACK_S} 秒内未确认，已回滚到套用前的规则\"' \\
     </dev/null >/dev/null 2>&1 &
-echo '    已备份现有规则，${ROLLBACK_S} 秒内未确认就自动回滚'
+echo '    已备份现有规则，${ROLLBACK_S} 秒内未确认就自动回滚（本轮 ${GEN}）'
 sudo nft -f /etc/nftables.conf
 sudo rc-update add nftables default 2>/dev/null || true
 
@@ -188,7 +193,8 @@ rm -rf '${tmp}'
 
 say "确认防火墙没有把自己关在外面"
 if ssh -o ConnectTimeout=15 -o BatchMode=yes "${REMOTE}" \
-       "sudo touch ${CONFIRM} && sudo rc-service nftables save >/dev/null 2>&1"; then
+       "printf %s '${GEN}' | sudo install -m644 /dev/stdin '${CONFIRM}' &&
+        sudo rc-service nftables save >/dev/null 2>&1"; then
     echo "  另开一条连线成功，规则已保存"
 else
     echo "!! 无法另开一条连线，规则未保存" >&2
