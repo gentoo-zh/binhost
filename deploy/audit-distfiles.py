@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
+import contextlib
 import errno
+import fcntl
 import os
 import pathlib
 import json
@@ -11,6 +13,39 @@ import time
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path[:0] = [str(HERE), str(HERE.parent / "build")]
 from ebuilds import restrict_tokens, restrict_uncertain    # noqa: E402
+
+
+@contextlib.contextmanager
+def locked(path):
+    """Hold an exclusive lock beside path for a whole read-modify-write.
+
+    daily.sh already serialises the scheduled run, so this is what keeps a
+    hand-run of this script from racing it and losing a reservation.
+    """
+    lock = pathlib.Path(f"{path}.lock")
+    try:
+        lock.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(lock, os.O_WRONLY | os.O_CREAT, 0o644)
+    except OSError as e:
+        print(f"!! 无法建立 {lock}，本次不加锁：{e}", file=sys.stderr)
+        yield
+        return
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        yield
+    finally:
+        os.close(fd)
+
+
+def write_atomic(path, text):
+    tmp = path.with_name(path.name + ".new")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        tmp.write_text(text)
+        os.replace(tmp, path)
+    except OSError:
+        tmp.unlink(missing_ok=True)
+        raise
 
 
 def scan(overlay):
@@ -70,25 +105,22 @@ class LedgerError(Exception):
 def recent_deletions(add_count, now=None):
     now = int(time.time()) if now is None else now
     f = pathlib.Path(LEDGER)
-    try:
-        rows = json.loads(f.read_text())
-    except FileNotFoundError:
-        rows = []
-    except (OSError, ValueError) as e:
-        raise LedgerError(f"{f} 无法读取：{e}") from e
-    if not isinstance(rows, list):
-        raise LedgerError(f"{f} 内容不是清单")
-    rows = [r for r in rows if now - r[0] < WINDOW_HOURS * 3600]
-    if add_count:
-        rows.append([now, add_count])
-    tmp = f.with_suffix(".json.new")
-    try:
-        f.parent.mkdir(parents=True, exist_ok=True)
-        tmp.write_text(json.dumps(rows))
-        os.replace(tmp, f)
-    except OSError as e:
-        tmp.unlink(missing_ok=True)
-        raise LedgerError(f"{f} 无法写入：{e}") from e
+    with locked(f):
+        try:
+            rows = json.loads(f.read_text())
+        except FileNotFoundError:
+            rows = []
+        except (OSError, ValueError) as e:
+            raise LedgerError(f"{f} 无法读取：{e}") from e
+        if not isinstance(rows, list):
+            raise LedgerError(f"{f} 内容不是清单")
+        rows = [r for r in rows if now - r[0] < WINDOW_HOURS * 3600]
+        if add_count:
+            rows.append([now, add_count])
+        try:
+            write_atomic(f, json.dumps(rows))
+        except OSError as e:
+            raise LedgerError(f"{f} 无法写入：{e}") from e
     return sum(n for _, n in rows)
 
 
@@ -148,8 +180,7 @@ def reap(orphan, paths, grace=None, budget=None):
         seen.pop(f, None)
 
     try:
-        state.parent.mkdir(parents=True, exist_ok=True)
-        state.write_text(json.dumps(seen, indent=1, sort_keys=True))
+        write_atomic(state, json.dumps(seen, indent=1, sort_keys=True))
     except OSError as e:                                   # noqa: BLE001
         print(f"!! 无法写入 {state}: {e}", file=sys.stderr)
         failed.append(str(state))
