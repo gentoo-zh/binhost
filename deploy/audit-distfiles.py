@@ -12,7 +12,9 @@ import time
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path[:0] = [str(HERE), str(HERE.parent / "build")]
-from ebuilds import restrict_tokens, restrict_uncertain    # noqa: E402
+import portage                                             # noqa: E402
+from portage.dep import use_reduce                         # noqa: E402
+from portage.exception import PortageException             # noqa: E402
 
 
 @contextlib.contextmanager
@@ -48,37 +50,102 @@ def write_atomic(path, text):
         raise
 
 
-def scan(overlay):
+def distfiles_of(src_uri):
+    """Names SRC_URI actually writes into DISTDIR.
+
+    `a -> b` renames the download, so the file on disk is b. Everything else
+    is the basename of the URL. Conditionals are taken in full rather than
+    evaluated, because a file any USE combination can pull in is still one we
+    have to keep.
+    """
+    out = set()
+    try:
+        tokens = use_reduce(src_uri, matchall=True, is_src_uri=True, eapi="8")
+    except PortageException:
+        return None
+    i = 0
+    while i < len(tokens):
+        tok = tokens[i]
+        if i + 2 < len(tokens) and tokens[i + 1] == "->":
+            out.add(tokens[i + 2])
+            i += 3
+            continue
+        # A bare name with no scheme is what RESTRICT=fetch packages declare:
+        # the user places the file in DISTDIR by hand.
+        out.add(tok.rsplit("/", 1)[-1] if "://" in tok else tok)
+        i += 1
+    return out
+
+
+def portage_aux(overlay):
+    """cp -> [(cpv, SRC_URI, RESTRICT)] from Portage's own metadata."""
+    db = portage.portdbapi()
+
+    def aux(cp):
+        for cpv in db.cp_list(cp):
+            try:
+                src, restrict = db.aux_get(cpv, ["SRC_URI", "RESTRICT"])
+            except Exception:                              # noqa: BLE001
+                yield cpv, None, None
+                continue
+            yield cpv, src, restrict
+    return aux
+
+
+def scan(overlay, aux=None):
+    """distfile -> [(cp, restricted)], plus the ones we could not decide.
+
+    Attribution comes from each CPV's expanded SRC_URI, so a shared file, a
+    renamed download or a name without a version in it all land on the right
+    package. When Portage metadata cannot be read the file goes into the
+    undecided set and nothing will delete it.
+    """
     users = {}
     unsure = set()
+    unfetchable = set()
+    if aux is None:
+        try:
+            aux = portage_aux(overlay)
+        except Exception as e:                             # noqa: BLE001
+            print(f"!! 无法读取 Portage metadata：{e}", file=sys.stderr)
+            return {}, set(), set()
+
     for man in overlay.glob("*/*/Manifest"):
         d = man.parent
-        ebuilds = list(d.glob("*.ebuild"))
-        if not ebuilds:
-            continue
-        pn = d.name
-        by_version = {}
-        vague = {}
-        for e in ebuilds:
-            ver = e.name[len(pn) + 1:-len(".ebuild")]
-            text = e.read_text(errors="replace")
-            by_version[ver] = "mirror" in restrict_tokens(text)
-            vague[ver] = restrict_uncertain(text)
-        fallback = any(by_version.values())
-        fallback_vague = any(vague.values())
-
+        cp = str(d.relative_to(overlay))
+        declared = {}
         for line in man.read_text(errors="replace").splitlines():
-            if not line.startswith("DIST "):
+            if line.startswith("DIST "):
+                declared[line.split()[1]] = None
+
+        seen = set()
+        for cpv, src, restrict in aux(cp):
+            if src is None:
+                unsure.update(declared)
                 continue
-            name = line.split()[1]
-            hit = [v for v in by_version if v in name]
-            pick = max(hit, key=len) if hit else None
-            restricted = by_version[pick] if pick else fallback
-            if (vague[pick] if pick else fallback_vague):
-                unsure.add(name)
-            users.setdefault(name, []).append(
-                (str(d.relative_to(overlay)), restricted))
-    return users, unsure
+            names = distfiles_of(src)
+            if names is None:
+                unsure.update(declared)
+                continue
+            try:
+                tokens = set(use_reduce(restrict, matchall=True, eapi="8"))
+            except PortageException:
+                unsure.update(names & set(declared))
+                continue
+            blocked = "mirror" in tokens
+            if "fetch" in tokens:
+                unfetchable.update(names & set(declared))
+            for name in names & set(declared):
+                entry = (cp, blocked)
+                if entry not in users.setdefault(name, []):
+                    users[name].append(entry)
+                seen.add(name)
+
+        for name in set(declared) - seen:
+            unsure.add(name)
+            if (cp, True) not in users.setdefault(name, []):
+                users[name].append((cp, True))
+    return users, unsure, unfetchable
 
 
 GRACE_SECONDS = 7 * 24 * 3600
@@ -187,37 +254,20 @@ def reap(orphan, paths, grace=None, budget=None):
     return deleted, failed
 
 
-def main(overlay, dest):
+def main(overlay, dest, aux=None):
     overlay, dest = pathlib.Path(overlay), pathlib.Path(dest)
     if not (overlay / "profiles" / "repo_name").exists():
         sys.exit(f"不是 ebuild 仓库：{overlay}")
 
-    users, unsure = scan(overlay)
+    users, unsure, unfetchable = scan(overlay, aux)
     paths = {p.name: p for p in dest.rglob("*") if p.is_file() and p.name not in MARKERS}
     have = set(paths)
 
-    unfetchable = set()
-    for man in overlay.glob("*/*/Manifest"):
-        d = man.parent
-        pn = d.name
-        by_version = {}
-        for e in d.glob("*.ebuild"):
-            ver = e.name[len(pn) + 1:-len(".ebuild")]
-            by_version[ver] = "fetch" in restrict_tokens(
-                e.read_text(errors="replace"))
-        if not any(by_version.values()):
-            continue
-        fallback = any(by_version.values())
-        for line in man.read_text(errors="replace").splitlines():
-            if not line.startswith("DIST "):
-                continue
-            name = line.split()[1]
-            hit = [v for v in by_version if v in name]
-            if by_version[max(hit, key=len)] if hit else fallback:
-                unfetchable.add(name)
-
-    mirrorable = {f for f, us in users.items() if any(not r for _, r in us)} - unfetchable
-    never = {f for f, us in users.items() if us and all(r for _, r in us)}
+    # One consumer forbidding mirroring is enough: attribution is now exact,
+    # so the aggregate has to be the conservative one.
+    mirrorable = {f for f, us in users.items()
+                  if us and all(not r for _, r in us)} - unfetchable
+    never = {f for f, us in users.items() if any(r for _, r in us)}
 
     mirrorable -= unsure
     never -= unsure
