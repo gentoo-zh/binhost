@@ -256,7 +256,7 @@ else
             elif (( want > 0 )); then
                 bad "node_exporter" "安装时配置了 ${want} 个抓取源，当前集合为空"
             else
-                note "node_exporter" "未配置抓取源，${EXPORTER_PORT} 不对外开放"
+                bad "node_exporter" "${EXPORTER_PORT} 已启动且防火墙已放行，但抓取源清单为空，没有任何监控能取得指标"
             fi
         fi
     fi
