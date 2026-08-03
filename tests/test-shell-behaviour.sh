@@ -21,7 +21,7 @@ contains() {
         printf '  ✓ %s\n' "$1"
         pass=$((pass + 1))
     else
-        printf '  ✗ %s\n      输出里没有 %s\n' "$1" "$3"
+        printf '  ✗ %s\n      输出中未包含 %s\n' "$1" "$3"
         fail=$((fail + 1))
     fi
 }
@@ -76,6 +76,104 @@ stage_index() {
     } > "${dir}/stage/Packages"
     gzip -c "${dir}/stage/Packages" > "${dir}/stage/Packages.gz"
 }
+
+echo "== 两条发布路径确实执行同一支 publish-site.sh"
+
+site_sync_calls() {
+    local d args rc
+    d=$(mktemp -d)
+    printf '#!/bin/bash\nprintf "%%s\\n" "$@" > "%s/args"\nexit %s\n' "${d}" "$1" \
+        > "${d}/pub"
+    chmod +x "${d}/pub"
+    git init -q -b master "${d}/repo"
+    mkdir -p "${d}/repo/site" "${d}/dest"
+    printf 'KEY\n' > "${d}/repo/site/gentoo-zh-binhost.asc"
+    ( cd "${d}/repo" && git add -A &&
+      git -c user.email=t@t -c user.name=t commit -q -m x )
+    PUBLISH="${d}/pub" WORK="${d}/work" DEST="${d}/dest" REPO="${d}/repo" \
+        DONE="${d}/done" LOCK="${d}/lock" \
+        bash "${ROOT}/deploy/site-sync.sh" >/dev/null 2>&1
+    rc=$?
+    args=$(tr '\n' ' ' < "${d}/args" 2>/dev/null)
+    printf '%s|%s|%s\n' "${rc}" "${args}" \
+        "$(test -e "${d}/done" && echo recorded || echo missing)"
+    rm -rf "${d}"
+}
+
+IFS='|' read -r rc args done_state <<< "$(site_sync_calls 0)"
+ok "site-sync 真的执行了 publisher" "$(grep -c '/site' <<< "${args}")" "1"
+ok "并且把来源与目标一起传进去" "$(grep -c 'dest' <<< "${args}")" "1"
+ok "publisher 成功时记下已完成" "${done_state}" "recorded"
+
+IFS='|' read -r rc args done_state <<< "$(site_sync_calls 7)"
+ok "publisher 失败时 site-sync 也失败" "$((rc != 0))" "1"
+ok "publisher 失败时不记已完成" "${done_state}" "missing"
+
+deploy_site_cmd() {
+    local d
+    d=$(mktemp -d); mkdir -p "${d}/bin"
+    cat > "${d}/bin/ssh" <<EOF
+#!/bin/bash
+for a in "\$@"; do last="\$a"; done
+case "\${last}" in
+  *mktemp*) echo /tmp/stage ;;
+  *publish-site*) printf '%s\n' "\${last}" >> "${d}/cmds" ;;
+  *) : ;;
+esac
+EOF
+    printf '#!/bin/bash\nexit 0\n' > "${d}/bin/rsync"
+    chmod +x "${d}/bin/ssh" "${d}/bin/rsync"
+    ( cd "${ROOT}" && PATH="${d}/bin:${PATH}" bash deploy-site.sh >/dev/null 2>&1 )
+    cat "${d}/cmds" 2>/dev/null
+    rm -rf "${d}"
+}
+
+cmd=$(deploy_site_cmd)
+ok "deploy-site 真的调用了 publisher" \
+   "$(grep -c '/usr/local/lib/binhost/publish-site.sh' <<< "${cmd}")" "1"
+ok "并且传的是暂存目录与发布目录" "$(grep -c '/tmp/stage /srv/mirrors' <<< "${cmd}")" "1"
+ok "调用包在站点锁里" "$(grep -c 'flock' <<< "${cmd}")" "1"
+
+echo
+echo "== publish-site.sh 本身"
+
+pubsite() {
+    local d src dest
+    d=$(mktemp -d)
+    src="${d}/site"; dest="${d}/dest"
+    mkdir -p "${src}/assets" "${dest}/assets"
+    printf 'KEY\n' > "${src}/gentoo-zh-binhost.asc"
+    printf '<p>new</p>\n' > "${src}/index.html"
+    printf 'ua\n' > "${src}/robots.txt"
+    printf 'css\n' > "${src}/assets/site.css"
+    printf '<p>old</p>\n' > "${dest}/gone.html"
+    printf 'stale\n' > "${dest}/assets/removed.css"
+    printf 'AAAA\n' > "${src}/same.html"
+    printf 'BBBB\n' > "${dest}/same.html"
+    touch -d '2026-01-01 00:00:00' "${src}/same.html" "${dest}/same.html"
+    mkdir -p "${d}/bin"
+    cat > "${d}/bin/gpg" <<'EOF'
+#!/bin/bash
+printf 'pub:u:255:22::::::::scSC:\nfpr:::::::::AAAA0000000000000000000000000000000000AA:\n'
+EOF
+    chmod +x "${d}/bin/gpg"
+    echo AAAA0000000000000000000000000000000000AA > "${d}/fpr"
+    PATH="${d}/bin:${PATH}" FPR_FILE="${d}/fpr" \
+        bash "${ROOT}/deploy/publish-site.sh" "${src}" "${dest}" >/dev/null 2>&1
+    printf '%s %s %s %s %s\n' \
+        "$(test -e "${dest}/gentoo-zh-binhost.asc" && echo asc || echo noasc)" \
+        "$(test -e "${dest}/gone.html" && echo kept || echo removed)" \
+        "$(test -e "${dest}/assets/removed.css" && echo kept || echo removed)" \
+        "$(tr -d '\n' < "${dest}/index.html" 2>/dev/null)" \
+        "$(tr -d '\n' < "${dest}/same.html" 2>/dev/null)"
+    rm -rf "${d}"
+}
+read -r a b c dd ee <<< "$(pubsite)"
+ok "公钥会发布" "${a}" "asc"
+ok "来源中已不存在的页面会一并移除" "${b}" "removed"
+ok "assets 里多余的文件也会移除" "${c}" "removed"
+ok "页面内容已更新" "${dd}" "<p>new</p>"
+ok "同大小同 mtime 但内容不同时仍然更新" "${ee}" "AAAA"
 
 echo "== status.sh 的部署版本核对"
 
@@ -172,7 +270,7 @@ stage_index "${d}" 3
 rm -f "${d}/stage/app-misc/p1-1.0-1.gpkg.tar"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
-ok "索引列出但暂存区里没有该包时中止" "$?" "1"
+ok "索引列出但暂存区不存在该包时中止" "$?" "1"
 contains "并且指出是哪一个" "${out}" "p1-1.0-1.gpkg.tar"
 rm -rf "${d}"
 
@@ -478,8 +576,8 @@ fake_gpg "${d}" AAAA0000000000000000000000000000000000AA \
 echo AAAA0000000000000000000000000000000000AA > "${d}/fpr"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" WORK="${d}/work" DEST="${d}/dest" \
       FPR_FILE="${d}/fpr" LOCK="${d}/lock" bash deploy/site-sync.sh 2>&1)
-ok "掺进一把没登记的主公钥就拒绝" "$?" "1"
-ok "掺进来时公钥不发布" "$(test -e "${d}/dest/gentoo-zh-binhost.asc" && echo 有 || echo 无)" "无"
+ok "混入一把未登记的主公钥就拒绝" "$?" "1"
+ok "混入时公钥不发布" "$(test -e "${d}/dest/gentoo-zh-binhost.asc" && echo 有 || echo 无)" "无"
 rm -rf "${d}"
 
 d=$(setup_site)

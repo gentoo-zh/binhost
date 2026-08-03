@@ -33,7 +33,7 @@ def sudo_btns(name, t, bad):
         has_cmd = 'class="sudo"' in block
         has_btn = 'sudo-btn' in block
         if has_cmd and not has_btn:
-            bad.append(f"{name}: 有 root 命令的代码块，标题栏里没有 sudo 开关")
+            bad.append(f"{name}: 有 root 命令的代码块，标题栏缺少 sudo 开关")
         if has_btn and not has_cmd:
             bad.append(f"{name}: 代码块里一条 root 命令都没有，却有 sudo 开关")
 

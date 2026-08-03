@@ -44,7 +44,7 @@ def main():
 
         for m in re.finditer(r"data-src-list='([^']*)'", text):
             if "%s" not in m.group(1):
-                bad.append(f"{f.name}: data-src-list 里没有 %s：{m.group(1)}")
+                bad.append(f"{f.name}: data-src-list 未包含 %s：{m.group(1)}")
 
     for b in bad:
         print("!!! " + b, file=sys.stderr)

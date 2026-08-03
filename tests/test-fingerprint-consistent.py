@@ -80,7 +80,7 @@ if len(signing) != 1:
 
 def check_carriers(fpr):
     for f in sorted(REQUIRED - set(found[fpr]) - {SERVICE}):
-        fail(f"{f} 里没有正在签名的那把 {fpr[:8]}")
+        fail(f"{f} 未包含正在签名的那把 {fpr[:8]}")
 
 
 if not shutil.which("gpg"):
@@ -110,7 +110,7 @@ for f, k in sorted(keys.items()):
     print(f"    {f}  {state}{left}")
 
 for f in sorted(set(found) - set(keys)):
-    fail(f"{f[:8]} 写在下面这些地方，但 {ASC.name} 里没有这把公钥：\n      "
+    fail(f"{f[:8]} 写在下面这些地方，但 {ASC.name} 未包含这把公钥：\n      "
          + "\n      ".join(sorted(set(found[f]))))
 
 if len(signing) == 1:
