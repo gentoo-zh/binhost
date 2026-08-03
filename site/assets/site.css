@@ -401,7 +401,7 @@ button:active, .copy-chip:active { transform: translateY(1px); }
   font-family: var(--mono); font-size: 0.78rem; line-height: 1.75; color: var(--fg-soft);
   min-height: calc(2 * 1.75 * 0.95rem + 0.35rem);
 }
-.facts span { display: inline-flex; align-items: baseline; gap: 0.3em; }
+.facts span { display: inline-flex; align-items: baseline; gap: 0.3em; white-space: nowrap; }
 .facts .num { color: var(--accent); font-size: 0.95rem; font-weight: 600; }
 .facts b { font-weight: 500; color: var(--fg-body); }
 
@@ -438,6 +438,9 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
   white-space: pre-line; line-height: 1.65;
 }
 #count { min-height: calc(3 * 1.65 * 0.82rem); }
+.jump { font-size: 0.82rem; margin: -0.4rem 0 1.1rem; }
+.jump a { color: var(--accent); text-decoration: none; }
+.jump a:hover { text-decoration: underline; }
 #updated { min-height: calc(2 * 1.65 * 0.82rem); }
 
 .pkgs td.name {
@@ -541,6 +544,10 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 }
 
 @media (max-width: 34rem) {
+  /* two columns leave the timestamp too little room and it breaks mid-value */
+  .facts { grid-template-columns: auto; gap: 0.1rem; }
+  .facts .job { margin-top: 0.35rem; }
+
   .pkgs th.mark { width: 4.5rem; }
   .pkgs td.mark { white-space: normal; }
   .pkgs td.name { overflow-wrap: anywhere; }
