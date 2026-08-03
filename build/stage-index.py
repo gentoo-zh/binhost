@@ -13,7 +13,7 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from ebuilds import (                                       # noqa: E402
-    Masks, dep_atoms, read_mask, split_cpv,
+    Masks, bindist_state, dep_atoms, read_mask, split_cpv,
 )
 
 
@@ -78,7 +78,36 @@ def safe_path(value):
     return p
 
 
-RUNTIME_FIELDS = ("RDEPEND", "PDEPEND")
+GENTOO_TREE = os.environ.get("GENTOO_TREE", "/var/db/repos/gentoo")
+
+RUNTIME_FIELDS = ("RDEPEND", "PDEPEND", "IDEPEND")
+
+
+def ebuild_for(cpv, *roots):
+    cp, ver = split_cpv(cpv)
+    if ver is None:
+        return None
+    pn = cp.split("/", 1)[1]
+    for root in roots:
+        if root is None:
+            continue
+        eb = pathlib.Path(root) / cp / f"{pn}-{ver}.ebuild"
+        if eb.is_file():
+            return eb
+    return None
+
+
+def effective_bindist(cpv, f, overlay):
+    """yes / no / unknown, read from the ebuild that is in the tree right now.
+
+    The cached stanza records what RESTRICT was when the binary package was
+    built. Upstream adding bindist afterwards does not by itself make Portage
+    rebuild it, so an old stanza can still carry no RESTRICT at all.
+    """
+    eb = ebuild_for(cpv, overlay, GENTOO_TREE)
+    if eb is not None:
+        return bindist_state(eb.read_text(errors="ignore"))
+    return "yes" if "bindist" in f.get("RESTRICT", "").split() else "no"
 
 
 def runtime_closure(entries, seeds):
@@ -144,7 +173,8 @@ def select(entries, overlay=None, excluded=None, with_deps=None):
             skipped += 1
             continue
 
-        if "bindist" in f.get("RESTRICT", "").split():
+        state = effective_bindist(cpv, f, overlay)
+        if state != "no":
             refused.append((cpv, str(safe_path(f.get("PATH", "")))))
             skipped += 1
             continue

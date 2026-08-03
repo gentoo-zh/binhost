@@ -108,27 +108,6 @@ printf '%s\n' "${paths[@]}" |
     rsync -a --info=stats2 --files-from=- "${STAGE}/" "${REMOTE}:${REMOTE_ROOT}/" |
     { grep -E "files transferred|Total transferred file size" || true; } | sed 's/^/    /'
 
-rsync -a "${STAGE}/Packages" "${REMOTE}:${REMOTE_ROOT}/.Packages.new"
-rsync -a "${STAGE}/Packages.gz" "${REMOTE}:${REMOTE_ROOT}/.Packages.gz.new"
-# shellcheck disable=SC2029  # as above
-ssh "${REMOTE}" "cd ${REMOTE_ROOT} && \
-    mv -f .Packages.new Packages && \
-    mv -f .Packages.gz.new Packages.gz"
-
-ts=$(awk '/^TIMESTAMP: /{print $2; exit}' "${STAGE}/Packages")
-n=$(awk '/^PACKAGES: /{print $2; exit}' "${STAGE}/Packages")
-overlay="" deps=""
-if [[ -r ${STAGE}/counts.txt ]]; then
-    { read -r overlay; read -r deps; } < "${STAGE}/counts.txt" || true
-fi
-[[ ${overlay} =~ ^[0-9]+$ ]] || overlay=${n:-0}
-[[ ${deps} =~ ^[0-9]+$ ]] || deps=0
-# shellcheck disable=SC2029  # REMOTE_ROOT is meant to expand locally
-printf '{"packages":%s,"overlay":%s,"deps":%s,"generated":%s}\n' \
-    "${n:-0}" "${overlay}" "${deps}" "${ts:-0}" |
-    ssh "${REMOTE}" "cat > ${REMOTE_ROOT}/.status.json.new &&
-                     mv -f ${REMOTE_ROOT}/.status.json.new ${REMOTE_ROOT}/status.json"
-
 QUARANTINE="${STAGE}/quarantine.txt"
 if [[ -s ${QUARANTINE} ]]; then
     q=$(wc -l < "${QUARANTINE}")
@@ -153,6 +132,27 @@ if [[ -s ${QUARANTINE} ]]; then
     }
     echo ">>> 实际移除 ${gone} 个"
 fi
+
+rsync -a "${STAGE}/Packages" "${REMOTE}:${REMOTE_ROOT}/.Packages.new"
+rsync -a "${STAGE}/Packages.gz" "${REMOTE}:${REMOTE_ROOT}/.Packages.gz.new"
+# shellcheck disable=SC2029  # as above
+ssh "${REMOTE}" "cd ${REMOTE_ROOT} && \
+    mv -f .Packages.new Packages && \
+    mv -f .Packages.gz.new Packages.gz"
+
+ts=$(awk '/^TIMESTAMP: /{print $2; exit}' "${STAGE}/Packages")
+n=$(awk '/^PACKAGES: /{print $2; exit}' "${STAGE}/Packages")
+overlay="" deps=""
+if [[ -r ${STAGE}/counts.txt ]]; then
+    { read -r overlay; read -r deps; } < "${STAGE}/counts.txt" || true
+fi
+[[ ${overlay} =~ ^[0-9]+$ ]] || overlay=${n:-0}
+[[ ${deps} =~ ^[0-9]+$ ]] || deps=0
+# shellcheck disable=SC2029  # REMOTE_ROOT is meant to expand locally
+printf '{"packages":%s,"overlay":%s,"deps":%s,"generated":%s}\n' \
+    "${n:-0}" "${overlay}" "${deps}" "${ts:-0}" |
+    ssh "${REMOTE}" "cat > ${REMOTE_ROOT}/.status.json.new &&
+                     mv -f ${REMOTE_ROOT}/.status.json.new ${REMOTE_ROOT}/status.json"
 
 # shellcheck disable=SC2029  # as above
 want=${#paths[@]}

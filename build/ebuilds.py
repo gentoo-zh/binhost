@@ -6,9 +6,11 @@ import re
 import sys
 
 try:
+    from portage.dep import Atom, match_from_list
+    from portage.exception import InvalidAtom, PortageException
     from portage.versions import vercmp
 except ImportError:
-    sys.exit("需要 sys-apps/portage：版本比较用 portage.versions.vercmp")
+    sys.exit("需要 sys-apps/portage：原子匹配与版本比较都用 portage 提供的实现")
 
 ATOM = re.compile(r"^[a-z0-9-]+/[A-Za-z0-9._+-]+$")
 
@@ -28,67 +30,47 @@ def builds_from_source(text):
     return bool(ecl & BUILD_ECLASS) or bool(COMPILE_PHASE.search(text))
 
 
-MASK_OP = re.compile(r"^(!!|!|>=|<=|=|~|>|<)")
 CPV_SPLIT = re.compile(r"^(?P<cp>.+?)-(?P<ver>[0-9][0-9a-zA-Z._+]*(?:-r[0-9]+)?)$")
 
 
-def parse_atom(atom):
-    """(cp, op, version) for one atom. op and version are None for a bare atom.
-
-    A version is only legal after an operator, so a bare category/package
-    always means every version.
-    """
-    m = MASK_OP.match(atom)
-    op = m.group(1) if m else None
-    rest = atom[len(op):] if op else atom
-    star = rest.endswith("*")
-    rest = rest.rstrip("*")
+def _cp_of(atom):
+    """category/package of an atom, with operator, version and slot removed."""
+    rest = atom.lstrip("!<>=~").rstrip("*")
     rest = re.sub(r"\[[^\]]*\]$", "", rest)
-    rest = re.split(r"::", rest, maxsplit=1)[0]
-    rest = re.split(r":", rest, maxsplit=1)[0]
-    if not op:
-        return rest, None, None
+    rest = re.split(r"::?", rest, maxsplit=1)[0]
     m = CPV_SPLIT.match(rest)
-    if not m:
-        return rest, None, None
-    return m.group("cp"), ("=*" if star and op == "=" else op), m.group("ver")
+    return m.group("cp") if m else rest
 
 
 class Masks:
-    """package.mask entries, keeping the version constraint of each atom."""
+    """package.mask entries, matched through Portage rather than by hand.
+
+    An earlier version compared operators itself and disagreed with Portage on
+    revisions: ~pkg-1.2 has to match 1.2-r1, and =pkg-1* has to match 1-r1.
+    """
 
     def __init__(self):
-        self.whole = set()
-        self.ranged = {}
+        self.atoms = {}
 
     def add(self, atom):
-        cp, op, ver = parse_atom(atom)
-        if op is None:
-            self.whole.add(cp)
-        else:
-            self.ranged.setdefault(cp, []).append((op, ver))
+        cp = _cp_of(atom)
+        self.atoms.setdefault(cp, []).append(atom)
 
     def __contains__(self, cp):
-        return cp in self.whole
+        """True only when every version is masked, that is a bare atom."""
+        return any(a == cp for a in self.atoms.get(cp, ()))
 
     def named(self):
-        return self.whole | set(self.ranged)
+        return set(self.atoms)
 
     def masks(self, cp, ver):
-        if cp in self.whole:
-            return True
-        for op, mver in self.ranged.get(cp, ()):
-            c = vercmp(ver, mver)
-            if c is None:
+        cpv = f"{cp}-{ver}"
+        for atom in self.atoms.get(cp, ()):
+            try:
+                if match_from_list(Atom(atom), [cpv]):
+                    return True
+            except (InvalidAtom, PortageException):
                 continue
-            if op == "=*" and (ver == mver or ver.startswith(mver + ".")):
-                return True
-            if (op == "=" and c == 0) or (op == "~" and c == 0):
-                return True
-            if (op == ">=" and c >= 0) or (op == ">" and c > 0):
-                return True
-            if (op == "<=" and c <= 0) or (op == "<" and c < 0):
-                return True
         return False
 
 
@@ -127,7 +109,9 @@ def dep_atoms(text):
     for token in text.split():
         if token in ("(", ")", "||", "&&") or token.endswith("?"):
             continue
-        token = token.lstrip("!<>=~").split("[", 1)[0].split(":", 1)[0].rstrip("=*")
+        if token.startswith("!"):
+            continue
+        token = token.lstrip("<>=~").split("[", 1)[0].split(":", 1)[0].rstrip("=*")
         if "/" not in token:
             continue
         cp = split_cpv(token)[0]

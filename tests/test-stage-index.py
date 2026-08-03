@@ -19,7 +19,7 @@ HEADER_WITH_REV = HEADER + '\nREPO_REVISIONS: {}'
 
 
 def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None, PATH=None,
-           rdepend=None, depend=None):
+           rdepend=None, depend=None, idepend=None):
     cp = cpv.rsplit("-", 1)[0]
     path = f"{cp}/{cpv.split('/')[-1]}.gpkg.tar" if PATH is None else PATH
     lines = [f"CPV: {cpv}", f"PATH: {path}", f"REPO: {repo}"]
@@ -31,6 +31,8 @@ def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None, PATH=None,
         lines.append(f"RDEPEND: {rdepend}")
     if depend:
         lines.append(f"DEPEND: {depend}")
+    if idepend:
+        lines.append(f"IDEPEND: {idepend}")
     return "\n".join(lines)
 
 
@@ -288,6 +290,49 @@ case("RESTRICT 是多个词时按整词认", lambda: (
 case("bindist 的那一个不会进索引", lambda: (
     "app-misc/b-1" not in cpvs(run([stanza("app-misc/a-1"),
                                     stanza("app-misc/b-1", restrict="bindist")])[0])))
+
+def with_overlay(stanzas, ebuilds):
+    """Stage against an overlay whose ebuilds may differ from the stanzas."""
+    _, entries = stage_index.parse(HEADER + "\n\n" + "\n\n".join(stanzas) + "\n")
+    with tempfile.TemporaryDirectory() as tmp:
+        ov = pathlib.Path(tmp)
+        (ov / "profiles").mkdir(parents=True)
+        (ov / "profiles" / "package.mask").write_text("")
+        for cpv, body in ebuilds.items():
+            cp, ver = cpv.rsplit("-", 1)
+            d = ov / cp
+            d.mkdir(parents=True, exist_ok=True)
+            (d / f"{cp.split('/')[1]}-{ver}.ebuild").write_text(body)
+        return stage_index.select(entries, ov, excluded=set(), with_deps=False)
+
+
+case("旧 stanza 无 RESTRICT，但 overlay 已加 bindist，仍要拒绝", lambda: (
+    (lambda r: cpvs(r[0]) == [] and [c for c, _ in r[3]] == ["app-misc/example-1"])(
+        with_overlay([stanza("app-misc/example-1")],
+                     {"app-misc/example-1": 'EAPI=8\nRESTRICT="bindist"\n'}))))
+
+case("overlay 未声明 bindist 时正常发布", lambda: (
+    cpvs(with_overlay([stanza("app-misc/example-1")],
+                      {"app-misc/example-1": 'EAPI=8\nRESTRICT="strip"\n'})[0])
+    == ["app-misc/example-1"]))
+
+case("overlay 的 RESTRICT 无法静态判定时拒绝", lambda: (
+    [c for c, _ in with_overlay(
+        [stanza("app-misc/example-1")],
+        {"app-misc/example-1": 'EAPI=8\nR="x"\nRESTRICT="${R}"\n'})[3]]
+    == ["app-misc/example-1"]))
+
+case("IDEPEND 里的包也要一起发", lambda: (
+    deps([stanza("app-misc/a-1", idepend="dev-util/tool"),
+          stanza("dev-util/tool-1", repo="gentoo")])
+    == ["app-misc/a-1", "dev-util/tool-1"]))
+
+case("blocker 不算依赖，不跟着发", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="!dev-libs/lib !!dev-libs/deep"),
+          stanza("dev-libs/lib-1", repo="gentoo"),
+          stanza("dev-libs/deep-1", repo="gentoo")])
+    == ["app-misc/a-1"]))
+
 
 def deps(stanzas):
     return sorted(cpvs(run(stanzas, with_deps=True)[0]))
