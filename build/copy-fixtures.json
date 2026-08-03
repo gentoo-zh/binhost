@@ -1,0 +1,125 @@
+{
+ "cases": [
+  [
+   "js 模板字面量",
+   "assets/util.js",
+   "const x = `直接跑完就行`;\n",
+   "emitted"
+  ],
+  [
+   "js 单行字串",
+   "assets/util.js",
+   "var m = '装上就行';\n",
+   "emitted"
+  ],
+  [
+   "js 跨行拼接的第二段",
+   "assets/util.js",
+   "var m = '第一段' +\n        '直接跑就行';\n",
+   "emitted"
+  ],
+  [
+   "python 三引号",
+   "gen.py",
+   "MSG = \"\"\"\n第一行\n直接跑就行\n\"\"\"\n",
+   "emitted"
+  ],
+  [
+   "python 逐行 print",
+   "gen.py",
+   "print(\"装上就行\")\n",
+   "emitted"
+  ],
+  [
+   "shell heredoc",
+   "run.sh",
+   "cat <<EOF\n装上就行，跑完看日志\nEOF\n",
+   "emitted"
+  ],
+  [
+   "shell 引号字串",
+   "run.sh",
+   "echo \"搞定了\"\n",
+   "emitted"
+  ],
+  [
+   "yaml 里的字串",
+   "wf.yml",
+   "run: echo \"装上就行\"\n",
+   "emitted"
+  ],
+  [
+   "html 里的 i18n 串",
+   "page.html",
+   "var T = { a: '加载中，装上就行' };\n",
+   "emitted"
+  ],
+  [
+   "css 多行注释",
+   "assets/site.css",
+   "/* 多行\n   直接跑完就行\n*/\nbody{}\n",
+   "comment"
+  ],
+  [
+   "html 多行注释",
+   "page.html",
+   "<!-- 多行\n   装上就行\n-->\n",
+   "comment"
+  ],
+  [
+   "shell 单行注释",
+   "run.sh",
+   "# 这一步搞定之后继续\ntrue\n",
+   "comment"
+  ],
+  [
+   "python 行末注释",
+   "gen.py",
+   "x = 1  # 装上就行\n",
+   "comment"
+  ],
+  [
+   "markdown 正文",
+   "README.md",
+   "装上就行。\n",
+   "comment"
+  ],
+  [
+   "中文注释",
+   "run.sh",
+   "# 这是中文代码注释\ntrue\n",
+   "comment"
+  ],
+  [
+   "python 中文注释",
+   "gen.py",
+   "# 中文说明\nx = 1\n",
+   "comment"
+  ],
+  [
+   "js 中文注释",
+   "assets/util.js",
+   "// 中文说明\nvar y = 1;\n",
+   "comment"
+  ],
+  [
+   "单字的跑",
+   "run.sh",
+   "echo \"跑 deploy/install.sh\"\n",
+   "emitted"
+  ]
+ ],
+ "clean": {
+  "assets/util.js": "const x = '已复制';\n",
+  "gen.py": "print(\"索引无法读取\")\n",
+  "run.sh": "echo \"本轮终止\"\n",
+  "wf.yml": "run: echo \"已发布\"\n",
+  "page.html": "<!-- chrome:head -->\n<p>未找到请求的资源。</p>\n",
+  "assets/site.css": "body{}\n",
+  "README.md": "在构建机上运行。\n"
+ },
+ "site": {
+  "ok": "<p>先执行一次配置</p>\n",
+  "bad": "<p>先跑一次配置</p>\n"
+ }
+}

@@ -86,7 +86,7 @@ COMMENT = {
 NO_SUFFIX = {"cron.d-binhost", "logrotate-binhost", "rsyncd.conf", "nftables.conf"}
 
 
-SELF = {"check-copy.py", "test-check-copy.py"}
+SELF = {"check-copy.py", "copy-fixtures.json"}
 
 EMIT_SUFFIX = (".sh", ".py", ".js", ".yml", ".yaml", ".html", ".css")
 CJK = re.compile(r'[\u4e00-\u9fff]')
@@ -123,7 +123,7 @@ def check_emitted(root):
         hits = []
         for line, chunk in emitted_chunks(f.read_text(errors="replace"), f.suffix):
             if BARE_RUN.search(chunk):
-                hits.append(f"{line}: 「跑」应写成执行或运行  {chunk.strip()[:60]}")
+                hits.append(f"{line}: 应写成执行或运行，不用单字  {chunk.strip()[:60]}")
                 continue
             for w in COLLOQUIAL_EMIT:
                 if w in chunk:
@@ -218,7 +218,7 @@ def main(dirname):
             for m in re.finditer(pat, text):
                 hits.append(f"{why}: {m.group(0)[:20]}")
         for m in BARE_RUN.finditer(text):
-            hits.append(f"「跑」应写成执行或运行: {text[max(0, m.start() - 6):m.start() + 6]}")
+            hits.append(f"应写成执行或运行，不用单字: {text[max(0, m.start() - 6):m.start() + 6]}")
 
         chars = len(re.sub(r"\s", "", text))
         dashes = text.count("——")
