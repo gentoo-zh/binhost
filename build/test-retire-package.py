@@ -8,7 +8,7 @@ SCRIPT = pathlib.Path(__file__).with_name("retire-package.py")
 
 BASE = ["app-misc/aaa", "net-misc/geo", "net-proxy/bore", "sys-apps/pacman"]
 EXCL = "# 不收录的包和原因\napp-misc/old\t上游停更\n"
-GONE = "overlay 里已没有这个包"
+GONE = "overlay 中已不存在该软件包"
 
 failed = 0
 
@@ -38,8 +38,8 @@ def run(*args, excluded=EXCL, listed=BASE):
 
 
 rc, lst, exc, msg = run("net-misc/geo", GONE)
-check("overlay 里没有的只从清单删", rc == 0 and "net-misc/geo" not in lst, msg)
-check("overlay 里没有的不写进 excluded", "net-misc/geo" not in exc, exc)
+check("overlay 中不存在的只从清单移除", rc == 0 and "net-misc/geo" not in lst, msg)
+check("overlay 中不存在的不写进 excluded", "net-misc/geo" not in exc, exc)
 
 rc, lst, exc, msg = run("net-proxy/bore", "overlay 的 package.mask 屏蔽了它")
 check("其他原因也从清单删", rc == 0 and "net-proxy/bore" not in lst, msg)

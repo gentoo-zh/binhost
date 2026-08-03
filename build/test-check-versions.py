@@ -8,12 +8,13 @@ import tempfile
 CHECK = str(pathlib.Path(__file__).with_name("check-versions.py"))
 def make_overlay(root, packages, masked=(), body=None):
     root = pathlib.Path(root)
-    for cp, ver in packages.items():
+    for cp, vers in packages.items():
         d = root / cp
         d.mkdir(parents=True, exist_ok=True)
-        (d / f"{d.name}-{ver}.ebuild").write_text(
-            (body or {}).get(cp,
-                'EAPI=8\ninherit cmake\nKEYWORDS="~amd64"\nSLOT="0"\n'))
+        for ver in ([vers] if isinstance(vers, str) else vers):
+            (d / f"{d.name}-{ver}.ebuild").write_text(
+                (body or {}).get(cp,
+                    'EAPI=8\ninherit cmake\nKEYWORDS="~amd64"\nSLOT="0"\n'))
     prof = root / "profiles"
     prof.mkdir(parents=True, exist_ok=True)
     (prof / "repo_name").write_text("gentoo-zh\n")
@@ -114,6 +115,24 @@ if not ok:
 MOVED_OLD = "app-misc/example"
 MOVED_NEW = "net-misc/example"
 BINDIST = 'EAPI=8\ninherit cmake\nKEYWORDS="~amd64"\nSLOT="0"\nRESTRICT="bindist"\n'
+OKKW = 'EAPI=8\ninherit cmake\nKEYWORDS="~amd64"\nSLOT="0"\n'
+NOKW = 'EAPI=8\ninherit cmake\nKEYWORDS="~arm64"\nSLOT="0"\n'
+VAGUE = 'EAPI=8\ninherit cmake\nKEYWORDS="~amd64"\nSLOT="0"\nR="x"\nRESTRICT="${R}"\n'
+
+
+def retire_mixed(list_lines, cp, versions):
+    """One package, a different ebuild body per version."""
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        overlay = make_overlay(d / "overlay", {})
+        pkg = overlay / cp
+        pkg.mkdir(parents=True, exist_ok=True)
+        for ver, body in versions.items():
+            (pkg / f"{pkg.name}-{ver}.ebuild").write_text(body)
+        (d / "list.txt").write_text("\n".join(list_lines) + "\n")
+        p = subprocess.run([sys.executable, CHECK, "--retire", str(overlay),
+                            str(d / "list.txt")], capture_output=True, text=True)
+        return p.returncode, [l for l in p.stdout.splitlines() if l.strip()]
 
 MIGRATE = [
     ("改分类，两边同名，配成一对",
@@ -147,22 +166,37 @@ for name, tree, tree_empty, want in UPSTREAM:
         bad += 1
 
 RETIRE = [
-    ("overlay 里没有的列为可移出", [PKG], {},
-     [f"{PKG}\toverlay 里已没有这个包"]),
-    ("被 mask 的列为可移出", [PKG], {PKG: NOW},
-     [f"{PKG}\toverlay 的 package.mask 屏蔽了它"]),
+    ("overlay 中不存在的列为可移出", [PKG], {},
+     {}, [f"{PKG}\toverlay 中已不存在该软件包"]),
+    ("整包被 mask 的列为可移出", [PKG], {PKG: NOW},
+     {"masked": (PKG,)}, [f"{PKG}\toverlay 的 package.mask 屏蔽了全部版本"]),
     ("只有 9999 的列为可移出", [PKG], {PKG: "9999"},
-     [f"{PKG}\t只有 live ebuild，建不出可发布的版本"]),
+     {}, [f"{PKG}\t只有 live ebuild，无法构建可发布的版本"]),
     ("RESTRICT=bindist 的列为可移出", [PKG], {PKG: NOW},
-     [f"{PKG}\t上游加了 RESTRICT=bindist，不可再散布"]),
-    ("正常的包不列出", [PKG], {PKG: NOW}, []),
+     {"body": {PKG: BINDIST}},
+     [f"{PKG}\t全部可用版本都是 RESTRICT=bindist，不可再散布"]),
+    ("正常的包不列出", [PKG], {PKG: NOW}, {}, []),
+    ("只 mask 新版、旧版仍可用的不列出", [PKG], {PKG: ["1.0", "2.0"]},
+     {"masked": (f">={PKG}-2",)}, []),
+    ("mask 覆盖了全部版本的才列出", [PKG], {PKG: ["1.0", "2.0"]},
+     {"masked": (f">={PKG}-1",)},
+     [f"{PKG}\toverlay 的 package.mask 屏蔽了全部版本"]),
+    ("新版无 amd64、旧版有的不列出", [PKG], {PKG: ["1.0", "2.0"]},
+     {"body": {PKG: None}}, []),
+    ("全部版本都无 amd64 的才列出", [PKG], {PKG: ["1.0", "2.0"]},
+     {"body": {PKG: NOKW}}, [f"{PKG}\t没有接受 amd64 的版本"]),
+    ("RESTRICT 无法判定的不列出", [PKG], {PKG: NOW},
+     {"body": {PKG: VAGUE}}, []),
 ]
-for i, (name, lst, packages, want) in enumerate(RETIRE):
-    kw = {}
-    if "mask" in name:
-        kw["masked"] = (PKG,)
-    if "bindist" in name:
-        kw["body"] = {PKG: BINDIST}
+for name, lst, packages, kw, want in RETIRE:
+    if kw.get("body") == {PKG: None}:
+        kw = {}
+        rc, got = retire_mixed(lst, PKG, {"1.0": OKKW, "2.0": NOKW})
+        ok = got == want and rc == 0
+        print(f"  {'✓' if ok else '✗'} {name:<24} {got if got else '（无）'}")
+        if not ok:
+            bad += 1
+        continue
     rc, got = retire(lst, packages, **kw)
     ok = got == want and rc == 0
     print(f"  {'✓' if ok else '✗'} {name:<24} {got if got else '（无）'}")

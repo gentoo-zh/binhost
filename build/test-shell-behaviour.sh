@@ -357,11 +357,18 @@ EOF
 }
 
 fake_gpg() {
-    cat > "$1/bin/gpg" <<EOF
+    local d="$1"
+    shift
+    : > "${d}/keys"
+    for f in "$@"; do
+        printf 'pub:u:255:22::::::::scSC:\nfpr:::::::::%s:\n' "${f}" >> "${d}/keys"
+        printf 'sub:u:255:22::::::::s:\nfpr:::::::::%sSUB:\n' "${f:0:37}" >> "${d}/keys"
+    done
+    cat > "${d}/bin/gpg" <<EOF
 #!/bin/bash
-echo "fpr:::::::::$2:"
+cat "${d}/keys"
 EOF
-    chmod +x "$1/bin/gpg"
+    chmod +x "${d}/bin/gpg"
 }
 
 d=$(setup_site)
@@ -372,6 +379,27 @@ out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" WORK="${d}/work" DEST="${d}/dest" 
 ok "指纹相符时正常结束" "$?" "0"
 ok "并且写下 DONE" "$(cat "${d}/work/.synced" 2>/dev/null)" "1111111111111111111111111111111111111111"
 ok "公钥已发布" "$(cat "${d}/dest/gentoo-zh-binhost.asc" 2>/dev/null)" "KEY"
+rm -rf "${d}"
+
+d=$(setup_site)
+fake_gpg "${d}" AAAA0000000000000000000000000000000000AA \
+                BBBB0000000000000000000000000000000000BB
+printf '%s\n%s\n' AAAA0000000000000000000000000000000000AA \
+                   BBBB0000000000000000000000000000000000BB > "${d}/fpr"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" WORK="${d}/work" DEST="${d}/dest" \
+      FPR_FILE="${d}/fpr" LOCK="${d}/lock" bash deploy/site-sync.sh 2>&1)
+ok "轮替重叠期两把主公钥都在记录里就放行" "$?" "0"
+ok "重叠期公钥已发布" "$(cat "${d}/dest/gentoo-zh-binhost.asc" 2>/dev/null)" "KEY"
+rm -rf "${d}"
+
+d=$(setup_site)
+fake_gpg "${d}" AAAA0000000000000000000000000000000000AA \
+                BBBB0000000000000000000000000000000000BB
+echo AAAA0000000000000000000000000000000000AA > "${d}/fpr"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" WORK="${d}/work" DEST="${d}/dest" \
+      FPR_FILE="${d}/fpr" LOCK="${d}/lock" bash deploy/site-sync.sh 2>&1)
+ok "掺进一把没登记的主公钥就拒绝" "$?" "1"
+ok "掺进来时公钥不发布" "$(test -e "${d}/dest/gentoo-zh-binhost.asc" && echo 有 || echo 无)" "无"
 rm -rf "${d}"
 
 d=$(setup_site)

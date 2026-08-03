@@ -155,6 +155,24 @@
    "gen.py",
    "def f():\n    \"\"\"中文说明\"\"\"\n    return 1\n",
    "comment"
+  ],
+  [
+   "markdown bash 围栏里的中文注释",
+   "doc.md",
+   "说明\n\n```bash\nmake（不应该写中文）\n# 中文注释\nEOF\n```\n",
+   "comment"
+  ],
+  [
+   "markdown python 围栏里的中文注释",
+   "doc.md",
+   "```python\n# 中文注释\nx = 1\n```\n",
+   "comment"
+  ],
+  [
+   "systemd unit 的 Description 口语",
+   "x.service",
+   "[Unit]\nDescription=把失败推出去\n",
+   "emitted"
   ]
  ],
  "clean": {
@@ -164,8 +182,9 @@
   "wf.yml": "run: echo \"已发布\"\n",
   "page.html": "<!-- chrome:head -->\n<p>未找到请求的资源。</p>\n",
   "assets/site.css": "body{}\n",
-  "README.md": "在构建机上运行。\n",
-  "notes.txt": "# English note\n"
+  "README.md": "在构建机上运行。\n\n这是一段中文正文，不是注释。\n\n参见 `# 中文` 这个行内代码。\n\n```\n# 没有标注语言的围栏不扫\n```\n",
+  "notes.txt": "# English note\n",
+  "units/probe.service": "[Unit]\nDescription=每日构建并发布\n"
  },
  "site": {
   "ok": "<p>先执行一次配置</p>\n",

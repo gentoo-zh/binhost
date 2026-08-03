@@ -40,7 +40,7 @@ if [[ ! -r ${FPR_FILE} ]]; then
 fi
 mapfile -t want < <(tr -d ' \r' < "${FPR_FILE}" | grep -oE '[0-9A-Fa-f]{40}' | tr 'a-f' 'A-F')
 mapfile -t got < <(gpg --with-colons --show-keys "${WORK}/site/gentoo-zh-binhost.asc" 2>/dev/null |
-                   awk -F: '/^fpr:/{print $10}')
+                   awk -F: '$1=="pub"{p=1;next} $1=="sub"{p=0} $1=="fpr"&&p{print $10;p=0}')
 unexpected=()
 for g in "${got[@]}"; do
     [[ " ${want[*]} " == *" ${g} "* ]] || unexpected+=("${g}")

@@ -12,7 +12,7 @@ import sys
 import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from ebuilds import read_mask  # noqa: E402
+from ebuilds import Masks, read_mask, split_cpv  # noqa: E402
 
 
 def parse(text):
@@ -78,7 +78,7 @@ def safe_path(value):
 
 def select(entries, overlay=None, excluded=None):
     excluded = read_excluded() if excluded is None else excluded
-    masked = read_mask(overlay) if overlay is not None else set()
+    masked = read_mask(overlay) if overlay is not None else Masks()
     best = {}
     skipped = 0
     refused = []
@@ -97,16 +97,16 @@ def select(entries, overlay=None, excluded=None):
             skipped += 1
             continue
 
-        cp = re.match(r"^([a-z0-9-]+/.+?)-[0-9]", cpv)
-        if cp and cp.group(1) in excluded:
+        cp, ver = split_cpv(cpv)
+        if cp in excluded:
             skipped += 1
             continue
 
-        if cp and cp.group(1) in masked:
+        if ver is not None and masked.masks(cp, ver):
             skipped += 1
             continue
 
-        if "bindist" in f.get("RESTRICT", ""):
+        if "bindist" in f.get("RESTRICT", "").split():
             refused.append(cpv)
             skipped += 1
             continue

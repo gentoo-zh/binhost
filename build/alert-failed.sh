@@ -19,10 +19,12 @@ if [[ ${FORCE:-0} != 1 && ${result} == success ]]; then
     echo "${UNIT} 的结果是 success，不发告警" >&2
     exit 0
 fi
-if [[ ${FORCE:-0} != 1 && ${code} == "${ALERTED_EXIT:-10}" ]]; then
-    echo "${UNIT} 已自行告警（退出码 ${code}），不发第二条" >&2
-    exit 0
-fi
+for handled in ${HANDLED_EXITS:-10 11}; do
+    if [[ ${FORCE:-0} != 1 && ${code} == "${handled}" ]]; then
+        echo "${UNIT} 已自行处理告警（退出码 ${code}），不发第二条" >&2
+        exit 0
+    fi
+done
 started=$(field ExecMainStartTimestamp)
 finished=$(field ExecMainExitTimestamp)
 

@@ -14,9 +14,9 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ebuilds import (                                       # noqa: E402
-    ATOM, PREBUILT_ECLASS, builds_from_source,
+    ATOM, PREBUILT_ECLASS, bindist_state, builds_from_source,
     accepts_amd64, inherits, keywords_of, newest_ebuild,
-    read_mask, restricts_bindist, version_of, vercmp,
+    read_mask, version_of, vercmp,
 )
 
 
@@ -35,13 +35,13 @@ def field(text, name):
     return m.group(1).strip() if m else ""
 
 
-def why_not_listed(cp, text, masked):
-    if cp in masked:
+def why_not_listed(cp, ver, text, masked):
+    if masked.masks(cp, ver):
         return "masked"
     kw = keywords_of(text)
     if kw is not None and not accepts_amd64(kw):
         return "nokeyword"
-    if restricts_bindist(text):
+    if bindist_state(text) != "no":
         return "bindist"
     if cp.startswith(("acct-", "virtual/", "app-alternatives/")):
         return "meta"
@@ -132,7 +132,7 @@ def main(overlay):
             "dist": sorted(set(dist)),
         }
         if cp not in wanted and cp not in excluded:
-            row["why"] = why_not_listed(cp, text, masked)
+            row["why"] = why_not_listed(cp, version_of(eb, pkgdir.name), text, masked)
         if cp in excluded:
             row["excluded"] = excluded[cp]
         out.append(row)

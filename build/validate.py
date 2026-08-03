@@ -8,7 +8,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ebuilds import (                                       # noqa: E402
     ATOM, BUILD_ECLASS, PREBUILT_ECLASS,
     accepts_amd64, inherits, keywords_of, newest_ebuild,
-    read_mask, restricts_bindist, version_of, vercmp,
+    bindist_state, read_mask, usable_ebuilds, version_of, vercmp,
 )
 
 
@@ -48,7 +48,7 @@ def main(overlay):
         elif not reason:
             errors.append(f"{EXCLUDED.name}:{lineno}: {cp} 没写原因")
         elif not (overlay / cp).is_dir():
-            notes.append(f"{EXCLUDED.name}:{lineno}: {cp} 已不在 overlay 里，可以删掉这条")
+            notes.append(f"{EXCLUDED.name}:{lineno}: {cp} 已不在 overlay 中，可移除此记录")
 
     for lineno, raw in enumerate(LIST.read_text().splitlines(), 1):
         line = raw.strip()
@@ -90,17 +90,23 @@ def main(overlay):
             errors.append(f"{LIST.name}:{lineno}: not in the overlay: {cp}")
             continue
 
-        if cp in masked:
-            errors.append(f"{LIST.name}:{lineno}: overlay 的 package.mask 屏蔽了它: {cp}")
-            continue
-        eb = newest_ebuild(pkgdir)
-        if eb is None:
-            errors.append(f"{LIST.name}:{lineno}: no non-live ebuild: {cp}")
+        usable = usable_ebuilds(pkgdir, masked)
+        if not usable:
+            if newest_ebuild(pkgdir) is None:
+                errors.append(f"{LIST.name}:{lineno}: no non-live ebuild: {cp}")
+            else:
+                errors.append(
+                    f"{LIST.name}:{lineno}: 没有一个版本可构建（全被 mask 或无 amd64）: {cp}")
             continue
 
+        eb, _ = usable[0]
         text = eb.read_text(errors="ignore")
 
-        if restricts_bindist(text):
+        states = {bindist_state(e.read_text(errors="ignore")) for e, _ in usable}
+        if "unknown" in states:
+            errors.append(
+                f"{LIST.name}:{lineno}: RESTRICT 用了变量或条件式，无法静态判定: {cp}")
+        elif states == {"yes"}:
             errors.append(f"{LIST.name}:{lineno}: RESTRICT=bindist, cannot be redistributed: {cp}")
 
         kw = keywords_of(text)

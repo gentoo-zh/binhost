@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import functools
 import pathlib
 import re
 import sys
@@ -27,19 +28,86 @@ def builds_from_source(text):
     return bool(ecl & BUILD_ECLASS) or bool(COMPILE_PHASE.search(text))
 
 
+MASK_OP = re.compile(r"^(!!|!|>=|<=|=|~|>|<)")
+CPV_SPLIT = re.compile(r"^(?P<cp>.+?)-(?P<ver>[0-9][0-9a-zA-Z._+]*(?:-r[0-9]+)?)$")
+
+
+def parse_atom(atom):
+    """(cp, op, version) for one atom. op and version are None for a bare atom.
+
+    A version is only legal after an operator, so a bare category/package
+    always means every version.
+    """
+    m = MASK_OP.match(atom)
+    op = m.group(1) if m else None
+    rest = atom[len(op):] if op else atom
+    star = rest.endswith("*")
+    rest = rest.rstrip("*")
+    rest = re.sub(r"\[[^\]]*\]$", "", rest)
+    rest = re.split(r"::", rest, maxsplit=1)[0]
+    rest = re.split(r":", rest, maxsplit=1)[0]
+    if not op:
+        return rest, None, None
+    m = CPV_SPLIT.match(rest)
+    if not m:
+        return rest, None, None
+    return m.group("cp"), ("=*" if star and op == "=" else op), m.group("ver")
+
+
+class Masks:
+    """package.mask entries, keeping the version constraint of each atom."""
+
+    def __init__(self):
+        self.whole = set()
+        self.ranged = {}
+
+    def add(self, atom):
+        cp, op, ver = parse_atom(atom)
+        if op is None:
+            self.whole.add(cp)
+        else:
+            self.ranged.setdefault(cp, []).append((op, ver))
+
+    def __contains__(self, cp):
+        return cp in self.whole
+
+    def named(self):
+        return self.whole | set(self.ranged)
+
+    def masks(self, cp, ver):
+        if cp in self.whole:
+            return True
+        for op, mver in self.ranged.get(cp, ()):
+            c = vercmp(ver, mver)
+            if c is None:
+                continue
+            if op == "=*" and (ver == mver or ver.startswith(mver + ".")):
+                return True
+            if (op == "=" and c == 0) or (op == "~" and c == 0):
+                return True
+            if (op == ">=" and c >= 0) or (op == ">" and c > 0):
+                return True
+            if (op == "<=" and c <= 0) or (op == "<" and c < 0):
+                return True
+        return False
+
+
 def read_mask(overlay):
+    out = Masks()
     p = pathlib.Path(overlay) / "profiles" / "package.mask"
     if not p.exists():
-        return set()
-    out = set()
+        return out
     for raw in p.read_text(errors="ignore").splitlines():
         line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        m = re.search(r"[a-z0-9-]+/[A-Za-z0-9._+-]+", line.lstrip("<>=~!"))
-        if m:
-            out.add(re.sub(r"-[0-9][^/]*$", "", m.group(0)))
+        if line and not line.startswith("#"):
+            out.add(line.split()[0])
     return out
+
+
+def split_cpv(cpv):
+    """(cp, version) for a category/package-version string, or (cpv, None)."""
+    m = CPV_SPLIT.match(cpv)
+    return (m.group("cp"), m.group("ver")) if m else (cpv, None)
 
 
 def version_of(ebuild, pn):
@@ -57,6 +125,31 @@ def newest_ebuild(pkgdir):
         if (vercmp(version_of(e, pn), version_of(best, pn)) or 0) > 0:
             best = e
     return best
+
+
+def usable_ebuilds(pkgdir, masks=None):
+    """(ebuild, version), newest first, dropping 9999, masked and non-amd64.
+
+    Used where "can we still build anything here" is the question, so that a
+    mask or a dropped keyword on the newest version alone does not make the
+    whole package look gone.
+    """
+    pkgdir = pathlib.Path(pkgdir)
+    cp = f"{pkgdir.parent.name}/{pkgdir.name}"
+    out = []
+    for e in pkgdir.glob("*.ebuild"):
+        if "9999" in e.name:
+            continue
+        ver = version_of(e, pkgdir.name)
+        if masks is not None and masks.masks(cp, ver):
+            continue
+        kw = keywords_of(e.read_text(errors="ignore"))
+        if kw is not None and not accepts_amd64(kw):
+            continue
+        out.append((e, ver))
+    out.sort(key=functools.cmp_to_key(
+        lambda a, b: vercmp(a[1], b[1]) or 0), reverse=True)
+    return out
 
 
 def accepts_amd64(keywords):
@@ -99,6 +192,9 @@ EXPANSION = re.compile(r"[$`]")
 
 
 def restrict_uncertain(text):
+    plain = [m for m, _ in _assignments(text) if not m.group("plus")]
+    if len(plain) > 1:
+        return True
     for m, val in _assignments(text):
         if EXPANSION.search(val):
             return True
@@ -117,7 +213,18 @@ def restrict_uncertain(text):
 
 
 def restricts_bindist(text):
-    return any("bindist" in val for _, val in _assignments(text))
+    return "bindist" in restrict_tokens(text)
+
+
+def bindist_state(text):
+    """yes / no / unknown. unknown when the value cannot be read statically.
+
+    Callers must fail closed on unknown: do not publish it, and do not
+    propose retiring it either.
+    """
+    if restrict_uncertain(text):
+        return "unknown"
+    return "yes" if restricts_bindist(text) else "no"
 
 
 def inherits(text):

@@ -96,7 +96,7 @@ previous=$(${DOCKER} image inspect "${BASE}-prev" --format '{{.Id}}' 2>/dev/null
 
 if ${DOCKER} cp "${container}:/tmp/world-incomplete" - >/dev/null 2>&1; then
     ${DOCKER} rm -f "${container}" >/dev/null
-    die "@world 未能对齐，保留原有的 ${BASE} 不动"
+    die "@world 未能对齐，保留现有的 ${BASE}"
 fi
 
 echo ">>> committing ${BASE}"

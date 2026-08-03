@@ -4,10 +4,8 @@ import importlib.util
 import pathlib
 import sys
 
-spec = importlib.util.spec_from_file_location(
-    "validate", pathlib.Path(__file__).with_name("validate.py"))
-validate = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(validate)
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from ebuilds import bindist_state, restricts_bindist          # noqa: E402
 
 TERMIUS = '''EAPI=8
 DESCRIPTION="Terminal"
@@ -23,13 +21,17 @@ CASES = [
     ("no bindist", 'RESTRICT="mirror strip"\n', False),
     ("no RESTRICT at all", 'LICENSE="GPL-2"\n', False),
     ("indented, inside a conditional", '\tRESTRICT="bindist"\n', True),
-    ("second assignment carries it",
+    ("second plain assignment carries it",
      'RESTRICT="mirror"\nRESTRICT="bindist"\n', True),
-    ("first assignment carries it",
-     'RESTRICT="bindist"\nRESTRICT="mirror"\n', True),
+    ("last plain assignment wins, so this one is not bindist",
+     'RESTRICT="bindist"\nRESTRICT="mirror"\n', False),
+    ("+= appends to the earlier value",
+     'RESTRICT="mirror"\nRESTRICT+=" bindist"\n', True),
     ("quoted text later in the file", TERMIUS, True),
     ("bindist only inside a comment", '# RESTRICT="bindist" upstream says no\n', False),
-    ("substring of another token", 'RESTRICT="nobindistcheck"\n', True),
+    ("substring of another token", 'RESTRICT="nobindistcheck"\n', False),
+    ("bindist as a prefix of another token", 'RESTRICT="bindistfoo"\n', False),
+    ("bindist as a suffix of another token", 'RESTRICT="nobindist"\n', False),
     ("value spanning several lines", 'RESTRICT="\n\tbindist\n\tmirror"\n', True),
     ("several lines, no bindist", 'RESTRICT="\n\tmirror\n\ttest"\n', False),
 ]
@@ -37,7 +39,7 @@ CASES = [
 print(f"  {'形状':<30} {'预期':<6} 实际")
 bad = 0
 for name, text, expect in CASES:
-    got = validate.restricts_bindist(text)
+    got = restricts_bindist(text)
     ok = got == expect
     print(f"  {'✓' if ok else '✗'} {name:<28} {str(expect):<6} {got}")
     bad += not ok
@@ -45,9 +47,26 @@ for name, text, expect in CASES:
 if len(sys.argv) > 1:
     overlay = pathlib.Path(sys.argv[1])
     hits = [eb for eb in overlay.glob("*/*/*.ebuild")
-            if validate.restricts_bindist(eb.read_text(errors="ignore"))]
+            if restricts_bindist(eb.read_text(errors="ignore"))]
     ok = len(hits) > 0
     print(f"  {'✓' if ok else '✗'} {'真实 overlay 中可识别 bindist':<28} {'>0':<6} {len(hits)}")
+    bad += not ok
+
+STATES = [
+    ("plain bindist is decidable", 'RESTRICT="bindist"\n', "yes"),
+    ("plain mirror is decidable", 'RESTRICT="mirror"\n', "no"),
+    ("variable expansion is undecidable", 'R="bindist"\nRESTRICT="${R}"\n', "unknown"),
+    ("command substitution is undecidable", 'RESTRICT="`f`"\n', "unknown"),
+    ("two plain assignments are undecidable",
+     'RESTRICT="bindist"\nRESTRICT="mirror"\n', "unknown"),
+    ("assignment inside a conditional is undecidable",
+     'if use foo; then\n\tRESTRICT="bindist"\nfi\n', "unknown"),
+]
+print()
+for name, text, expect in STATES:
+    got = bindist_state(text)
+    ok = got == expect
+    print(f"  {'✓' if ok else '✗'} {name:<44} {expect:<8} {got}")
     bad += not ok
 
 sys.exit(1 if bad else 0)

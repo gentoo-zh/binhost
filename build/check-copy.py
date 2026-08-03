@@ -1,38 +1,15 @@
 #!/usr/bin/env python3
 
+import json
 import pathlib
 import re
 import sys
 
-PHRASES = [
-    (r"不是[^。，]{1,20}而是", "否定式对比"),
-    (r"與其說|与其说", "否定式对比"),
-    (r"这不仅是|這不僅是", "伪广度"),
-    (r"值得注意的是", "预告式套话"),
-    (r"总的来说|總的來說|综上所述|綜上所述", "总结段"),
-    (r"随着[^。]{0,12}的不断|隨著[^。]{0,12}的不斷", "套话开头"),
-    (r"奠定了坚实|扮演着重要", "公文腔"),
-    (r"[。！？]\s*(其实|說白了|说白了|坦白讲)", "口语开头"),
-]
+VOCAB = json.loads((pathlib.Path(__file__).with_name("copy-words.json")).read_text())
 
-WORDS = [
-    "赋能", "抓手", "闭环", "底层逻辑", "认知升级", "长期主义", "颗粒度",
-    "护城河", "组合拳", "打法", "破圈", "沉淀", "生态位",
-    "不断深化", "持续推动", "有力支撑", "彰显", "诠释", "擘画",
-    "注入新的活力", "迈上新台阶",
-    "至关重要", "至關重要", "深入探讨", "深入探討", "版图", "版圖",
-    "的话", "的話", "就行", "拉下来", "拉下來", "装上", "裝上", "搞定",
-    "直接跑", "直接给", "直接給", "白跑", "一下就",
-    "写不了", "寫不了", "不能省", "读不了", "讀不了", "认不出", "認不出",
-    "多半", "看一眼", "东西", "東西", "一眼", "没劲", "沒勁", "不划算",
-    "省得", "免得", "干脆", "乾脆", "好几", "好幾", "一大堆", "没啥", "沒啥",
-]
-
-FILLER = [
-    (r"进行[了]?(构建|同步|下载|安装|验证|检查)", "「进行」多余"),
-    (r"通过[^，。]{0,8}的方式", "「通过…的方式」空转"),
-    (r"作为[^，。]{0,6}来说", "「作为…来说」空转"),
-]
+PHRASES = [tuple(x) for x in VOCAB["phrases"]]
+WORDS = VOCAB["words"]
+FILLER = [tuple(x) for x in VOCAB["filler"]]
 
 
 from html.parser import HTMLParser                        # noqa: E402
@@ -79,10 +56,10 @@ class Visible(HTMLParser):
 
 
 def visible_text(html):
-    """页面上人看得到的每一段文字：正文、属性、i18n 表里的串。
+    """Every run of text a reader can see: body, attributes, i18n tables.
 
-    此前用正则整段删掉 title、pre、table.spec、rule-dont，属性也完全不看，
-    于是这些位置的用词从来没被检查过。
+    An earlier version stripped title, pre, table.spec and rule-dont with a
+    regex and never looked at attributes, so none of those were ever checked.
     """
     v = Visible()
     v.feed(html)
@@ -91,31 +68,10 @@ def visible_text(html):
     return "\n".join(v.parts) + "\n" + tables
 
 
-COLLOQUIAL = [
-    "的话", "的話", "就行", "拉下来", "拉下來", "装上", "裝上", "搞定",
-    "直接跑", "直接给", "直接給", "白跑", "白做", "一下就", "就这么", "就這麼",
-    "写不了", "寫不了", "读不了", "讀不了", "认不出", "認不出",
-    "一堆", "咋", "啥", "干活", "活干", "玩意", "省事", "靠谱", "靠譜",
-    "拉倒", "压根", "壓根", "干脆", "乾脆", "老是", "半天",
-    "多半", "看一眼", "东西", "東西", "没劲", "沒勁", "省得", "好几", "好幾",
-    "一大堆", "没啥", "沒啥", "乱七八糟", "亂七八糟",
-    "跑一次", "跑一遍", "重跑", "跑完", "跑起来", "跑起來", "跑不", "在跑",
-    "没跑", "沒跑", "跑了", "跑过", "跑過", "装不上", "裝不上", "取不到",
-    "读不出", "讀不出", "对不上", "對不上", "发不出", "發不出", "挡住", "擋住",
-    "其实", "其實", "坦白讲", "坦白講",
-]
+COLLOQUIAL = VOCAB["colloquial"]
+COLLOQUIAL_EMIT = COLLOQUIAL + VOCAB["colloquial_emit_extra"]
 
-COLLOQUIAL_EMIT = COLLOQUIAL + [
-    "在跑", "没跑", "沒跑", "跑完", "跑起来", "跑起來", "没成", "沒成", "停了",
-    "那一步", "这一步", "這一步", "弄", "搞", "整个儿",
-    "没了", "沒了", "不可读", "不可讀", "直接删", "直接刪", "都还在", "都還在",
-    "跟着换", "跟著換", "圈出来", "圈出來", "圈了出来", "圈了出來",
-    "认得", "認得", "加进去", "加進去", "能读到", "能讀到", "失联", "失聯",
-    "被删掉", "被刪掉", "才删", "才刪", "用完", "还没有", "還沒有",
-    "报出来", "報出來", "留着", "留著", "拿到",
-]
-
-BARE_RUN = re.compile(r"跑(?![步道车馬马])")
+BARE_RUN = re.compile(VOCAB["bare_run"])
 
 COMMENT = {
     ".txt": r"#(.*)$",
@@ -137,9 +93,10 @@ NO_SUFFIX = {"cron.d-binhost", "logrotate-binhost", "rsyncd.conf",
              "nftables.conf", "robots.txt", "excluded.txt", "packages.txt"}
 
 
-SELF = {"check-copy.py", "copy-fixtures.json", "test-check-copy.py"}
+DATA = {"copy-words.json", "copy-fixtures.json"}
 
-EMIT_SUFFIX = (".sh", ".py", ".js", ".yml", ".yaml", ".html", ".css", ".txt")
+EMIT_SUFFIX = (".sh", ".py", ".js", ".yml", ".yaml", ".html", ".css", ".txt",
+                ".service", ".timer")
 CJK = re.compile(r'[\u4e00-\u9fff]')
 
 STRINGS = re.compile(
@@ -153,8 +110,14 @@ HEREDOC = re.compile(
     r"<<-?\s*['\"]?([A-Za-z_][A-Za-z0-9_]*)['\"]?[^\n]*\n([\s\S]*?)\n[ \t]*\1\b")
 
 
+UNIT_TEXT = re.compile(r"^(?:Description|Documentation)=(.*)$", re.M)
+
+
 def emitted_chunks(text, suffix):
     out = []
+    if suffix in (".service", ".timer"):
+        return [(text[:m.start()].count("\n") + 1, m.group(1))
+                for m in UNIT_TEXT.finditer(text) if CJK.search(m.group(1))]
     if suffix in (".sh", ".yml", ".yaml"):
         for m in HEREDOC.finditer(text):
             out.append((text[:m.start()].count("\n") + 1, m.group(2)))
@@ -167,7 +130,7 @@ def emitted_chunks(text, suffix):
 def check_emitted(root):
     bad = 0
     for f in sorted(pathlib.Path(root).rglob("*")):
-        if not f.is_file() or f.suffix not in EMIT_SUFFIX or f.name in SELF:
+        if not f.is_file() or f.suffix not in EMIT_SUFFIX or f.name in DATA:
             continue
         if ".git" in f.parts:
             continue
@@ -196,9 +159,9 @@ QUOTED_SPAN = re.compile(
 
 
 def mask_strings(line):
-    """把字串内容换成空格。注释符号出现在字串里时不是注释：
+    """Blank out string contents. A comment marker inside a string is not one:
 
-    ${#paths[@]} 与 print(f"  # {kind}") 都会被逐行的 #(.*)$ 当成注释。
+    ${#paths[@]} and print(f"  # {kind}") both match a per-line #(.*)$.
     """
     line = re.sub(r"\$\{#", "$${", line)
     return QUOTED_SPAN.sub(lambda m: " " * len(m.group(0)), line)
@@ -226,6 +189,33 @@ def docstrings(text):
     return [(text[:m.start()].count("\n") + 1, m.group(1)) for m in DOCSTRING.finditer(text)]
 
 
+FENCE = re.compile(r"^```([A-Za-z0-9_+-]*)[^\n]*\n([\s\S]*?)^```", re.M)
+FENCE_COMMENT = {
+    "bash": r"#(.*)$", "sh": r"#(.*)$", "shell": r"#(.*)$", "console": r"#(.*)$",
+    "python": r"#(.*)$", "py": r"#(.*)$", "yaml": r"#(.*)$", "yml": r"#(.*)$",
+    "ini": r"#(.*)$", "conf": r"#(.*)$", "js": r"//(.*)$",
+}
+
+
+def fenced_comments(text):
+    """Comments inside Markdown code fences.
+
+    A fence carries commands a reader may paste, so its comments are code
+    comments and follow the same rule as the rest of the tree.
+    """
+    out = []
+    for m in FENCE.finditer(text):
+        pat = FENCE_COMMENT.get(m.group(1).lower())
+        if pat is None:
+            continue
+        base = text[:m.start()].count("\n") + 1
+        for i, line in enumerate(m.group(2).splitlines(), 1):
+            hit = re.search(pat, mask_strings(line))
+            if hit:
+                out.append((base + i, next((g for g in hit.groups() if g), "")))
+    return out
+
+
 def check_comments(root):
     bad = 0
     for f in sorted(pathlib.Path(root).rglob("*")):
@@ -237,7 +227,7 @@ def check_comments(root):
             pat = r"#(.*)$"
         else:
             continue
-        if f.name in SELF:
+        if f.name in DATA:
             continue
         try:
             text = f.read_text()
@@ -247,8 +237,12 @@ def check_comments(root):
         chunks = comment_chunks(text, pat, f.suffix in BLOCK_LANGS)
         if f.suffix == ".py":
             chunks = chunks + docstrings(text)
+        fenced = set()
+        if f.suffix == ".md":
+            fenced = {(n, c) for n, c in fenced_comments(text)}
+            chunks = chunks + sorted(fenced)
         for line, chunk in chunks:
-            if pat is not None and CJK.search(chunk):
+            if (pat is not None or (line, chunk) in fenced) and CJK.search(chunk):
                 hits.append(f"{line}: 注释里有中文  {chunk.strip()[:60]}")
                 continue
             for w in COLLOQUIAL:

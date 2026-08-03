@@ -29,10 +29,10 @@ index_header_ok() {
     fi
 }
 
-[[ -f ${STAGE}/Packages ]] || { echo "暂存区 ${STAGE} 里没有索引" >&2; exit 1; }
+[[ -f ${STAGE}/Packages ]] || { echo "暂存区 ${STAGE} 不存在索引" >&2; exit 1; }
 
 mapfile -t paths < <(awk '/^PATH: /{print $2}' "${STAGE}/Packages")
-(( ${#paths[@]} )) || { echo "索引里没有列出任何包" >&2; exit 1; }
+(( ${#paths[@]} )) || { echo "索引未列出任何软件包" >&2; exit 1; }
 
 missing=0
 index_header_ok "${STAGE}/Packages" "${#paths[@]}" || { echo "中止发布" >&2; exit 1; }
