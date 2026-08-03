@@ -6,7 +6,7 @@ stage-index.py <pkgdir> <stage> [overlay]
 import os
 import pathlib
 import re
-import shutil
+import hashlib
 import stat
 import sys
 import time
@@ -272,6 +272,38 @@ def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None):
     return ([candidates[k] for k in sorted(keep)], skipped, None, refused, unresolved)
 
 
+DIGESTS = ("SHA1", "MD5")
+
+
+def copy_digest(src, dst):
+    """Copy and hash in the same pass; the bytes are read either way."""
+    hashes = {name: hashlib.new(name.lower()) for name in DIGESTS}
+    while True:
+        chunk = src.read(1 << 20)
+        if not chunk:
+            break
+        dst.write(chunk)
+        for h in hashes.values():
+            h.update(chunk)
+    dst.flush()
+    return {name: h.hexdigest() for name, h in hashes.items()}
+
+
+def digest_mismatch(f, digest):
+    """A reason to refuse, or None.
+
+    The stanza describes the package the index promises. If the copy does not
+    hash to that, the source changed under us and the stanza no longer
+    describes what we would publish.
+    """
+    for name in DIGESTS:
+        want = f.get(name, "").strip().lower()
+        if want:
+            return None if want == digest[name] else (
+                f"{name} 与索引不符：索引 {want}，复制后 {digest[name]}")
+    return "索引没有给出 MD5 或 SHA1，无法确认复制的内容"
+
+
 def rewrite_header(header, count, rev):
     header = re.sub(r"^PACKAGES: .*$", f"PACKAGES: {count}", header, flags=re.M)
     header = re.sub(r"^TIMESTAMP: .*$", f"TIMESTAMP: {int(time.time())}", header, flags=re.M)
@@ -327,13 +359,15 @@ def main(pkgdir, stage, overlay=None, rev="", lookup=None):
                             try:
                                 with open(sfd, "rb", closefd=False) as fh, \
                                      open(dfd, "wb", closefd=False) as out:
-                                    shutil.copyfileobj(fh, out)
-                                    out.flush()
+                                    digest = copy_digest(fh, out)
                                 written = os.fstat(dfd).st_size
                             finally:
                                 os.close(dfd)
                             if written != os.fstat(sfd).st_size:
                                 sys.exit(f"拒绝 stage：{rel} 复制后大小不符")
+                            bad = digest_mismatch(f, digest)
+                            if bad:
+                                sys.exit(f"拒绝 stage：{rel} {bad}")
                             os.utime(name, ns=(st.st_atime_ns, st.st_mtime_ns),
                                      dir_fd=dst_dir, follow_symlinks=False)
                         finally:
