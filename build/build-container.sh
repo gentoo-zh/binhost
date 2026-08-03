@@ -93,6 +93,7 @@ sys-libs/libsolv       conda
 dev-util/mamba         python
 app-i18n/opencc        python
 media-video/pipewire   gstreamer
+app-shells/gitstatus   zsh-completion
 EOF
 
 mapfile -t atoms < <(grep -E '^[a-z0-9-]+/[A-Za-z0-9._+-]+$' /tmp/packages.txt)

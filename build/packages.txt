@@ -7,7 +7,6 @@ app-containers/bubblejail
 app-crypt/archlinux-keyring
 app-crypt/cotp
 app-dicts/fcitx-pinyin-custom-pinyin-dictionary
-app-dicts/fcitx-pinyin-moegirl
 app-dicts/fcitx-pinyin-sougou-dict
 app-dicts/fcitx-pinyin-zhwiki
 app-editors/edit
