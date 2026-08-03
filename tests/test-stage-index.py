@@ -18,9 +18,19 @@ HEADER = "ACCEPT_KEYWORDS: ~amd64\nPACKAGES: 999\nTIMESTAMP: 1\nVERSION: 0"
 HEADER_WITH_REV = HEADER + '\nREPO_REVISIONS: {}'
 
 
+def digest_of(data):
+    import hashlib
+    return hashlib.sha1(data).hexdigest()
+
+
+def md5_of(data):
+    import hashlib
+    return hashlib.md5(data).hexdigest()
+
+
 def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None, PATH=None,
            rdepend=None, depend=None, idepend=None, pdepend=None,
-           slot="0", use=None, iuse=None, eapi="8"):
+           slot="0", use=None, iuse=None, eapi="8", sha1=None):
     cp = cpv.rsplit("-", 1)[0]
     path = f"{cp}/{cpv.split('/')[-1]}.gpkg.tar" if PATH is None else PATH
     lines = [f"CPV: {cpv}", f"PATH: {path}", f"REPO: {repo}"]
@@ -38,6 +48,8 @@ def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None, PATH=None,
         lines.append(f"BUILD_ID: {build_id}")
     if restrict:
         lines.append(f"RESTRICT: {restrict}")
+    if sha1:
+        lines.append(f"SHA1: {sha1}")
     if rdepend:
         lines.append(f"RDEPEND: {rdepend}")
     if depend:
@@ -242,7 +254,8 @@ def _escape(shape):
         else:
             target.write_text("inside\n")
         (pkg / "Packages").write_text(
-            HEADER + "\n\n" + stanza("app-misc/a-1", PATH="app-misc/a-1.gpkg.tar") + "\n")
+            HEADER + "\n\n" + stanza("app-misc/a-1", PATH="app-misc/a-1.gpkg.tar",
+                                      sha1=digest_of(b"inside\n")) + "\n")
         try:
             rc = stage_index.main(str(pkg), str(stage),
                                   lookup=lambda cpv, repo: "")
@@ -260,6 +273,46 @@ for _shape in ("final", "relative", "intermediate", "fifo"):
 case("正常文件照常 stage", lambda: _escape("plain")[0] in (0, None))
 
 
+def _digest_probe(sha1=None, md5=None, content=b"inside\n"):
+    """Stage one package and report whether main accepted it."""
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        pkg = d / "pkg"
+        (pkg / "app-misc").mkdir(parents=True)
+        (pkg / "app-misc" / "a-1.gpkg.tar").write_bytes(content)
+        stage = d / "stage"
+        stage.mkdir()
+        lines = ["CPV: app-misc/a-1", "PATH: app-misc/a-1.gpkg.tar",
+                 "REPO: gentoo-zh", "EAPI: 8", "SLOT: 0"]
+        if sha1:
+            lines.append(f"SHA1: {sha1}")
+        if md5:
+            lines.append(f"MD5: {md5}")
+        (pkg / "Packages").write_text(HEADER + "\n\n" + "\n".join(lines) + "\n")
+        try:
+            rc = stage_index.main(str(pkg), str(stage), lookup=lambda cpv, repo: "")
+        except SystemExit as e:
+            rc = e.code
+        return rc
+
+
+case("SHA1 与索引相符时照常 stage", lambda: (
+    _digest_probe(sha1=digest_of(b"inside\n")) in (0, None)))
+
+case("SHA1 不符时拒绝，不按旧 stanza 发布", lambda: (
+    (lambda rc: rc not in (0, None) and "SHA1" in str(rc))(
+        _digest_probe(sha1=digest_of(b"something else")))))
+
+case("只有 MD5 时按 MD5 核对", lambda: (
+    _digest_probe(md5=md5_of(b"inside\n")) in (0, None)))
+
+case("MD5 不符时同样拒绝", lambda: (
+    _digest_probe(md5=md5_of(b"other")) not in (0, None)))
+
+case("索引没有给出摘要时拒绝，不默认放行", lambda: (
+    (lambda rc: rc not in (0, None) and "无法确认" in str(rc))(_digest_probe())))
+
+
 def _dest_escape(shape):
     import os
     with tempfile.TemporaryDirectory() as tmp:
@@ -269,6 +322,7 @@ def _dest_escape(shape):
         (pkg / "app-misc" / "a-1.gpkg.tar").write_text("payload\n")
         stage = d / "stage"
         stage.mkdir()
+        payload_sha1 = digest_of(b"payload\n")
         outside = d / "OUTSIDE"
         outside.mkdir()
         if shape == "dir":
@@ -277,7 +331,8 @@ def _dest_escape(shape):
             (stage / "app-misc").mkdir()
             os.symlink(outside / "a-1.gpkg.tar", stage / "app-misc" / "a-1.gpkg.tar")
         (pkg / "Packages").write_text(
-            HEADER + "\n\n" + stanza("app-misc/a-1", PATH="app-misc/a-1.gpkg.tar") + "\n")
+            HEADER + "\n\n" + stanza("app-misc/a-1", PATH="app-misc/a-1.gpkg.tar",
+                                      sha1=payload_sha1) + "\n")
         try:
             rc = stage_index.main(str(pkg), str(stage),
                                   lookup=lambda cpv, repo: "")
