@@ -81,12 +81,13 @@ def select(entries, overlay=None, excluded=None):
     masked = read_mask(overlay) if overlay is not None else set()
     best = {}
     skipped = 0
+    refused = []
 
     for f, s in entries:
         cpv = f["CPV"]
 
         if safe_path(f.get("PATH", "")) is None:
-            return [], skipped, f"索引里的 PATH 不合法：{cpv} -> {f.get('PATH', '')!r}"
+            return [], skipped, f"索引里的 PATH 不合法：{cpv} -> {f.get('PATH', '')!r}", []
 
         if f.get("REPO") != "gentoo-zh":
             skipped += 1
@@ -106,7 +107,9 @@ def select(entries, overlay=None, excluded=None):
             continue
 
         if "bindist" in f.get("RESTRICT", ""):
-            return [], skipped, f"refusing to stage RESTRICT=bindist package: {cpv}"
+            refused.append(cpv)
+            skipped += 1
+            continue
 
         bid = int(f.get("BUILD_ID", 0))
         prev = best.get(cpv)
@@ -117,7 +120,7 @@ def select(entries, overlay=None, excluded=None):
             skipped += 1
         best[cpv] = (bid, f, s)
 
-    return list(best.values()), skipped, None
+    return list(best.values()), skipped, None, refused
 
 
 def rewrite_header(header, count, rev):
@@ -140,9 +143,12 @@ def main(pkgdir, stage, overlay=None, rev=""):
     overlay = pathlib.Path(overlay) if overlay else None
 
     header, entries = parse((pkgdir / "Packages").read_text())
-    kept, skipped, error = select(entries, overlay)
+    kept, skipped, error, refused = select(entries, overlay)
     if error:
         sys.exit(error)
+    for cpv in refused:
+        print(f"!! 不发布 {cpv}：RESTRICT=bindist，不可再散布；该把它移出 packages.txt",
+              file=sys.stderr)
 
     stanzas = []
     src_root = os.open(pkgdir, os.O_RDONLY | os.O_DIRECTORY)
@@ -194,6 +200,8 @@ def main(pkgdir, stage, overlay=None, rev=""):
     (stage / "Packages").write_text(
         rewrite_header(header, len(stanzas), rev) + "\n\n" + "\n\n".join(stanzas) + "\n")
     print(f">>> staged {len(stanzas)}, skipped {skipped} not ours to publish")
+    if refused:
+        print(f">>> 其中 {len(refused)} 个因 RESTRICT=bindist 被跳过")
     return 0
 
 

@@ -3,4 +3,4 @@
 20 0 * * * root BINHOST_ALERT=1 /usr/local/bin/binhost-status
 17 * * * * root /usr/local/bin/binhost-daily >> /var/log/emirrordist/run.log 2>&1
 
-17 3,15 * * * root /usr/bin/certbot renew --quiet --deploy-hook 'rc-service nginx reload'
+17 3,15 * * * root /usr/bin/certbot renew --quiet --deploy-hook 'nginx -t && rc-service nginx reload'
