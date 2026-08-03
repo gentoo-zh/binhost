@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import pathlib
 import subprocess
 import sys
@@ -21,17 +22,41 @@ def make_overlay(root, packages, masked=(), body=None):
     return root
 
 
-def run(index_lines, list_lines, packages=None, masked=()):
+def make_tree(root, packages, empty=()):
+    root = pathlib.Path(root)
+    for cp in packages:
+        d = root / cp
+        d.mkdir(parents=True, exist_ok=True)
+        (d / f"{d.name}-1.0.ebuild").write_text('EAPI=8\nSLOT="0"\n')
+    for cp in empty:
+        (root / cp).mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def run(index_lines, list_lines, packages=None, masked=(), tree=(), body=None,
+        tree_empty=()):
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
-        overlay = make_overlay(d / "overlay", packages or {}, masked)
+        overlay = make_overlay(d / "overlay", packages or {}, masked, body)
+        gentoo = make_tree(d / "gentoo", tree, tree_empty)
         (d / "Packages").write_text(
             "ACCEPT_KEYWORDS: ~amd64\nPACKAGES: 0\n\n" + "\n\n".join(index_lines) + "\n")
         (d / "list.txt").write_text("\n".join(list_lines) + "\n")
         p = subprocess.run([sys.executable, CHECK, str(overlay),
                             str(d / "Packages"), str(d / "list.txt")],
-                           capture_output=True, text=True)
+                           capture_output=True, text=True,
+                           env={**os.environ, "GENTOO_TREE": str(gentoo)})
         return p.returncode, p.stdout
+
+
+def retire(list_lines, packages=None, masked=(), body=None):
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        overlay = make_overlay(d / "overlay", packages or {}, masked, body)
+        (d / "list.txt").write_text("\n".join(list_lines) + "\n")
+        p = subprocess.run([sys.executable, CHECK, "--retire", str(overlay),
+                            str(d / "list.txt")], capture_output=True, text=True)
+        return p.returncode, [l for l in p.stdout.splitlines() if l.strip()]
 
 
 def stanza(cpv):
@@ -84,6 +109,71 @@ print(f"  {'✓' if ok else '✗'} {'新包上线未收录':<22} {'新包':<8} "
 if not ok:
     bad += 1
 
+
+
+MOVED_OLD = "app-misc/example"
+MOVED_NEW = "net-misc/example"
+BINDIST = 'EAPI=8\ninherit cmake\nKEYWORDS="~amd64"\nSLOT="0"\nRESTRICT="bindist"\n'
+
+MIGRATE = [
+    ("改分类，两边同名，配成一对",
+     [], [MOVED_OLD], {MOVED_NEW: NOW}, (), f"疑似改分类 {MOVED_OLD} -> {MOVED_NEW}"),
+    ("包真的删了，没有同名新包，仍报已移除",
+     [], [MOVED_OLD], {"net-misc/unrelated": NOW}, (), f"已移除 {MOVED_OLD}"),
+    ("同名新包已经在清单里，不算改分类",
+     [], [MOVED_OLD, MOVED_NEW], {MOVED_NEW: NOW}, (), f"已移除 {MOVED_OLD}"),
+]
+for name, idx, lst, packages, tree, want in MIGRATE:
+    rc, out = run(idx, lst, packages, tree=tree)
+    ok = any(l.strip().startswith(want) for l in out.splitlines()) and rc == 1
+    print(f"  {'✓' if ok else '✗'} {name:<24} {want}")
+    if not ok:
+        bad += 1
+        for l in out.splitlines()[1:6]:
+            print(f"      {l}")
+
+UPSTREAM = [
+    ("::gentoo 也有这个包就报出", (PKG,), (), True),
+    ("::gentoo 没有就不报", ("app-misc/other",), (), False),
+    ("::gentoo 有目录但没有 ebuild 不算", (), (PKG,), False),
+]
+for name, tree, tree_empty, want in UPSTREAM:
+    rc, out = run([stanza(f"{PKG}-{NOW}")], [PKG], {PKG: NOW},
+                  tree=tree, tree_empty=tree_empty)
+    got = any("已进主树" in l for l in out.splitlines())
+    ok = got == want
+    print(f"  {'✓' if ok else '✗'} {name:<24} {'报出' if got else '未报出'}")
+    if not ok:
+        bad += 1
+
+RETIRE = [
+    ("overlay 里没有的列为可移出", [PKG], {},
+     [f"{PKG}\toverlay 里已没有这个包"]),
+    ("被 mask 的列为可移出", [PKG], {PKG: NOW},
+     [f"{PKG}\toverlay 的 package.mask 屏蔽了它"]),
+    ("只有 9999 的列为可移出", [PKG], {PKG: "9999"},
+     [f"{PKG}\t只有 live ebuild，建不出可发布的版本"]),
+    ("RESTRICT=bindist 的列为可移出", [PKG], {PKG: NOW},
+     [f"{PKG}\t上游加了 RESTRICT=bindist，不可再散布"]),
+    ("正常的包不列出", [PKG], {PKG: NOW}, []),
+]
+for i, (name, lst, packages, want) in enumerate(RETIRE):
+    kw = {}
+    if "mask" in name:
+        kw["masked"] = (PKG,)
+    if "bindist" in name:
+        kw["body"] = {PKG: BINDIST}
+    rc, got = retire(lst, packages, **kw)
+    ok = got == want and rc == 0
+    print(f"  {'✓' if ok else '✗'} {name:<24} {got if got else '（无）'}")
+    if not ok:
+        bad += 1
+
+rc, got = retire([PKG], {PKG: NOW}, masked=(PKG,))
+ok = len(got) == 1 and got[0].count("\t") == 1
+print(f"  {'✓' if ok else '✗'} {'每行一个制表符分隔包名和原因':<24} {got}")
+if not ok:
+    bad += 1
 
 
 def newcomers(packages, list_lines, masked=(), restrict=None, keywords=None, body=None):

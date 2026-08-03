@@ -39,6 +39,9 @@ jobs:
       - name: Adding a package to the list
         run: python3 build/test-add-package.py
 
+      - name: Removing a package from the list
+        run: python3 build/test-retire-package.py
+
       - name: Version comparison fixture still matches portage
         run: python3 build/test-vercmp-fixture.py
 
