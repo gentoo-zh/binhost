@@ -1,0 +1,121 @@
+name: retire
+
+on:
+  schedule:
+    - cron: "30 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  find:
+    runs-on: ubuntu-latest
+    container: gentoo/stage3@sha256:7453ebe0a87f90ab16beed03c7f579a3cbb9ba4985e8cc310086277329b2290c  # gentoo/stage3:amd64
+    outputs:
+      rows: ${{ steps.pick.outputs.rows }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Fetch the overlay
+        run: |
+          mkdir -p /tmp/overlay
+          wget -qO- https://github.com/gentoo-zh/overlay/archive/refs/heads/master.tar.gz |
+            tar xz -C /tmp/overlay --strip-components=1
+
+      - name: Pick the ones that can no longer be built
+        id: pick
+        run: |
+          set -euo pipefail
+          python3 build/check-versions.py --retire /tmp/overlay build/packages.txt > /tmp/out.txt
+          listed=$(grep -cvE '^\s*(#|$)' build/packages.txt)
+          echo ">>> 清单 ${listed} 个，该移出 $(wc -l < /tmp/out.txt) 个"
+          cat /tmp/out.txt
+          {
+            echo "rows<<EOF"
+            cat /tmp/out.txt
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+  propose:
+    needs: find
+    if: needs.find.outputs.rows != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+
+      - name: Open one pull request per package
+        id: prs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ROWS: ${{ needs.find.outputs.rows }}
+        run: |
+          set -euo pipefail
+          git config user.name "Zakk"
+          git config user.email "zakk@gentoozh.org"
+
+          base=$(git rev-parse HEAD)
+          : > /tmp/urls.txt
+
+          mapfile -t rows <<< "${ROWS}"
+
+          for row in "${rows[@]}"; do
+            [ -n "${row}" ] || continue
+            cp=${row%%$'\t'*}
+            why=${row#*$'\t'}
+            branch="retire/${cp//\//-}"
+
+            if git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1; then
+              echo "  ${cp} 已经有 ${branch}，跳过"
+              continue
+            fi
+
+            git checkout -q -B "${branch}" "${base}"
+            python3 build/retire-package.py "${cp}" "${why}"
+
+            if git diff --quiet -- build/packages.txt build/excluded.txt; then
+              echo "  ${cp} 清单没有变化，跳过"
+              continue
+            fi
+
+            git commit -q -m "build: retire ${cp}" -- build/packages.txt build/excluded.txt
+            git push -q origin "${branch}"
+
+            body=$(printf '%s\n' \
+              "清单里的 \`${cp}\` 已经建不出可发布的二进制包：${why}。" \
+              "" \
+              "合并表示移出清单，下一轮构建不再尝试它。若只是暂时如此、仍要保留，请关闭本 PR；" \
+              "分支还在，同一个包不会重复提出，等它恢复后手动删掉 \`${branch}\` 即可重新纳入检查。" \
+              "" \
+              "\`overlay 里已没有这个包\` 只从 \`packages.txt\` 删除；其余原因会同时写进 \`build/excluded.txt\`，" \
+              "站点的包列表会把它连同原因一起显示出来。")
+            if ! gh pr create --base master --head "${branch}" \
+                 --title "build: retire ${cp}" --body "${body}" >> /tmp/urls.txt; then
+              echo "  ${cp} PR 创建失败，删除远端分支 ${branch}"
+              git push -q origin --delete "${branch}" || true
+            fi
+          done
+
+          cat /tmp/urls.txt
+          {
+            echo "urls<<EOF"
+            cat /tmp/urls.txt
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Post the links to Telegram
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT: ${{ secrets.TELEGRAM_CHAT }}
+          URLS: ${{ steps.prs.outputs.urls }}
+        run: |
+          [ -n "${TELEGRAM_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT:-}" ] || exit 0
+          [ -n "${URLS:-}" ] || exit 0
+          text=$(printf '%s\n%s' "以下包已经无法产出二进制包，合并表示移出清单，要保留请关闭 PR：" "${URLS}")
+          curl -fsS --max-time 20 -o /dev/null \
+            "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT}" \
+            --data-urlencode "text=${text}"
