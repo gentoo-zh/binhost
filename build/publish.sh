@@ -135,10 +135,30 @@ fi
 
 rsync -a "${STAGE}/Packages" "${REMOTE}:${REMOTE_ROOT}/.Packages.new"
 rsync -a "${STAGE}/Packages.gz" "${REMOTE}:${REMOTE_ROOT}/.Packages.gz.new"
-# shellcheck disable=SC2029  # as above
-ssh "${REMOTE}" "cd ${REMOTE_ROOT} && \
-    mv -f .Packages.new Packages && \
-    mv -f .Packages.gz.new Packages.gz"
+
+# The two indexes cannot be swapped in one rename. Keep a copy of the old
+# Packages so a failure on the second swap puts the pair back to one
+# generation instead of leaving Packages new and Packages.gz old for good.
+# shellcheck disable=SC2029  # REMOTE_ROOT is meant to expand locally
+ssh "${REMOTE}" "sh -s '${REMOTE_ROOT}'" <<'SWAP'
+set -u
+cd "$1" || exit 1
+if [ -e Packages ]; then
+    cp -p Packages .Packages.prev || exit 1
+fi
+if ! mv -f .Packages.new Packages; then
+    rm -f .Packages.prev
+    exit 1
+fi
+if ! mv -f .Packages.gz.new Packages.gz; then
+    if [ -e .Packages.prev ]; then
+        mv -f .Packages.prev Packages
+    fi
+    echo "!! Packages.gz 未能替换，已还原 Packages" >&2
+    exit 1
+fi
+rm -f .Packages.prev
+SWAP
 
 ts=$(awk '/^TIMESTAMP: /{print $2; exit}' "${STAGE}/Packages")
 n=$(awk '/^PACKAGES: /{print $2; exit}' "${STAGE}/Packages")

@@ -17,21 +17,25 @@ from portage.dep import use_reduce                         # noqa: E402
 from portage.exception import PortageException             # noqa: E402
 
 
+class LedgerError(Exception):
+    pass
+
+
 @contextlib.contextmanager
 def locked(path):
     """Hold an exclusive lock beside path for a whole read-modify-write.
 
     daily.sh already serialises the scheduled run, so this is what keeps a
-    hand-run of this script from racing it and losing a reservation.
+    hand-run of this script from racing it and losing a reservation. Without
+    the lock two runs can each read the same ledger and each spend the whole
+    budget, so failing to take it has to stop the round rather than proceed.
     """
     lock = pathlib.Path(f"{path}.lock")
     try:
         lock.parent.mkdir(parents=True, exist_ok=True)
         fd = os.open(lock, os.O_WRONLY | os.O_CREAT, 0o644)
     except OSError as e:
-        print(f"!! 无法建立 {lock}，本次不加锁：{e}", file=sys.stderr)
-        yield
-        return
+        raise LedgerError(f"无法建立 {lock}，本轮不做任何清理：{e}") from e
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
         yield
@@ -172,10 +176,6 @@ LEDGER = "/var/lib/emirrordist/reaped.json"
 WINDOW_HOURS = 24
 
 MARKERS = {"layout.conf", "README.txt"}
-
-
-class LedgerError(Exception):
-    pass
 
 
 def recent_deletions(add_count, now=None):

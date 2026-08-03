@@ -148,6 +148,10 @@ pubsite() {
     printf 'css\n' > "${src}/assets/site.css"
     printf '<p>old</p>\n' > "${dest}/gone.html"
     printf 'stale\n' > "${dest}/assets/removed.css"
+    mkdir -p "${dest}/binpkgs/x86-64" "${dest}/distfiles/ab"
+    printf 'pkg\n' > "${dest}/binpkgs/x86-64/a.gpkg.tar"
+    printf 'idx\n' > "${dest}/binpkgs/x86-64/Packages"
+    printf 'src\n' > "${dest}/distfiles/ab/a.tar.gz"
     printf 'AAAA\n' > "${src}/same.html"
     printf 'BBBB\n' > "${dest}/same.html"
     touch -d '2026-01-01 00:00:00' "${src}/same.html" "${dest}/same.html"
@@ -160,20 +164,54 @@ EOF
     echo AAAA0000000000000000000000000000000000AA > "${d}/fpr"
     PATH="${d}/bin:${PATH}" FPR_FILE="${d}/fpr" \
         bash "${ROOT}/deploy/publish-site.sh" "${src}" "${dest}" >/dev/null 2>&1
-    printf '%s %s %s %s %s\n' \
+    printf '%s %s %s %s %s %s\n' \
         "$(test -e "${dest}/gentoo-zh-binhost.asc" && echo asc || echo noasc)" \
         "$(test -e "${dest}/gone.html" && echo kept || echo removed)" \
         "$(test -e "${dest}/assets/removed.css" && echo kept || echo removed)" \
         "$(tr -d '\n' < "${dest}/index.html" 2>/dev/null)" \
-        "$(tr -d '\n' < "${dest}/same.html" 2>/dev/null)"
+        "$(tr -d '\n' < "${dest}/same.html" 2>/dev/null)" \
+        "$(find "${dest}/binpkgs" "${dest}/distfiles" -type f 2>/dev/null | wc -l)"
     rm -rf "${d}"
 }
-read -r a b c dd ee <<< "$(pubsite)"
+read -r a b c dd ee ff <<< "$(pubsite)"
 ok "公钥会发布" "${a}" "asc"
 ok "来源中已不存在的页面会一并移除" "${b}" "removed"
 ok "assets 里多余的文件也会移除" "${c}" "removed"
 ok "页面内容已更新" "${dd}" "<p>new</p>"
 ok "同大小同 mtime 但内容不同时仍然更新" "${ee}" "AAAA"
+ok "已发布的包与 distfiles 不受删除影响" "${ff}" "3"
+
+echo "== publish.sh 的索引替换"
+
+swap_probe() {
+    local mode="$1" d
+    d=$(mktemp -d)
+    sed -n "/<<'SWAP'/,/^SWAP\$/p" "${ROOT}/build/publish.sh" |
+        sed -e "1d" -e "\$d" > "${d}/swap.sh"
+    printf 'old\n' > "${d}/Packages"
+    printf 'oldgz\n' > "${d}/Packages.gz"
+    printf 'new\n' > "${d}/.Packages.new"
+    if [ "${mode}" != "gzmissing" ]; then
+        printf 'newgz\n' > "${d}/.Packages.gz.new"
+    fi
+    sh "${d}/swap.sh" "${d}" >/dev/null 2>&1
+    printf '%s %s %s %s\n' "$?" \
+        "$(tr -d '\n' < "${d}/Packages")" \
+        "$(tr -d '\n' < "${d}/Packages.gz")" \
+        "$(find "${d}" -maxdepth 1 -name '.Packages*' | wc -l)"
+    rm -rf "${d}"
+}
+
+read -r rc pk gz leftover <<< "$(swap_probe ok)"
+ok "两个索引都换成新的" "${pk} ${gz}" "new newgz"
+ok "换完不留临时文件" "${leftover}" "0"
+ok "正常情况下退出码为零" "${rc}" "0"
+
+read -r rc pk gz leftover <<< "$(swap_probe gzmissing)"
+ok "Packages.gz 换不成时报错" "${rc}" "1"
+ok "Packages.gz 换不成时把 Packages 还原回旧的" "${pk}" "old"
+ok "还原之后两个索引仍是同一代" "${pk} ${gz}" "old oldgz"
+ok "还原之后不留临时文件" "${leftover}" "0"
 
 echo "== provision.sh 的主机密钥核对"
 
