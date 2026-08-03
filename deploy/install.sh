@@ -156,9 +156,12 @@ for s in cronie rsyncd; do
     fi
 done
 if sudo rc-service nginx status >/dev/null 2>&1; then
-    sudo rc-service nginx reload >/dev/null 2>&1 ||
-        { echo "    !! nginx 未能重新载入配置"; svc_bad=1; }
-    echo "    nginx 已重新载入配置，进行中的下载不受影响"
+    if sudo rc-service nginx reload >/dev/null 2>&1; then
+        echo "    nginx 已重新载入配置，进行中的下载不受影响"
+    else
+        echo "    !! nginx 未能重新载入配置"
+        svc_bad=1
+    fi
 else
     sudo rc-service nginx start >/dev/null 2>&1 || { echo "    !! nginx 未能启动"; svc_bad=1; }
 fi

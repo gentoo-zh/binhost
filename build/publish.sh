@@ -46,24 +46,63 @@ if ! cmp -s <(gzip -dc "${STAGE}/Packages.gz") "${STAGE}/Packages"; then
     exit 1
 fi
 
-while read -r p size; do
-    actual=$(stat -c %s "${STAGE}/${p}" 2>/dev/null || echo -1)
-    if [[ ${size} =~ ^[0-9]+$ ]] && (( actual != size )); then
-        echo "!! ${p} 实际 ${actual} 字节，索引写 ${size}" >&2
+while read -r n path nsize size; do
+    if (( n != 1 )); then
+        echo "!! 有 ${n} 行 PATH 的 stanza：${path:-未知}" >&2
+        missing=$((missing + 1))
+        continue
+    fi
+    if (( nsize != 1 )); then
+        echo "!! ${path} 有 ${nsize} 行 SIZE，应恰好一行" >&2
+        missing=$((missing + 1))
+        continue
+    fi
+    if ! [[ ${size} =~ ^[0-9]+$ ]]; then
+        echo "!! ${path} 的 SIZE 不是非负整数：${size}" >&2
+        missing=$((missing + 1))
+        continue
+    fi
+    actual=$(stat -c %s "${STAGE}/${path}" 2>/dev/null || echo -1)
+    if (( actual != size )); then
+        echo "!! ${path} 实际 ${actual} 字节，索引写 ${size}" >&2
         missing=$((missing + 1))
     fi
-done < <(awk '/^PATH: /{p=$2} /^SIZE: /{if (p != "") {print p, $2; p=""}}' "${STAGE}/Packages")
+done < <(awk -v RS='' '
+    {
+        np = 0; ns = 0; path = ""; size = ""
+        n = split($0, lines, "\n")
+        for (i = 1; i <= n; i++) {
+            if (lines[i] ~ /^PATH: /) { np++; sub(/^PATH: /, "", lines[i]); path = lines[i] }
+            if (lines[i] ~ /^SIZE: /) { ns++; sub(/^SIZE: /, "", lines[i]); size = lines[i] }
+        }
+        if (np || ns) print np, path, ns, size
+    }' "${STAGE}/Packages")
+
+dupes=$(printf '%s\n' "${paths[@]}" | sort | uniq -d)
+if [[ -n ${dupes} ]]; then
+    echo "!! 索引里有重复的 PATH：" >&2
+    printf '   %s\n' "${dupes}" >&2
+    missing=$((missing + 1))
+fi
 
 for p in "${paths[@]}"; do
-    [[ -s ${STAGE}/${p} ]] || { echo "!! 索引列出但暂存区里没有或为空：${p}" >&2
+    case ${p} in
+        /*|*/../*|../*|*/..|..|"") echo "!! 索引里的 PATH 不合法：${p}" >&2
+                                   missing=$((missing + 1)); continue ;;
+    esac
+    [[ -s ${STAGE}/${p} ]] || { echo "!! 索引列出但暂存区不存在或为空：${p}" >&2
                                 missing=$((missing + 1)); }
 done
-(( missing )) && { echo "${missing} 个包不在暂存区，中止发布" >&2; exit 1; }
+(( missing )) && { echo "索引有 ${missing} 处不合规，中止发布" >&2; exit 1; }
 
 echo ">>> 发布 ${#paths[@]} 个包到 ${REMOTE}:${REMOTE_ROOT}"
 
 # shellcheck disable=SC2029  # the path is meant to expand locally
 ssh "${REMOTE}" "install -dm755 ${REMOTE_ROOT}"
+
+# shellcheck disable=SC2029
+before=$(ssh "${REMOTE}" "find ${REMOTE_ROOT} -name '*.gpkg.tar' -printf x 2>/dev/null | wc -c")
+[[ ${before} =~ ^[0-9]+$ ]] || before=0
 
 printf '%s\n' "${paths[@]}" |
     rsync -a --info=stats2 --files-from=- "${STAGE}/" "${REMOTE}:${REMOTE_ROOT}/" |
@@ -100,11 +139,13 @@ retired=$(printf '%s\n' "${paths[@]}" | ssh "${REMOTE}" "
         > /tmp/binhost-retire-${TAG}.txt || true
     n=\$(wc -l < /tmp/binhost-retire-${TAG}.txt)
     over=0
-    [ \"\${n}\" -gt 0 ] && [ \"\${have}\" -gt 0 ] &&
-        [ \$(( n * 100 )) -ge \$(( have * ${MAX_RETIRE_SHARE} )) ] && over=1
+    base=${before}
+    [ \"\${base}\" -gt 0 ] || base=\${have}
+    [ \"\${n}\" -gt 0 ] && [ \"\${base}\" -gt 0 ] &&
+        [ \$(( n * 100 )) -ge \$(( base * ${MAX_RETIRE_SHARE} )) ] && over=1
     [ \"\${n}\" -ge ${MAX_RETIRE_COUNT} ] && over=1
     if [ \"\${over}\" -eq 1 ] && [ '${FORCE_RETIRE:-0}' != 1 ]; then
-        echo \"本轮要清理 \${n}/\${have} 个，达到 ${MAX_RETIRE_SHARE}% 或 ${MAX_RETIRE_COUNT} 个的上限，未清理\" >&2
+        echo \"本轮要清理 \${n} 个，本轮之前有 \${base} 个，达到 ${MAX_RETIRE_SHARE}% 或 ${MAX_RETIRE_COUNT} 个的上限，未清理\" >&2
         echo \"确认无误后以 FORCE_RETIRE=1 重新执行\" >&2
         rm -f /tmp/binhost-keep-${TAG}.txt /tmp/binhost-have-${TAG}.txt /tmp/binhost-retire-${TAG}.txt
         exit 3

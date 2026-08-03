@@ -224,6 +224,40 @@ for _shape in ("final", "relative", "intermediate", "fifo"):
 
 case("正常文件照常 stage", lambda: _escape("plain")[0] in (0, None))
 
+
+def _dest_escape(shape):
+    import os
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        pkg = d / "pkgdir"
+        (pkg / "app-misc").mkdir(parents=True)
+        (pkg / "app-misc" / "a-1.gpkg.tar").write_text("payload\n")
+        stage = d / "stage"
+        stage.mkdir()
+        outside = d / "OUTSIDE"
+        outside.mkdir()
+        if shape == "dir":
+            os.symlink(outside, stage / "app-misc")
+        elif shape == "file":
+            (stage / "app-misc").mkdir()
+            os.symlink(outside / "a-1.gpkg.tar", stage / "app-misc" / "a-1.gpkg.tar")
+        (pkg / "Packages").write_text(
+            HEADER + "\n\n" + stanza("app-misc/a-1", PATH="app-misc/a-1.gpkg.tar") + "\n")
+        try:
+            rc = stage_index.main(str(pkg), str(stage))
+        except SystemExit as e:
+            rc = e.code
+        leaked = any(p.is_file() and p.name == "a-1.gpkg.tar" for p in outside.rglob("*"))
+        return rc, leaked
+
+
+case("目的地的中间目录是 symlink 时拒绝且不写出去",
+     lambda: (lambda r: r[0] not in (0, None) and not r[1])(_dest_escape("dir")))
+case("目的地的目标档案是 symlink 时拒绝且不写出去",
+     lambda: (lambda r: r[0] not in (0, None) and not r[1])(_dest_escape("file")))
+case("目的地干净时照常写入",
+     lambda: _dest_escape("clean")[0] in (0, None))
+
 bad = 0
 for name, fn in CASES:
     try:

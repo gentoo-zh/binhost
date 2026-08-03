@@ -39,6 +39,17 @@ if [[ -z ${VERSION_FILE} ]]; then
         [[ -r ${f} ]] && { VERSION_FILE="${f}"; break; }
     done
 fi
+COMPONENT="${COMPONENT:-}"
+if [[ -z ${COMPONENT} ]]; then
+    [[ -d /usr/local/lib/binhost ]] && COMPONENT=mirror
+    [[ -d /var/lib/binhost/build ]] && COMPONENT=builder
+fi
+case ${COMPONENT} in
+    mirror)  TRACKED="deploy build/gen-packages.py build/ebuilds.py build/status.sh build/alert.sh nginx" ;;
+    builder) TRACKED="build deploy/systemd" ;;
+    *)       TRACKED="" ;;
+esac
+
 if [[ -n ${VERSION_FILE} && -r ${VERSION_FILE} ]]; then
     here=$(tr -d ' \n' < "${VERSION_FILE}")
     there=$(curl -fsS --max-time 20 "${REPO_API}" 2>/dev/null |
@@ -46,9 +57,24 @@ if [[ -n ${VERSION_FILE} && -r ${VERSION_FILE} ]]; then
     if [[ -z ${there} ]]; then
         note "部署版本" "${here:0:8}，远端不可达，未比对"
     elif [[ ${here} == "${there}" ]]; then
-        note "部署版本" "${here:0:8}，与 master 一致"
+        note "部署版本" "${here:0:8}，与目标版本一致"
+    elif [[ -z ${TRACKED} ]]; then
+        bad "部署版本" "已部署 ${here:0:8}，目标版本 ${there:0:8}"
     else
-        bad "部署版本" "已部署 ${here:0:8}，master 为 ${there:0:8}，该机运行的不是当前代码"
+        changed=$(curl -fsS --max-time 25 \
+            "https://api.github.com/repos/gentoo-zh/binhost/compare/${here}...${there}" 2>/dev/null |
+            sed -n 's/^      "filename": "\(.*\)",$/\1/p')
+        hit=""
+        for path in ${TRACKED}; do
+            grep -q "^${path}" <<< "${changed}" && { hit="${path}"; break; }
+        done
+        if [[ -z ${changed} ]]; then
+            note "部署版本" "${here:0:8}，无法取得差异，未比对"
+        elif [[ -n ${hit} ]]; then
+            bad "部署版本" "已部署 ${here:0:8}，目标版本 ${there:0:8}，${hit} 已变更"
+        else
+            note "部署版本" "${here:0:8}，本机安装的部分与 ${there:0:8} 无差异"
+        fi
     fi
 else
     bad "部署版本" "缺少 VERSION，安装时未记录提交号"
@@ -273,18 +299,65 @@ if (( problems > 0 )) && [[ ! -r ${ALERT_CONF} ]]; then
     echo "!! 有 ${problems} 项未通过，但 ${ALERT_CONF} 无法读取，告警传送失败" >&2
 fi
 
+STATE_FILE="${STATE_FILE:-/var/lib/binhost/status-state}"
+COOLDOWN_H="${COOLDOWN_H:-24}"
+
+fingerprint=""
+if (( problems > 0 )); then
+    fingerprint=$(printf '%s\n' "${failures[@]}" | sed 's/[0-9]\+/N/g' | sort |
+                  sha256sum | cut -c1-16)
+fi
+
+prev_fp=""
+prev_at=0
+if [[ -r ${STATE_FILE} ]]; then
+    read -r prev_fp prev_at < "${STATE_FILE}" 2>/dev/null || { prev_fp=""; prev_at=0; }
+    [[ ${prev_at} =~ ^[0-9]+$ ]] || prev_at=0
+fi
+
+now=$(date +%s)
+kind=none
+if (( problems > 0 )); then
+    if [[ ${fingerprint} != "${prev_fp}" ]]; then
+        kind=new
+    elif (( now - prev_at >= COOLDOWN_H * 3600 )); then
+        kind=repeat
+    fi
+elif [[ -n ${prev_fp} ]]; then
+    kind=recovered
+fi
+
+save_state() {
+    local fp="$1" at="$2" tmp
+    tmp="${STATE_FILE}.new"
+    mkdir -p "$(dirname "${STATE_FILE}")" 2>/dev/null || true
+    if printf '%s %s\n' "${fp}" "${at}" > "${tmp}" 2>/dev/null; then
+        mv -f "${tmp}" "${STATE_FILE}" 2>/dev/null ||
+            echo "!! 无法写入 ${STATE_FILE}，去重状态未保存" >&2
+    else
+        echo "!! 无法写入 ${STATE_FILE}，去重状态未保存" >&2
+    fi
+}
+
 sent=0
-if (( problems > 0 )) && [[ ${BINHOST_ALERT:-} == 1 ]] && [[ -r ${ALERT_CONF} ]]; then
+if [[ ${kind} != none ]] && [[ ${BINHOST_ALERT:-} == 1 ]] && [[ -r ${ALERT_CONF} ]]; then
     # shellcheck source=/dev/null
     . "${ALERT_CONF}"
     if [[ -z ${TELEGRAM_TOKEN:-} || -z ${TELEGRAM_CHAT:-} ]]; then
         echo "!!! ${ALERT_CONF} 缺 TELEGRAM_TOKEN 或 TELEGRAM_CHAT，本次告警未发出" >&2
     fi
     if [[ -n ${TELEGRAM_TOKEN:-} && -n ${TELEGRAM_CHAT:-} ]]; then
-        text="binhost 检查未通过（$(hostname)）:"
-        for f in "${failures[@]}"; do
-            text+=$'\n'"• ${f}"
-        done
+        if [[ ${kind} == recovered ]]; then
+            text="binhost 检查已全部通过（$(hostname)）"
+        else
+            case ${kind} in
+                new)    text="binhost 检查未通过（$(hostname)）:" ;;
+                repeat) text="binhost 检查仍未通过（$(hostname)，已持续 $(( (now - prev_at) / 3600 )) 小时）:" ;;
+            esac
+            for f in "${failures[@]}"; do
+                text+=$'\n'"• ${f}"
+            done
+        fi
         if curl -fsS --max-time 20 -o /dev/null \
             --url "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=${TELEGRAM_CHAT}" \
@@ -298,7 +371,18 @@ if (( problems > 0 )) && [[ ${BINHOST_ALERT:-} == 1 ]] && [[ -r ${ALERT_CONF} ]]
     fi
 fi
 
+if (( sent )) || [[ ${BINHOST_ALERT:-} != 1 ]]; then
+    if (( problems > 0 )); then
+        [[ ${kind} == none ]] || save_state "${fingerprint}" "${now}"
+    elif [[ -n ${prev_fp} ]]; then
+        save_state "" "${now}"
+    fi
+fi
+
 if (( problems > 0 )); then
+    if [[ ${kind} == none ]]; then
+        echo "  （与上次相同的故障，${COOLDOWN_H} 小时内不重复通知）"
+    fi
     exit $(( sent ? 10 : 1 ))
 fi
 exit 0

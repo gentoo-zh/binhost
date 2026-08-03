@@ -86,8 +86,13 @@ def restrict_tokens(text):
     return set(cur)
 
 
+EXPANSION = re.compile(r"[$`]")
+
+
 def restrict_uncertain(text):
-    for m, _ in _assignments(text):
+    for m, val in _assignments(text):
+        if EXPANSION.search(val):
+            return True
         if m.group("pre").strip():
             return True
         depth = 0

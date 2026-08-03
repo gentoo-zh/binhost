@@ -7,6 +7,8 @@ DEST="${DEST:-./x86-64}"
 MAX_REMOVE_SHARE="${MAX_REMOVE_SHARE:-20}"
 MAX_REMOVE_COUNT="${MAX_REMOVE_COUNT:-60}"
 
+before=$(find "${DEST}" -name '*.gpkg.tar' -printf x 2>/dev/null | wc -c)
+
 mkdir -p "${DEST}"
 
 tmp=$(mktemp -d)
@@ -64,7 +66,6 @@ for path in "${paths[@]}"; do
         [[ $(stat -c %s "${DEST}/${path}" 2>/dev/null || echo -1) == "${want}" ]] && continue
         echo "!! ${path} 大小与索引不符，重新下载" >&2
         stale=$((stale + 1))
-        rm -f "${DEST}/${path}"
     fi
     mkdir -p "${DEST}/$(dirname "${path}")"
     if curl -fsSL --max-time 900 "${BASE}/${path}" -o "${DEST}/${path}.part"; then
@@ -105,10 +106,12 @@ while IFS= read -r -d '' f; do
 done < <(find "${DEST}" -name '*.gpkg.tar' -print0)
 
 over=0
-(( ${#retire[@]} > 0 && have > 0 && ${#retire[@]} * 100 >= have * MAX_REMOVE_SHARE )) && over=1
+base=${before}
+(( base > 0 )) || base=${have}
+(( ${#retire[@]} > 0 && base > 0 && ${#retire[@]} * 100 >= base * MAX_REMOVE_SHARE )) && over=1
 (( ${#retire[@]} >= MAX_REMOVE_COUNT )) && over=1
 if (( over )) && [[ ${FORCE_REMOVE:-0} != 1 ]]; then
-    echo "!! 本轮要清理 ${#retire[@]}/${have} 个，达到 ${MAX_REMOVE_SHARE}% 或 ${MAX_REMOVE_COUNT} 个的上限，未清理" >&2
+    echo "!! 本轮要清理 ${#retire[@]} 个，本轮之前有 ${base} 个，达到 ${MAX_REMOVE_SHARE}% 或 ${MAX_REMOVE_COUNT} 个的上限，未清理" >&2
     echo "   索引与已下载的包都已就位，确认无误后以 FORCE_REMOVE=1 重新执行" >&2
     exit 3
 fi
