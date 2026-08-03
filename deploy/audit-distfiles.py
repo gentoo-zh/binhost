@@ -57,11 +57,13 @@ def write_atomic(path, text):
 def carriable_names(uri_map, restrict):
     """(names we may carry, whether RESTRICT took any URI away), or None.
 
-    Same rules as portage's _emirrordist: fetch restriction implies mirror
-    restriction, a mirror+ URI lifts both for itself, fetch+ lifts only the
-    fetch one, and a file stays carriable while any one of its URIs survives.
-    Portage's mirror:// exemption list is not configured on this host, so it
-    is not applied here either.
+    Same rules as portage's _emirrordist: RESTRICT is reduced with the same
+    flat, matchnone arguments, so only unconditional restrictions apply and
+    demo? ( mirror ) does not stop us carrying the file. fetch restriction
+    implies mirror restriction, a mirror+ URI lifts both for itself, fetch+
+    lifts only the fetch one, and a file stays carriable while any one of its
+    URIs survives. Portage's mirror:// exemption list is not configured on
+    this host, so it is not applied here either.
 
     The second value separates the two ways a name can end up with no usable
     URI. A restriction means we must not carry it. No URI at all, as a bare
@@ -69,7 +71,7 @@ def carriable_names(uri_map, restrict):
     take anything down.
     """
     try:
-        tokens = set(use_reduce(restrict, matchall=True, eapi="8"))
+        tokens = frozenset(use_reduce(restrict, flat=True, matchnone=True))
     except PortageException:
         return None
     no_fetch = "fetch" in tokens
@@ -88,19 +90,24 @@ def carriable_names(uri_map, restrict):
     return out, no_mirror
 
 
-def portage_aux(overlay):
+def portage_aux(overlay, tree=None):
     """cp -> [(cpv, {distfile: [uri]}, RESTRICT)] from Portage's own metadata.
 
     The fetch map is what keeps each URI attached to the name it writes, which
     is what the per-URI fetch+ and mirror+ prefixes act on.
+
+    Every query names the overlay. Three packages currently exist in both
+    trees, and without the tree an ebuild from ::gentoo decides what happens
+    to a file the overlay's Manifest declared.
     """
-    db = pinned_portdbapi(overlay)
+    db = pinned_portdbapi(overlay, tree) if tree else pinned_portdbapi(overlay)
+    tree = str(overlay)
 
     def aux(cp):
-        for cpv in db.cp_list(cp):
+        for cpv in db.cp_list(cp, mytree=tree):
             try:
-                restrict = db.aux_get(cpv, ["RESTRICT"])[0]
-                uri_map = db.getFetchMap(cpv)
+                restrict = db.aux_get(cpv, ["RESTRICT"], mytree=tree)[0]
+                uri_map = db.getFetchMap(cpv, mytree=tree)
             except Exception:                              # noqa: BLE001
                 yield cpv, None, None
                 continue
