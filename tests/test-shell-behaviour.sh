@@ -286,6 +286,111 @@ ok "抓取源清单为空时算故障" "$(exporter_probe "")" "failed"
 ok "有抓取源时才算通过" \
    "$(exporter_probe " elements = { 1.2.3.4, 5.6.7.8 }")" "passed"
 
+echo "== 建置进度是真实进度，不是监看进程的心跳"
+
+snap() {
+    local d out
+    d=$(mktemp -d)
+    [ -n "$1" ] && printf '%s\n' "$1" > "${d}/progress"
+    [ -n "$2" ] && printf '%s\n' "$2" > "${d}/whole.log"
+    out=$( cd "${ROOT}" && bash -c \
+        'source <(sed -n "/^emit()/,/^}/p;/^snapshot()/,/^}/p" build/build-progress.sh)
+         snapshot "'"${d}"'/whole.log"' )
+    rm -rf "${d}"
+    echo "${out}"
+}
+
+phase_of() { grep -o '"phase":"[a-z-]*"' <<< "$1" | cut -d'"' -f4; }
+field_of() { grep -o "\"$2\":[0-9]*" <<< "$1" | cut -d: -f2; }
+
+s=$(snap "42 173 app-misc/foo" "")
+ok "逐包阶段报出真实完成数" "$(field_of "${s}" "done")" "42"
+ok "逐包阶段报出总数" "$(field_of "${s}" total)" "173"
+ok "逐包阶段标出 phase" "$(phase_of "${s}")" "per-package"
+case "${s}" in *'"now":"app-misc/foo"'*) ok "逐包阶段报出当前套件" yes yes ;;
+               *) ok "逐包阶段报出当前套件" no yes ;; esac
+
+s=$(snap "" ">>> Emerging (5 of 10) app-misc/bar
+>>> Installing (5 of 10) app-misc/bar")
+ok "整体阶段仍按 whole.log 计数" "$(field_of "${s}" "done")" "1"
+ok "整体阶段标出 phase" "$(phase_of "${s}")" "whole"
+
+s=$(snap "" "")
+ok "两者都没有时是 prepare" "$(phase_of "${s}")" "prepare"
+
+s=$(snap "7 9 app-misc/x" "")
+gen=$(field_of "${s}" generated); prog=$(field_of "${s}" progress_at)
+ok "progress_at 与 generated 分开输出" \
+   "$([ -n "${gen}" ] && [ -n "${prog}" ] && echo both || echo missing)" "both"
+
+build_status_probe() {
+    local json="$1" d out
+    d=$(mktemp -d); mkdir -p "${d}/bin"
+    cat > "${d}/bin/curl" <<EOF
+#!/bin/bash
+for a in "\$@"; do
+  case "\$a" in *build-status.json*) printf '%s' '${json}'; exit 0 ;; esac
+done
+exit 22
+EOF
+    printf '#!/bin/bash\nexit 1\n' > "${d}/bin/sudo"
+    printf '#!/bin/bash\nexit 1\n' > "${d}/bin/openssl"
+    chmod +x "${d}/bin"/*
+    out=$( cd "${ROOT}" && PATH="${d}/bin:${PATH}" ALERT_CONF=/nonexistent \
+        STATE_FILE="${d}/s" VERSION_FILE="${d}/v" SIGNING_GNUPGHOME="${d}/n" \
+        DISK_PATH="${d}/n" HEARTBEAT="${d}/n/.h" SITE_WORK="${d}/n" \
+        SITE_DEST="${d}/n" MONITORS_FILE="${d}/n" \
+        bash build/status.sh 2>&1 | grep 建置状态 )
+    rm -rf "${d}"
+    case "${out}" in *'<--'*) echo failed ;; *) echo passed ;; esac
+}
+
+NOW=$(date +%s); STALE=$(( NOW - 4 * 3600 ))
+ok "监看在刷新但建置无进展时算故障" \
+   "$(build_status_probe "{\"state\":\"running\",\"phase\":\"per-package\",\"progress_at\":${STALE},\"generated\":${NOW}}")" \
+   "failed"
+ok "两者都新时正常" \
+   "$(build_status_probe "{\"state\":\"running\",\"phase\":\"per-package\",\"progress_at\":${NOW},\"generated\":${NOW}}")" \
+   "passed"
+ok "旧格式没有 progress_at 时退回看 generated" \
+   "$(build_status_probe "{\"state\":\"running\",\"generated\":${NOW}}")" \
+   "passed"
+
+echo "== 逐包阶段确实公布进度"
+
+percpkg_probe() {
+    local d out
+    d=$(mktemp -d); mkdir -p "${d}/bin" "${d}/log"
+    printf '#!/bin/bash\nexit 0\n' > "${d}/bin/emerge"
+    chmod +x "${d}/bin/emerge"
+    # Run build-container.sh's per-package loop verbatim, with emerge stubbed
+    sed -n '/^    i=0$/,/^    rm -f \/var\/log\/binhost\/progress$/p' \
+        "${ROOT}/build/build-container.sh" > "${d}/loop.sh"
+    ( cd "${d}" && PATH="${d}/bin:${PATH}" bash -c '
+        atoms=(app-misc/a app-misc/b app-misc/c)
+        EMERGE=(emerge)
+        failed=()
+        mkdir -p /tmp/binhost-probe-log
+        sed "s|/var/log/binhost|/tmp/binhost-probe-log|g" '"${d}"'/loop.sh > '"${d}"'/loop2.sh
+        # Capture the progress file while the second package is building
+        cat > '"${d}"'/bin/emerge <<EOF
+#!/bin/bash
+case "\$*" in *app-misc/b*) cat /tmp/binhost-probe-log/progress > '"${d}"'/seen ;; esac
+exit 0
+EOF
+        chmod +x '"${d}"'/bin/emerge
+        source '"${d}"'/loop2.sh' >/dev/null 2>&1 )
+    out=$(cat "${d}/seen" 2>/dev/null)
+    local left
+    left=$(test -e /tmp/binhost-probe-log/progress && echo 有 || echo 无)
+    rm -rf "${d}" /tmp/binhost-probe-log
+    printf '%s|%s\n' "${out}" "${left}"
+}
+
+IFS='|' read -r seen left <<< "$(percpkg_probe)"
+ok "循环中会写出第 N 个与总数和当前套件" "${seen}" "2 3 app-misc/b"
+ok "循环结束后进度文件被清掉" "${left}" "无"
+
 echo "== publish.sh"
 
 d=$(setup_publish)

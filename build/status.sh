@@ -268,13 +268,21 @@ if [[ -z ${job} ]]; then
     bad "建置状态" "无法获取 build-status.json"
 else
     jstate=$(grep -o '"state":"[a-z]*"' <<< "${job}" | cut -d'"' -f4)
+    jphase=$(grep -o '"phase":"[a-z-]*"' <<< "${job}" | cut -d'"' -f4)
     jts=$(grep -o '"generated":[0-9]*' <<< "${job}" | cut -d: -f2)
+    # progress_at comes from the build itself; generated is only when the
+    # watcher last pushed. They diverge when the watcher outlives the build.
+    jprog=$(grep -o '"progress_at":[0-9]*' <<< "${job}" | cut -d: -f2)
+    [[ ${jprog} =~ ^[0-9]+$ ]] || jprog="${jts}"
     if [[ ! ${jts} =~ ^[0-9]+$ ]]; then
         bad "建置状态" "generated 无法解析"
     else
         jage=$(( ( $(date +%s) - jts ) / 3600 ))
+        page=$(( ( $(date +%s) - jprog ) / 3600 ))
         if [[ ${jstate} == failed ]]; then
             bad "建置状态" "上一轮建置失败（${jage} 小时前）"
+        elif [[ ${jstate} == running ]] && (( page >= BUILD_STALE_H )); then
+            bad "建置状态" "${jphase:-未知} 阶段已 ${page} 小时没有进展，建置可能卡住"
         elif [[ ${jstate} == running ]] && (( jage >= BUILD_STALE_H )); then
             bad "建置状态" "running 已 ${jage} 小时未更新，进度推送可能已停止"
         elif (( jage >= HEARTBEAT_MAX_H )); then
