@@ -19,10 +19,21 @@ HEADER_WITH_REV = HEADER + '\nREPO_REVISIONS: {}'
 
 
 def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None, PATH=None,
-           rdepend=None, depend=None, idepend=None):
+           rdepend=None, depend=None, idepend=None, pdepend=None,
+           slot="0", use=None, iuse=None, eapi="8"):
     cp = cpv.rsplit("-", 1)[0]
     path = f"{cp}/{cpv.split('/')[-1]}.gpkg.tar" if PATH is None else PATH
     lines = [f"CPV: {cpv}", f"PATH: {path}", f"REPO: {repo}"]
+    if eapi is not None:
+        lines.append(f"EAPI: {eapi}")
+    if slot is not None:
+        lines.append(f"SLOT: {slot}")
+    if use:
+        lines.append(f"USE: {use}")
+    if iuse:
+        lines.append(f"IUSE: {iuse}")
+    if pdepend:
+        lines.append(f"PDEPEND: {pdepend}")
     if build_id is not None:
         lines.append(f"BUILD_ID: {build_id}")
     if restrict:
@@ -432,8 +443,136 @@ case("只在构建期用到的不发", lambda: (
     deps([stanza("app-misc/a-1", depend="dev-util/tool"), TOOL])
     == ["app-misc/a-1"]))
 
-case("带版本与 slot 的依赖原子也解析得出来", lambda: (
-    deps([stanza("app-misc/a-1", rdepend=">=dev-libs/lib-1:0/1=[foo]"), LIB])
+case("带版本、slot 与 USE 的原子逐项匹配", lambda: (
+    deps([stanza("app-misc/a-1", rdepend=">=dev-libs/lib-1:0/1=[foo]"),
+          stanza("dev-libs/lib-1", repo="gentoo", slot="0/1", use="foo", iuse="foo")])
+    == ["app-misc/a-1", "dev-libs/lib-1"]))
+
+case("stanza 省略 SLOT 时按 portage 的默认值 0 匹配", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="dev-libs/lib:0"),
+          stanza("dev-libs/lib-1", repo="gentoo", slot=None)])
+    == ["app-misc/a-1", "dev-libs/lib-1"]))
+
+case("slot 不符时不算满足", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="dev-libs/lib:2"),
+          stanza("dev-libs/lib-1", repo="gentoo", slot="0")])
+    == ["app-misc/a-1"]))
+
+case("sub-slot 不符时不算满足", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="dev-libs/lib:0/9"),
+          stanza("dev-libs/lib-1", repo="gentoo", slot="0/1")])
+    == ["app-misc/a-1"]))
+
+case("stanza 省略 IUSE 时不满足未开启的 USE 依赖", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="dev-libs/lib[foo]"),
+          stanza("dev-libs/lib-1", repo="gentoo")])
+    == ["app-misc/a-1"]))
+
+case("stanza 省略 IUSE 但开启了该 flag 时算满足", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="dev-libs/lib[foo]"),
+          stanza("dev-libs/lib-1", repo="gentoo", use="foo")])
+    == ["app-misc/a-1", "dev-libs/lib-1"]))
+
+case("IUSE 与 EAPI 都省略时 USE 依赖匹配不到，两者要一起读", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="dev-libs/lib[foo]"),
+          stanza("dev-libs/lib-1", repo="gentoo", use="foo", eapi=None)])
+    == ["app-misc/a-1"]))
+
+case("stanza 省略 EAPI 时仍能按版本匹配", lambda: (
+    deps([stanza("app-misc/a-1", rdepend=">=dev-libs/lib-1"),
+          stanza("dev-libs/lib-1", repo="gentoo", eapi=None)])
+    == ["app-misc/a-1", "dev-libs/lib-1"]))
+
+case("USE 依赖不满足时不算满足", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="dev-libs/lib[foo]"),
+          stanza("dev-libs/lib-1", repo="gentoo", use="bar", iuse="foo bar")])
+    == ["app-misc/a-1"]))
+
+case("::repo 限定只匹配该仓库的产物", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="dev-libs/lib::gentoo-zh"),
+          stanza("dev-libs/lib-1", repo="gentoo")])
+    == ["app-misc/a-1"]))
+
+case("::repo 限定命中时照常发布", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="dev-libs/lib::gentoo"),
+          stanza("dev-libs/lib-1", repo="gentoo")])
+    == ["app-misc/a-1", "dev-libs/lib-1"]))
+
+case("大于等于只取满足条件的版本，不带上旧版", lambda: (
+    deps([stanza("app-misc/a-1", rdepend=">=dev-libs/lib-2"),
+          stanza("dev-libs/lib-1", repo="gentoo"),
+          stanza("dev-libs/lib-2", repo="gentoo")])
+    == ["app-misc/a-1", "dev-libs/lib-2"]))
+
+case("波浪号匹配同一版本的 revision", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="~dev-libs/lib-1.2"),
+          stanza("dev-libs/lib-1.2-r3", repo="gentoo")])
+    == ["app-misc/a-1", "dev-libs/lib-1.2-r3"]))
+
+case("万用版本匹配带 revision 的版本", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="=dev-libs/lib-1*"),
+          stanza("dev-libs/lib-1-r1", repo="gentoo")])
+    == ["app-misc/a-1", "dev-libs/lib-1-r1"]))
+
+case("精确版本指到旧的那一个时也要发", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="=dev-libs/lib-1"),
+          stanza("dev-libs/lib-1", repo="gentoo"),
+          stanza("dev-libs/lib-2", repo="gentoo")])
+    == ["app-misc/a-1", "dev-libs/lib-1"]))
+
+case("同一个包新旧两版各被不同的包指到时都发", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="=dev-libs/lib-1"),
+          stanza("app-misc/b-1", rdepend="=dev-libs/lib-2"),
+          stanza("dev-libs/lib-1", repo="gentoo"),
+          stanza("dev-libs/lib-2", repo="gentoo")])
+    == ["app-misc/a-1", "app-misc/b-1", "dev-libs/lib-1", "dev-libs/lib-2"]))
+
+case("裸原子只取每个 slot 里最新的那个", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="dev-libs/lib"),
+          stanza("dev-libs/lib-1", repo="gentoo"),
+          stanza("dev-libs/lib-2", repo="gentoo")])
+    == ["app-misc/a-1", "dev-libs/lib-2"]))
+
+case("不同 slot 各取一个", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="dev-libs/lib"),
+          stanza("dev-libs/lib-1", repo="gentoo", slot="1"),
+          stanza("dev-libs/lib-2", repo="gentoo", slot="2")])
+    == ["app-misc/a-1", "dev-libs/lib-1", "dev-libs/lib-2"]))
+
+case("或组取第一个索引能满足的分支", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="|| ( dev-libs/gone dev-libs/lib )"), LIB])
+    == ["app-misc/a-1", "dev-libs/lib-1"]))
+
+case("或组两个分支都在时只取前一个", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="|| ( dev-libs/lib dev-libs/deep )"),
+          LIB, DEEP])
+    == ["app-misc/a-1", "dev-libs/lib-1"]))
+
+case("或组一个分支都满足不了时什么都不发", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="|| ( dev-libs/gone dev-libs/missing )"), LIB])
+    == ["app-misc/a-1"]))
+
+case("或组满足不了要记进未解析清单", lambda: (
+    (lambda u: any("||" in a for a in u))(
+        run([stanza("app-misc/a-1", rdepend="|| ( dev-libs/gone dev-libs/missing )")],
+            with_deps=True)[4])))
+
+case("索引中不存在的原子记进未解析清单", lambda: (
+    (lambda u: [a for a in u] == ["sys-libs/glibc"])(
+        run([stanza("app-misc/a-1", rdepend="sys-libs/glibc")], with_deps=True)[4])))
+
+case("未解析清单记下是谁引用的", lambda: (
+    run([stanza("app-misc/a-1", rdepend="sys-libs/glibc")],
+        with_deps=True)[4]["sys-libs/glibc"] == {"app-misc/a-1"}))
+
+case("virtual 的提供者沿它自己的依赖展开", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="virtual/lib"),
+          stanza("virtual/lib-0", repo="gentoo", rdepend="|| ( dev-libs/lib dev-libs/deep )"),
+          LIB, DEEP])
+    == ["app-misc/a-1", "dev-libs/lib-1", "virtual/lib-0"]))
+
+case("PDEPEND 里的包也一起发", lambda: (
+    deps([stanza("app-misc/a-1", pdepend="dev-libs/lib"), LIB])
     == ["app-misc/a-1", "dev-libs/lib-1"]))
 
 case("use 条件式里的依赖一并算上", lambda: (
