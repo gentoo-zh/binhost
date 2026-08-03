@@ -5,13 +5,14 @@ import sys
 import tempfile
 
 CHECK = str(pathlib.Path(__file__).with_name("check-versions.py"))
-def make_overlay(root, packages, masked=()):
+def make_overlay(root, packages, masked=(), body=None):
     root = pathlib.Path(root)
     for cp, ver in packages.items():
         d = root / cp
         d.mkdir(parents=True, exist_ok=True)
         (d / f"{d.name}-{ver}.ebuild").write_text(
-            'EAPI=8\ninherit cmake\nKEYWORDS="~amd64"\nSLOT="0"\n')
+            (body or {}).get(cp,
+                'EAPI=8\ninherit cmake\nKEYWORDS="~amd64"\nSLOT="0"\n'))
     prof = root / "profiles"
     prof.mkdir(parents=True, exist_ok=True)
     (prof / "repo_name").write_text("gentoo-zh\n")
@@ -85,10 +86,10 @@ if not ok:
 
 
 
-def newcomers(packages, list_lines, masked=(), restrict=None, keywords=None):
+def newcomers(packages, list_lines, masked=(), restrict=None, keywords=None, body=None):
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
-        overlay = make_overlay(d / "overlay", packages, masked)
+        overlay = make_overlay(d / "overlay", packages, masked, body)
         for cp, extra in (restrict or {}).items():
             for eb in (overlay / cp).glob("*.ebuild"):
                 eb.write_text(eb.read_text() + f'RESTRICT="{extra}"\n')
@@ -111,6 +112,14 @@ NEW = [
     ("-bin 结尾不报", {"app-misc/foo-bin": "1.0"}, [], {}, []),
     ("不接受 amd64 的不报", {PKG: NOW}, [], {"keywords": {PKG: "~arm64"}}, []),
     ("RESTRICT=bindist 不报", {PKG: NOW}, [], {"restrict": {PKG: "bindist"}}, []),
+    ("自己写 src_configure 的会被报出", {PKG: NOW}, [],
+     {"body": {PKG: 'EAPI=8\nKEYWORDS="~amd64"\nSLOT="0"\nsrc_configure() {\n\t./configure\n}\n'}}, [f"{PKG} {NOW}"]),
+    ("自己写 src_compile 的会被报出", {PKG: NOW}, [],
+     {"body": {PKG: 'EAPI=8\nKEYWORDS="~amd64"\nSLOT="0"\nsrc_compile() {\n\temake\n}\n'}}, [f"{PKG} {NOW}"]),
+    ("既没有构建 eclass 也没有编译阶段的不报", {PKG: NOW}, [],
+     {"body": {PKG: 'EAPI=8\nKEYWORDS="~amd64"\nSLOT="0"\n'}}, []),
+    ("unpacker 即使写了 src_compile 也不报", {PKG: NOW}, [],
+     {"body": {PKG: 'EAPI=8\ninherit unpacker\nKEYWORDS="~amd64"\nSLOT="0"\nsrc_compile() {\n\t:\n}\n'}}, []),
 ]
 
 for name, pkgs, lst, kw, want in NEW:

@@ -29,6 +29,9 @@ jobs:
         run: |
           set -euo pipefail
           python3 build/check-versions.py --newcomers /tmp/overlay build/packages.txt > /tmp/new.txt
+          total=$(find /tmp/overlay -mindepth 2 -maxdepth 2 -type d | wc -l)
+          listed=$(grep -cvE '^\s*(#|$)' build/packages.txt)
+          echo ">>> overlay ${total} 个目录，清单 ${listed} 个，候选 $(wc -l < /tmp/new.txt) 个"
           cat /tmp/new.txt
 
           : > /tmp/ok.txt

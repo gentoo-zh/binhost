@@ -14,7 +14,7 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ebuilds import (                                       # noqa: E402
-    ATOM, BUILD_ECLASS, PREBUILT_ECLASS,
+    ATOM, PREBUILT_ECLASS, builds_from_source,
     accepts_amd64, inherits, keywords_of, newest_ebuild,
     read_mask, restricts_bindist, version_of, vercmp,
 )
@@ -45,10 +45,9 @@ def why_not_listed(cp, text, masked):
         return "bindist"
     if cp.startswith(("acct-", "virtual/", "app-alternatives/")):
         return "meta"
-    eclasses = inherits(text)
-    if eclasses & PREBUILT_ECLASS or cp.endswith("-bin"):
+    if inherits(text) & PREBUILT_ECLASS or cp.endswith("-bin"):
         return "prebuilt"
-    if eclasses & BUILD_ECLASS:
+    if builds_from_source(text):
         return "candidate"
     return "nobuild"
 

@@ -8,8 +8,8 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ebuilds import (                                       # noqa: E402
-    ATOM, BUILD_ECLASS, PREBUILT_ECLASS,
-    accepts_amd64, inherits, keywords_of, newest_ebuild,
+    ATOM, builds_from_source,
+    accepts_amd64, keywords_of, newest_ebuild,
     read_mask, restricts_bindist, version_of, vercmp,
 )
 
@@ -37,10 +37,7 @@ def newcomers(overlay, wanted, masked):
             continue
         if restricts_bindist(text):
             continue
-        eclasses = inherits(text)
-        if eclasses & PREBUILT_ECLASS:
-            continue
-        if eclasses & BUILD_ECLASS:
+        if builds_from_source(text):
             out.append((cp, ver))
     return out
 
