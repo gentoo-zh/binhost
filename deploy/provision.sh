@@ -26,16 +26,28 @@ if ! ssh-keygen -F "${host}" -f "${KNOWN_HOSTS}" >/dev/null 2>&1; then
     fi
     scanned=$(ssh-keyscan -T 15 "${host}" 2>/dev/null)
     [[ -n ${scanned} ]] || { echo "!! 无法获取 ${host} 的主机密钥" >&2; exit 1; }
-    if ! ssh-keygen -lf - <<< "${scanned}" | awk '{print $2}' |
-         grep -qxF "${HOST_KEY}"; then
+
+    matched=""
+    while IFS= read -r keyline; do
+        [[ -n ${keyline} && ${keyline} != \#* ]] || continue
+        fpr=$(ssh-keygen -lf - <<< "${keyline}" 2>/dev/null | awk '{print $2}') || fpr=""
+        if [[ -n ${fpr} && ${fpr} == "${HOST_KEY}" ]]; then matched="${keyline}"; fi
+    done <<< "${scanned}"
+
+    if [[ -z ${matched} ]]; then
         echo "!! ${host} 的主机密钥与 HOST_KEY 不符，可能连错了机器或被中间人接管" >&2
         echo "   实际指纹：" >&2
         ssh-keygen -lf - <<< "${scanned}" | awk '{print "     " $2}' >&2
         exit 1
     fi
+
     mkdir -p "$(dirname "${KNOWN_HOSTS}")"
-    printf '%s\n' "${scanned}" >> "${KNOWN_HOSTS}"
-    echo "  ${host} 的主机密钥与带外指纹一致，已写入 known_hosts"
+    # Only the key that passed out-of-band verification, plus the [host]:port
+    # form OpenSSH looks up once sshd moves off port 22.
+    printf '%s\n' "${matched}" >> "${KNOWN_HOSTS}"
+    printf '[%s]:%s %s\n' "${host}" "${SSH_PORT}" \
+        "$(cut -d' ' -f2- <<< "${matched}")" >> "${KNOWN_HOSTS}"
+    echo "  ${host} 的主机密钥与带外指纹一致，已写入 known_hosts（含 [${host}]:${SSH_PORT}）"
 fi
 
 say "现状"

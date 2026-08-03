@@ -175,6 +175,47 @@ ok "assets 里多余的文件也会移除" "${c}" "removed"
 ok "页面内容已更新" "${dd}" "<p>new</p>"
 ok "同大小同 mtime 但内容不同时仍然更新" "${ee}" "AAAA"
 
+echo "== provision.sh 的主机密钥核对"
+
+hostkey_probe() {
+    local want="$1" d out
+    d=$(mktemp -d); mkdir -p "${d}/bin"
+    touch "${d}/pub"
+    cat > "${d}/bin/ssh-keyscan" <<'EOF'
+#!/bin/bash
+echo "# probe:22 SSH-2.0-test"
+echo "probe ssh-rsa AAAARSAKEY"
+echo "# probe:22 SSH-2.0-test"
+echo "probe ssh-ed25519 AAAAED25519KEY"
+EOF
+    cat > "${d}/bin/ssh-keygen" <<'EOF'
+#!/bin/bash
+if [ "$1" = "-F" ]; then exit 1; fi
+line=$(cat)
+case "${line}" in
+  *AAAARSAKEY*)     echo "3072 SHA256:RSAFPR probe (RSA)" ;;
+  *AAAAED25519KEY*) echo "256 SHA256:EDFPR probe (ED25519)" ;;
+  *)                exit 1 ;;
+esac
+EOF
+    printf '#!/bin/bash\nexit 0\n' > "${d}/bin/ssh"
+    chmod +x "${d}/bin"/*
+    ( cd "${ROOT}" && PATH="${d}/bin:${PATH}" KNOWN_HOSTS="${d}/kh" PUBKEY="${d}/pub" \
+        HOST_KEY="${want}" TARGET=root@probe SSH_PORT=60001 \
+        bash deploy/provision.sh >/dev/null 2>&1 ) || true
+    out=$(awk '{print $1" "$2}' "${d}/kh" 2>/dev/null | tr '\n' ',')
+    rm -rf "${d}"
+    echo "${out}"
+}
+
+ok "只写通过核对的那一把，并附 [host]:port 形式" \
+   "$(hostkey_probe SHA256:EDFPR)" \
+   "probe ssh-ed25519,[probe]:60001 ssh-ed25519,"
+ok "另一把算法即使扫到也不写入" \
+   "$(hostkey_probe SHA256:RSAFPR)" \
+   "probe ssh-rsa,[probe]:60001 ssh-rsa,"
+ok "指纹均不匹配时不写 known_hosts" "$(hostkey_probe SHA256:NOMATCH)" ""
+
 echo "== status.sh 的部署版本核对"
 
 version_probe() {
