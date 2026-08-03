@@ -80,6 +80,32 @@ stage_index() {
 echo "== publish.sh"
 
 d=$(setup_publish)
+stage_index "${d}" 2
+mkdir -p "${d}/remote/app-misc"
+for ((i = 0; i < 30; i++)); do echo x > "${d}/remote/app-misc/old${i}-1.0-1.gpkg.tar"; done
+echo x > "${d}/remote/app-misc/banned-1.0-1.gpkg.tar"
+echo "app-misc/banned-1.0-1.gpkg.tar" > "${d}/stage/quarantine.txt"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "清理仍被上限拦下" "$?" "3"
+ok "但不可再散布的那个已经移除" \
+   "$(test -e "${d}/remote/app-misc/banned-1.0-1.gpkg.tar" && echo 在 || echo 不在)" "不在"
+ok "受上限保护的旧包一个没动" "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "30"
+contains "输出说明它不受上限约束" "${out}" "不受清理上限约束"
+rm -rf "${d}"
+
+d=$(setup_publish)
+stage_index "${d}" 2
+mkdir -p "${d}/remote/app-misc"
+echo x > "${d}/remote/app-misc/banned-1.0-1.gpkg.tar"
+printf '../../etc/passwd\n' > "${d}/stage/quarantine.txt"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "隔离清单里的越界路径被拒绝" "$?" "1"
+contains "并且说明本轮不继续" "${out}" "本轮不再继续"
+rm -rf "${d}"
+
+d=$(setup_publish)
 stage_index "${d}" 4 9
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)

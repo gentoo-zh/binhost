@@ -362,10 +362,12 @@ if [[ ${kind} != none ]] && [[ ${BINHOST_ALERT:-} == 1 ]] && [[ -r ${ALERT_CONF}
             done
         fi
         if curl -fsS --max-time 20 -o /dev/null \
-            --url "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=${TELEGRAM_CHAT}" \
             --data-urlencode "text=${text}" \
-            --data "disable_notification=false"
+            --data "disable_notification=false" \
+            --config - <<EOF
+url = "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage"
+EOF
         then
             sent=1
         else

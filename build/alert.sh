@@ -32,9 +32,11 @@ alert() {
     fi
 
     if curl -fsS --max-time 20 -o /dev/null \
-        --url "https://api.telegram.org/bot${token}/sendMessage" \
         --data-urlencode "chat_id=${chat}" \
-        --data-urlencode "text=${text}"
+        --data-urlencode "text=${text}" \
+        --config - <<EOF
+url = "https://api.telegram.org/bot${token}/sendMessage"
+EOF
     then
         ALERT_SENT=1
     else

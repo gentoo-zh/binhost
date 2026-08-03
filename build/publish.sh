@@ -122,22 +122,50 @@ printf '{"packages":%s,"generated":%s}\n' "${n:-0}" "${ts:-0}" |
     ssh "${REMOTE}" "cat > ${REMOTE_ROOT}/.status.json.new &&
                      mv -f ${REMOTE_ROOT}/.status.json.new ${REMOTE_ROOT}/status.json"
 
+QUARANTINE="${STAGE}/quarantine.txt"
+if [[ -s ${QUARANTINE} ]]; then
+    q=$(wc -l < "${QUARANTINE}")
+    echo ">>> ${q} 个不可再散布，先从公开路径移除，不受清理上限约束"
+    # shellcheck disable=SC2029  # REMOTE_ROOT is meant to expand locally
+    gone=$(ssh "${REMOTE}" "
+        set -eu
+        cd ${REMOTE_ROOT} || exit 1
+        tmp=\$(mktemp -d) || exit 1
+        trap 'rm -rf \"\${tmp}\"' EXIT
+        cat > \"\${tmp}/deny\"
+        n=0
+        while IFS= read -r rel; do
+            [ -n \"\${rel}\" ] || continue
+            case \"\${rel}\" in /*|*..*) echo \"拒绝：\${rel}\" >&2; exit 1 ;; esac
+            if [ -e \"\${rel}\" ]; then rm -f -- \"\${rel}\" && n=\$(( n + 1 )); fi
+        done < \"\${tmp}/deny\"
+        find . -mindepth 1 -type d -empty -delete
+        echo \"\${n}\"" < "${QUARANTINE}") || {
+        echo "!! 不可再散布的产物未能移除，本轮不再继续" >&2
+        exit 1
+    }
+    echo ">>> 实际移除 ${gone} 个"
+fi
+
 # shellcheck disable=SC2029  # as above
 want=${#paths[@]}
 # shellcheck disable=SC2029
 retired=$(printf '%s\n' "${paths[@]}" | ssh "${REMOTE}" "
-    cat > /tmp/binhost-keep-${TAG}.txt
-    got=\$(wc -l < /tmp/binhost-keep-${TAG}.txt)
+    set -u
+    tmp=\$(mktemp -d) || exit 1
+    trap 'rm -rf \"\${tmp}\"' EXIT
+    cat > \"\${tmp}/keep\"
+    got=\$(wc -l < \"\${tmp}/keep\")
     if [ \"\${got}\" -ne ${want} ]; then
         echo \"保留清单只收到 \${got} 行，应为 ${want}，中止清理\" >&2
         exit 1
     fi
     cd ${REMOTE_ROOT} || exit 1
-    find . -name '*.gpkg.tar' -printf '%P\n' | sort > /tmp/binhost-have-${TAG}.txt
-    have=\$(wc -l < /tmp/binhost-have-${TAG}.txt)
-    grep -vxF -f /tmp/binhost-keep-${TAG}.txt /tmp/binhost-have-${TAG}.txt \
-        > /tmp/binhost-retire-${TAG}.txt || true
-    n=\$(wc -l < /tmp/binhost-retire-${TAG}.txt)
+    find . -name '*.gpkg.tar' -printf '%P\n' | sort > \"\${tmp}/have\"
+    have=\$(wc -l < \"\${tmp}/have\")
+    grep -vxF -f \"\${tmp}/keep\" \"\${tmp}/have\" \
+        > \"\${tmp}/retire\" || true
+    n=\$(wc -l < \"\${tmp}/retire\")
     over=0
     base=${before}
     [ \"\${base}\" -gt 0 ] || base=\${have}
@@ -147,13 +175,11 @@ retired=$(printf '%s\n' "${paths[@]}" | ssh "${REMOTE}" "
     if [ \"\${over}\" -eq 1 ] && [ '${FORCE_RETIRE:-0}' != 1 ]; then
         echo \"本轮要清理 \${n} 个，本轮之前有 \${base} 个，达到 ${MAX_RETIRE_SHARE}% 或 ${MAX_RETIRE_COUNT} 个的上限，未清理\" >&2
         echo \"确认无误后以 FORCE_RETIRE=1 重新执行\" >&2
-        rm -f /tmp/binhost-keep-${TAG}.txt /tmp/binhost-have-${TAG}.txt /tmp/binhost-retire-${TAG}.txt
         exit 3
     fi
-    tr '\\n' '\\0' < /tmp/binhost-retire-${TAG}.txt | xargs -0r rm -f
+    tr '\\n' '\\0' < \"\${tmp}/retire\" | xargs -0r rm -f
     find . -mindepth 1 -type d -empty -delete
-    echo \"\${n}\"
-    rm -f /tmp/binhost-keep-${TAG}.txt /tmp/binhost-have-${TAG}.txt /tmp/binhost-retire-${TAG}.txt") || {
+    echo \"\${n}\"") || {
     rc=$?
     if (( rc == 3 )); then
         echo ">>> 已发布 ${#paths[@]} 个；清理被上限拦下，索引与包体都已就位" >&2
