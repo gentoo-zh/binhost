@@ -96,6 +96,31 @@ case("孤儿在磁盘上已经不存在时不报错", lambda: (
 
 
 
+def fetch_map(files, src_style="url"):
+    """What Portage's getFetchMap would return for this fixture declaration.
+
+    A plain list of names becomes one URL each; a dict carries the URIs
+    verbatim, which is how the fetch+ and mirror+ cases are written. A bare
+    SRC_URI name maps to no URI at all, exactly as Portage reports it.
+    """
+    if isinstance(files, dict):
+        return {n: list(u) for n, u in files.items()}
+    if src_style == "none":
+        return {}
+    if src_style == "bare":
+        return {n: [] for n in files}
+    return {n: [f"https://example.invalid/{n}"] for n in files}
+
+
+def fixture_aux(packages, src_style="url"):
+    """The aux scan() consumes, built from the same fixture declaration."""
+    def aux(cp):
+        for ver, spec in packages.get(cp, {}).items():
+            files, restrict = spec if isinstance(spec, tuple) else (spec, "")
+            yield f"{cp}-{ver}", fetch_map(files, src_style), restrict
+    return aux
+
+
 def build_overlay(root, packages, src_style="url"):
     root = pathlib.Path(root)
     (root / "profiles").mkdir(parents=True, exist_ok=True)
@@ -107,11 +132,10 @@ def build_overlay(root, packages, src_style="url"):
         for ver, spec in versions.items():
             files, restrict = spec if isinstance(spec, tuple) else (spec, "")
             body = 'EAPI=8\nSLOT="0"\n'
-            if src_style == "bare":
-                body += 'SRC_URI="' + " ".join(files) + '"\n'
-            elif src_style != "none":
-                body += 'SRC_URI="' + " ".join(f"https://example.invalid/{f}"
-                                               for f in files) + '"\n'
+            uris = fetch_map(files, src_style)
+            if uris:
+                body += 'SRC_URI="' + " ".join(
+                    " ".join(u) if u else n for n, u in sorted(uris.items())) + '"\n'
             if restrict:
                 body += f'RESTRICT="{restrict}"\n'
             (d / f"{d.name}-{ver}.ebuild").write_text(body)
@@ -119,25 +143,6 @@ def build_overlay(root, packages, src_style="url"):
         (d / "Manifest").write_text(
             "".join(f"DIST {f} 1 BLAKE2B x SHA512 y\n" for f in sorted(dists)))
     return root
-
-
-def text_aux(overlay):
-    """Read SRC_URI and RESTRICT straight from the fixture ebuilds.
-
-    The fixtures write literal values, so no expansion is needed; this keeps
-    the tests on the same attribution path without registering a Portage repo.
-    """
-    import re as _re
-
-    def aux(cp):
-        d = pathlib.Path(overlay) / cp
-        for eb in sorted(d.glob("*.ebuild")):
-            text = eb.read_text()
-            def field(name):
-                m = _re.search(rf'^{name}="([^"]*)"', text, _re.M)
-                return m.group(1) if m else ""
-            yield f"{cp}-{eb.stem.split('-')[-1]}", field("SRC_URI"), field("RESTRICT")
-    return aux
 
 
 def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False,
@@ -168,7 +173,8 @@ def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False,
         buf = io.StringIO()
         try:
             with contextlib.redirect_stdout(buf):
-                rc = audit.main(str(ov), str(d / "dist"), aux=text_aux(ov))
+                rc = audit.main(str(ov), str(d / "dist"),
+                                aux=fixture_aux(packages, src_style))
         finally:
             audit.STATE, audit.RECYCLE, audit.GRACE_SECONDS, audit.LEDGER = old
         left = sorted(p.name for p in dist.iterdir())
@@ -312,35 +318,8 @@ case("额度耗尽后不再删除", lambda: (
     lambda r: r[0][-1] == 0)(_budget_rounds()))
 
 def _fetch_probe():
-    import tempfile as _t, pathlib as _p
-    with _t.TemporaryDirectory() as tmp:
-        ov = _p.Path(tmp)
-        (ov / "profiles").mkdir(parents=True)
-        (ov / "profiles" / "repo_name").write_text("gentoo-zh\n")
-        (ov / "profiles" / "package.mask").write_text("")
-        d = ov / "app-misc" / "b"
-        d.mkdir(parents=True)
-        (d / "b-1.0.ebuild").write_text(
-            'EAPI=8\nSLOT="0"\nSRC_URI="https://x/b-1.0.tar.gz"\n'
-            'RESTRICT="fetch"\n')
-        (d / "b-2.0.ebuild").write_text(
-            'EAPI=8\nSLOT="0"\nSRC_URI="https://x/b-2.0.tar.gz"\n')
-        (d / "Manifest").write_text(
-            "DIST b-1.0.tar.gz 1 BLAKE2B x SHA512 y\n"
-            "DIST b-2.0.tar.gz 1 BLAKE2B x SHA512 y\n")
-        dist = _p.Path(tmp) / "dist" / "ab"
-        dist.mkdir(parents=True)
-        old = (audit.STATE, audit.RECYCLE, audit.LEDGER, audit.GRACE_SECONDS)
-        audit.STATE = str(ov / "s.json"); audit.RECYCLE = str(ov / "rec")
-        audit.LEDGER = str(ov / "l.json"); audit.GRACE_SECONDS = 0
-        import io, contextlib
-        buf = io.StringIO()
-        try:
-            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(io.StringIO()):
-                audit.main(str(ov), str(_p.Path(tmp) / "dist"), aux=text_aux(ov))
-        finally:
-            audit.STATE, audit.RECYCLE, audit.LEDGER, audit.GRACE_SECONDS = old
-        return buf.getvalue()
+    return run_main({"app-misc/b": {"1.0": (["b-1.0.tar.gz"], "fetch"),
+                                    "2.0": ["b-2.0.tar.gz"]}}, [])[3]
 
 
 case("fetch 限制不跨版本传染", lambda: (
@@ -352,7 +331,7 @@ case("带 fetch 的那个版本自己算无法获取", lambda: (
 )(_fetch_probe()))
 
 def scan_with(pkgs):
-    """pkgs: {cp: [(cpv, SRC_URI, RESTRICT)]}; the Manifest is derived from SRC_URI."""
+    """pkgs: {cp: [(cpv, {name: [uri]}, RESTRICT)]}; the Manifest lists every name."""
     with tempfile.TemporaryDirectory() as tmp:
         ov = pathlib.Path(tmp)
         (ov / "profiles").mkdir(parents=True)
@@ -361,9 +340,8 @@ def scan_with(pkgs):
             d = ov / cp
             d.mkdir(parents=True, exist_ok=True)
             names = set()
-            for _, src, _ in rows:
-                if src:
-                    names |= audit.distfiles_of(src) or set()
+            for _, uri_map, _ in rows:
+                names |= set(uri_map or {})
             (d / "Manifest").write_text(
                 "".join(f"DIST {n} 1 BLAKE2B x SHA512 y\n" for n in sorted(names)))
 
@@ -375,16 +353,17 @@ def scan_with(pkgs):
 case("SRC_URI 的改名形式按改名后的文件归属", lambda: (
     (lambda r: set(r[0]) == {"pkg-1.tar.gz"} and not r[1])(
         scan_with({"app-misc/pkg": [
-            ("app-misc/pkg-1", "https://x/v1.tar.gz -> pkg-1.tar.gz", "")]}))))
+            ("app-misc/pkg-1", {"pkg-1.tar.gz": ["https://x/v1.tar.gz"]}, "")]}))))
 
 case("条件式里的文件也算被引用", lambda: (
     set(scan_with({"app-misc/pkg": [
-        ("app-misc/pkg-1", "https://x/a.tar nls? ( https://x/b.tar )", "")]})[0])
+        ("app-misc/pkg-1", {"a.tar": ["https://x/a.tar"],
+                            "b.tar": ["https://x/b.tar"]}, "")]})[0])
     == {"a.tar", "b.tar"}))
 
 case("无版本号的文件名同样归属正确", lambda: (
     set(scan_with({"app-misc/pkg": [
-        ("app-misc/pkg-1", "https://x/noversion.zip", "")]})[0])
+        ("app-misc/pkg-1", {"noversion.zip": ["https://x/noversion.zip"]}, "")]})[0])
     == {"noversion.zip"}))
 
 
@@ -404,9 +383,10 @@ def scan_with_manifest(pkgs, manifests):
         return audit.scan(ov, aux)
 
 
-case("裸文件名按 SRC_URI 归属，不落入不确定", lambda: (
-    (lambda r: r[0]["manual.zip"] == [("app-misc/m", False)] and not r[1])(
-        scan_with_manifest({"app-misc/m": [("app-misc/m-1", "manual.zip", "")]},
+case("裸文件名照样归属，只是取不回来，不落入不确定", lambda: (
+    (lambda r: r[0]["manual.zip"] == [("app-misc/m", False)]
+     and r[2] == {"manual.zip"} and not r[1])(
+        scan_with_manifest({"app-misc/m": [("app-misc/m-1", {"manual.zip": []}, "")]},
                            {"app-misc/m": ["manual.zip"]}))))
 
 case("metadata 无法读取时归入不确定，且仍记为受限", lambda: (
@@ -416,8 +396,48 @@ case("metadata 无法读取时归入不确定，且仍记为受限", lambda: (
 
 case("SRC_URI 为空时同样归入不确定", lambda: (
     (lambda r: r[1] == {"y.tar"} and r[0]["y.tar"] == [("app-misc/y", True)])(
-        scan_with_manifest({"app-misc/y": [("app-misc/y-1", "", "")]},
+        scan_with_manifest({"app-misc/y": [("app-misc/y-1", {}, "")]},
                            {"app-misc/y": ["y.tar"]}))))
+
+case("RESTRICT=fetch 时既不可取回也不可镜像", lambda: (
+    (lambda r: r[0]["f.tar"] == [("app-misc/f", True)] and not r[2])(
+        scan_with_manifest(
+            {"app-misc/f": [("app-misc/f-1", {"f.tar": ["https://x/f.tar"]}, "fetch")]},
+            {"app-misc/f": ["f.tar"]}))))
+
+case("fetch+ 覆写只解除抓取限制，镜像仍不允许", lambda: (
+    (lambda r: r[0]["g.tar"] == [("app-misc/g", True)])(
+        scan_with_manifest(
+            {"app-misc/g": [("app-misc/g-1", {"g.tar": ["fetch+https://x/g.tar"]},
+                             "fetch")]},
+            {"app-misc/g": ["g.tar"]}))))
+
+case("mirror+ 覆写同时解除两者", lambda: (
+    (lambda r: r[0]["h.tar"] == [("app-misc/h", False)])(
+        scan_with_manifest(
+            {"app-misc/h": [("app-misc/h-1", {"h.tar": ["mirror+https://x/h.tar"]},
+                             "fetch")]},
+            {"app-misc/h": ["h.tar"]}))))
+
+case("同一文件多个 URI，只要有一个可镜像就可镜像", lambda: (
+    (lambda r: r[0]["i.tar"] == [("app-misc/i", False)])(
+        scan_with_manifest(
+            {"app-misc/i": [("app-misc/i-1",
+                             {"i.tar": ["https://x/i.tar", "mirror+https://y/i.tar"]},
+                             "mirror")]},
+            {"app-misc/i": ["i.tar"]}))))
+
+case("多个 URI 都没有覆写时仍然不可镜像", lambda: (
+    (lambda r: r[0]["j.tar"] == [("app-misc/j", True)])(
+        scan_with_manifest(
+            {"app-misc/j": [("app-misc/j-1",
+                             {"j.tar": ["https://x/j.tar", "https://y/j.tar"]},
+                             "mirror")]},
+            {"app-misc/j": ["j.tar"]}))))
+
+case("RESTRICT=fetch 的文件已在镜像上时要下架", lambda: (
+    lambda r: r[1] == [] and r[2] == ["k.tar"]
+)(run_main({"app-misc/k": {"1.0": (["k.tar"], "fetch")}}, ["k.tar"])))
 
 case("裸文件名的 SRC_URI 也能归属，不会当成无人引用而回收", lambda: (
     lambda r: "manual.zip" in r[1] and r[2] == []
