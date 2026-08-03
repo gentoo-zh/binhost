@@ -19,10 +19,10 @@ docs/     运维手册
 
 在 stage3 容器里构建，`CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"`，`FEATURES=binpkg-signing`。仓库按 CPU 基线切分（`x86-64`），与官方 binhost 一致。
 
-发布的主体是 overlay 自己的包，另外附带这些包运行期依赖里的部分 `::gentoo` 包，
-两者在同一份索引里，用 `REPO` 字段区分。两者都要求许可证允许再分发，
-`RESTRICT=bindist` 的不发。附带的依赖只覆盖我们这些包用得到的部分，
-不替代官方完整 binhost。
+发布的主体是收录清单里的 overlay 包，另外附带这些包所需的部分 `::gentoo` 运行期
+依赖，两者在同一份索引里，用 `REPO` 字段区分。许可证不允许再分发的、
+`RESTRICT=bindist` 的都不发布。附带的依赖范围只到这些包的运行期依赖，
+不替代 Gentoo 官方 binhost。
 
 `@world` 对齐后的容器提交成基础镜像，超过 7 天才刷新，平时的构建从已经对齐好的根开始。
 

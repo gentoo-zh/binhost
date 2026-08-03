@@ -142,7 +142,7 @@ def main(overlay, index, listfile):
         pn = cp.split("/", 1)[1]
         moved = fresh_by_pn.get(pn, [])
         if moved:
-            print(f"    疑似改分类 {cp} -> {moved[0]}  同名不同分类，两边一起改")
+            print(f"    疑似改分类 {cp} -> {moved[0]}  同名不同分类，packages.txt 与 overlay 需同步更新")
         else:
             print(f"    已移除 {cp}  overlay 中不存在该软件包，可能被删除或改了分类，清单需同步")
     for cp in blocked:
