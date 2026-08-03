@@ -241,6 +241,36 @@ case("README.txt 不算孤儿", lambda: (
 )(run_main({f"app-misc/p{i}": {"1": [f"p{i}.tar.gz"]} for i in range(20)},
            [f"p{i}.tar.gz" for i in range(20)] + ["README.txt"])))
 
+def two_repo_probe():
+    """A real portdbapi over two trees that both carry the same package."""
+    import tempfile as _t, pathlib as _p
+    with _t.TemporaryDirectory() as tmp:
+        d = _p.Path(tmp)
+        for name, ver, src, restrict in (
+                ("gentoo", "1.0", "https://x/shared.tar.gz", ""),
+                ("gentoo-zh", "2.0", "https://x/shared.tar.gz", ""),
+        ):
+            root = d / name
+            (root / "profiles").mkdir(parents=True, exist_ok=True)
+            (root / "profiles" / "repo_name").write_text(name + "\n")
+            (root / "profiles" / "categories").write_text("app-misc\n")
+            if name != "gentoo":
+                (root / "metadata").mkdir(parents=True, exist_ok=True)
+                (root / "metadata" / "layout.conf").write_text("masters = gentoo\n")
+            pkg = root / "app-misc" / "shared"
+            pkg.mkdir(parents=True, exist_ok=True)
+            body = f'EAPI=8\nSLOT="0"\nSRC_URI="{src}"\n'
+            if restrict:
+                body += f'RESTRICT="{restrict}"\n'
+            (pkg / f"shared-{ver}.ebuild").write_text(body)
+            (pkg / "Manifest").write_text("DIST shared.tar.gz 1 BLAKE2B x SHA512 y\n")
+        aux = audit.portage_aux(d / "gentoo-zh", tree=str(d / "gentoo"))
+        return sorted(cpv for cpv, _m, _r in aux("app-misc/shared"))
+
+
+case("查询限定在 overlay，不带出主树同名包的版本", lambda: (
+    two_repo_probe() == ["app-misc/shared-2.0"]))
+
 print(f"  {'用例':<44} 结果")
 bad = 0
 
@@ -431,6 +461,27 @@ case("SRC_URI 为空时同样归入不确定", lambda: (
     (lambda r: r[1] == {"y.tar"} and r[0]["y.tar"] == [("app-misc/y", True)])(
         scan_with_manifest({"app-misc/y": [("app-misc/y-1", {}, "")]},
                            {"app-misc/y": ["y.tar"]}))))
+
+case("条件式的 mirror 不算限制，与 emirrordist 一致", lambda: (
+    (lambda r: r[0]["c.tar"] == [("app-misc/c", False)])(
+        scan_with_manifest(
+            {"app-misc/c": [("app-misc/c-1", {"c.tar": ["https://x/c.tar"]},
+                             "demo? ( mirror )")]},
+            {"app-misc/c": ["c.tar"]}))))
+
+case("条件式的 fetch 同样不算限制", lambda: (
+    (lambda r: r[0]["d.tar"] == [("app-misc/d", False)])(
+        scan_with_manifest(
+            {"app-misc/d": [("app-misc/d-1", {"d.tar": ["https://x/d.tar"]},
+                             "test? ( fetch )")]},
+            {"app-misc/d": ["d.tar"]}))))
+
+case("无条件的 mirror 仍然算限制", lambda: (
+    (lambda r: r[0]["e.tar"] == [("app-misc/e", True)])(
+        scan_with_manifest(
+            {"app-misc/e": [("app-misc/e-1", {"e.tar": ["https://x/e.tar"]},
+                             "mirror demo? ( fetch )")]},
+            {"app-misc/e": ["e.tar"]}))))
 
 case("RESTRICT=fetch 时既不可取回也不可镜像", lambda: (
     (lambda r: r[0]["f.tar"] == [("app-misc/f", True)] and not r[2])(
