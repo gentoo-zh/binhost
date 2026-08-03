@@ -58,7 +58,7 @@ case("刚发现的孤儿不删，只记时间", lambda: (
     lambda r: r[0] == [] and r[1] == ["a.tar.gz"] and "a.tar.gz" in r[2]
 )(reap(["a.tar.gz"], {"a.tar.gz": "x"})))
 
-case("过了回收期才删", lambda: (
+case("超过回收期之后才会删除", lambda: (
     lambda r: r[0] == ["a.tar.gz"] and r[1] == []
 )(reap(["a.tar.gz"], {"a.tar.gz": "x"}, seen={"a.tar.gz": OLD})))
 
@@ -69,7 +69,7 @@ case("不是孤儿的一个都不碰", lambda: (
 case("又被引用了就从状态里忘掉", lambda: (
     "a.tar.gz" not in reap([], {"a.tar.gz": "x"}, seen={"a.tar.gz": OLD})[2]))
 
-case("删完之后状态里不再留着它", lambda: (
+case("删除之后状态里不再保留它", lambda: (
     "a.tar.gz" not in reap(["a.tar.gz"], {"a.tar.gz": "x"}, seen={"a.tar.gz": OLD})[2]))
 
 case("文件名带方括号也能删掉", lambda: (
@@ -163,7 +163,7 @@ case("孤儿比例过高时拒绝清理", lambda: (
 )(run_main({"app-misc/a": {"1": ["a.tar.gz"]}},
            ["a.tar.gz", "b.tar.xz", "c.zip", "d.tar.bz2", "e.crate"])))
 
-case("正常比例下回收而不是直接删", lambda: (
+case("正常比例下移入回收目录，而非就地删除", lambda: (
     lambda r: r[0] == 0 and "old.tar.gz" not in r[1] and r[2] == ["old.tar.gz"]
 )(run_main({f"app-misc/p{i}": {"1": [f"p{i}.tar.gz"]} for i in range(20)},
            [f"p{i}.tar.gz" for i in range(20)] + ["old.tar.gz"])))
@@ -220,12 +220,12 @@ case("清掉了就不该让这一轮失败", lambda: (
 )(run_main({"app-misc/foo": {"1.0": (["foo-1.0.tar.gz"], "mirror")}},
            ["foo-1.0.tar.gz"])))
 
-case("走回收桶而不是直接删", lambda: (
+case("移入回收目录，而非就地删除", lambda: (
     lambda r: r[2] == ["foo-1.0.tar.gz"]
 )(run_main({"app-misc/foo": {"1.0": (["foo-1.0.tar.gz"], "bindist mirror strip")}},
            ["foo-1.0.tar.gz"])))
 
-case("按版本归属，不禁的那个留着", lambda: (
+case("按版本归属，未受限的那个保留", lambda: (
     lambda r: r[1] == ["foo-2.0.tar.gz"] and r[2] == ["foo-1.0.tar.gz"]
 )(run_main({"app-misc/foo": {"1.0": (["foo-1.0.tar.gz"], "mirror"),
                              "2.0": ["foo-2.0.tar.gz"]}},
@@ -280,7 +280,7 @@ def _budget_rounds():
 case("累计额度在删除之前就生效", lambda: (
     lambda r: sum(r[0]) <= r[1])(_budget_rounds()))
 
-case("额度用完之后一个都不再删", lambda: (
+case("额度耗尽后不再删除", lambda: (
     lambda r: r[0][-1] == 0)(_budget_rounds()))
 
 def _fetch_probe():

@@ -47,10 +47,10 @@ if sudo test -e /etc/binhost/alert.conf; then
     sudo chown ${BUILD_USER}:${BUILD_USER} /etc/binhost/alert.conf
     sudo chmod 600 /etc/binhost/alert.conf
     sudo -u ${BUILD_USER} test -r /etc/binhost/alert.conf &&
-        echo '    ${BUILD_USER} 能读到' ||
+        echo '    ${BUILD_USER} 可读取' ||
         echo '    !! ${BUILD_USER} 仍然无法读取，告警将无法传送'
 else
-    echo '    /etc/binhost/alert.conf 还没有，告警不会发出'
+    echo '    /etc/binhost/alert.conf 尚未建立，告警不会发出'
 fi
 "
 

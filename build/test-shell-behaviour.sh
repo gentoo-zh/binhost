@@ -120,8 +120,8 @@ echo x > "${d}/remote/app-misc/gone-1.0-1.gpkg.tar"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
 ok "正常一轮退役少量包时照常执行" "$?" "0"
-ok "退役的那一个被删掉" "$(test -e "${d}/remote/app-misc/gone-1.0-1.gpkg.tar" && echo 在 || echo 无)" "无"
-ok "索引里的都还在" "$(find "${d}/remote" -name 'p*.gpkg.tar' | wc -l)" "10"
+ok "退役的那一个已删除" "$(test -e "${d}/remote/app-misc/gone-1.0-1.gpkg.tar" && echo 在 || echo 无)" "无"
+ok "索引里的仍然存在" "$(find "${d}/remote" -name 'p*.gpkg.tar' | wc -l)" "10"
 rm -rf "${d}"
 
 d=$(setup_publish)
@@ -256,7 +256,7 @@ out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}
       bash deploy/mirror-sync.sh 2>&1)
 ok "本地文件大小与索引不符时重新下载" "$?" "0"
 ok "重新下载后内容正确" "$(cat "${d}/dest/app-misc/p1-1.0-1.gpkg.tar")" "x"
-contains "并且报出来" "${out}" "大小与索引不符"
+contains "并且报出该情况" "${out}" "大小与索引不符"
 rm -rf "${d}"
 
 d=$(setup_mirror)

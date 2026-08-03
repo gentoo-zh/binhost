@@ -104,7 +104,7 @@ def newcomers(packages, list_lines, masked=(), restrict=None, keywords=None):
 
 NEW = [
     ("在清单里的不报", {PKG: NOW}, [PKG], {}, []),
-    ("不在清单里的报出来", {PKG: NOW}, [], {}, [f"{PKG} {NOW}"]),
+    ("不在清单里的会被报出", {PKG: NOW}, [], {}, [f"{PKG} {NOW}"]),
     ("被 mask 的不报", {PKG: NOW}, [], {"masked": (PKG,)}, []),
     ("acct-group 不报", {"acct-group/foo": "0"}, [], {}, []),
     ("virtual 不报", {"virtual/foo": "0"}, [], {}, []),
