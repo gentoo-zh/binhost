@@ -12,7 +12,7 @@ import time
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path[:0] = [str(HERE), str(HERE.parent / "build")]
-import portage                                             # noqa: E402
+from ebuilds import pinned_portdbapi                       # noqa: E402
 from portage.dep import use_reduce                         # noqa: E402
 from portage.exception import PortageException             # noqa: E402
 
@@ -50,55 +50,67 @@ def write_atomic(path, text):
         raise
 
 
-def distfiles_of(src_uri):
-    """Names SRC_URI actually writes into DISTDIR.
+def carriable_names(uri_map, restrict):
+    """(names we may carry, whether RESTRICT took any URI away), or None.
 
-    `a -> b` renames the download, so the file on disk is b. Everything else
-    is the basename of the URL. Conditionals are taken in full rather than
-    evaluated, because a file any USE combination can pull in is still one we
-    have to keep.
+    Same rules as portage's _emirrordist: fetch restriction implies mirror
+    restriction, a mirror+ URI lifts both for itself, fetch+ lifts only the
+    fetch one, and a file stays carriable while any one of its URIs survives.
+    Portage's mirror:// exemption list is not configured on this host, so it
+    is not applied here either.
+
+    The second value separates the two ways a name can end up with no usable
+    URI. A restriction means we must not carry it. No URI at all, as a bare
+    SRC_URI name declares, means nobody can fetch it, which is not a reason to
+    take anything down.
     """
-    out = set()
     try:
-        tokens = use_reduce(src_uri, matchall=True, is_src_uri=True, eapi="8")
+        tokens = set(use_reduce(restrict, matchall=True, eapi="8"))
     except PortageException:
         return None
-    i = 0
-    while i < len(tokens):
-        tok = tokens[i]
-        if i + 2 < len(tokens) and tokens[i + 1] == "->":
-            out.add(tokens[i + 2])
-            i += 3
-            continue
-        # A bare name with no scheme is what RESTRICT=fetch packages declare:
-        # the user places the file in DISTDIR by hand.
-        out.add(tok.rsplit("/", 1)[-1] if "://" in tok else tok)
-        i += 1
-    return out
+    no_fetch = "fetch" in tokens
+    no_mirror = no_fetch or "mirror" in tokens
+    out = set()
+    for name, uris in uri_map.items():
+        for uri in uris:
+            lifts_mirror = uri.startswith("mirror+")
+            lifts_fetch = lifts_mirror or uri.startswith("fetch+")
+            if no_fetch and not lifts_fetch:
+                continue
+            if no_mirror and not lifts_mirror:
+                continue
+            out.add(name)
+            break
+    return out, no_mirror
 
 
 def portage_aux(overlay):
-    """cp -> [(cpv, SRC_URI, RESTRICT)] from Portage's own metadata."""
-    db = portage.portdbapi()
+    """cp -> [(cpv, {distfile: [uri]}, RESTRICT)] from Portage's own metadata.
+
+    The fetch map is what keeps each URI attached to the name it writes, which
+    is what the per-URI fetch+ and mirror+ prefixes act on.
+    """
+    db = pinned_portdbapi(overlay)
 
     def aux(cp):
         for cpv in db.cp_list(cp):
             try:
-                src, restrict = db.aux_get(cpv, ["SRC_URI", "RESTRICT"])
+                restrict = db.aux_get(cpv, ["RESTRICT"])[0]
+                uri_map = db.getFetchMap(cpv)
             except Exception:                              # noqa: BLE001
                 yield cpv, None, None
                 continue
-            yield cpv, src, restrict
+            yield cpv, uri_map, restrict
     return aux
 
 
 def scan(overlay, aux=None):
-    """distfile -> [(cp, restricted)], plus the ones we could not decide.
+    """distfile -> [(cp, blocked)], the undecided ones and the unfetchable ones.
 
-    Attribution comes from each CPV's expanded SRC_URI, so a shared file, a
-    renamed download or a name without a version in it all land on the right
-    package. When Portage metadata cannot be read the file goes into the
-    undecided set and nothing will delete it.
+    Attribution comes from each CPV's fetch map, so a shared file, a renamed
+    download or a name without a version in it all land on the right package.
+    When Portage metadata cannot be read the file goes into the undecided set
+    and nothing will delete it.
     """
     users = {}
     unsure = set()
@@ -113,35 +125,32 @@ def scan(overlay, aux=None):
     for man in overlay.glob("*/*/Manifest"):
         d = man.parent
         cp = str(d.relative_to(overlay))
-        declared = {}
+        declared = set()
         for line in man.read_text(errors="replace").splitlines():
             if line.startswith("DIST "):
-                declared[line.split()[1]] = None
+                declared.add(line.split()[1])
 
         seen = set()
-        for cpv, src, restrict in aux(cp):
-            if src is None:
+        for cpv, uri_map, restrict in aux(cp):
+            if uri_map is None:
                 unsure.update(declared)
                 continue
-            names = distfiles_of(src)
-            if names is None:
-                unsure.update(declared)
+            names = set(uri_map) & declared
+            decided = carriable_names(uri_map, restrict)
+            if decided is None:
+                unsure.update(names)
                 continue
-            try:
-                tokens = set(use_reduce(restrict, matchall=True, eapi="8"))
-            except PortageException:
-                unsure.update(names & set(declared))
-                continue
-            blocked = "mirror" in tokens
-            if "fetch" in tokens:
-                unfetchable.update(names & set(declared))
-            for name in names & set(declared):
+            carriable, restricted = decided
+            for name in names:
+                blocked = name not in carriable and restricted
+                if name not in carriable and not restricted:
+                    unfetchable.add(name)
                 entry = (cp, blocked)
                 if entry not in users.setdefault(name, []):
                     users[name].append(entry)
                 seen.add(name)
 
-        for name in set(declared) - seen:
+        for name in declared - seen:
             unsure.add(name)
             if (cp, True) not in users.setdefault(name, []):
                 users[name].append((cp, True))
@@ -263,8 +272,8 @@ def main(overlay, dest, aux=None):
     paths = {p.name: p for p in dest.rglob("*") if p.is_file() and p.name not in MARKERS}
     have = set(paths)
 
-    # One consumer forbidding mirroring is enough: attribution is now exact,
-    # so the aggregate has to be the conservative one.
+    # One consumer forbidding it is enough: attribution is exact, so the
+    # aggregate has to be the conservative one.
     mirrorable = {f for f, us in users.items()
                   if us and all(not r for _, r in us)} - unfetchable
     never = {f for f, us in users.items() if any(r for _, r in us)}
@@ -337,12 +346,13 @@ def main(overlay, dest, aux=None):
 
     print(f"overlay 引用 {len(users)}，其中可镜像 {len(mirrorable)}，"
           f"不可镜像 {len(never)}，无法取得 {len(unfetchable)}，"
-          f"RESTRICT 算不准 {len(unsure)}")
+          f"无法判定 {len(unsure)}")
     if unsure:
-        print(f"!! {len(unsure)} 个文件的 RESTRICT 写在条件式或函式里，"
-              f"静态无法解析出有效值；本轮既不清理也不当作可公开", file=sys.stderr)
+        print(f"!! {len(unsure)} 个文件无法判定可否公开：Portage metadata 读取失败、"
+              f"RESTRICT 解析失败，或 Manifest 里的条目不属于任何一个版本；"
+              f"本轮既不清理也不当作可公开", file=sys.stderr)
         for f in sorted(unsure)[:10]:
-            print(f"   算不准 {f}  <- {[p for p, _ in users.get(f, [])]}", file=sys.stderr)
+            print(f"   无法判定 {f}  <- {[p for p, _ in users.get(f, [])]}", file=sys.stderr)
     print(f"镜像上 {len(have)}，缺 {len(missing)}，禁止镜像 {len(extra)}，"
           f"已无人引用 {len(orphan)}，本轮清理 {len(deleted) + len(restricted)}"
           f"（其中禁止镜像 {len(restricted)}）")
@@ -357,7 +367,8 @@ def main(overlay, dest, aux=None):
     for f in missing[:20]:
         print(f"  缺 {f}  <- {[p for p, _ in users[f]]}")
     for f in extra[:20]:
-        print(f"  多 {f}  <- {[p for p, _ in users[f]]}（所有引用方都 RESTRICT=mirror）")
+        print(f"  多 {f}  <- {[p for p, _ in users[f]]}"
+              f"（至少一个引用方 RESTRICT 禁止镜像或禁止抓取）")
     for f in deleted[:20]:
         print(f"  清理 {f}")
 

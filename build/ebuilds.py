@@ -247,3 +247,36 @@ def read_list(path):
         return []
     return [l.strip() for l in p.read_text().splitlines()
             if l.strip() and not l.strip().startswith("#")]
+
+
+GENTOO_TREE = "/var/db/repos/gentoo"
+
+
+class MetadataUnavailable(Exception):
+    pass
+
+
+def pinned_portdbapi(overlay, tree=GENTOO_TREE):
+    """A portdbapi reading exactly the two trees given, not the host's config.
+
+    Locations go through an explicit config so the result does not depend on
+    repos.conf or on whether something else imported portage first, and the
+    resolved paths are checked afterwards because a silently different tree
+    would be answered from with no error.
+    """
+    import os
+    import portage
+    env = dict(os.environ)
+    env["PORTAGE_REPOSITORIES"] = (
+        "[DEFAULT]\nmain-repo = gentoo\n\n"
+        f"[gentoo]\nlocation = {tree}\n\n"
+        f"[gentoo-zh]\nlocation = {overlay}\nmasters = gentoo\n")
+    try:
+        db = portage.portdbapi(mysettings=portage.config(env=env))
+    except Exception as e:                                  # noqa: BLE001
+        raise MetadataUnavailable(str(e)) from e
+    for name, want in (("gentoo", str(tree)), ("gentoo-zh", str(overlay))):
+        got = db.getRepositoryPath(name)
+        if got != want:
+            raise MetadataUnavailable(f"{name} resolved to {got}, expected {want}")
+    return db
