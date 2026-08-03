@@ -92,7 +92,7 @@ d=$(setup)
 echo aaaaaaaa > "${d}/VERSION"
 printf 'not-a-fingerprint\n' > "${d}/state"
 run "${d}"
-ok "读不出时间戳仍会发" "$(sent_count "${d}")" "1"
+ok "时间戳无法解析时仍会发" "$(sent_count "${d}")" "1"
 rm -rf "${d}"
 
 echo
