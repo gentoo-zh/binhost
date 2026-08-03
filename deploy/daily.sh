@@ -59,9 +59,17 @@ if step "distfiles 同步" /usr/local/bin/binhost-distfiles-sync; then
     step "distfiles 对账" python3 "${LIB}/audit-distfiles.py" "${OVERLAY}" "${DISTDIR}"
 fi
 
-step "依赖反向验证" python3 "${LIB}/verify-deps.py" \
-    /srv/pub/binpkgs/x86-64/Packages \
-    --installed /srv/pub/binpkgs/x86-64/installed.txt
+# The base system list arrives with the index. An index published before this
+# check existed does not have one, and that is not a dependency problem, so it
+# is reported and skipped. An unreadable list is still a failure: verify-deps
+# refuses to guess.
+BASELINE=/srv/pub/binpkgs/x86-64/installed.txt
+if [[ -e ${BASELINE} ]]; then
+    step "依赖反向验证" python3 "${LIB}/verify-deps.py" \
+        /srv/pub/binpkgs/x86-64/Packages --installed "${BASELINE}"
+else
+    echo "跳过依赖反向验证：${BASELINE} 尚未发布，下一轮建置会带上它"
+fi
 
 if [[ -s ${FAILURES} ]]; then
     n=$(wc -l < "${FAILURES}")
