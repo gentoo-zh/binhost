@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-import importlib.util
 import pathlib
 import sys
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+BUILD = pathlib.Path(__file__).resolve().parent.parent / "build"
+sys.path.insert(0, str(BUILD))
 from ebuilds import bindist_state, restricts_bindist          # noqa: E402
 
 TERMIUS = '''EAPI=8

@@ -7,8 +7,10 @@ import sys
 import tempfile
 import time
 
+BUILD = pathlib.Path(__file__).resolve().parent.parent / "build"
+
 spec = importlib.util.spec_from_file_location(
-    "stage_index", pathlib.Path(__file__).with_name("stage-index.py"))
+    "stage_index", BUILD / "stage-index.py")
 stage_index = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(stage_index)
 

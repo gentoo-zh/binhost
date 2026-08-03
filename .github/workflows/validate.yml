@@ -22,34 +22,34 @@ jobs:
         run: python3 build/validate.py /tmp/overlay
 
       - name: Version check handles every commit shape
-        run: python3 build/test-check-versions.py
+        run: python3 tests/test-check-versions.py
 
       - name: bindist detection handles every RESTRICT shape
-        run: python3 build/test-validate.py /tmp/overlay
+        run: python3 tests/test-validate.py /tmp/overlay
 
       - name: Staging filter keeps only what is ours
-        run: python3 build/test-stage-index.py
+        run: python3 tests/test-stage-index.py
 
       - name: Reaping orphans deletes the right file
-        run: python3 build/test-audit-distfiles.py
+        run: python3 tests/test-audit-distfiles.py
 
       - name: Failure classifier does not invent packages
-        run: python3 build/test-classify-failures.py
+        run: python3 tests/test-classify-failures.py
 
       - name: Adding a package to the list
-        run: python3 build/test-add-package.py
+        run: python3 tests/test-add-package.py
 
       - name: Removing a package from the list
-        run: python3 build/test-retire-package.py
+        run: python3 tests/test-retire-package.py
 
       - name: Version comparison fixture still matches portage
-        run: python3 build/test-vercmp-fixture.py
+        run: python3 tests/test-vercmp-fixture.py
 
       - name: install.sh covers what the scripts reach for
-        run: python3 build/test-install-covers-refs.py
+        run: python3 tests/test-install-covers-refs.py
 
       - name: The signing fingerprint agrees everywhere
-        run: python3 build/test-fingerprint-consistent.py
+        run: python3 tests/test-fingerprint-consistent.py
 
       - name: Exclusion list is enforced
         run: |
@@ -80,7 +80,7 @@ jobs:
           base=$(git merge-base "origin/${{ github.base_ref }}" HEAD)
           python3 build/check-commits.py "${base}..HEAD"
       - name: The checker itself still holds
-        run: python3 build/test-check-commits.py
+        run: python3 tests/test-check-commits.py
 
   python:
     runs-on: ubuntu-latest
@@ -126,22 +126,22 @@ jobs:
           for f in site/assets/*.js; do node --check "$f" || exit 1; done
           echo "  $(ls site/assets/*.js | wc -l) 个脚本可解析"
       - name: The front-end scripts survive being loaded
-        run: node build/test-scripts-load.js site/assets
+        run: node tests/test-scripts-load.js site/assets
 
       - name: Check i18n tables
         run: node build/check-i18n.js site
       - name: Version order on the packages page
-        run: node build/test-vercmp.js
+        run: node tests/test-vercmp.js
       - name: Shared chrome is up to date
         run: python3 build/render-chrome.py --check
       - name: Check nav and footer
         run: python3 build/check-chrome.py site
       - name: Search hint on the packages page
-        run: node build/test-packages-search.js
+        run: node tests/test-packages-search.js
       - name: File browser breadcrumbs
-        run: node build/test-app-crumbs.js
+        run: node tests/test-app-crumbs.js
       - name: Links that differ per language
-        run: node build/test-i18n-engine.js
+        run: node tests/test-i18n-engine.js
       - name: Mirror pickers agree
         run: python3 build/check-pickers.py
       - name: Both setup modes say the same thing
@@ -149,7 +149,7 @@ jobs:
       - name: Check copy
         run: python3 build/check-copy.py site
       - name: The copy checker still catches every shape
-        run: python3 build/test-check-copy.py
+        run: python3 tests/test-check-copy.py
       - name: Check stylesheet
         run: python3 build/check-css.py site
 
@@ -158,16 +158,16 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: shellcheck
-        run: shellcheck build/*.sh deploy/*.sh deploy-site.sh
+        run: shellcheck build/*.sh deploy/*.sh tests/*.sh deploy-site.sh
 
       - name: Alerting survives a broken alert.conf
-        run: bash build/test-alert.sh
+        run: bash tests/test-alert.sh
 
       - name: Delete budgets, DONE markers and index consistency
-        run: bash build/test-shell-behaviour.sh
+        run: bash tests/test-shell-behaviour.sh
 
       - name: The same failure is not notified twice
-        run: bash build/test-status-dedup.sh
+        run: bash tests/test-status-dedup.sh
 
   nginx:
     runs-on: ubuntu-latest

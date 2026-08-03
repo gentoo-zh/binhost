@@ -12,7 +12,7 @@ if (!src) {
 }
 const cmpVer = new Function(src[0] + "\nreturn cmpVer;")();
 
-const cases = JSON.parse(fs.readFileSync(path.join(ROOT, "build", "vercmp-cases.json"), "utf8"));
+const cases = JSON.parse(fs.readFileSync(path.join(__dirname, "vercmp-cases.json"), "utf8"));
 
 let bad = 0;
 for (const [a, b, want] of cases.pairs) {

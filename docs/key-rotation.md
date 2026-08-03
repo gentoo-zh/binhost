@@ -80,7 +80,7 @@ build/publish.sh
 ## 指纹写在哪几处
 
 轮替时这些都要跟着换，漏一处就是签名与用户核对的不一致。
-`build/test-fingerprint-consistent.py` 在 CI 里按 `.asc` 核对这几处：
+`tests/test-fingerprint-consistent.py` 在 CI 里按 `.asc` 核对这几处：
 
 - `.asc` 里可以有多把公钥，重叠期就该是这样，它会把把数打印出来提醒收尾
 - 仓库正文里写的每一个指纹都必须是 `.asc` 里发布过的，写错或写了已经撤下的会红
