@@ -215,7 +215,7 @@ case("禁止镜像的文件会被回收", lambda: (
 )(run_main({"app-misc/foo": {"1.0": (["foo-1.0.tar.gz"], "mirror")}},
            ["foo-1.0.tar.gz"])))
 
-case("清掉了就不该让这一轮失败", lambda: (
+case("已回收的文件不应导致本次稽核失败", lambda: (
     lambda r: r[0] == 0
 )(run_main({"app-misc/foo": {"1.0": (["foo-1.0.tar.gz"], "mirror")}},
            ["foo-1.0.tar.gz"])))

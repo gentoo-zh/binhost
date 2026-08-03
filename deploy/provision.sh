@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-TARGET="${TARGET:?用法: TARGET=root@主机 $0}"
+TARGET="${TARGET:?用法： TARGET=root@主机 $0}"
 ADMIN="${ADMIN:-zakk}"
 SSH_PORT="${SSH_PORT:-60001}"
 PUBKEY="${PUBKEY:-$HOME/.ssh/gentoozh_mirror.pub}"
@@ -101,7 +101,7 @@ EOF
     fi
     modprobe tcp_bbr 2>/dev/null || true
     sysctl -q -p /etc/sysctl.d/99-mirror.conf
-    echo "  拥塞控制: $(sysctl -n net.ipv4.tcp_congestion_control)"'
+    echo "  拥塞控制： $(sysctl -n net.ipv4.tcp_congestion_control)"'
 
 say "日志轮转"
 on 'command -v logrotate >/dev/null || emerge -q app-admin/logrotate

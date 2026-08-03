@@ -64,7 +64,7 @@ def main():
         print("!!! " + b, file=sys.stderr)
     if bad:
         return 1
-    print("  两种写法: 内容一致")
+    print("  两种写法： 内容一致")
     return 0
 
 

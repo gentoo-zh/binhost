@@ -57,14 +57,14 @@ def check(sha):
 
     m = SUBJECT.match(subject)
     if not m:
-        problems.append(f"主题不是 `scope: 主题` 的形式: {subject!r}")
+        problems.append(f"主题不是 `scope: 主题` 的形式： {subject!r}")
     else:
         scope, rest = m.group(1), m.group(2)
         allowed = scopes_for(sha)
         if scope not in allowed:
             problems.append(
                 f"scope `{scope}` 不是这个提交改动的部分"
-                f"（可用: {', '.join(sorted(allowed)) or '无'}）")
+                f"（可用： {', '.join(sorted(allowed)) or '无'}）")
         if rest.endswith(("。", ".")):
             problems.append("主题结尾不要句号")
         if CJK.search(rest):

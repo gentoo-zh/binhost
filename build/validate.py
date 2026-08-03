@@ -55,7 +55,7 @@ def main(overlay):
         if not line or line.startswith("#"):
             continue
         if raw != line:
-            errors.append(f"{LIST.name}:{lineno}: 行首或行尾有多余空白: {raw!r}")
+            errors.append(f"{LIST.name}:{lineno}: 行首或行尾有多余空白： {raw!r}")
             continue
         if not ATOM.match(line):
             errors.append(f"{LIST.name}:{lineno}: not a category/package atom: {raw!r}")
@@ -105,14 +105,14 @@ def main(overlay):
         states = {bindist_state(e.read_text(errors="ignore")) for e, _ in usable}
         if "unknown" in states:
             errors.append(
-                f"{LIST.name}:{lineno}: RESTRICT 用了变量或条件式，无法静态判定: {cp}")
+                f"{LIST.name}:{lineno}: RESTRICT 用了变量或条件式，无法静态判定： {cp}")
         elif states == {"yes"}:
             errors.append(f"{LIST.name}:{lineno}: RESTRICT=bindist, cannot be redistributed: {cp}")
 
         kw = keywords_of(text)
         if kw is not None and not accepts_amd64(kw):
             errors.append(
-                f"{LIST.name}:{lineno}: KEYWORDS 未包含 amd64，建置机无法安装: {cp}")
+                f"{LIST.name}:{lineno}: KEYWORDS 未包含 amd64，建置机无法安装： {cp}")
 
         eclasses = inherits(text)
         if eclasses & PREBUILT_ECLASS:

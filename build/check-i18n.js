@@ -56,7 +56,7 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
   try {
     T = eval('(' + m[1].replace(/;$/, '') + ')');
   } catch (e) {
-    console.error(`!!! ${f}: i18n 表解析失败: ${e.message}`);
+    console.error(`!!! ${f}: i18n 表解析失败： ${e.message}`);
     bad++;
     continue;
   }
@@ -93,14 +93,14 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
     const miss = [...new Set(keysInScript.map(x => x[1]))]
       .filter(k => !(k in cn) && !(k in (COMMON['zh-cn'] || {})));
     if (miss.length) {
-      console.error(`!!! ${f} [zh-cn] 脚本可取得但表中缺少: ${miss.join(', ')}`);
+      console.error(`!!! ${f} [zh-cn] 脚本可取得但表中缺少： ${miss.join(', ')}`);
       bad++;
     }
   }
   for (const lang of Object.keys(T).filter(l => l !== 'zh-cn')) {
     const miss = [...keys].filter(k => !(k in T[lang]));
     if (miss.length) {
-      console.error(`!!! ${f} [${lang}] 缺少翻译: ${miss.join(', ')}`);
+      console.error(`!!! ${f} [${lang}] 缺少翻译： ${miss.join(', ')}`);
       bad++;
     }
   }

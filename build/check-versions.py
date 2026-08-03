@@ -87,7 +87,7 @@ def published(index):
 def main(overlay, index, listfile):
     overlay, index = pathlib.Path(overlay), pathlib.Path(index)
     if not index.exists():
-        print(f"!! 索引不存在: {index}")
+        print(f"!! 索引不存在： {index}")
         return 1
 
     wanted = {l.strip() for l in pathlib.Path(listfile).read_text().splitlines()
@@ -196,11 +196,11 @@ def list_newcomers(overlay, listfile):
 if __name__ == "__main__":
     if sys.argv[1:2] == ["--retire"]:
         if len(sys.argv) != 4:
-            sys.exit("用法: check-versions.py --retire OVERLAY PACKAGES.TXT")
+            sys.exit("用法： check-versions.py --retire OVERLAY PACKAGES.TXT")
         sys.exit(list_retirable(sys.argv[2], sys.argv[3]))
     if sys.argv[1:2] == ["--newcomers"]:
         if len(sys.argv) != 4:
-            sys.exit("用法: check-versions.py --newcomers OVERLAY PACKAGES.TXT")
+            sys.exit("用法： check-versions.py --newcomers OVERLAY PACKAGES.TXT")
         sys.exit(list_newcomers(sys.argv[2], sys.argv[3]))
     if len(sys.argv) != 4:
         sys.exit(__doc__)

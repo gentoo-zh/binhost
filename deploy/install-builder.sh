@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-REMOTE="${REMOTE:?用法: REMOTE=\"ssh ...\" $0}"
+REMOTE="${REMOTE:?用法： REMOTE=\"ssh ...\" $0}"
 ROOT="${ROOT:-/var/lib/binhost}"
 SIGNING_KEY="${SIGNING_KEY:?需要签名密钥指纹}"
 BUILD_USER="${BUILD_USER:-adminc3b9c6}"
