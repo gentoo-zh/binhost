@@ -230,9 +230,19 @@ def recycle(path):
 
 
 def reap(orphan, paths, grace=None, budget=None):
-    grace = GRACE_SECONDS if grace is None else grace
+    """Recycle orphans past the grace period, holding the state file's lock.
 
+    The whole read, recycle and write is one transaction. Two runs that each
+    read the same state would write back stale timestamps, and a file that
+    reappears under the same name would then skip the grace period entirely.
+    """
+    grace = GRACE_SECONDS if grace is None else grace
     state = pathlib.Path(STATE)
+    with locked(state):
+        return _reap_locked(orphan, paths, grace, budget, state)
+
+
+def _reap_locked(orphan, paths, grace, budget, state):
     try:
         seen = json.loads(state.read_text())
     except (OSError, ValueError):
