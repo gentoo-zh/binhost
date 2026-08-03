@@ -28,6 +28,7 @@ INDEX = os.environ.get("INDEX", "")
 DIST_INDEX = pathlib.Path(os.environ.get("DIST_INDEX", OUT.parent / "distfiles-index.json"))
 
 CPV = re.compile(r"^CPV: (\S+)", re.M)
+STANZA = re.compile(r"^(\w+): (.*)$", re.M)
 
 
 def field(text, name):
@@ -79,6 +80,35 @@ def read_built():
     return out
 
 
+def read_deps():
+    """The ::gentoo packages in the index, newest version of each.
+
+    They are published alongside the overlay's own packages but are not part of
+    the build list, so the site has to name them separately rather than let a
+    reader take the overlay list for the whole index.
+    """
+    if not INDEX:
+        return []
+    p = pathlib.Path(INDEX)
+    if not p.exists():
+        return []
+    best = {}
+    for s in p.read_text(errors="ignore").split("\n\n")[1:]:
+        f = dict(STANZA.findall(s))
+        cpv = f.get("CPV")
+        if not cpv or f.get("REPO") == "gentoo-zh":
+            continue
+        parts = catpkgsplit(cpv)
+        if not parts:
+            continue
+        cp = f"{parts[0]}/{parts[1]}"
+        ver = parts[2] + ("-" + parts[3] if parts[3] != "r0" else "")
+        cur = best.get(cp)
+        if cur is None or vercmp(ver, cur) > 0:
+            best[cp] = ver
+    return [{"cp": cp, "ver": v} for cp, v in sorted(best.items())]
+
+
 def mirrored():
     try:
         return set(json.loads(DIST_INDEX.read_text())["files"])
@@ -103,6 +133,7 @@ def main(overlay):
 
     excluded = read_excluded()
     built = read_built()
+    deps = read_deps()
     masked = read_mask(overlay)
     out, missing = [], sorted(wanted)
     for pkgdir in sorted(overlay.glob("*/*")):
@@ -148,7 +179,7 @@ def main(overlay):
 
     tmp = OUT.with_suffix(".json.new")
     tmp.write_text(json.dumps(
-        {"generated": int(time.time()), "packages": out},
+        {"generated": int(time.time()), "packages": out, "deps": deps},
         ensure_ascii=False, separators=(",", ":")))
     os.replace(tmp, OUT)
 
@@ -168,13 +199,21 @@ def main(overlay):
         else:
             mark = "src" if all(f in have for f in pkg["dist"]) else "--"
         lines.append(f"{pkg['cp']:<44} {mark}  {pkg['desc']}".rstrip())
+    if deps:
+        lines += ["",
+                  f"# ::gentoo 运行期依赖，{len(deps)} 个",
+                  "# 这些包来自 gentoo 主仓库，因为本站的包用得到才一并发布，"
+                  "不构成完整的官方 binhost",
+                  ""]
+        lines += [f"{d['cp']:<44} {d['ver']}" for d in deps]
+
     tmp_txt = txt.with_suffix(".txt.new")
     tmp_txt.write_text("\n".join(lines) + "\n")
     os.replace(tmp_txt, txt)
 
     with_dist = sum(1 for p in out if p["dist"])
     print(f">>> {len(out)} packages ({sum(p['binhost'] for p in out)} on the binhost "
-          f"list, {with_dist} with distfiles) -> {OUT}")
+          f"list, {with_dist} with distfiles, {len(deps)} ::gentoo deps) -> {OUT}")
     if have is None:
         print("!!! distfiles 索引未能读取，源码一列按无法确定输出", file=sys.stderr)
     return 0

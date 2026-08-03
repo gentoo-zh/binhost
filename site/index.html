@@ -345,7 +345,7 @@ window.MIRROR_I18N = {
     step1: '匯入簽章公鑰', step2: '加入倉庫', step3: '打開 getbinpkg（附加）',
     keyAlt: '也可不安裝該套件，直接下載公鑰檔案，見 <a href="/faq#key-download">FAQ</a>。',
     keyNote: '<code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。沒有它，上面三條 gpg 命令會以 <code>no writable keyring found</code> 失敗——gpg 不會自己建這個目錄，而 portage 只在第一次取二進位套件時才會呼叫它，那已經是第 2、3 步之後了。簽章用的是 getuto 建立的 Portage Local Trust Key，口令在 <code>/etc/portage/gnupg/pass</code>，因此要用 <code>--passphrase-file</code> 讀。驗簽以 <code>portage</code> 使用者執行，該使用者對 trustdb 沒有寫入權限，所以 trustdb 要預先算好。',
-    factPkgs: ' 個二進位套件', factDeps: ' 個附帶的依賴',
+    factPkgs: ' 個 gentoo-zh 套件', factDeps: ' 個一併發布的 ::gentoo 套件',
     factDist: ' 個 distfiles 檔案', factTime: '更新於 ',
     h2contact: '聯絡', ctForum: '論壇'
   },
@@ -368,7 +368,7 @@ window.MIRROR_I18N = {
     step1: 'Import the signing key', step2: 'Add the repository', step3: 'Enable getbinpkg (append)',
     keyAlt: 'You can fetch the key file directly instead of installing the package; see the <a href="/faq#key-download">FAQ</a>.',
     keyNote: '<code>getuto</code> creates <code>/etc/portage/gnupg</code>. Without it the three gpg commands above fail with <code>no writable keyring found</code>: gpg does not create the directory itself, and portage only invokes getuto when it first fetches a binary package, which is after steps 2 and 3. The signature is made with the Portage Local Trust Key getuto created. Its passphrase is in <code>/etc/portage/gnupg/pass</code>, hence <code>--passphrase-file</code>. Verification runs as the <code>portage</code> user, which has no write access to the trustdb, so the trustdb must be computed beforehand.',
-    factPkgs: ' binary packages', factDeps: ' bundled dependencies',
+    factPkgs: ' gentoo-zh packages', factDeps: ' ::gentoo packages alongside',
     factDist: ' distfiles', factTime: 'updated ',
     h2contact: 'Contact', ctForum: 'Forum'
   }
@@ -407,8 +407,8 @@ window.MIRROR_I18N = {
     if (!data) return;
     var bin = data[0], dist = data[1], job = data[2], html = '';
     var own = bin && (typeof bin.overlay === 'number' ? bin.overlay : bin.packages);
-    if (own) html += fact(own, s('factPkgs', ' 个二进制包'), bin.generated);
-    if (bin && bin.deps) html += fact(bin.deps, s('factDeps', ' 个附带的依赖'), 0);
+    if (own) html += fact(own, s('factPkgs', ' 个 gentoo-zh 包'), bin.generated);
+    if (bin && bin.deps) html += fact(bin.deps, s('factDeps', ' 个一并发布的 ::gentoo 包'), 0);
     if (dist && dist.files) html += fact(dist.files, s('factDist', ' 个 distfiles 文件'), dist.generated);
     var fresh = job && job.generated &&
                 (Date.now() / 1000 - job.generated) < 3 * 3600;
