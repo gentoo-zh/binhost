@@ -173,6 +173,30 @@
    "x.service",
    "[Unit]\nDescription=把失败推出去\n",
    "emitted"
+  ],
+  [
+   "操作提示写成口语的处置",
+   "run.sh",
+   "echo \"没有一个版本可构建，该移出清单\"\n",
+   "emitted"
+  ],
+  [
+   "把补全说成自己补上",
+   "page.html",
+   "var T = { a: '地址不写 distfiles/，portage 会自己补上。' };\n",
+   "emitted"
+  ],
+  [
+   "把第二条连线说成另开一条",
+   "run.sh",
+   "echo \"另开一条连线成功\"\n",
+   "emitted"
+  ],
+  [
+   "把重新执行说成之后再试",
+   "run.sh",
+   "echo \"会自动回滚，之后再试\"\n",
+   "emitted"
   ]
  ],
  "clean": {

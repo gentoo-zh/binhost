@@ -68,7 +68,8 @@
 
   <p class="lead" data-i18n-html="lead">
     gentoo-zh overlay 的二进制包与 distfiles 镜像。两者相互独立，按需分别配置。
-    ::gentoo 的部分用 <a href="https://gentoozh.org/mirrorlist/">社区镜像列表</a>里的节点。
+    二进制包里另附带这些包运行期依赖所需的部分 ::gentoo 包，不替代官方完整 binhost；
+    distfiles 的 ::gentoo 部分用 <a href="https://gentoozh.org/mirrorlist/">社区镜像列表</a>里的节点。
   </p>
 
   <p class="facts" id="facts"></p>
@@ -82,7 +83,7 @@
 
   <p class="note" data-i18n-html="distNote">
     这里只有 overlay 的源码，不能替代官方源，因此是追加而非替换。
-    地址不写 <code>distfiles/</code>，portage 会自己补上。
+    地址不写 <code>distfiles/</code>，portage 会自动附加。
     这里把镜像都列出：<code>GENTOO_MIRRORS</code> 是按顺序尝试的列表，
     选中的无法获取时会落到后面的地址。
   </p>
@@ -334,17 +335,18 @@ window.MIRROR_I18N = {
     modeQuick: '快速設定',
     quickNote: '這一段把三步一次做完。想知道每一步在做什麼，切到手動設定。',
     title: '設定',
-    lead: 'gentoo-zh overlay 的二進位套件與 distfiles 鏡像。兩者相互獨立，按需分別設定。::gentoo 的部分用 <a href="https://gentoozh.org/zh-tw/mirrorlist/">社群鏡像列表</a>裡的節點。',
+    lead: 'gentoo-zh overlay 的二進位套件與 distfiles 鏡像。兩者相互獨立，按需分別設定。二進位套件裡另附帶這些套件執行期依賴所需的部分 ::gentoo 套件，不取代官方完整 binhost；distfiles 的 ::gentoo 部分用 <a href="https://gentoozh.org/zh-tw/mirrorlist/">社群鏡像列表</a>裡的節點。',
     h2bin: '二進位套件', h2dist: 'Distfiles',
     sigNote: '驗簽由第 2 步的 <code>verify-signature = true</code> 提供，只作用於本站。<code>FEATURES=binpkg-request-signature</code> 是全域的，會覆蓋它，也會要求你自己用 <code>FEATURES=buildpkg</code> 建出來的套件帶簽章——那些套件預設沒有簽章，於是每次本機建置都會在合併時報 <code>GnuPG verification failed</code>。要開它就得同時配好 <code>binpkg-signing</code> 與本機簽章金鑰。',
     srcLabel: '鏡像', srcLabelFirst: '優先', srcCernet: '教育網聯合鏡像站', srcNju: '南京大學', srcNyist: '南陽理工', srcHernet: '河南教育網', srcOrigin: '來源站',
     repoNote: '預設是南京大學，中國大陸下載會更快；來源站在美國，部分地區下載可能較為緩慢。兩邊的套件都是一樣的，簽章也是同一份，更換哪個都不會影響驗簽。',
-    distNote: '這裡只有 overlay 的原始碼，不能替代官方來源，因此是追加而非替換。位址不寫 <code>distfiles/</code>，portage 會自己補上。這裡把鏡像都列出：<code>GENTOO_MIRRORS</code> 是按順序嘗試的列表，選中的無法取得時會落到後面的位址。',
+    distNote: '這裡只有 overlay 的原始碼，不能替代官方來源，因此是追加而非替換。位址不寫 <code>distfiles/</code>，portage 會自動附加。這裡把鏡像都列出：<code>GENTOO_MIRRORS</code> 是按順序嘗試的列表，選中的無法取得時會落到後面的位址。',
     distOptOut: '因版權等原因不希望某個套件被鏡像時，在其 ebuild 中加入 <code>RESTRICT="mirror"</code>，同步工具會跳過。',
     step1: '匯入簽章公鑰', step2: '加入倉庫', step3: '打開 getbinpkg（附加）',
     keyAlt: '也可不安裝該套件，直接下載公鑰檔案，見 <a href="/faq#key-download">FAQ</a>。',
     keyNote: '<code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。沒有它，上面三條 gpg 命令會以 <code>no writable keyring found</code> 失敗——gpg 不會自己建這個目錄，而 portage 只在第一次取二進位套件時才會呼叫它，那已經是第 2、3 步之後了。簽章用的是 getuto 建立的 Portage Local Trust Key，口令在 <code>/etc/portage/gnupg/pass</code>，因此要用 <code>--passphrase-file</code> 讀。驗簽以 <code>portage</code> 使用者執行，該使用者對 trustdb 沒有寫入權限，所以 trustdb 要預先算好。',
-    factPkgs: ' 個二進位套件', factDist: ' 個 distfiles 檔案', factTime: '更新於 ',
+    factPkgs: ' 個二進位套件', factDeps: ' 個附帶的依賴',
+    factDist: ' 個 distfiles 檔案', factTime: '更新於 ',
     h2contact: '聯絡', ctForum: '論壇'
   },
   'en': {
@@ -356,7 +358,7 @@ window.MIRROR_I18N = {
     modeQuick: 'Quick setup',
     quickNote: 'One block, all three steps. Switch to step by step to see what each one does.',
     title: 'Setup',
-    lead: 'Binary package and distfiles mirror for the gentoo-zh overlay. The two are independent and configured separately. For ::gentoo, use a node from the <a href="https://gentoozh.org/en/mirrorlist/">community mirror list</a>.',
+    lead: 'Binary package and distfiles mirror for the gentoo-zh overlay. The two are independent and configured separately. The binary packages also carry the ::gentoo runtime dependencies those packages need, which is not a replacement for the official binhost. For ::gentoo distfiles, use a node from the <a href="https://gentoozh.org/en/mirrorlist/">community mirror list</a>.',
     h2bin: 'Binary packages', h2dist: 'Distfiles',
     sigNote: 'Verification comes from <code>verify-signature = true</code> in step 2 and applies to this repository only. <code>FEATURES=binpkg-request-signature</code> is global, overrides that, and also demands a signature on the packages you build yourself with <code>FEATURES=buildpkg</code>. Those are unsigned by default, so every local build fails to merge with <code>GnuPG verification failed</code>. Enabling it means setting up <code>binpkg-signing</code> and a local signing key as well.',
     srcLabel: 'Mirror', srcLabelFirst: 'First', srcCernet: 'CERNET', srcNju: 'Nanjing University', srcNyist: 'NYIST', srcHernet: 'HERNET', srcOrigin: 'Origin',
@@ -366,7 +368,8 @@ window.MIRROR_I18N = {
     step1: 'Import the signing key', step2: 'Add the repository', step3: 'Enable getbinpkg (append)',
     keyAlt: 'You can fetch the key file directly instead of installing the package; see the <a href="/faq#key-download">FAQ</a>.',
     keyNote: '<code>getuto</code> creates <code>/etc/portage/gnupg</code>. Without it the three gpg commands above fail with <code>no writable keyring found</code>: gpg does not create the directory itself, and portage only invokes getuto when it first fetches a binary package, which is after steps 2 and 3. The signature is made with the Portage Local Trust Key getuto created. Its passphrase is in <code>/etc/portage/gnupg/pass</code>, hence <code>--passphrase-file</code>. Verification runs as the <code>portage</code> user, which has no write access to the trustdb, so the trustdb must be computed beforehand.',
-    factPkgs: ' binary packages', factDist: ' distfiles', factTime: 'updated ',
+    factPkgs: ' binary packages', factDeps: ' bundled dependencies',
+    factDist: ' distfiles', factTime: 'updated ',
     h2contact: 'Contact', ctForum: 'Forum'
   }
 };
@@ -405,6 +408,7 @@ window.MIRROR_I18N = {
     var bin = data[0], dist = data[1], job = data[2], html = '';
     var own = bin && (typeof bin.overlay === 'number' ? bin.overlay : bin.packages);
     if (own) html += fact(own, s('factPkgs', ' 个二进制包'), bin.generated);
+    if (bin && bin.deps) html += fact(bin.deps, s('factDeps', ' 个附带的依赖'), 0);
     if (dist && dist.files) html += fact(dist.files, s('factDist', ' 个 distfiles 文件'), dist.generated);
     var fresh = job && job.generated &&
                 (Date.now() / 1000 - job.generated) < 3 * 3600;

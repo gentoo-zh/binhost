@@ -146,15 +146,15 @@ def main(overlay, index, listfile):
         else:
             print(f"    已移除 {cp}  overlay 中不存在该软件包，可能被删除或改了分类，清单需同步")
     for cp in blocked:
-        print(f"    已屏蔽 {cp}  没有一个版本可构建，该移出清单")
+        print(f"    已屏蔽 {cp}  没有一个版本可构建，应从清单移除")
     for cp in live:
         print(f"    仅 9999 {cp}  只有 live ebuild，无法构建可发布的版本")
     for cp in banned:
-        print(f"    不可散布 {cp}  全部可用版本都是 RESTRICT=bindist，该移出清单")
+        print(f"    不可散布 {cp}  全部可用版本都是 RESTRICT=bindist，应从清单移除")
     for cp in unclear:
         print(f"    待人工确认 {cp}  RESTRICT 用了变量或条件式，无法静态判定，未做任何处置")
     for cp in upstreamed:
-        print(f"    已进主树 {cp}  ::gentoo 也有这个包，该判断是否还要自己构建")
+        print(f"    已进主树 {cp}  ::gentoo 也有这个包，需确认是否仍由本站构建")
     for cp, ver in fresh:
         print(f"    新包   {cp}  {ver}  有构建系统但不在清单，需要判断是否收录")
 
