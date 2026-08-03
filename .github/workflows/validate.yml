@@ -30,6 +30,12 @@ jobs:
       - name: Staging filter keeps only what is ours
         run: python3 tests/test-stage-index.py
 
+      - name: Published index satisfies its own runtime dependencies
+        run: python3 tests/test-verify-deps.py
+
+      - name: Package list separates the two repositories
+        run: python3 tests/test-gen-packages.py
+
       - name: Reaping orphans deletes the right file
         run: python3 tests/test-audit-distfiles.py
 
