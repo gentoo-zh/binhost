@@ -20,3 +20,4 @@ media-plugins/osdlyrics	configure 需要 XML::Parser，基础镜像补 perl-clea
 net-proxy/proxy-server		ebuild 没有 KEYWORDS 声明，任何架构都装不上
 sys-kernel/mkinitcpio		需要 dbus[systemd]，与我们的 OpenRC profile 不兼容
 sys-kernel/xanmod-kernel	内核配置因人而异，发预编译的等于把我们的配置强加给用户
+app-dicts/fcitx-pinyin-moegirl	许可证 CC-BY-NC-SA-3.0 不允许再分发，整体解析会因它中止
