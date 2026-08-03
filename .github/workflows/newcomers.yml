@@ -131,6 +131,8 @@ jobs:
           [ -n "${URLS:-}" ] || exit 0
           text=$(printf '%s\n%s' "overlay 有待审核的新包，合并表示收录，不收录请关闭 PR：" "${URLS}")
           curl -fsS --max-time 20 -o /dev/null \
-            "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=${TELEGRAM_CHAT}" \
-            --data-urlencode "text=${text}"
+            --data-urlencode "text=${text}" \
+            --config - <<EOF
+          url = "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage"
+          EOF

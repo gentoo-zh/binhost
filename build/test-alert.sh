@@ -10,6 +10,10 @@ mkdir -p "${tmp}/bin"
 cat > "${tmp}/bin/curl" <<'EOF'
 #!/bin/bash
 printf '%s\n' "$@" >> "${CURL_LOG}"
+printf '%s\n' "$@" >> "${CURL_LOG}.argv"
+for a in "$@"; do
+    [ "$a" = "--config" ] && { cat >> "${CURL_LOG}"; break; }
+done
 EOF
 chmod +x "${tmp}/bin/curl"
 export PATH="${tmp}/bin:${PATH}"
@@ -115,6 +119,23 @@ else
     fi
 fi
 chmod 644 "${tmp}/full.conf"
+
+SECRET=SeCrEtToKeN0123456789
+: > "${tmp}/tok.log"; : > "${tmp}/tok.log.argv"
+printf 'TELEGRAM_TOKEN=%s\nTELEGRAM_CHAT=c\n' "${SECRET}" > "${tmp}/tok.conf"
+CURL_LOG="${tmp}/tok.log" ALERT_CONF="${tmp}/tok.conf" bash -c '
+    . "'"${HERE}"'/alert.sh"
+    alert "hello"' >/dev/null 2>&1
+if grep -q "${SECRET}" "${tmp}/tok.log" 2>/dev/null; then
+    echo "  ✓ 令牌确实传给了 curl"; pass=$((pass + 1))
+else
+    echo "  ✗ 令牌没有传给 curl，这个用例本身失效了"; fail=$((fail + 1))
+fi
+if grep -q "${SECRET}" "${tmp}/tok.log.argv" 2>/dev/null; then
+    echo "  ✗ 令牌出现在 curl 的命令行参数里，ps 可见"; fail=$((fail + 1))
+else
+    echo "  ✓ 令牌不在 curl 的命令行参数里"; pass=$((pass + 1))
+fi
 
 echo "  通过 ${pass}，未通过 ${fail}"
 exit $(( fail > 0 ))

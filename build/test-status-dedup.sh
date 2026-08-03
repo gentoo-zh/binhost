@@ -22,7 +22,11 @@ setup() {
     mkdir -p "${d}/bin"
     cat > "${d}/bin/curl" <<EOF
 #!/bin/bash
+body=""
 for a in "\$@"; do
+    [ "\$a" = "--config" ] && { body=\$(cat); break; }
+done
+for a in "\$@" "\${body}"; do
     case "\$a" in
         *api.telegram.org*) echo CALL >> "${d}/sent.log"; exit 0 ;;
     esac

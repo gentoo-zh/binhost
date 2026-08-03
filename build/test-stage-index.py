@@ -260,10 +260,23 @@ case("目的地干净时照常写入",
 
 case("某个包被加了 bindist 时只跳过它", lambda: (
     lambda r: cpvs(r[0]) == ["app-misc/a-1", "app-misc/c-1"]
-              and r[2] is None and r[3] == ["app-misc/b-1"]
+              and r[2] is None
+              and [c for c, _ in r[3]] == ["app-misc/b-1"]
 )(run([stanza("app-misc/a-1"),
        stanza("app-misc/b-1", restrict="bindist"),
        stanza("app-misc/c-1")])))
+
+case("被跳过的那个连它的路径一起记下来，好从公开路径移除", lambda: (
+    run([stanza("app-misc/a-1"),
+         stanza("app-misc/b-1", restrict="bindist")])[3]
+    == [("app-misc/b-1", "app-misc/b/b-1.gpkg.tar")]))
+
+case("RESTRICT 里带 bindist 前缀的其他词不算", lambda: (
+    not run([stanza("app-misc/b-1", restrict="bindistfoo")])[3]))
+
+case("RESTRICT 是多个词时按整词认", lambda: (
+    [c for c, _ in run([stanza("app-misc/b-1", restrict="mirror bindist strip")])[3]]
+    == ["app-misc/b-1"]))
 
 case("bindist 的那一个不会进索引", lambda: (
     "app-misc/b-1" not in cpvs(run([stanza("app-misc/a-1"),

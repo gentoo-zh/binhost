@@ -70,9 +70,11 @@ if (( ${#text} > 3500 )); then
 fi
 
 if ! curl -fsS --max-time 20 -o /dev/null \
-    --url "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
     --data-urlencode "chat_id=${TELEGRAM_CHAT}" \
-    --data-urlencode "text=${text}"
+    --data-urlencode "text=${text}" \
+    --config - <<EOF
+url = "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage"
+EOF
 then
     echo "!! 告警发送失败（${#text} 字）" >&2
 fi

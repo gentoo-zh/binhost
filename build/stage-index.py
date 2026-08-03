@@ -107,7 +107,7 @@ def select(entries, overlay=None, excluded=None):
             continue
 
         if "bindist" in f.get("RESTRICT", "").split():
-            refused.append(cpv)
+            refused.append((cpv, str(safe_path(f.get("PATH", "")))))
             skipped += 1
             continue
 
@@ -146,9 +146,11 @@ def main(pkgdir, stage, overlay=None, rev=""):
     kept, skipped, error, refused = select(entries, overlay)
     if error:
         sys.exit(error)
-    for cpv in refused:
+    for cpv, _ in refused:
         print(f"!! 不发布 {cpv}：RESTRICT=bindist，不可再散布；该把它移出 packages.txt",
               file=sys.stderr)
+    (stage / "quarantine.txt").write_text(
+        "".join(f"{rel}\n" for _, rel in sorted(refused)))
 
     stanzas = []
     src_root = os.open(pkgdir, os.O_RDONLY | os.O_DIRECTORY)
