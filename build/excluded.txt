@@ -1,14 +1,17 @@
-# 不收录的包，连同原因。
+# Packages that are not carried, with the reason for each.
 #
-# 和 packages.txt 互斥：validate.py 会拒绝同时出现在两份文件里的包。
-# 写在这里的不会被构建，站点上标成不收录并显示原因。
+# Mutually exclusive with packages.txt: validate.py rejects any package that
+# appears in both. Nothing here is built; the site marks it as not carried and
+# shows the reason.
 #
-# 两类：
-#   一是结论稳定的——许可证、profile 不兼容、上游禁止再分发，不会自己变好；
-#   二是一直编不过的——写清楚试过几轮，环境侧的原因排除掉之后要回来复查，
-#     别让它就这么烂在清单外面。
+# Two kinds belong here. The first is a settled verdict -- a licence, an
+# incompatible profile, an upstream that forbids redistribution -- which will
+# not resolve on its own. The second is a package that has failed to build
+# round after round: say how many rounds were tried, and come back to it once
+# an environment-side cause has been ruled out, rather than leaving it here
+# forever.
 #
-# 格式：category/package  <TAB>  原因
+# Format: category/package  <TAB>  reason
 
 app-i18n/fcitx-kkc		依赖 libkkc 的 configure 需要 XML::Parser，基础镜像补 perl-cleaner 后复查
 app-misc/crush			许可证 FSL-1.1-MIT 不允许再分发
