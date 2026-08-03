@@ -36,10 +36,24 @@ def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None, PATH=None,
     return "\n".join(lines)
 
 
-def run(stanzas, overlay_has=None, excluded=frozenset(), masked=(), with_deps=False):
+def fake_lookup(restricts=None):
+    """(cpv, repo) -> RESTRICT. None stands for metadata not readable."""
+    restricts = restricts or {}
+
+    def get(cpv, repo):
+        if (cpv, repo) in restricts:
+            return restricts[(cpv, repo)]
+        return restricts.get(cpv, "")
+    return get
+
+
+def run(stanzas, overlay_has=None, excluded=frozenset(), masked=(), with_deps=False,
+        restricts=None):
     _, entries = stage_index.parse(HEADER + "\n\n" + "\n\n".join(stanzas) + "\n")
+    lookup = fake_lookup(restricts)
     if overlay_has is None:
-        return stage_index.select(entries, excluded=excluded, with_deps=with_deps)
+        return stage_index.select(entries, excluded=excluded, with_deps=with_deps,
+                                  lookup=lookup)
     with tempfile.TemporaryDirectory() as tmp:
         ov = pathlib.Path(tmp)
         for cpv in overlay_has:
@@ -52,7 +66,7 @@ def run(stanzas, overlay_has=None, excluded=frozenset(), masked=(), with_deps=Fa
         (prof / "repo_name").write_text("gentoo-zh\n")
         (prof / "package.mask").write_text(
             "".join(f"# masked for removal\n{cp}\n" for cp in masked))
-        return stage_index.select(entries, ov, excluded=excluded)
+        return stage_index.select(entries, ov, excluded=excluded, lookup=lookup)
 
 
 def cpvs(kept):
@@ -219,7 +233,8 @@ def _escape(shape):
         (pkg / "Packages").write_text(
             HEADER + "\n\n" + stanza("app-misc/a-1", PATH="app-misc/a-1.gpkg.tar") + "\n")
         try:
-            rc = stage_index.main(str(pkg), str(stage))
+            rc = stage_index.main(str(pkg), str(stage),
+                                  lookup=lambda cpv, repo: "")
         except SystemExit as e:
             rc = e.code
         out = stage / "app-misc" / "a-1.gpkg.tar"
@@ -253,7 +268,8 @@ def _dest_escape(shape):
         (pkg / "Packages").write_text(
             HEADER + "\n\n" + stanza("app-misc/a-1", PATH="app-misc/a-1.gpkg.tar") + "\n")
         try:
-            rc = stage_index.main(str(pkg), str(stage))
+            rc = stage_index.main(str(pkg), str(stage),
+                                  lookup=lambda cpv, repo: "")
         except SystemExit as e:
             rc = e.code
         leaked = any(p.is_file() and p.name == "a-1.gpkg.tar" for p in outside.rglob("*"))
@@ -270,7 +286,7 @@ case("目的地干净时照常写入",
 case("某个包被加了 bindist 时只跳过它", lambda: (
     lambda r: cpvs(r[0]) == ["app-misc/a-1", "app-misc/c-1"]
               and r[2] is None
-              and [c for c, _ in r[3]] == ["app-misc/b-1"]
+              and [c for c, _, _ in r[3]] == ["app-misc/b-1"]
 )(run([stanza("app-misc/a-1"),
        stanza("app-misc/b-1", restrict="bindist"),
        stanza("app-misc/c-1")])))
@@ -278,49 +294,96 @@ case("某个包被加了 bindist 时只跳过它", lambda: (
 case("被跳过的那个连它的路径一起记下来，好从公开路径移除", lambda: (
     run([stanza("app-misc/a-1"),
          stanza("app-misc/b-1", restrict="bindist")])[3]
-    == [("app-misc/b-1", "app-misc/b/b-1.gpkg.tar")]))
+    == [("app-misc/b-1", "app-misc/b/b-1.gpkg.tar", "yes")]))
+
+case("无法读取 metadata 与 bindist 分别标注，操作提示才不会指错方向", lambda: (
+    [s for _, _, s in with_meta([stanza("app-misc/a-1"), stanza("app-misc/b-1")],
+                                {("app-misc/a-1", "gentoo-zh"): "bindist"},
+                                default=None)[3]]
+    == ["yes", "unknown"]))
 
 case("RESTRICT 里带 bindist 前缀的其他词不算", lambda: (
     not run([stanza("app-misc/b-1", restrict="bindistfoo")])[3]))
 
 case("RESTRICT 是多个词时按整词认", lambda: (
-    [c for c, _ in run([stanza("app-misc/b-1", restrict="mirror bindist strip")])[3]]
+    [c for c, _, _ in run([stanza("app-misc/b-1", restrict="mirror bindist strip")])[3]]
     == ["app-misc/b-1"]))
 
 case("bindist 的那一个不会进索引", lambda: (
     "app-misc/b-1" not in cpvs(run([stanza("app-misc/a-1"),
                                     stanza("app-misc/b-1", restrict="bindist")])[0])))
 
-def with_overlay(stanzas, ebuilds):
-    """Stage against an overlay whose ebuilds may differ from the stanzas."""
+def with_meta(stanzas, restricts, default=""):
+    """restricts maps (cpv, repo) to RESTRICT. default=None fakes a read failure."""
     _, entries = stage_index.parse(HEADER + "\n\n" + "\n\n".join(stanzas) + "\n")
-    with tempfile.TemporaryDirectory() as tmp:
-        ov = pathlib.Path(tmp)
-        (ov / "profiles").mkdir(parents=True)
-        (ov / "profiles" / "package.mask").write_text("")
-        for cpv, body in ebuilds.items():
-            cp, ver = cpv.rsplit("-", 1)
-            d = ov / cp
-            d.mkdir(parents=True, exist_ok=True)
-            (d / f"{cp.split('/')[1]}-{ver}.ebuild").write_text(body)
-        return stage_index.select(entries, ov, excluded=set(), with_deps=False)
+
+    def lookup(cpv, repo):
+        return restricts.get((cpv, repo), default)
+    return stage_index.select(entries, None, excluded=set(), with_deps=False,
+                              lookup=lookup)
 
 
-case("旧 stanza 无 RESTRICT，但 overlay 已加 bindist，仍要拒绝", lambda: (
-    (lambda r: cpvs(r[0]) == [] and [c for c, _ in r[3]] == ["app-misc/example-1"])(
-        with_overlay([stanza("app-misc/example-1")],
-                     {"app-misc/example-1": 'EAPI=8\nRESTRICT="bindist"\n'}))))
+def only_refused(result, cpv):
+    return cpvs(result[0]) == [] and [c for c, _, _ in result[3]] == [cpv]
 
-case("overlay 未声明 bindist 时正常发布", lambda: (
-    cpvs(with_overlay([stanza("app-misc/example-1")],
-                      {"app-misc/example-1": 'EAPI=8\nRESTRICT="strip"\n'})[0])
+
+case("旧 stanza 无 RESTRICT，但当前 metadata 已加 bindist，仍要拒绝", lambda: (
+    only_refused(with_meta([stanza("app-misc/example-1")],
+                           {("app-misc/example-1", "gentoo-zh"): "bindist"}),
+                 "app-misc/example-1")))
+
+case("当前 metadata 没有 bindist 时正常发布", lambda: (
+    cpvs(with_meta([stanza("app-misc/example-1")],
+                   {("app-misc/example-1", "gentoo-zh"): "strip"})[0])
     == ["app-misc/example-1"]))
 
-case("overlay 的 RESTRICT 无法静态判定时拒绝", lambda: (
-    [c for c, _ in with_overlay(
-        [stanza("app-misc/example-1")],
-        {"app-misc/example-1": 'EAPI=8\nR="x"\nRESTRICT="${R}"\n'})[3]]
+case("eclass 加进来的 bindist 同样识别", lambda: (
+    only_refused(with_meta([stanza("app-misc/example-1")],
+                           {("app-misc/example-1", "gentoo-zh"): "strip bindist"}),
+                 "app-misc/example-1")))
+
+case("无法读取 metadata 时拒绝发布，不回退到 stanza", lambda: (
+    only_refused(with_meta([stanza("app-misc/example-1")], {}, default=None),
+                 "app-misc/example-1")))
+
+case("按 stanza 的 REPO 选来源", lambda: (
+    only_refused(with_meta([stanza("app-misc/example-1", repo="gentoo-zh")],
+                           {("app-misc/example-1", "gentoo-zh"): "bindist",
+                            ("app-misc/example-1", "gentoo"): ""},
+                           default=None),
+                 "app-misc/example-1")))
+
+case("同名 CPV 在另一个仓库受限时不影响本仓库的判定", lambda: (
+    cpvs(with_meta([stanza("app-misc/example-1", repo="gentoo-zh")],
+                   {("app-misc/example-1", "gentoo-zh"): "",
+                    ("app-misc/example-1", "gentoo"): "bindist"},
+                   default=None)[0])
     == ["app-misc/example-1"]))
+
+def portage_lookup_error(overlay):
+    try:
+        stage_index.portage_restrict(overlay)
+    except stage_index.MetadataUnavailable as e:
+        return str(e)
+    return None
+
+
+case("仓库路径解析不到指定位置时不返回可用的查询函数", lambda: (
+    portage_lookup_error("/nonexistent/overlay") is not None))
+
+case("路径不符时报出期望的位置", lambda: (
+    "/nonexistent/overlay" in (portage_lookup_error("/nonexistent/overlay") or "")))
+
+case("没有 overlay 就无法确认来源，整轮不发布", lambda: (
+    (lambda r: r[0] == [] and "no overlay to resolve gentoo-zh against" in (r[2] or ""))(
+        stage_index.select(
+            stage_index.parse(HEADER + "\n\n" + stanza("app-misc/example-1") + "\n")[1],
+            None, excluded=set(), with_deps=False))))
+
+case("stanza 建成时受限，即使当前 metadata 已解除也不发布", lambda: (
+    only_refused(with_meta([stanza("app-misc/example-1", restrict="bindist")],
+                           {("app-misc/example-1", "gentoo-zh"): ""}),
+                 "app-misc/example-1")))
 
 case("IDEPEND 里的包也要一起发", lambda: (
     deps([stanza("app-misc/a-1", idepend="dev-util/tool"),
@@ -380,7 +443,7 @@ case("use 条件式里的依赖一并算上", lambda: (
 
 case("依赖里带 bindist 的仍然被拒", lambda: (
     (lambda r: cpvs(r[0]) == ["app-misc/a-1"]
-               and [c for c, _ in r[3]] == ["dev-libs/lib-1"])(
+               and [c for c, _, _ in r[3]] == ["dev-libs/lib-1"])(
         run([stanza("app-misc/a-1", rdepend="dev-libs/lib"),
              stanza("dev-libs/lib-1", repo="gentoo", restrict="bindist")],
             with_deps=True))))
