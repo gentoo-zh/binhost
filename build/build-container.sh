@@ -139,6 +139,7 @@ rm -rf "${STAGE}.new"
 install -dm755 "${STAGE}.new"
 
 OVERLAY_REV="$(git -C "${OVERLAY}" rev-parse HEAD 2>/dev/null || echo '')" \
+    GENTOO_TREE="${TREE}" \
     python3 "$(dirname "$0")/stage-index.py" "${PKGDIR}" "${STAGE}.new" "${OVERLAY}"
 
 gzip -kf "${STAGE}.new/Packages"

@@ -13,7 +13,7 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from ebuilds import (                                       # noqa: E402
-    Masks, bindist_state, dep_atoms, read_mask, split_cpv,
+    Masks, dep_atoms, read_mask, split_cpv,
 )
 
 
@@ -83,31 +83,60 @@ GENTOO_TREE = os.environ.get("GENTOO_TREE", "/var/db/repos/gentoo")
 RUNTIME_FIELDS = ("RDEPEND", "PDEPEND", "IDEPEND")
 
 
-def ebuild_for(cpv, *roots):
-    cp, ver = split_cpv(cpv)
-    if ver is None:
-        return None
-    pn = cp.split("/", 1)[1]
-    for root in roots:
-        if root is None:
-            continue
-        eb = pathlib.Path(root) / cp / f"{pn}-{ver}.ebuild"
-        if eb.is_file():
-            return eb
-    return None
+class MetadataUnavailable(Exception):
+    pass
 
 
-def effective_bindist(cpv, f, overlay):
-    """yes / no / unknown, read from the ebuild that is in the tree right now.
+def portage_restrict(overlay):
+    """(cpv, repo) -> RESTRICT from Portage metadata, eclasses included.
 
-    The cached stanza records what RESTRICT was when the binary package was
-    built. Upstream adding bindist afterwards does not by itself make Portage
-    rebuild it, so an old stanza can still carry no RESTRICT at all.
+    The repository is selected per stanza because the same CPV can exist in
+    both trees with different RESTRICT. Locations are pinned to the trees this
+    build used rather than whichever checkouts the host has registered, and are
+    passed through an explicit config so the result does not depend on whether
+    something else imported portage first.
+
+    USE conditionals are left unevaluated, so bindist behind any flag counts.
     """
-    eb = ebuild_for(cpv, overlay, GENTOO_TREE)
-    if eb is not None:
-        return bindist_state(eb.read_text(errors="ignore"))
-    return "yes" if "bindist" in f.get("RESTRICT", "").split() else "no"
+    env = dict(os.environ)
+    env["PORTAGE_REPOSITORIES"] = (
+        "[DEFAULT]\nmain-repo = gentoo\n\n"
+        f"[gentoo]\nlocation = {GENTOO_TREE}\n\n"
+        f"[gentoo-zh]\nlocation = {overlay}\nmasters = gentoo\n")
+    try:
+        import portage
+        db = portage.portdbapi(mysettings=portage.config(env=env))
+        for name, want in (("gentoo", GENTOO_TREE), ("gentoo-zh", str(overlay))):
+            got = db.getRepositoryPath(name)
+            if got != want:
+                raise MetadataUnavailable(f"{name} resolved to {got}, expected {want}")
+    except MetadataUnavailable:
+        raise
+    except Exception as e:                                 # noqa: BLE001
+        raise MetadataUnavailable(str(e)) from e
+
+    def get(cpv, repo):
+        try:
+            return db.aux_get(cpv, ["RESTRICT"], myrepo=repo or None)[0]
+        except Exception:                                  # noqa: BLE001
+            return None
+    return get
+
+
+def effective_bindist(cpv, f, lookup):
+    """yes / no / unknown, where unknown is withheld exactly like yes.
+
+    The union of both sources. The cached stanza records what RESTRICT was
+    when the binary package was built, and upstream adding bindist afterwards
+    does not by itself make Portage rebuild it, so neither source alone is
+    sufficient.
+    """
+    if "bindist" in f.get("RESTRICT", "").split():
+        return "yes"
+    restrict = lookup(cpv, f.get("REPO"))
+    if restrict is None:
+        return "unknown"
+    return "yes" if "bindist" in restrict.split() else "no"
 
 
 def runtime_closure(entries, seeds):
@@ -138,9 +167,16 @@ def runtime_closure(entries, seeds):
     return seen
 
 
-def select(entries, overlay=None, excluded=None, with_deps=None):
+def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None):
     excluded = read_excluded() if excluded is None else excluded
     masked = read_mask(overlay) if overlay is not None else Masks()
+    if lookup is None:
+        try:
+            if overlay is None:
+                raise MetadataUnavailable("no overlay to resolve gentoo-zh against")
+            lookup = portage_restrict(overlay)
+        except MetadataUnavailable as e:
+            return [], 0, f"Portage metadata unavailable, nothing published: {e}", []
     if with_deps is None:
         with_deps = os.environ.get("PUBLISH_DEPS", "1") == "1"
     best = {}
@@ -173,9 +209,9 @@ def select(entries, overlay=None, excluded=None, with_deps=None):
             skipped += 1
             continue
 
-        state = effective_bindist(cpv, f, overlay)
+        state = effective_bindist(cpv, f, lookup)
         if state != "no":
-            refused.append((cpv, str(safe_path(f.get("PATH", "")))))
+            refused.append((cpv, str(safe_path(f.get("PATH", ""))), state))
             skipped += 1
             continue
 
@@ -206,19 +242,22 @@ def rewrite_header(header, count, rev):
     return header
 
 
-def main(pkgdir, stage, overlay=None, rev=""):
+def main(pkgdir, stage, overlay=None, rev="", lookup=None):
     pkgdir, stage = pathlib.Path(pkgdir), pathlib.Path(stage)
     overlay = pathlib.Path(overlay) if overlay else None
 
     header, entries = parse((pkgdir / "Packages").read_text())
-    kept, skipped, error, refused = select(entries, overlay)
+    kept, skipped, error, refused = select(entries, overlay, lookup=lookup)
     if error:
         sys.exit(error)
-    for cpv, _ in refused:
-        print(f"!! 不发布 {cpv}：RESTRICT=bindist，不可再散布；该把它移出 packages.txt",
-              file=sys.stderr)
+    for cpv, _, state in refused:
+        if state == "unknown":
+            print(f"!! 不发布 {cpv}：读不到它的 RESTRICT，无法确认可否散布",
+                  file=sys.stderr)
+        else:
+            print(f"!! 不发布 {cpv}：RESTRICT=bindist，不可再散布", file=sys.stderr)
     (stage / "quarantine.txt").write_text(
-        "".join(f"{rel}\n" for _, rel in sorted(refused)))
+        "".join(f"{rel}\n" for _, rel, _ in sorted(refused)))
 
     stanzas = []
     src_root = os.open(pkgdir, os.O_RDONLY | os.O_DIRECTORY)
@@ -274,7 +313,7 @@ def main(pkgdir, stage, overlay=None, rev=""):
     print(f">>> staged {len(stanzas)}（overlay {ours}，运行期依赖 {len(stanzas) - ours}），"
           f"skipped {skipped} not ours to publish")
     if refused:
-        print(f">>> 其中 {len(refused)} 个因 RESTRICT=bindist 被跳过")
+        print(f">>> 其中 {len(refused)} 个因不可散布或无法确认被跳过")
     return 0
 
 
