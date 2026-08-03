@@ -16,7 +16,8 @@ HEADER = "ACCEPT_KEYWORDS: ~amd64\nPACKAGES: 999\nTIMESTAMP: 1\nVERSION: 0"
 HEADER_WITH_REV = HEADER + '\nREPO_REVISIONS: {}'
 
 
-def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None, PATH=None):
+def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None, PATH=None,
+           rdepend=None, depend=None):
     cp = cpv.rsplit("-", 1)[0]
     path = f"{cp}/{cpv.split('/')[-1]}.gpkg.tar" if PATH is None else PATH
     lines = [f"CPV: {cpv}", f"PATH: {path}", f"REPO: {repo}"]
@@ -24,13 +25,17 @@ def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None, PATH=None):
         lines.append(f"BUILD_ID: {build_id}")
     if restrict:
         lines.append(f"RESTRICT: {restrict}")
+    if rdepend:
+        lines.append(f"RDEPEND: {rdepend}")
+    if depend:
+        lines.append(f"DEPEND: {depend}")
     return "\n".join(lines)
 
 
-def run(stanzas, overlay_has=None, excluded=frozenset(), masked=()):
+def run(stanzas, overlay_has=None, excluded=frozenset(), masked=(), with_deps=False):
     _, entries = stage_index.parse(HEADER + "\n\n" + "\n\n".join(stanzas) + "\n")
     if overlay_has is None:
-        return stage_index.select(entries, excluded=excluded)
+        return stage_index.select(entries, excluded=excluded, with_deps=with_deps)
     with tempfile.TemporaryDirectory() as tmp:
         ov = pathlib.Path(tmp)
         for cpv in overlay_has:
@@ -281,6 +286,60 @@ case("RESTRICT 是多个词时按整词认", lambda: (
 case("bindist 的那一个不会进索引", lambda: (
     "app-misc/b-1" not in cpvs(run([stanza("app-misc/a-1"),
                                     stanza("app-misc/b-1", restrict="bindist")])[0])))
+
+def deps(stanzas):
+    return sorted(cpvs(run(stanzas, with_deps=True)[0]))
+
+
+def deps_excluded():
+    r = run([stanza("app-misc/a-1", rdepend="dev-libs/lib"),
+             stanza("dev-libs/lib-1", repo="gentoo")],
+            excluded={"app-misc/a"}, with_deps=True)
+    return cpvs(r[0]) == []
+
+
+LIB = stanza("dev-libs/lib-1", repo="gentoo")
+DEEP = stanza("dev-libs/deep-1", repo="gentoo")
+TOOL = stanza("dev-util/tool-1", repo="gentoo")
+UNUSED = stanza("app-misc/unused-1", repo="gentoo")
+
+case("不开依赖时，::gentoo 的一律不发", lambda: (
+    deps([stanza("app-misc/a-1")]) == ["app-misc/a-1"]))
+
+case("我们的包用到的 ::gentoo 依赖会一起发", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="dev-libs/lib"), LIB])
+    == ["app-misc/a-1", "dev-libs/lib-1"]))
+
+case("依赖的依赖也跟着发", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="dev-libs/lib"),
+          stanza("dev-libs/lib-1", repo="gentoo", rdepend="dev-libs/deep"), DEEP])
+    == ["app-misc/a-1", "dev-libs/deep-1", "dev-libs/lib-1"]))
+
+case("没人用到的 ::gentoo 包不发", lambda: (
+    deps([stanza("app-misc/a-1"), UNUSED]) == ["app-misc/a-1"]))
+
+case("只在构建期用到的不发", lambda: (
+    deps([stanza("app-misc/a-1", depend="dev-util/tool"), TOOL])
+    == ["app-misc/a-1"]))
+
+case("带版本与 slot 的依赖原子也解析得出来", lambda: (
+    deps([stanza("app-misc/a-1", rdepend=">=dev-libs/lib-1:0/1=[foo]"), LIB])
+    == ["app-misc/a-1", "dev-libs/lib-1"]))
+
+case("use 条件式里的依赖一并算上", lambda: (
+    deps([stanza("app-misc/a-1", rdepend="foo? ( dev-libs/lib ) || ( dev-libs/deep )"),
+          LIB, DEEP])
+    == ["app-misc/a-1", "dev-libs/deep-1", "dev-libs/lib-1"]))
+
+case("依赖里带 bindist 的仍然被拒", lambda: (
+    (lambda r: cpvs(r[0]) == ["app-misc/a-1"]
+               and [c for c, _ in r[3]] == ["dev-libs/lib-1"])(
+        run([stanza("app-misc/a-1", rdepend="dev-libs/lib"),
+             stanza("dev-libs/lib-1", repo="gentoo", restrict="bindist")],
+            with_deps=True))))
+
+case("被 excluded 的包不做种子，它的依赖也不发", deps_excluded)
+
 
 bad = 0
 for name, fn in CASES:
