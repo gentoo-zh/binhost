@@ -33,14 +33,14 @@ on 'printf "en_US.UTF-8 UTF-8\nen_GB.UTF-8 UTF-8\nzh_CN.UTF-8 UTF-8\nzh_TW.UTF-8
     locale-gen > "$lg" 2>&1 || echo "  !! locale-gen 未完成"
     tail -1 "$lg" | sed "s/^/  /"; rm -f "$lg"'
 
-say "网络：确认开机不会失联"
+say "网络：确认开机后不会失去连接"
 # shellcheck disable=SC2016  # as above, expands on the remote
 on 'iface=$(ip -o -4 route show default | awk "{print \$5}" | head -1)
     echo "  默认路由走 ${iface}"
     if [ -f /etc/conf.d/net ] && grep -q "^config_" /etc/conf.d/net; then
         grep -q "config_${iface}" /etc/conf.d/net \
             && echo "  /etc/conf.d/net 与网卡名一致" \
-            || echo "  !! /etc/conf.d/net 配的不是 ${iface}，重启会失联"
+            || echo "  !! /etc/conf.d/net 配置的不是 ${iface}，重启后会失去连接"
     fi
     if [ -d /etc/init.d ]; then
         rc-update show default 2>/dev/null | grep -qE "dhcpcd|net\." \
@@ -94,5 +94,5 @@ say "完成"
 echo "接下来："
 echo "  1. 另开一个终端确认 ssh -i ${PUBKEY%.pub} -p ${SSH_PORT} ${ADMIN}@${TARGET#*@} 能登录"
 echo "  2. 确认之后再重启 sshd：ssh ${TARGET} 'rc-service sshd restart'"
-echo "     当前这个连接不会断，重启前留着它当退路"
+echo "     当前这个连接不会中断，重启前请保持它作为退路"
 echo "  3. 执行 deploy/install.sh 安装服务"

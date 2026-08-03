@@ -107,6 +107,18 @@
    "run.sh",
    "echo \"跑 deploy/install.sh\"\n",
    "emitted"
+  ],
+  [
+   "扩充的口语词",
+   "run.sh",
+   "echo \"证书没了，重新执行\"\n",
+   "emitted"
+  ],
+  [
+   "站点上的口语词",
+   "assets/util.js",
+   "var m = '把命中的词圈出来';\n",
+   "emitted"
   ]
  ],
  "clean": {

@@ -68,7 +68,7 @@ const want = {
 };
 for (const [lang, url] of Object.entries(want)) {
   const r = run(lang);
-  check(`${lang} 的链接指向 ${url}`, r.href === url, `拿到 ${r.href}`);
+  check(`${lang} 的链接指向 ${url}`, r.href === url, `实际 ${r.href}`);
 }
 
 function menuRun() {
@@ -140,7 +140,7 @@ check("选一项之后菜单收起", m.menu.hidden === true);
   check("并且焦点回到按钮", global.document.activeElement === btn, "焦点不在按钮上");
 
   items[1].click();
-  check("选一项之后 aria-checked 跟着换",
+  check("选一项之后 aria-checked 随之更新",
         items[1].getAttribute("aria-checked") === "true" &&
         items[2].getAttribute("aria-checked") === "false",
         items.map((i) => i.getAttribute("data-mode") + "=" + i.getAttribute("aria-checked")).join(" "));

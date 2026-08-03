@@ -40,7 +40,7 @@ jobs:
             if python3 build/validate.py /tmp/overlay > /tmp/validate.log 2>&1; then
               printf '%s %s\n' "${cp}" "${ver}" >> /tmp/ok.txt
             else
-              echo "  ${cp} 加进去之后 validate 不过，不提："
+              echo "  ${cp} 加入后 validate 未通过，不提出："
               grep -E 'packages\.txt' /tmp/validate.log | sed 's/^/    /' || true
             fi
           done < /tmp/new.txt
@@ -103,7 +103,7 @@ jobs:
               "" \
               "合并表示收录，下一轮构建会带上它。若不收录，请关闭本 PR，并将它连同原因写进 \`build/excluded.txt\`，否则每天会重新提出。" \
               "" \
-              "清单顺序不分大小写，这里只插一行，没有重排。加进去之后 \`validate.py\` 已执行，该 PR 不会再次触发 workflow：GITHUB_TOKEN 开的 PR 不触发 workflow。")
+              "清单顺序不分大小写，这里只插一行，没有重排。加入后 \`validate.py\` 已执行，该 PR 不会再次触发 workflow：GITHUB_TOKEN 开的 PR 不触发 workflow。")
             if ! gh pr create --base master --head "${branch}" \
                  --title "build: add ${cp}" --body "${body}" >> /tmp/urls.txt; then
               echo "  ${cp} PR 创建失败，删除远端分支 ${branch}"

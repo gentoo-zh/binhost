@@ -104,14 +104,14 @@ check "调用后凭据不残留在环境中" "unset" "${out}"
 
 chmod 000 "${tmp}/full.conf"
 if [[ $(id -u) -eq 0 ]]; then
-    echo "  - 跳过 conf 不可读一项：root 不受权限位限制"
+    echo "  - 跳过 conf 无法读取一项：root 不受权限位限制"
 else
     out=$(caller "${tmp}/full.conf"); rc=$?
-    check "conf 不可读时调用者不受影响" "0 REACHED_END" "${rc} ${out}"
+    check "conf 无法读取时调用者不受影响" "0 REACHED_END" "${rc} ${out}"
     if grep -q "无法读取" "${tmp}/err.txt"; then
-        echo "  ✓ 不可读时有提示"; pass=$((pass + 1))
+        echo "  ✓ 无法读取时有提示"; pass=$((pass + 1))
     else
-        echo "  ✗ 不可读时无提示"; fail=$((fail + 1))
+        echo "  ✗ 无法读取时无提示"; fail=$((fail + 1))
     fi
 fi
 chmod 644 "${tmp}/full.conf"

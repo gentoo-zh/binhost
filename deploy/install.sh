@@ -90,9 +90,9 @@ if sudo test -r \"\${CERT}/fullchain.pem\" && sudo test -r \"\${CERT}/privkey.pe
 else
     if sudo grep -qs 'listen 443' /etc/nginx/conf.d/distfiles.conf; then
         echo '    !! 无法读取证书，但现有配置在监听 443；保持原样不动' >&2
-        echo '       证书确实没了就先修证书，再重新执行本脚本' >&2
+        echo '       证书确实已失效时，先处理证书，再重新执行本脚本' >&2
     else
-        echo '    证书还没有，先只配 HTTP；签发之后重新执行本脚本'
+        echo '    证书尚未签发，先只配置 HTTP；签发之后重新执行本脚本'
         awk '/^server \{/{n++} n<2' distfiles.conf |
             sudo install -m644 /dev/stdin /etc/nginx/conf.d/distfiles.conf
     fi
@@ -109,7 +109,7 @@ if [ -n '${SIGNING_FPR}' ]; then
   printf '%s\n' '${SIGNING_FPR}' | sudo tee /etc/binhost/signing-key.fpr >/dev/null
   echo '    signing-key.fpr 已写入'
 elif [ ! -r /etc/binhost/signing-key.fpr ]; then
-  echo '    /etc/binhost/signing-key.fpr 还没有，公钥不会同步（传 SIGNING_FPR= 设定它）'
+  echo '    /etc/binhost/signing-key.fpr 尚未建立，公钥不会同步（传 SIGNING_FPR= 设定它）'
 else
   echo '    沿用已有的 signing-key.fpr:'
   sed 's/^/      /' /etc/binhost/signing-key.fpr
@@ -137,7 +137,7 @@ echo '--- overlay 副本'
 [ -d /var/lib/binhost-overlay/.git ] ||
     sudo git clone --quiet --depth=1 https://github.com/gentoo-zh/overlay /var/lib/binhost-overlay
 
-echo '--- 让 portage 认得这个 repo（emirrordist 要）'
+echo '--- 注册 repo 供 emirrordist 使用'
 sudo install -dm755 /etc/portage/repos.conf
 printf '[gentoo-zh]\nlocation = /var/lib/binhost-overlay\nauto-sync = no\n' |
     sudo install -m644 /dev/stdin /etc/portage/repos.conf/gentoo-zh.conf
