@@ -166,7 +166,7 @@ for name, idx, lst, packages, tree, moves, want in MIGRATE:
             print(f"      {l}")
 
 UPSTREAM = [
-    ("::gentoo 也有这个包就报出", (PKG,), (), True),
+    ("该 CP 同时存在于 ::gentoo 时报出", (PKG,), (), True),
     ("::gentoo 没有就不报", ("app-misc/other",), (), False),
     ("::gentoo 有目录但没有 ebuild 不算", (), (PKG,), False),
 ]
@@ -230,6 +230,18 @@ print(f"  {'✓' if ok else '✗'} {'move 来源不由 retire 单独提出':<24}
 if not ok:
     bad += 1
 
+for name, packages in (
+    ("move 来源与目标都消失时由 retire 提出", {}),
+    ("move 目标没有 ebuild 时由 retire 提出", {MOVED_NEW: []}),
+):
+    rc, got = retire([MOVED_OLD], packages,
+                     moves=((MOVED_OLD, MOVED_NEW),))
+    want = [f"{MOVED_OLD}\toverlay 中已不存在该软件包"]
+    ok = got == want and rc == 0
+    print(f"  {'✓' if ok else '✗'} {name:<24} {got}")
+    if not ok:
+        bad += 1
+
 
 def newcomers(packages, list_lines, masked=(), restrict=None, keywords=None, body=None,
               moves=()):
@@ -270,6 +282,8 @@ NEW = [
      {"body": {PKG: 'EAPI=8\ninherit unpacker\nKEYWORDS="~amd64"\nSLOT="0"\nsrc_compile() {\n\t:\n}\n'}}, []),
     ("move 目标不由 newcomers 单独提出", {MOVED_NEW: NOW}, [MOVED_OLD],
      {"moves": ((MOVED_OLD, MOVED_NEW),)}, []),
+    ("历史 move 来源未收录时目标仍可提出", {MOVED_NEW: NOW}, [],
+     {"moves": ((MOVED_OLD, MOVED_NEW),)}, [f"{MOVED_NEW} {NOW}"]),
 ]
 
 for name, pkgs, lst, kw, want in NEW:
@@ -319,9 +333,9 @@ def classification_probe():
         atoms = [cp for cp in packages if cp != "app-misc/live"]
         atoms.append("app-misc/live")
         once = all(result.stderr.count(cp) == 1 for cp in atoms)
-        categories = ("meta package", "live only", "no amd64 or masked", "bindist",
-                      "unknown RESTRICT", "-bin package", "prebuilt eclass",
-                      "no known build stage", "candidate")
+        categories = ("元包", "仅有 9999 ebuild", "无可用 amd64 版本或已屏蔽",
+                      "RESTRICT=bindist", "RESTRICT 无法判定", "-bin 软件包",
+                      "预构建 eclass", "无已知构建阶段", "候选")
         return result.returncode == 0 and once and all(
             f">>> {category}: 1:" in result.stderr for category in categories) \
             and not any(relative in result.stderr for relative in management) \
@@ -334,10 +348,11 @@ if not ok:
     bad += 1
 
 
-def move_rows():
+def move_rows(packages=None):
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
-        overlay = make_overlay(d / "overlay", {MOVED_NEW: NOW},
+        overlay = make_overlay(d / "overlay",
+                               {MOVED_NEW: NOW} if packages is None else packages,
                                moves=((MOVED_OLD, MOVED_NEW),))
         (d / "list.txt").write_text(MOVED_OLD + "\n")
         p = subprocess.run([sys.executable, CHECK, "--moves", str(overlay),
@@ -348,6 +363,12 @@ def move_rows():
 rc, rows = move_rows()
 ok = rc == 0 and rows == [f"{MOVED_OLD}\t{MOVED_NEW}"]
 print(f"  {'✓' if ok else '✗'} {'move 清单只输出权威配对':<24} {rows}")
+if not ok:
+    bad += 1
+
+rc, rows = move_rows({MOVED_NEW: []})
+ok = rc == 0 and rows == []
+print(f"  {'✓' if ok else '✗'} {'move 目标没有 ebuild 时不输出配对':<24} {rows}")
 if not ok:
     bad += 1
 

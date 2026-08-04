@@ -105,7 +105,8 @@ jobs:
             body=$(printf '%s\n' \
               "overlay 里的 \`${cp}\` ${ver} 有构建系统，可以在 amd64 上安装，但不在收录清单上。" \
               "" \
-              "合并表示收录，下一轮构建会带上它。若不收录，请关闭本 PR，并将它连同原因写进 \`build/excluded.txt\`，否则每天会重新提出。" \
+              "合并表示收录，下一轮构建会包含它。关闭本 PR 并保留远端分支可停止重复提案。" \
+              "删除远端分支 \`${branch}\` 后，下一次检查会重新提出；确认长期不收录时，请将它和原因写入 \`build/excluded.txt\`。" \
               "" \
               "清单顺序不分大小写，这里只插一行，没有重排。自动化会在该提交上执行完整的 \`validate\` 工作流程。")
             if ! gh workflow run validate.yml --ref "${branch}"; then

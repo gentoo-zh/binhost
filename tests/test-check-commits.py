@@ -115,4 +115,11 @@ for name, subjects, ok in MULTI:
         for line in out.splitlines():
             print(f"      {line}")
 
+rc, out = run("stage-index: decide by version")
+plain_status = rc == 0 and "通过" in out \
+    and "✓" not in out and "✗" not in out
+print(f"  {'✓' if plain_status else '✗'} {'检查器状态不用装饰符号':<24}")
+if not plain_status:
+    bad += 1
+
 sys.exit(1 if bad else 0)
