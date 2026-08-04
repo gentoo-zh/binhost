@@ -27,19 +27,20 @@ docs/     运维手册
 
 `@world` 对齐后的容器提交成基础镜像，超过 7 天才刷新，平时的构建从已经对齐好的根开始。
 
-高权限构建容器会执行 ebuild，但不挂载私钥。容器在 emerge 之前记录基础系统的
-CPV、SLOT、USE、IUSE、EAPI 与 repository，依赖检查按完整 Portage Atom 匹配该快照。
-构建完成后，脚本还会记录当轮实际使用的 Gentoo binhost 索引。若依赖只能从源码
-取得，则另从当前 Gentoo 仓库记录可匹配的版本；带 USE 约束的源码依赖不会按未知配置
-推定为可用。
+基础镜像更新与每日构建容器都会执行 ebuild，目前仍使用 `--privileged`。签名容器虽然
+没有网络与 ebuild 仓库，根文件系统只读，却复用了执行过 ebuild 的基础镜像。因此，
+ebuild 仍可能通过主机块设备或被修改的签名工具取得私钥；修复条件见
+[`docs/accepted-risks.md`](docs/accepted-risks.md)。
 
-构建完成后，独立签名容器会检查索引中的每个 gpkg，只重新签署未由当前密钥有效签名的
-软件包。该容器不使用
-`--privileged`，没有网络与 ebuild 仓库，根文件系统只读；宿主机仅将暂存目录
-以可写方式挂载。
-签名完成后，脚本使用仅包含指定公钥的临时 keyring 验证每个索引条目。
-私钥只挂载到此阶段，不写入基础镜像。全部验签通过后，宿主机将新签名的软件包写回
-持久的 PKGDIR，未变化的软件包在下一轮保持原有字节。
+容器在 emerge 之前记录基础系统的 CPV、SLOT、USE、IUSE、EAPI 与 repository，依赖检查
+按完整 Portage Atom 匹配该快照。构建完成后，脚本还会记录当轮实际使用的 Gentoo
+binhost 索引。若依赖只能从源码取得，则另从当前 Gentoo 仓库记录可匹配的版本；带 USE
+约束的源码依赖不会按未知配置推定为可用。
+
+签名阶段检查索引中的每个 gpkg，只重新签署未由当前密钥有效签名的软件包。签名完成后，
+脚本使用仅包含指定公钥的临时 keyring 验证每个索引条目。全部验签通过后，宿主机将新签名
+的软件包写回持久的 PKGDIR，未变化的软件包在下一轮保持原有字节。这些检查验证签名结果，
+但在上述隔离问题修复前不能证明私钥未被 ebuild 执行环境取得。
 
 暂存索引必须覆盖 `packages.txt` 中每个包的当前可用版本，并通过运行期依赖检查。
 `Packages`、`Packages.gz`、构建前基础系统快照、Gentoo binhost 可用包快照与
@@ -58,9 +59,9 @@ build/publish.sh
 build/status.sh
 ```
 
-两台机器分开装。build/ 下有几支两边都要（status.sh、gen-packages.py），由各自的安装脚本分别装过去：
-
-前者装镜像机，后者装构建机：
+两台机器分别安装。`deploy/install.sh` 在镜像机安装同步、索引、站点、状态检查脚本，以及
+`gen-packages.py`、`verify-deps.py`、`generation.py` 等运行依赖。
+`deploy/install-builder.sh` 在构建机安装整个 `build/` 目录与 systemd 单元：
 
 ```bash
 MONITORS='<抓 9100 的监控机>' SIGNING_FPR=<签名指纹> \
@@ -69,8 +70,8 @@ SIGNING_KEY=<指纹> REMOTE="ssh build" \
     ./deploy/install-builder.sh
 ```
 
-构建机那边装的是构建脚本、overlay 副本与每日构建的 systemd timer，
-入口是 `build/cycle.sh`：更新 overlay、构建、发布、报告失败。
+构建机还会建立 overlay 副本与每日构建的 systemd timer。入口 `build/cycle.sh` 依次更新
+overlay、构建、发布并报告失败。
 
 构建机的本机锁只允许一个 `cycle.sh` 运行。镜像机没有远端发布锁，因此不得并行
 执行自动发布与人工 `build/publish.sh`。
