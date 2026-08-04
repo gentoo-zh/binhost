@@ -118,6 +118,40 @@ if not ok:
     bad += 1
 
 
+def simultaneous_lifecycle_case():
+    versioned = "app-misc/versioned"
+    deleted = "app-misc/deleted"
+    masked = "app-misc/masked"
+    newcomer = "app-misc/newcomer"
+    moved_old = "app-misc/moved"
+    moved_new = "net-misc/moved"
+    packages = {
+        versioned: "2.0",
+        masked: "1.0",
+        moved_new: "1.0",
+        newcomer: "1.0",
+    }
+    listed = [versioned, deleted, masked, moved_old]
+    index = [stanza(f"{versioned}-1.0"), stanza(f"{deleted}-1.0"),
+             stanza(f"{masked}-1.0"), stanza(f"{moved_old}-1.0")]
+    rc, out = run(index, listed, packages, masked=(masked,),
+                  moves=((moved_old, moved_new),))
+    expected = (
+        f"落后   {versioned}",
+        f"已移除 {deleted}",
+        f"已屏蔽 {masked}",
+        f"改分类 {moved_old} -> {moved_new}",
+        f"新包   {newcomer}",
+    )
+    return rc == 1 and all(value in out for value in expected)
+
+
+ok = simultaneous_lifecycle_case()
+print(f"  {'✓' if ok else '✗'} {'同轮 add/drop、删除、mask、move 与新增':<24}")
+if not ok:
+    bad += 1
+
+
 
 MOVED_OLD = "app-misc/example"
 MOVED_NEW = "net-misc/example"
@@ -188,7 +222,7 @@ RETIRE = [
      {}, [f"{PKG}\t只有 live ebuild，无法构建可发布的版本"]),
     ("RESTRICT=bindist 的列为可移出", [PKG], {PKG: NOW},
      {"body": {PKG: BINDIST}},
-     [f"{PKG}\t全部可用版本都是 RESTRICT=bindist，不可再散布"]),
+     [f"{PKG}\t全部可用版本都是 RESTRICT=bindist，不发布 binpkg"]),
     ("正常的包不列出", [PKG], {PKG: NOW}, {}, []),
     ("只 mask 新版、旧版仍可用的不列出", [PKG], {PKG: ["1.0", "2.0"]},
      {"masked": (f">={PKG}-2",)}, []),

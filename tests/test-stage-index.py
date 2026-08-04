@@ -30,7 +30,7 @@ def md5_of(data):
 
 def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None, PATH=None,
            rdepend=None, depend=None, idepend=None, pdepend=None,
-           slot="0", use=None, iuse=None, eapi="8", sha1=None):
+           slot="0", use=None, iuse=None, eapi="8", sha1=None, license=None):
     cp = cpv.rsplit("-", 1)[0]
     path = f"{cp}/{cpv.split('/')[-1]}.gpkg.tar" if PATH is None else PATH
     lines = [f"CPV: {cpv}", f"PATH: {path}", f"REPO: {repo}"]
@@ -48,6 +48,8 @@ def stanza(cpv, repo="gentoo-zh", build_id=None, restrict=None, PATH=None,
         lines.append(f"BUILD_ID: {build_id}")
     if restrict:
         lines.append(f"RESTRICT: {restrict}")
+    if license:
+        lines.append(f"LICENSE: {license}")
     if sha1:
         lines.append(f"SHA1: {sha1}")
     if rdepend:
@@ -71,25 +73,40 @@ def fake_lookup(restricts=None):
 
 
 def run(stanzas, overlay_has=None, excluded=frozenset(), masked=(), with_deps=False,
-        restricts=None):
-    _, entries = stage_index.parse(HEADER + "\n\n" + "\n\n".join(stanzas) + "\n")
-    lookup = fake_lookup(restricts)
-    if overlay_has is None:
-        return stage_index.select(entries, excluded=excluded, with_deps=with_deps,
-                                  lookup=lookup)
-    with tempfile.TemporaryDirectory() as tmp:
-        ov = pathlib.Path(tmp)
-        for cpv in overlay_has:
-            cp = re.match(r"^([a-z0-9-]+/.+?)-[0-9]", cpv).group(1)
-            d = ov / cp
-            d.mkdir(parents=True, exist_ok=True)
-            (d / (cpv.split("/", 1)[1] + ".ebuild")).write_text("EAPI=8\n")
-        prof = ov / "profiles"
-        prof.mkdir(parents=True, exist_ok=True)
-        (prof / "repo_name").write_text("gentoo-zh\n")
-        (prof / "package.mask").write_text(
-            "".join(f"# masked for removal\n{cp}\n" for cp in masked))
-        return stage_index.select(entries, ov, excluded=excluded, lookup=lookup)
+        restricts=None, licenses=None, gentoo_tree=None):
+    old_tree = stage_index.GENTOO_TREE
+    stage_index.GENTOO_TREE = gentoo_tree or "/nonexistent/gentoo"
+    try:
+        _, entries = stage_index.parse(
+            HEADER + "\n\n" + "\n\n".join(stanzas) + "\n")
+        lookup = fake_lookup(restricts)
+        licenses = licenses or {}
+
+        def license_lookup(cpv, fields):
+            key = (cpv, fields.get("REPO", ""))
+            return licenses.get(key, licenses.get(cpv, "yes"))
+
+        if overlay_has is None:
+            return stage_index.select(
+                entries, excluded=excluded, with_deps=with_deps,
+                lookup=lookup, license_lookup=license_lookup)
+        with tempfile.TemporaryDirectory() as tmp:
+            ov = pathlib.Path(tmp)
+            for cpv in overlay_has:
+                cp = re.match(r"^([a-z0-9-]+/.+?)-[0-9]", cpv).group(1)
+                d = ov / cp
+                d.mkdir(parents=True, exist_ok=True)
+                (d / (cpv.split("/", 1)[1] + ".ebuild")).write_text("EAPI=8\n")
+            prof = ov / "profiles"
+            prof.mkdir(parents=True, exist_ok=True)
+            (prof / "repo_name").write_text("gentoo-zh\n")
+            (prof / "package.mask").write_text(
+                "".join(f"# masked for removal\n{cp}\n" for cp in masked))
+            return stage_index.select(
+                entries, ov, excluded=excluded, lookup=lookup,
+                license_lookup=license_lookup, with_deps=with_deps)
+    finally:
+        stage_index.GENTOO_TREE = old_tree
 
 
 def cpvs(kept):
@@ -119,6 +136,45 @@ case("RESTRICT=bindist 不进索引", lambda: (
 case("RESTRICT 为其他值时照常收录", lambda: (
     cpvs(run([stanza("app-misc/a-1", restrict="mirror strip")])[0]) == ["app-misc/a-1"]))
 
+
+class FakeLicenseSettings:
+    def _getMissingLicenses(self, _cpv, metadata):
+        if metadata["LICENSE"] == "BROKEN":
+            raise ValueError("invalid license expression")
+        return [metadata["LICENSE"]] if metadata["LICENSE"] == "NO-REDIST" else []
+
+
+case("当前许可证可再分发时通过", lambda: (
+    stage_index.effective_license(
+        "app-misc/a-1", {"LICENSE": "MIT", "SLOT": "0", "REPO": "gentoo-zh"},
+        "GPL-2", "0", FakeLicenseSettings()) == "yes"))
+
+case("缓存许可证不参与当前再分发判定", lambda: (
+    stage_index.effective_license(
+        "app-misc/a-1", {"LICENSE": "NO-REDIST", "SLOT": "0",
+                         "REPO": "gentoo-zh"},
+        "MIT", "0", FakeLicenseSettings()) == "yes"))
+
+case("当前许可证不可再分发时拒绝旧缓存", lambda: (
+    stage_index.effective_license(
+        "app-misc/a-1", {"LICENSE": "MIT", "SLOT": "0", "REPO": "gentoo-zh"},
+        "NO-REDIST", "0", FakeLicenseSettings()) == "no"))
+
+case("空许可证按 Portage 的许可证集合判定", lambda: (
+    stage_index.effective_license(
+        "app-misc/a-1", {"SLOT": "0", "REPO": "gentoo-zh"},
+        "", "0", FakeLicenseSettings()) == "yes"))
+
+case("许可证表达式无法判定时不默认放行", lambda: (
+    stage_index.effective_license(
+        "app-misc/a-1", {"LICENSE": "MIT", "SLOT": "0", "REPO": "gentoo-zh"},
+        "BROKEN", "0", FakeLicenseSettings()) == "unknown"))
+
+case("许可证策略拒绝的产物进入隔离清单", lambda: (
+    run([stanza("app-misc/a-1", license="NO-REDIST")],
+        licenses={"app-misc/a-1": "no"})[3]
+    == [("app-misc/a-1", "app-misc/a/a-1.gpkg.tar", "license")]))
+
 case("同一版本多实例仅保留 BUILD_ID 最大者", lambda: (
     len(run([stanza("app-misc/a-1", build_id=1),
              stanza("app-misc/a-1", build_id=3),
@@ -136,9 +192,95 @@ case("excluded.txt 里的包不发布", lambda: (
     run([stanza("app-text/wiki2man_on_rust-0.5.1-r1")],
         excluded={"app-text/wiki2man_on_rust"})[0] == []))
 
-case("不在收录清单不等于排除，依赖引入的产物照常发布", lambda: (
+case("acct-group 只在使用者系统本地安装", lambda: (
     cpvs(run([stanza("acct-group/aptly-0")], excluded={"app-misc/other"})[0])
-    == ["acct-group/aptly-0"]))
+    == []))
+
+case("acct-user 只在使用者系统本地安装", lambda: (
+    cpvs(run([stanza("acct-user/aptly-0")])[0]) == []))
+
+case("virtual 只在使用者系统本地安装", lambda: (
+    cpvs(run([stanza("virtual/lib-0", repo="gentoo")])[0]) == []))
+
+case("本地安装类别从候选索引排除", lambda: (
+    run([stanza("virtual/lib-0", repo="gentoo")])[3]
+    == [("virtual/lib-0", "virtual/lib/lib-0.gpkg.tar", "source")]))
+
+
+def quarantine_for(value):
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp)
+        pkgdir = root / "pkgdir"
+        pkgdir.mkdir()
+        (pkgdir / "Packages").write_text(HEADER + "\n\n" + value + "\n")
+        stage = root / "stage"
+        stage.mkdir()
+        stage_index.main(pkgdir, stage, lookup=lambda _cpv, _repo: "")
+        return (stage / "quarantine.txt").read_text().splitlines()
+
+
+case("本地安装类别等待新索引成功后再清理", lambda: (
+    quarantine_for(stanza("virtual/lib-0", repo="gentoo")) == []))
+
+case("bindist 产物仍立即进入隔离清单", lambda: (
+    quarantine_for(stanza("app-misc/restricted-1", restrict="bindist"))
+    == ["app-misc/restricted/restricted-1.gpkg.tar"]))
+
+case("mask 不会盖过新增的 bindist 限制", lambda: (
+    run([stanza("app-misc/a-1")], overlay_has=["app-misc/a-1"],
+        masked=("app-misc/a",), restricts={"app-misc/a-1": "bindist"})[3]
+    == [("app-misc/a-1", "app-misc/a/a-1.gpkg.tar", "yes")]))
+
+case("excluded 不会盖过新增的许可证限制", lambda: (
+    run([stanza("app-misc/a-1", license="NO-REDIST")],
+        excluded={"app-misc/a"}, licenses={"app-misc/a-1": "no"})[3]
+    == [("app-misc/a-1", "app-misc/a/a-1.gpkg.tar", "license")]))
+
+def removed_source_only_version():
+    with tempfile.TemporaryDirectory() as tmp:
+        return run([stanza("virtual/lib-0", repo="gentoo")],
+                   restricts={"virtual/lib-0": None}, gentoo_tree=tmp)[3] == [
+            ("virtual/lib-0", "virtual/lib/lib-0.gpkg.tar", "source")]
+
+
+case("本地安装类别的旧版本不会误判成 metadata 未知",
+     removed_source_only_version)
+
+
+def broken_source_only_metadata():
+    with tempfile.TemporaryDirectory() as tmp:
+        tree = pathlib.Path(tmp)
+        package = tree / "virtual/lib"
+        package.mkdir(parents=True)
+        (package / "lib-0.ebuild").write_text("EAPI=8\n")
+        return run([stanza("virtual/lib-0", repo="gentoo")],
+                   restricts={"virtual/lib-0": None}, gentoo_tree=tree)[3] == [
+            ("virtual/lib-0", "virtual/lib/lib-0.gpkg.tar", "unknown")]
+
+
+case("ebuild 仍存在但 metadata 无法读取时继续从严",
+     broken_source_only_metadata)
+
+case("本地安装类别仍服从当前版本新增的 bindist 限制", lambda: (
+    run([stanza("virtual/lib-0", repo="gentoo")],
+        restricts={"virtual/lib-0": "bindist"})[3]
+    == [("virtual/lib-0", "virtual/lib/lib-0.gpkg.tar", "yes")]))
+
+case("overlay 已移除的版本等待新索引成功后再清理", lambda: (
+    run([stanza("app-misc/a-1")], overlay_has=[],
+        restricts={"app-misc/a-1": None})[3]
+    == [("app-misc/a-1", "app-misc/a/a-1.gpkg.tar", "removed")]))
+
+
+def removed_gentoo_version():
+    with tempfile.TemporaryDirectory() as tmp:
+        return run([stanza("dev-libs/a-1", repo="gentoo")],
+                   restricts={"dev-libs/a-1": None}, gentoo_tree=tmp)[3] == [
+                ("dev-libs/a-1", "dev-libs/a/a-1.gpkg.tar", "removed")]
+
+
+case("Gentoo 主树已移除的版本等待新索引成功后再清理",
+     removed_gentoo_version)
 
 case("带 revision 的版本号可匹配排除清单", lambda: (
     run([stanza("app-misc/a-1.2.3-r4")], excluded={"app-misc/a"})[0] == []))
@@ -202,6 +344,22 @@ print(f"  {'用例':<40} 结果")
 case("overlay mask 掉之后不再 stage", lambda: (
     cpvs(run([stanza("app-misc/a-1")], overlay_has=["app-misc/a-1"],
              masked=("app-misc/a",))[0]) == []))
+
+case("overlay mask 的包不会作为依赖重新进入索引", lambda: (
+    (lambda r: cpvs(r[0]) == ["app-misc/a-1"]
+     and ("app-misc/b-1", "app-misc/b/b-1.gpkg.tar", "masked") in r[3])(
+        run([stanza("app-misc/a-1", rdepend="app-misc/b"),
+             stanza("app-misc/b-1")],
+            overlay_has=["app-misc/a-1", "app-misc/b-1"],
+            masked=("app-misc/b",), with_deps=True))))
+
+case("excluded.txt 的包不会作为依赖重新进入索引", lambda: (
+    (lambda r: cpvs(r[0]) == ["app-misc/a-1"]
+     and ("app-misc/b-1", "app-misc/b/b-1.gpkg.tar", "excluded") in r[3])(
+        run([stanza("app-misc/a-1", rdepend="app-misc/b"),
+             stanza("app-misc/b-1")],
+            overlay_has=["app-misc/a-1", "app-misc/b-1"],
+            excluded={"app-misc/b"}, with_deps=True))))
 
 case("没 mask 时照旧收录", lambda: (
     cpvs(run([stanza("app-misc/a-1")], overlay_has=["app-misc/a-1"])[0])
@@ -600,7 +758,7 @@ case("依赖同时存在于两个仓库时，取 overlay 的那一份", lambda: 
         run([stanza("app-misc/a-1", rdepend="dev-libs/lib"),
              stanza("dev-libs/lib-1", repo="gentoo-zh", build_id=1),
              stanza("dev-libs/lib-1", repo="gentoo", build_id=2)],
-            overlay_has=["app-misc/a-1"]))))
+            overlay_has=["app-misc/a-1", "dev-libs/lib-1"], with_deps=True))))
 
 case("::gentoo 限定的依赖取主树那一份", lambda: (
     (lambda r: sorted((f["CPV"], f["REPO"]) for _b, f, _s in r[0])
@@ -608,7 +766,7 @@ case("::gentoo 限定的依赖取主树那一份", lambda: (
         run([stanza("app-misc/a-1", rdepend="dev-libs/lib::gentoo"),
              stanza("dev-libs/lib-1", repo="gentoo-zh", build_id=1),
              stanza("dev-libs/lib-1", repo="gentoo", build_id=2)],
-            overlay_has=["app-misc/a-1"]))))
+            overlay_has=["app-misc/a-1"], with_deps=True))))
 
 case("闭包读的是最终要发布的那一份 stanza", lambda: (
     deps([stanza("app-misc/a-1", build_id=15, rdepend="dev-libs/other"),
@@ -680,11 +838,11 @@ case("未解析清单记下是谁引用的", lambda: (
     run([stanza("app-misc/a-1", rdepend="sys-libs/glibc")],
         with_deps=True)[4]["sys-libs/glibc"] == {"app-misc/a-1"}))
 
-case("virtual 的提供者沿它自己的依赖展开", lambda: (
+case("virtual 留给使用者的 Portage 从源码解析", lambda: (
     deps([stanza("app-misc/a-1", rdepend="virtual/lib"),
           stanza("virtual/lib-0", repo="gentoo", rdepend="|| ( dev-libs/lib dev-libs/deep )"),
           LIB, DEEP])
-    == ["app-misc/a-1", "dev-libs/lib-1", "virtual/lib-0"]))
+    == ["app-misc/a-1"]))
 
 case("PDEPEND 里的包也一起发", lambda: (
     deps([stanza("app-misc/a-1", pdepend="dev-libs/lib"), LIB])

@@ -318,6 +318,11 @@ case("没有 RESTRICT 就不动它", lambda: (
     lambda r: r[0] == 0 and r[1] == ["foo-1.0.tar.gz"] and r[2] == []
 )(run_main({"app-misc/foo": {"1.0": ["foo-1.0.tar.gz"]}}, ["foo-1.0.tar.gz"])))
 
+case("只有 bindist 时仍保留 distfile", lambda: (
+    lambda r: r[0] == 0 and r[1] == ["foo-1.0.tar.gz"] and r[2] == []
+)(run_main({"app-misc/foo": {"1.0": (["foo-1.0.tar.gz"], "bindist")}},
+           ["foo-1.0.tar.gz"])))
+
 case("禁止镜像的文件会被回收", lambda: (
     lambda r: r[1] == [] and r[2] == ["foo-1.0.tar.gz"]
 )(run_main({"app-misc/foo": {"1.0": (["foo-1.0.tar.gz"], "mirror")}},

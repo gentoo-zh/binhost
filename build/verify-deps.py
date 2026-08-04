@@ -5,8 +5,8 @@ verify-deps.py <Packages> [--installed <base snapshot>]
 
 Checks an index against itself: every runtime dependency of every stanza must
 match a published CPV, name a package the base system already provides, or
-match a package captured from the configured Gentoo binary repository or
-Gentoo source tree.
+match a package captured from the configured Gentoo binary repository or the
+Gentoo and gentoo-zh source trees.
 
 The base system is read from the immutable vdb snapshot written before emerge.
 Without that file there is no way to tell a dependency the consumer already has
@@ -24,6 +24,7 @@ from ebuilds import index_db, runtime_atoms, split_cpv   # noqa: E402
 from portage.dep import Atom                             # noqa: E402
 
 RUNTIME_FIELDS = ("RDEPEND", "PDEPEND", "IDEPEND")
+SOURCE_ONLY_CATEGORIES = frozenset({"acct-group", "acct-user", "virtual"})
 
 EXCEPTIONS = pathlib.Path(__file__).with_name("dep-exceptions.txt")
 
@@ -115,27 +116,39 @@ def write_available(path, source_text, source_fields, atoms):
     write_snapshot(path, header, selected)
 
 
-def source_resolver(tree):
+def default_use(iuse):
+    return " ".join(sorted(
+        flag[1:] for flag in iuse.split()
+        if flag.startswith("+") and len(flag) > 1))
+
+
+def source_resolver(tree, overlay=None):
     import os
     import portage
 
     env = dict(os.environ)
     env["ACCEPT_KEYWORDS"] = "~amd64"
-    env["PORTAGE_REPOSITORIES"] = (
+    repositories = (
         "[DEFAULT]\nmain-repo = gentoo\n\n"
         f"[gentoo]\nlocation = {pathlib.Path(tree).resolve()}\n")
+    if overlay is not None:
+        repositories += (
+            "\n[gentoo-zh]\n"
+            f"location = {pathlib.Path(overlay).resolve()}\n"
+            "masters = gentoo\n")
+    env["PORTAGE_REPOSITORIES"] = repositories
     database = portage.portdbapi(mysettings=portage.config(env=env))
 
     def resolve(atom):
         fields = []
-        names = ("SLOT", "USE", "IUSE_EFFECTIVE", "EAPI", "repository")
+        names = ("SLOT", "IUSE", "EAPI", "repository")
         for cpv in database.xmatch("match-visible", atom):
             values = dict(zip(names, database.aux_get(cpv, names)))
             fields.append({
                 "CPV": cpv,
                 "SLOT": values["SLOT"],
-                "USE": "",
-                "IUSE": values["IUSE_EFFECTIVE"],
+                "USE": default_use(values["IUSE"]),
+                "IUSE": values["IUSE"],
                 "EAPI": values["EAPI"],
                 "REPO": values["repository"],
             })
@@ -148,7 +161,8 @@ def select_source(atoms, resolve):
     selected = {}
     for value in atoms:
         atom = Atom(value)
-        if atom.use is not None:
+        category = atom.cp.partition("/")[0]
+        if atom.use is not None and category not in SOURCE_ONLY_CATEGORIES:
             continue
         for field in resolve(atom):
             key = (field["CPV"], field.get("REPO", ""))
@@ -156,17 +170,26 @@ def select_source(atoms, resolve):
     return [selected[key] for key in sorted(selected)]
 
 
-def write_source(path, tree, atoms, resolve=None):
-    fields = select_source(atoms, resolve or source_resolver(tree))
+def repository_revision(tree):
     try:
-        revision = subprocess.run(
+        return subprocess.run(
             ["git", "-C", str(tree), "rev-parse", "HEAD"], capture_output=True,
             text=True).stdout.strip()
     except FileNotFoundError:
-        revision = ""
+        return ""
+
+
+def write_source(path, tree, atoms, overlay=None, resolve=None):
+    fields = select_source(atoms, resolve or source_resolver(tree, overlay))
     header = [f"PACKAGES: {len(fields)}", "SOURCE_REPOSITORY: gentoo"]
+    revision = repository_revision(tree)
     if revision:
         header.append(f"SOURCE_REVISION: {revision}")
+    if overlay is not None:
+        header.append("SOURCE_OVERLAY_REPOSITORY: gentoo-zh")
+        overlay_revision = repository_revision(overlay)
+        if overlay_revision:
+            header.append(f"SOURCE_OVERLAY_REVISION: {overlay_revision}")
     header.append("VERSION: 1")
     write_snapshot(path, header, fields)
 
@@ -244,7 +267,7 @@ def check(fields, installed=None, available=None, source=None):
 
 def main(path, exceptions=None, installed=None, available=None,
          write_available_path=None, source=None, source_tree=None,
-         write_source_path=None, resolve_source=None):
+         source_overlay=None, write_source_path=None, resolve_source=None):
     fields = parse(pathlib.Path(path).read_text())
     if not fields:
         sys.exit(f"{path} 中没有任何 stanza")
@@ -282,7 +305,7 @@ def main(path, exceptions=None, installed=None, available=None,
             if not source_tree:
                 raise ValueError("未提供用于生成源码快照的 Gentoo 仓库")
             write_source(write_source_path, source_tree, unsatisfied,
-                         resolve=resolve_source)
+                         overlay=source_overlay, resolve=resolve_source)
             _source_fields, source_db = read_snapshot(
                 write_source_path, "Gentoo 源码可用包快照")
         else:
@@ -303,7 +326,7 @@ def main(path, exceptions=None, installed=None, available=None,
         print("!! 未提供基础系统清单，索引之外的依赖一律计为未满足", file=sys.stderr)
     print(f"索引 {len(fields)} 个，{len(base)} 个原子由基础系统提供，"
           f"{len(external)} 个由 Gentoo binhost 提供，"
-          f"{len(source_matches)} 个由 Gentoo 源码仓库提供，"
+          f"{len(source_matches)} 个由源码仓库提供，"
           f"{len(accepted)} 个是已列出的例外")
     for atom in stale:
         print(f"!! 例外 {atom} 本轮已能满足，应从 dep-exceptions.txt 删除",
@@ -328,10 +351,12 @@ if __name__ == "__main__":
     parser.add_argument("--write-available")
     parser.add_argument("--source")
     parser.add_argument("--source-tree")
+    parser.add_argument("--source-overlay")
     parser.add_argument("--write-source")
     options = parser.parse_args()
     sys.exit(main(options.path, installed=options.installed,
                   available=options.available,
                   write_available_path=options.write_available,
                   source=options.source, source_tree=options.source_tree,
+                  source_overlay=options.source_overlay,
                   write_source_path=options.write_source))

@@ -290,7 +290,7 @@ class MetadataUnavailable(Exception):
     pass
 
 
-def pinned_portdbapi(overlay, tree=GENTOO_TREE):
+def pinned_portdbapi(overlay, tree=GENTOO_TREE, accept_license=None):
     """A portdbapi reading exactly the two trees given, not the host's config.
 
     Locations go through an explicit config so the result does not depend on
@@ -305,6 +305,8 @@ def pinned_portdbapi(overlay, tree=GENTOO_TREE):
         "[DEFAULT]\nmain-repo = gentoo\n\n"
         f"[gentoo]\nlocation = {tree}\n\n"
         f"[gentoo-zh]\nlocation = {overlay}\nmasters = gentoo\n")
+    if accept_license is not None:
+        env["ACCEPT_LICENSE"] = accept_license
     try:
         db = portage.portdbapi(mysettings=portage.config(env=env))
     except Exception as e:                                  # noqa: BLE001
