@@ -78,8 +78,10 @@ setRows([{ cp: "media-sound/open-orpheus-bin", desc: "Orpheus", binhost: false,
            policy: "bindist", why: "prebuilt" }]);
 const bindist = renderWith("");
 check("发布政策与建置清单原因分别显示",
-      bindist.includes("why_bindist") && bindist.includes("why_prebuilt") &&
-      /why_prebuilt<\/span><\/td><td class="mark yes">/.test(bindist),
+      (bindist.match(/>why_bindist<\/span>/g) || []).length === 1 &&
+      !bindist.includes(">why_prebuilt</span>") &&
+      bindist.includes("whyLong_bindist whyLong_prebuilt") &&
+      /why_bindist<\/span><\/td><td class="mark yes">/.test(bindist),
       bindist.slice(0, 500));
 
 const packages = [
@@ -105,7 +107,7 @@ setRows([
   { cp: "app-misc/src-only", binhost: false, excluded: "", present: true,
     ver: "", size: 0, declaresDist: true, dist: true, policy: "", why: "candidate" },
   { cp: "virtual/neither", binhost: false, excluded: "", present: true,
-    ver: "", size: 0, declaresDist: false, dist: false, policy: "", why: "meta" },
+    ver: "", size: 0, declaresDist: false, dist: false, policy: "meta", why: "meta" },
   { cp: "app-i18n/libkkc-data", binhost: false, excluded: "", present: true,
     ver: "1", size: 1, declaresDist: true, dist: false, policy: "", why: "candidate" },
   { cp: "acct-group/aptly", binhost: false, excluded: "", present: true,
@@ -134,8 +136,22 @@ check("依赖闭包里的清单外套件不标成待移除",
 
 const sourceOnly = renderWith("acct-group/aptly");
 check("公开索引里的本地安装类别标成待移除",
-      sourceOnly.includes("why_meta") && sourceOnly.includes("why_retiring"),
+      (sourceOnly.match(/>why_meta<\/span>/g) || []).length === 1 &&
+      sourceOnly.includes("why_retiring") &&
+      /why_retiring<\/span><\/td><td class="mark yes">/.test(sourceOnly),
       sourceOnly.slice(0, 600));
+
+const localOnly = renderWith("virtual/neither");
+check("未发布的本地安装类别只显示一个状态标签",
+      (localOnly.match(/>why_meta<\/span>/g) || []).length === 1 &&
+      !localOnly.includes("why_retiring") &&
+      /why_meta<\/span><\/td><td class="mark no"/.test(localOnly),
+      localOnly.slice(0, 600));
+
+check("图例分别说明发布、清单、政策与退役状态",
+      ["lgBuilt", "lgPending", "lgExcluded", "lgDashBin", "lgBindist",
+       "lgLicense", "lgMeta", "lgRetiring", "lgDashDist"]
+        .every((key) => html.includes(`data-i18n="${key}"`)));
 
 check("distfiles 破折号区分无文件与未完整镜像",
       matrix.includes('title="distNone"') &&
