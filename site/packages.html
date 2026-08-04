@@ -92,11 +92,11 @@
     <dt><span class="pend why-tag" data-i18n="why_candidate">清单外</span></dt>
     <dd data-i18n="lgDashBin">不在直接构建清单；运行期依赖仍可能随包发布</dd>
     <dt><span class="pend why-tag" data-i18n="why_bindist">不提供 binpkg</span></dt>
-    <dd data-i18n="lgBindist"><code>RESTRICT=bindist</code> 禁止发布 binpkg</dd>
-    <dt><span class="pend why-tag" data-i18n="why_license">许可限制</span></dt>
-    <dd data-i18n="lgLicense">许可不属于 <code>@BINARY-REDISTRIBUTABLE</code></dd>
+    <dd data-i18n-html="lgBindist"><code>RESTRICT=bindist</code> 禁止发布 binpkg</dd>
+    <dt><span class="pend why-tag" data-i18n="why_license">许可证限制</span></dt>
+    <dd data-i18n-html="lgLicense"><code>LICENSE</code> 表达式不属于 <code>@BINARY-REDISTRIBUTABLE</code></dd>
     <dt><span class="pend why-tag" data-i18n="why_meta">本地安装</span></dt>
-    <dd data-i18n="lgMeta"><code>acct-group</code>、<code>acct-user</code> 与 <code>virtual</code> 由 Portage 本地安装</dd>
+    <dd data-i18n-html="lgMeta"><code>acct-group</code>、<code>acct-user</code> 与 <code>virtual</code> 由 Portage 本地安装</dd>
     <dt><span class="pend why-tag" data-i18n="why_retiring">待移除</span></dt>
     <dd data-i18n="lgRetiring">公开索引仍有旧 binpkg，下一代发布成功后移除</dd>
     <dt class="mark no">&#8212;</dt>
@@ -120,8 +120,8 @@
       <tbody id="rows"></tbody>
     </table>
     <p class="msg" id="msg"></p>
-    <noscript><p class="msg" data-i18n-html="noJs">这张表由脚本渲染。
-      纯文本查阅 <a href="/packages.txt">/packages.txt</a>。</p></noscript>
+    <noscript><p class="msg" data-i18n-html="noJs">此表需要脚本。
+      纯文本列表见 <a href="/packages.txt">/packages.txt</a>。</p></noscript>
   </div>
 
   <section id="deps">
@@ -192,7 +192,7 @@ window.MIRROR_I18N = {
     why_prebuilt: '清单外',
     why_nobuild: '清单外',
     why_bindist: '不提供 binpkg',
-    why_license: '许可限制',
+    why_license: '许可证限制',
     why_unknown: '政策不明',
     why_retiring: '待移除',
     why_nokeyword: '无 amd64',
@@ -201,24 +201,24 @@ window.MIRROR_I18N = {
     why_meta: '本地安装',
     why_removed: '已移除',
     why_candidate: '清单外',
-    whyLong_prebuilt: '上游提供预编译内容；这不是发布限制，该包目前不在建置清单中',
-    whyLong_nobuild: '未检测到常见建置 eclass；这不是发布限制，该包目前不在建置清单中',
-    whyLong_bindist: 'RESTRICT=bindist，本站不发布二进制包；distfiles 按 mirror/fetch 单独判定',
-    whyLong_license: '当前 ebuild 的许可证不属于 @BINARY-REDISTRIBUTABLE，本站不发布二进制包',
+    whyLong_prebuilt: '上游提供预编译内容；这不是发布限制，该包目前不在构建清单中',
+    whyLong_nobuild: '未检测到常见构建 eclass；这不是发布限制，该包目前不在构建清单中',
+    whyLong_bindist: 'RESTRICT=bindist，本站不发布 binpkg；distfiles 按 mirror、fetch 与 SRC_URI 分别判定',
+    whyLong_license: '当前 ebuild 的 LICENSE 表达式不属于 @BINARY-REDISTRIBUTABLE，本站不发布 binpkg',
     whyLong_unknown: '无法确定当前 ebuild 是否符合二进制包发布政策',
     whyLong_retiring: '公开索引仍包含旧产物；新一代索引成功切换后移除',
     whyLong_nokeyword: '没有 amd64 keyword',
     whyLong_masked: '被 profiles/package.mask 屏蔽',
-    whyLong_live: '只有 live ebuild，不发布稳定的二进制包',
+    whyLong_live: '仅有 live ebuild，本站不发布 binpkg',
     whyLong_meta: 'acct-group、acct-user 与 virtual 由使用者系统的 Portage 本地安装，本站不提供 binpkg',
     whyLong_removed: 'overlay 已移除该包；该行来自仍在公开索引中的产物',
-    whyLong_candidate: '检测到建置流程，但该包目前不在建置清单中',
+    whyLong_candidate: '检测到构建流程，但该包目前不在构建清单中',
     lgBuilt: '公开索引已有 binpkg',
     lgPending: '已在构建清单，尚无 binpkg',
     lgExcluded: '排除清单指定不构建',
     lgDashBin: '不在直接构建清单；运行期依赖仍可能随包发布',
     lgBindist: '<code>RESTRICT=bindist</code> 禁止发布 binpkg',
-    lgLicense: '许可不属于 <code>@BINARY-REDISTRIBUTABLE</code>',
+    lgLicense: '<code>LICENSE</code> 表达式不属于 <code>@BINARY-REDISTRIBUTABLE</code>',
     lgMeta: '<code>acct-group</code>、<code>acct-user</code> 与 <code>virtual</code> 由 Portage 本地安装',
     lgRetiring: '公开索引仍有旧 binpkg，下一代发布成功后移除',
     lgDashDist: '未声明 distfile、禁止镜像或尚未完整镜像',
@@ -228,11 +228,11 @@ window.MIRROR_I18N = {
     distUnknown: '无法获取 distfiles 索引',
     none: '没有匹配的包。',
     ph: '搜索包名',
-    noJs: '这张表由脚本渲染。纯文本查阅 <a href="/packages.txt">/packages.txt</a>。'
+    noJs: '此表需要脚本。纯文本列表见 <a href="/packages.txt">/packages.txt</a>。'
   },
   'zh-tw': {
 
-    unknown: '不明',    pending: '待建置', excluded: '不建置', updBin: '二進位套件更新於 ', updDist: 'distfiles 更新於 ', fltAll: '全部', fltBin: '僅二進位套件', fltDist: '僅 distfiles', title: '套件列表',
+    unknown: '無法取得',    pending: '待建置', excluded: '不建置', updBin: '二進位套件更新於 ', updDist: 'distfiles 更新於 ', fltAll: '全部', fltBin: '僅二進位套件', fltDist: '僅 distfiles', title: '套件列表',
     lead: 'overlay 套件與 ::gentoo 執行期依賴分開顯示。純文字查閱 <a href="/packages.txt">/packages.txt</a> 與 <a href="/deps.txt">/deps.txt</a>。',
     loading: '載入中…', failed: '無法載入套件資料：', thPkg: '套件', thVer: '版本', thSize: '體積', thBin: '二進位套件', thDist: 'Distfiles',
     h2deps: '::gentoo 依賴',
@@ -251,13 +251,13 @@ window.MIRROR_I18N = {
     why_nokeyword: '無 amd64', why_masked: '已遮蔽', why_live: '僅 9999', why_meta: '本機安裝', why_removed: '已移除', why_candidate: '清單外',
     whyLong_prebuilt: '上游提供預先編譯的內容；這不是發布限制，該套件目前不在建置清單中',
     whyLong_nobuild: '未偵測到常見建置 eclass；這不是發布限制，該套件目前不在建置清單中',
-    whyLong_bindist: 'RESTRICT=bindist，本站不發布二進位套件；distfiles 依 mirror/fetch 另行判定',
-    whyLong_license: '目前 ebuild 的許可證不屬於 @BINARY-REDISTRIBUTABLE，本站不發布二進位套件',
+    whyLong_bindist: 'RESTRICT=bindist，本站不發布 binpkg；distfiles 依 mirror、fetch 與 SRC_URI 分別判定',
+    whyLong_license: '目前 ebuild 的 LICENSE 表達式不屬於 @BINARY-REDISTRIBUTABLE，本站不發布 binpkg',
     whyLong_unknown: '無法確定目前 ebuild 是否符合二進位套件發布政策',
     whyLong_retiring: '公開索引仍包含舊產物；新一代索引成功切換後移除',
     whyLong_nokeyword: '沒有 amd64 keyword',
     whyLong_masked: '被 profiles/package.mask 遮蔽',
-    whyLong_live: '只有 live ebuild，不發布穩定的二進位套件',
+    whyLong_live: '僅有 live ebuild，本站不發布 binpkg',
     whyLong_meta: 'acct-group、acct-user 與 virtual 由使用者系統的 Portage 本機安裝，本站不提供 binpkg',
     whyLong_removed: 'overlay 已移除該套件；該列來自仍在公開索引中的產物',
     whyLong_candidate: '偵測到建置流程，但該套件目前不在建置清單中',
@@ -271,7 +271,7 @@ window.MIRROR_I18N = {
     distUnavailable: 'distfile 不允許鏡像，或尚未全部出現在鏡像索引中',
     distUnknown: '無法取得 distfiles 索引',
     ph: '搜尋套件名稱',
-    noJs: '這張表由指令碼算繪。純文字查閱 <a href="/packages.txt">/packages.txt</a>。'
+    noJs: '此表需要指令碼。純文字列表見 <a href="/packages.txt">/packages.txt</a>。'
   },
   'en': {
 
@@ -295,18 +295,18 @@ window.MIRROR_I18N = {
     why_nokeyword: 'no amd64', why_masked: 'masked', why_live: '9999 only', why_meta: 'local install', why_removed: 'removed', why_candidate: 'off-list',
     whyLong_prebuilt: 'Upstream provides prebuilt content. This is not a publication restriction; the package is not currently on the build list.',
     whyLong_nobuild: 'No common build eclass was detected. This is not a publication restriction; the package is not currently on the build list.',
-    whyLong_bindist: 'RESTRICT=bindist; this host does not publish a binary package. Distfiles follow mirror and fetch restrictions separately.',
-    whyLong_license: 'The current ebuild license is outside @BINARY-REDISTRIBUTABLE, so this host does not publish a binary package.',
+    whyLong_bindist: 'RESTRICT=bindist; this host does not publish a binpkg. Distfiles follow mirror, fetch and SRC_URI rules separately.',
+    whyLong_license: 'The current ebuild LICENSE expression is outside @BINARY-REDISTRIBUTABLE, so this host does not publish a binpkg.',
     whyLong_unknown: 'The current ebuild could not be evaluated against the binary-package publication policy.',
     whyLong_retiring: 'The public index still contains an old artifact. It is removed after a new index generation switches successfully.',
     whyLong_nokeyword: 'No amd64 keyword.',
     whyLong_masked: 'Masked in profiles/package.mask.',
-    whyLong_live: 'Only a live ebuild exists, so no stable binary package is published.',
+    whyLong_live: 'Only a live ebuild exists; this host does not publish a binpkg.',
     whyLong_meta: 'Portage installs acct-group, acct-user and virtual packages locally on the user system; this host does not provide a binpkg.',
     whyLong_removed: 'The package left the overlay; this row remains because its artifact is still in the public index.',
     whyLong_candidate: 'A build process was detected, but the package is not currently on the build list.',
     lgBindist: '<code>RESTRICT=bindist</code> prohibits binpkg publication.',
-    lgLicense: 'The licence is outside <code>@BINARY-REDISTRIBUTABLE</code>.',
+    lgLicense: 'The <code>LICENSE</code> expression is outside <code>@BINARY-REDISTRIBUTABLE</code>.',
     lgMeta: 'Portage installs <code>acct-group</code>, <code>acct-user</code> and <code>virtual</code> locally.',
     lgRetiring: 'An old binpkg remains public until the next generation publishes successfully.',
     lgDashDist: 'No declared distfile, mirroring is prohibited, or the mirror is incomplete.',
@@ -315,7 +315,7 @@ window.MIRROR_I18N = {
     distUnavailable: 'A distfile is restricted from mirroring or is not yet present in the mirror index.',
     distUnknown: 'The distfiles index is unavailable.',
     ph: 'Search package name',
-    noJs: 'This table is rendered by a script. Plain text at <a href="/packages.txt">/packages.txt</a>.'
+    noJs: 'This table requires scripts. The plain-text list is at <a href="/packages.txt">/packages.txt</a>.'
   }
 };
 </script>

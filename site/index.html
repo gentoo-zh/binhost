@@ -82,10 +82,10 @@
   </div>
 
   <p class="note" data-i18n-html="distNote">
-    这里只有 overlay 的源码，不能替代官方源，因此是追加而非替换。
-    地址不写 <code>distfiles/</code>，portage 会自动附加。
-    这里把镜像都列出：<code>GENTOO_MIRRORS</code> 是按顺序尝试的列表，
-    选中的地址无法获取文件时，portage 会依序尝试后续地址。
+    本站只镜像 overlay ebuild 声明的 distfiles，不替代 Gentoo 主仓库的 distfiles 镜像。
+    地址末尾无需添加 <code>distfiles/</code>，Portage 会自动附加。
+    <code>GENTOO_MIRRORS</code> 按顺序尝试列出的地址；优先地址缺少文件时，
+    Portage 会继续尝试后续地址。
   </p>
 
   <div class="step">
@@ -219,12 +219,11 @@
 
   <p class="note" data-i18n-html="keyNote">
     <code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。没有它，上面三条
-    gpg 命令会以 <code>no writable keyring found</code> 失败——gpg 不会自己建这个目录，
-    而 portage 只在第一次取二进制包时才会调用它，那已经是第 2、3 步之后了。
-    签名用的是 getuto 建立的 Portage Local Trust Key，口令在
-    <code>/etc/portage/gnupg/pass</code>，因此要用 <code>--passphrase-file</code> 读。
-    验签以 <code>portage</code> 用户执行，该用户对 trustdb 没有写入权限，
-    所以 trustdb 要预先算好。
+    <code>gpg</code> 命令会报告 <code>no writable keyring found</code>。<code>gpg</code>
+    不会自动建立该目录，而 Portage 直到首次获取二进制包才会调用 <code>getuto</code>，
+    此时配置步骤已经完成。签名使用 <code>getuto</code> 建立的 Portage Local Trust Key，
+    口令位于 <code>/etc/portage/gnupg/pass</code>，应通过 <code>--passphrase-file</code>
+    读取。验签以 <code>portage</code> 用户执行；该用户无权写入 trustdb，因此必须预先生成。
   </p>
 
   <div class="step">
@@ -276,7 +275,7 @@
   <p class="note" data-i18n-html="sigNote">
     验签由第 2 步的 <code>verify-signature = true</code> 提供，只作用于本源。
     <code>FEATURES=binpkg-request-signature</code> 是全局的，会覆盖它，也会要求通过
-    <code>FEATURES=buildpkg</code> 建置的包带签名。那些包默认没有签名；启用该功能时必须同时配置
+    <code>FEATURES=buildpkg</code> 构建的包带签名。那些包默认没有签名；启用该功能时必须同时配置
     <code>binpkg-signing</code> 与本机签名密钥。
   </p>
   </div>
@@ -340,11 +339,11 @@ window.MIRROR_I18N = {
     sigNote: '驗簽由第 2 步的 <code>verify-signature = true</code> 提供，只作用於本站。<code>FEATURES=binpkg-request-signature</code> 是全域設定，會覆蓋它，也會要求透過 <code>FEATURES=buildpkg</code> 建置的套件帶簽章。那些套件預設沒有簽章；啟用該功能時必須同時設定 <code>binpkg-signing</code> 與本機簽章金鑰。',
     srcLabel: '鏡像', srcLabelFirst: '優先', srcCernet: '教育網聯合鏡像站', srcNju: '南京大學', srcNyist: '南陽理工', srcHernet: '河南教育網', srcOrigin: '來源站',
     repoNote: '繁體中文頁面預設選擇來源站，可依網路情況切換。鏡像同步本站已簽章的產物；切換不改變簽章驗證要求。',
-    distNote: '這裡只有 overlay 的原始碼，不能替代官方來源，因此是附加而非取代。位址不寫 <code>distfiles/</code>，portage 會自動附加。這裡列出全部鏡像：<code>GENTOO_MIRRORS</code> 會依序嘗試各個位址，所選位址無法取得檔案時會繼續嘗試後續位址。',
+    distNote: '本站只鏡像 overlay ebuild 宣告的 distfiles，不取代 Gentoo 主倉庫的 distfiles 鏡像。位址末尾無須加入 <code>distfiles/</code>，Portage 會自動附加。<code>GENTOO_MIRRORS</code> 依序嘗試列出的位址；優先位址缺少檔案時，Portage 會繼續嘗試後續位址。',
     distOptOut: '不希望自動鏡像某個套件的 distfile 時，在 ebuild 的既有 <code>RESTRICT</code> 值中加入 <code>mirror</code>；沒有該變數時可設定 <code>RESTRICT="mirror"</code>。<code>RESTRICT</code> 中含 <code>fetch</code> 時，也會阻止同步流程自動取得和鏡像檔案。',
     step1: '匯入簽章公鑰', step2: '加入倉庫', step3: '啟用 getbinpkg（附加）',
     keyAlt: '也可不安裝該套件，直接下載公鑰檔案，見 <a href="/faq#key-download">FAQ</a>。',
-    keyNote: '<code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。沒有它，上面三條 gpg 命令會以 <code>no writable keyring found</code> 失敗——gpg 不會自己建這個目錄，而 portage 只在第一次取二進位套件時才會呼叫它，那已經是第 2、3 步之後了。簽章用的是 getuto 建立的 Portage Local Trust Key，口令在 <code>/etc/portage/gnupg/pass</code>，因此要用 <code>--passphrase-file</code> 讀。驗簽以 <code>portage</code> 使用者執行，該使用者對 trustdb 沒有寫入權限，所以 trustdb 要預先算好。',
+    keyNote: '<code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。缺少該目錄時，上述三條 <code>gpg</code> 命令會回報 <code>no writable keyring found</code>。<code>gpg</code> 不會自動建立該目錄，而 Portage 直到首次取得二進位套件才會呼叫 <code>getuto</code>，此時設定步驟已經完成。簽章使用 <code>getuto</code> 建立的 Portage Local Trust Key，密碼位於 <code>/etc/portage/gnupg/pass</code>，應透過 <code>--passphrase-file</code> 讀取。驗簽以 <code>portage</code> 使用者執行；該使用者無權寫入 trustdb，因此必須預先產生。',
     factBinRow: '二進位套件', factDistRow: 'distfiles', factBuildRow: '最近建置',
     factPkgs: ' 個 gentoo-zh', factDeps: ' 個 ::gentoo 依賴',
     factDist: ' 個檔案', factTime: '更新於 ', factFinished: '完成於 ',
@@ -365,11 +364,11 @@ window.MIRROR_I18N = {
     sigNote: 'Verification comes from <code>verify-signature = true</code> in step 2 and applies to this repository only. <code>FEATURES=binpkg-request-signature</code> is global, overrides that, and also requires signatures on packages built through <code>FEATURES=buildpkg</code>. Those packages are unsigned by default; enabling this feature therefore requires <code>binpkg-signing</code> and a local signing key.',
     srcLabel: 'Mirror', srcLabelFirst: 'First', srcCernet: 'CERNET', srcNju: 'Nanjing University', srcNyist: 'NYIST', srcHernet: 'HERNET', srcOrigin: 'Origin',
     repoNote: 'The English page defaults to the origin. Choose another mirror if it works better for your network. Mirrors synchronize the signed artifacts from this host; switching does not change the verification requirement.',
-    distNote: 'Only overlay sources live here, so this adds a mirror rather than replacing the official ones. Leave <code>distfiles/</code> off the address; portage appends it. Every mirror is listed: <code>GENTOO_MIRRORS</code> is tried in order, and portage continues with subsequent addresses when the selected mirror does not have a file.',
+    distNote: 'This host mirrors only the distfiles declared by overlay ebuilds; it does not replace a Gentoo repository distfiles mirror. Omit <code>distfiles/</code> from the end of the address because Portage appends it. <code>GENTOO_MIRRORS</code> tries the listed addresses in order and continues when the preferred address lacks a file.',
     distOptOut: 'To exclude a package\'s distfiles from automatic mirroring, add <code>mirror</code> to the ebuild\'s existing <code>RESTRICT</code> value; use <code>RESTRICT="mirror"</code> when the variable is absent. A <code>RESTRICT</code> value containing <code>fetch</code> also prevents the sync process from fetching and mirroring the files automatically.',
     step1: 'Import the signing key', step2: 'Add the repository', step3: 'Enable getbinpkg (append)',
     keyAlt: 'You can fetch the key file directly instead of installing the package; see the <a href="/faq#key-download">FAQ</a>.',
-    keyNote: '<code>getuto</code> creates <code>/etc/portage/gnupg</code>. Without it the three gpg commands above fail with <code>no writable keyring found</code>: gpg does not create the directory itself, and portage only invokes getuto when it first fetches a binary package, which is after steps 2 and 3. The signature is made with the Portage Local Trust Key getuto created. Its passphrase is in <code>/etc/portage/gnupg/pass</code>, hence <code>--passphrase-file</code>. Verification runs as the <code>portage</code> user, which has no write access to the trustdb, so the trustdb must be computed beforehand.',
+    keyNote: '<code>getuto</code> creates <code>/etc/portage/gnupg</code>. Without that directory, the three <code>gpg</code> commands above report <code>no writable keyring found</code>. <code>gpg</code> does not create the directory itself, and Portage invokes <code>getuto</code> only when it first fetches a binary package, after setup is complete. The signature uses the Portage Local Trust Key created by <code>getuto</code>. Read its passphrase from <code>/etc/portage/gnupg/pass</code> with <code>--passphrase-file</code>. Verification runs as the <code>portage</code> user, which cannot write the trustdb, so the trustdb must be prepared first.',
     factBinRow: 'Binary packages', factDistRow: 'distfiles', factBuildRow: 'Latest build',
     factPkgs: ' from gentoo-zh', factDeps: ' ::gentoo dependencies',
     factDist: ' files', factTime: 'updated ', factFinished: 'finished ',
@@ -453,8 +452,8 @@ window.MIRROR_I18N = {
     var fresh = job && job.generated &&
                 (Date.now() / 1000 - job.generated) < 3 * 3600;
     if (job && job.state === 'running' && fresh) {
-      var what = job.kind === 'prepare' ? ['factPreparing', ' 建置准备中']
-               : job.kind === 'source' ? ['factBuilding', ' 正在建置']
+      var what = job.kind === 'prepare' ? ['factPreparing', ' 构建准备中']
+               : job.kind === 'source' ? ['factBuilding', ' 正在构建']
                : ['factFetching', ' 正在取二进制包'];
       html += '<span class="job">' +
               (job.total ? '<b class="num">' + job.done + '/' + job.total + '</b>' : '') +

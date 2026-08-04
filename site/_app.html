@@ -78,8 +78,8 @@ document.documentElement.setAttribute(
       <tbody id="rows"></tbody>
     </table>
     <p class="msg" id="msg"></p>
-    <noscript><p class="msg" data-i18n-html="noJs">这个列表由脚本渲染。
-      不带脚本的目录浏览在 <a href="/_raw/">/_raw/</a>。</p></noscript>
+    <noscript><p class="msg" data-i18n-html="noJs">此列表需要脚本。
+      不使用脚本时，请通过 <a href="/_raw/">/_raw/</a> 浏览目录。</p></noscript>
   </div>
 </main>
 
@@ -108,19 +108,19 @@ window.MIRROR_I18N = {
     notFound: '这个路径不存在。',
     failed: '读取目录失败：',
     navFiles: '文件',
-    noJs: '这个列表由脚本渲染。不带脚本的目录浏览在 <a href="/_raw/">/_raw/</a>。'
+    noJs: '此列表需要脚本。不使用脚本时，请通过 <a href="/_raw/">/_raw/</a> 浏览目录。'
   },
   'zh-tw': { loading: '載入中…',
     title: '檔案', thWhat: '內容',
     thName: '名稱', thSize: '大小', thDate: '修改時間',
     notFound: '這個路徑不存在。', failed: '讀取目錄失敗：',
-    noJs: '這個列表由指令碼算繪。不帶指令碼的目錄瀏覽在 <a href="/_raw/">/_raw/</a>。'
+    noJs: '此列表需要指令碼。不使用指令碼時，請透過 <a href="/_raw/">/_raw/</a> 瀏覽目錄。'
   },
   'en': { loading: 'Loading…',
     title: 'Files', thWhat: 'Content',
     thName: 'Name', thSize: 'Size', thDate: 'Modified',
     notFound: 'No such path.', failed: 'Could not read directory: ',
-    noJs: 'This listing is rendered by a script. Plain directory browsing is at <a href="/_raw/">/_raw/</a>.'
+    noJs: 'This listing requires scripts. Without scripts, browse the directory at <a href="/_raw/">/_raw/</a>.'
   }
 };
 </script>
@@ -141,7 +141,7 @@ const ROOT = "/files/";
 
 const ROOT_DESC = {
   'binpkgs': { 'zh-cn': '二进制包', 'zh-tw': '二進位套件', 'en': 'Binary packages' },
-  'distfiles': { 'zh-cn': '软件包源码', 'zh-tw': '套件原始碼', 'en': 'Package sources' }
+  'distfiles': { 'zh-cn': 'Distfiles 镜像文件', 'zh-tw': 'Distfiles 鏡像檔案', 'en': 'Mirrored distfiles' }
 };
 const atRoot = path === ROOT;
 const lsPath = atRoot ? "/" : path;

@@ -79,20 +79,19 @@
 
   <h1 class="title" data-i18n="title">设计语言</h1>
   <p class="lead" data-i18n="lead">
-    这个站点的取值与规则。改样式与新增页面都以本页为准。
+    本页定义站点的设计值与规则。修改样式或新增页面时，以本页为准。
   </p>
 
   <h2 data-i18n="hRole">定位</h2>
 
   <p class="note" data-i18n="role1">
-    这是一个索引站点，不是产品主页。访客来这里是为了取一个地址、确认某个包是否收录、
-    查看某个目录的内容。所有决定都服从这一点：信息密度优先于留白，
-    数据可读优先于版面漂亮。
+    这是一个供使用者查找地址、确认包状态和浏览目录的索引站点。设计优先保证信息密度
+    与数据可读性，再考虑留白和装饰。
   </p>
 
   <p class="note" data-i18n-html="role2">
-    与 <a href="https://gentoozh.org/">gentoozh.org</a> 共用同一个色相与深色基底，
-    不照搬它的卡片网格。那是导航型首页的形态，用在数据表上会把行距撑散。
+    本站与 <a href="https://gentoozh.org/">gentoozh.org</a> 共用色相与深色基底。
+    卡片网格适合导航型首页，用于数据表会拉大行距，因此本站不采用该布局。
   </p>
 
   <h2 data-i18n="hColor">色彩</h2>
@@ -127,9 +126,8 @@
   <h2 data-i18n="hFont">字体</h2>
 
   <p class="note" data-i18n="font1">
-    正文用系统 sans，数据用等宽。包名、版本、路径、体积、时间一律等宽，
-    因为它们要对齐着扫，比例字体做不到。中文行高 1.8，比英文站点宽，
-    否则汉字挤在一起。
+    正文使用系统 sans 字体，数据使用等宽字体。包名、版本、路径、体积和时间需要纵向
+    对齐，比例字体无法保持字符宽度一致。中文行高为 1.8，避免汉字行距过密。
   </p>
 
   <div class="demo">
@@ -153,51 +151,50 @@
   <h2 data-i18n="hSpacing">间距与分隔</h2>
 
   <p class="note" data-i18n="spacing1">
-    间距取 4 的倍数。区块之间用 1px 线分隔，不用卡片、不用阴影、不用圆角容器；
-    圆角只出现在按钮和标签这类可点的小元素上，2px。
+    间距使用 4 的倍数。区块之间以 1px 线条分隔，不使用卡片、阴影或圆角容器。
+    按钮和标签等可交互小元素使用 2px 圆角。
   </p>
 
   <h2 data-i18n="hMobile">移动端</h2>
 
   <p class="note" data-i18n="mobile1">
-    一条列隐藏阶梯，加一个布局断点。表格宽度不够时逐列让位，让到只剩包名和状态
-    为止；布局本身只在 34rem 换一次。四档之外不再加，多设几档会让每一档都缺少
-    验证。
+    响应式规则包含三处表格列隐藏断点和一处布局断点。宽度不足时依次隐藏次要列，
+    最窄时保留包名与状态；页面布局只在 34rem 切换。新增断点前必须补充对应宽度的验证。
   </p>
 
   <table class="spec">
     <thead><tr><th data-i18n="thBp">断点</th><th data-i18n="thBpDo">做什么</th></tr></thead>
     <tbody>
-      <tr><td>62rem</td><td data-i18n="bp1">藏体积列。宽于它时包名不断行</td></tr>
-      <tr><td>52rem</td><td data-i18n="bp2">藏版本列。指纹改成占满一行按分组换行</td></tr>
+      <tr><td>62rem</td><td data-i18n="bp1">隐藏体积列。视口更宽时包名不换行</td></tr>
+      <tr><td>52rem</td><td data-i18n="bp2">隐藏版本列。指纹改为独占一行并按分组换行</td></tr>
       <tr><td>44rem</td><td data-i18n="bp3">隐藏文件浏览器的日期列</td></tr>
       <tr><td>34rem</td><td data-i18n="bp4">手机布局：顶栏折两行，内边距与代码字号收紧</td></tr>
     </tbody>
   </table>
 
   <p class="note" data-i18n="mobile2">
-    四块都写在基准规则之后。同权重下后出现的规则生效，混在基准规则中间会被其后的
-    基准规则覆盖。
+    四组媒体查询都写在基准规则之后。同权重规则按源码顺序覆盖；写在基准规则之前会
+    被后续基准规则覆盖。
   </p>
 
   <table class="spec">
     <thead><tr><th data-i18n="thRule">规则</th><th data-i18n="thWhy">原因</th></tr></thead>
     <tbody>
-      <tr><td data-i18n="r1k">顶栏两行</td><td data-i18n="r1v">品牌与语言、主题一行，导航链接一行。品牌用 flex-basis 0 先缩，否则浏览器会换行成三行</td></tr>
-      <tr><td data-i18n="r2k">导航链接横向可滑</td><td data-i18n="r2v">不换行，避免一个链接单独占一行</td></tr>
+      <tr><td data-i18n="r1k">顶栏两行</td><td data-i18n="r1v">品牌、语言与主题位于第一行，导航链接位于第二行。品牌使用 flex-basis: 0，避免顶栏换成三行</td></tr>
+      <tr><td data-i18n="r2k">导航链接可横向滚动</td><td data-i18n="r2v">链接保持单行，避免单个链接独占一行</td></tr>
       <tr><td data-i18n="r3k">表格逐列隐藏</td><td data-i18n="r3v">体积、版本依次让位，状态列留到最后</td></tr>
-      <tr><td data-i18n="r4k">表头留在视口里</td><td data-i18n="r4v">thead 用 position: sticky，top 取 --nav-h。顶栏也是 sticky，写 0 会滚到它底下；顶栏窄屏折两行，高度由 util.js 量出来写进变量</td></tr>
+      <tr><td data-i18n="r4k">表头留在视口内</td><td data-i18n="r4v">thead 使用 position: sticky，top 使用 --nav-h。顶栏同样为 sticky；若 top 为 0，表头会被顶栏遮挡。util.js 测量窄屏顶栏高度并写入变量</td></tr>
       <tr><td data-i18n="r5k">包名在斜线处断行</td><td data-i18n="r5v">用 &lt;wbr&gt; 标出断点。word-break: break-all 会把 app-admin/1password 切成无法辨认的三段</td></tr>
-      <tr><td data-i18n="r6k">页面不横向滚动</td><td data-i18n="r6v">代码块与地址栏在自己的容器里滚，表格靠逐列隐藏适配视口。表格外面不能套 overflow：overflow-x 一旦不是 visible，overflow-y 的 visible 会被算成 auto，表头的 sticky 就黏在那个容器上</td></tr>
+      <tr><td data-i18n="r6k">页面不横向滚动</td><td data-i18n="r6v">代码块与地址栏在各自容器内滚动，表格通过逐列隐藏适配视口。表格外层不得设置 overflow；overflow-x 不是 visible 时，overflow-y 的 visible 会计算为 auto，sticky 表头将绑定到该容器</td></tr>
       <tr><td data-i18n="r7k">正文内边距 1rem</td><td data-i18n="r7v">桌面 1.25rem。更小的值会让正文紧贴视口边缘</td></tr>
     </tbody>
   </table>
 
   <p class="note" data-i18n-html="mobile3">
-    改完逐宽度实测，320 到 1280 都看：可见列、指纹换行、标题字号、顶栏折行、
+    修改后逐一验证 320 至 1280 的每个宽度：可见列、指纹换行、标题字号、顶栏折行、
     表头吸顶、<code>documentElement.scrollWidth</code> 不大于
-    <code>clientWidth</code>。用指定宽度的 iframe 量，改
-    <code>html.style.width</code> 不触发媒体查询。
+    <code>clientWidth</code>。使用指定宽度的 iframe 测量；修改
+    <code>html.style.width</code> 不会触发媒体查询。
   </p>
 
   <h2 data-i18n="hComp">组件</h2>
@@ -231,23 +228,23 @@
   </div>
 
   <p class="note" data-i18n="code1">
-    路径写在标题栏，命令与配置在下方。值用强调色，键用正文色，注释与提示符用次要色。
-    每一块都能整段复制，不需要用户自己选中。
+    路径位于标题栏，命令与配置位于下方。值使用强调色，键使用正文色，注释与提示符
+    使用次要色。复制按钮选取整个代码块。
   </p>
 
   <p class="note" data-i18n-html="code2">
-    内容超宽时横向滚动，滚动条保留不隐藏——它是还能往右看的唯一提示。调细到 6px，
-    滑块用 <code>--border</code>，悬停 <code>--fg-soft</code>。系统默认样式在深色主题下是
-    一条浅灰粗条，全站只有那一处不跟主题。
+    超宽内容在代码块内横向滚动，并保留滚动条作为可滚动提示。滚动条宽度为 6px，
+    滑块使用 <code>--border</code>，悬停时使用 <code>--fg-soft</code>，避免系统默认样式
+    在深色主题下显示浅灰色粗条。
   </p>
 
   <h2 data-i18n="hLang">语言</h2>
 
   <p class="note" data-i18n-html="lang1">
-    简体是文档原文，直接写在 HTML 里；繁体与英文由 <code>i18n.js</code> 在 body 末尾换。
-    浏览器不保证等到那时才开始画，所以 <code>early.js</code> 放在
-    <code>&lt;head&gt;</code> 同步判断访客的语言：简体不做任何处理，无需等待一帧；
-    不是简体才把正文挡到换完为止，并带一个 1.5 秒兜底。
+    简体是源文案，直接写在 HTML 中；<code>i18n.js</code> 在 body 末尾替换繁体与英文。
+    浏览器可能在替换前开始绘制，因此 <code>early.js</code> 位于
+    <code>&lt;head&gt;</code>，同步判断访客语言。简体立即显示；其他语言在替换完成前
+    隐藏正文，并以 1.5 秒为最长等待时间。
   </p>
 
   <table class="spec">
@@ -256,44 +253,43 @@
       <tr><td>data-i18n</td><td data-i18n="m1">元素的文字</td></tr>
       <tr><td>data-i18n-html</td><td data-i18n="m2">整段内容，含里面的标签与链接</td></tr>
       <tr><td>data-i18n-href</td><td data-i18n="m3">链接地址。gentoozh.org 按语言分路径</td></tr>
-      <tr><td>data-langblock</td><td data-i18n="m4">整段多写几份，只显示当前语言那一份</td></tr>
+      <tr><td>data-langblock</td><td data-i18n="m4">每种语言各写一份，只显示当前语言的内容</td></tr>
     </tbody>
   </table>
 
   <p class="note" data-i18n="lang2">
-    导航栏与页脚是全站共用的，每一页都跟着语言走。语言按钮每页都渲染：
-    它决定的是全站偏好，缺一处会让读者以为该页不支持切换。
+    导航栏与页脚由全站共用，并随当前语言切换。每个页面都显示语言按钮，确保使用者
+    可以修改全站语言偏好。
   </p>
 
   <h2 data-i18n="hText">文字</h2>
 
   <p class="note" data-i18n="text1">
-    先给结论再给理由，因果写出来，不只并列现象。段落不超过 4 句。
-    不写总结段，不升华。简体用大陆用语（软件、网络、程序、数据、默认、内存），
-    繁体用台湾用语，技术术语保留英文原文。
+    先写结论，再说明必要理由；需要因果关系时明确写出。每段不超过 4 句，不添加重复
+    总结。简体使用大陆用语（软件、网络、程序、数据、默认、内存），繁体使用台湾用语，
+    技术术语保留英文原文。
   </p>
 
   <div class="demo">
-    <p class="rule-do" data-i18n="do1">因为 portage 接受二进制包时不比较 CFLAGS，所以这一点只能在构建端保证。</p>
+    <p class="rule-do" data-i18n="do1">Portage 接受二进制包时不比较 CFLAGS，因此构建端必须保证该参数。</p>
     <p class="rule-dont" data-specimen data-i18n="dont1">我们非常重视兼容性，会尽力确保您的使用体验。</p>
     <p class="rule-do" data-i18n="do2">这里只有 overlay 的源码，不能替代官方源。</p>
     <p class="rule-dont" data-specimen data-i18n="dont2">三样内容都可以直接浏览和下载哦。</p>
   </div>
 
   <p class="note" data-i18n="specimen">
-    下面三张表的实例列不随语言变。规范约束的是站点写出来的中文，
-    译成另一种语言之后，被禁的已经不是同一句。
+    下面三张表的示例列保持简体中文，用于检查源文案。译文按目标语言单独审校。
   </p>
 
   <h3 data-i18n="hBanPhrase">禁止的句式</h3>
   <table class="spec">
     <thead><tr><th data-i18n="thPhrase">句式</th><th data-i18n="thProblem">问题</th></tr></thead>
     <tbody>
-      <tr><td data-specimen>不是 X，而是 Y</td><td data-i18n="p1">否定式对比，绕一圈才说到点</td></tr>
+      <tr><td data-specimen>不是 X，而是 Y</td><td data-i18n="p1">否定式对比会延后核心结论</td></tr>
       <tr><td data-specimen>这不仅是…更是…</td><td data-i18n="p2">伪广度，没有增加信息</td></tr>
       <tr><td data-specimen>从 X 到 Y</td><td data-i18n="p3">同上</td></tr>
       <tr><td data-specimen>无缝、直观、强大</td><td data-i18n="p4">三项形容词堆叠，都不可验证</td></tr>
-      <tr><td data-specimen>值得注意的是</td><td data-i18n="p5">该注意的直接写，不用预告</td></tr>
+      <tr><td data-specimen>值得注意的是</td><td data-i18n="p5">直接陈述重点，无需预告</td></tr>
       <tr><td data-specimen>总的来说 / 综上所述</td><td data-i18n="p6">总结段本身就不写</td></tr>
       <tr><td data-specimen>随着…的不断发展</td><td data-i18n="p7">套话开头</td></tr>
       <tr><td data-specimen>其实 / 说白了 / 坦白讲</td><td data-i18n="p8">口语开头</td></tr>
@@ -334,8 +330,8 @@
   </div>
 
   <p class="note" data-i18n="never1">
-    这些是当下生成式工具的默认产物，同时出现会让任何站点显得出自同一个模板。
-    这个站点靠排版和信息组织成立，不靠装饰。
+    这些元素组合后容易形成通用模板外观。本站通过排版与信息组织建立层次，装饰不承担
+    信息表达功能。
   </p>
 
 </main>
@@ -362,10 +358,10 @@
 window.MIRROR_I18N = {
   'zh-tw': {
     title: '設計語言',
-    lead: '這個站點的取值與規則。改樣式與新增頁面都以本頁為準。',
+    lead: '本頁定義站點的設計值與規則。修改樣式或新增頁面時，以本頁為準。',
     hRole: '定位',
-    role1: '這是一個索引站點，不是產品首頁。訪客來這裡是為了取一個位址、確認某個套件是否收錄、查看某個目錄的內容。所有決定都服從這一點：資訊密度優先於留白，資料可讀優先於版面漂亮。',
-    role2: '與 <a href="https://gentoozh.org/">gentoozh.org</a> 共用同一個色相與深色基底，不照搬它的卡片網格。那是導覽型首頁的形態，用在資料表上會把行距撐散。',
+    role1: '這是供使用者查找位址、確認套件狀態和瀏覽目錄的索引站點。設計優先確保資訊密度與資料可讀性，再考慮留白和裝飾。',
+    role2: '本站與 <a href="https://gentoozh.org/">gentoozh.org</a> 共用色相與深色基底。卡片網格適合導覽型首頁，用於資料表會拉大行距，因此本站不採用該版面。',
     hColor: '色彩',
     color1: '強調色取自 gentoozh.org 的 <code>hsl(255 55% 70%)</code>，色相與 Gentoo 官方紫 <code>#54487a</code> 一致。全站只有這一個強調色，不再引入第二種色相；狀態用綠色，僅出現在表格的勾號上。',
     hDark: '深色',
@@ -382,7 +378,7 @@ window.MIRROR_I18N = {
     vAccentWeak: '目前項目的背景，極低飽和',
     vOk: '只用於 `已建置` 這類肯定狀態',
     hFont: '字型',
-    font1: '內文用系統 sans，資料用等寬。套件名、版本、路徑、體積、時間一律等寬，因為它們要對齊著掃，比例字型做不到。中文行高 1.8，比英文站點寬，否則漢字擠在一起。',
+    font1: '內文使用系統 sans 字型，資料使用等寬字型。套件名、版本、路徑、體積和時間需要縱向對齊，比例字型無法保持字元寬度一致。中文行高為 1.8，避免漢字行距過密。',
     fontSans: '系統 sans：內文與說明文字 The quick brown fox',
     fontMono: '等寬：app-i18n/fcitx-rime-extra 5.1.8 · 12.4 M · 2026-07-27',
     thSize: '尺寸',
@@ -395,33 +391,33 @@ window.MIRROR_I18N = {
     sz6: '程式碼區塊',
     sz7: '表頭、狀態標籤',
     hSpacing: '間距與分隔',
-    spacing1: '間距取 4 的倍數。區塊之間用 1px 線分隔，不用卡片、不用陰影、不用圓角容器；圓角只出現在按鈕和標籤這類可點的小元素上，2px。',
+    spacing1: '間距使用 4 的倍數。區塊之間以 1px 線條分隔，不使用卡片、陰影或圓角容器。按鈕和標籤等可互動小元素使用 2px 圓角。',
     hMobile: '行動裝置',
-    mobile1: '一條欄位隱藏階梯，加一個版面斷點。表格寬度不夠時逐欄讓位，讓到只剩套件名和狀態為止；版面本身只在 34rem 換一次。四檔之外不再加，多設幾檔會讓每一檔都缺少驗證。',
+    mobile1: '響應式規則包含三處表格欄位隱藏斷點和一處版面斷點。寬度不足時依序隱藏次要欄位，最窄時保留套件名與狀態；頁面版面只在 34rem 切換。新增斷點前必須補充對應寬度的驗證。',
     thBp: '斷點',
     thBpDo: '做什麼',
-    bp1: '隱藏體積欄。寬於它時套件名不斷行',
-    bp2: '隱藏版本欄。指紋改成佔滿一行按分組換行',
+    bp1: '隱藏體積欄。視窗更寬時套件名不換行',
+    bp2: '隱藏版本欄。指紋改為獨佔一行並按分組換行',
     bp3: '隱藏檔案瀏覽器的日期欄',
     bp4: '手機版面：頂欄折兩行，內距與程式碼字級收緊',
-    mobile2: '四塊都寫在基準規則之後。同權重下後出現的規則生效，混在基準規則中間會被其後的基準規則覆蓋。',
+    mobile2: '四組媒體查詢都寫在基準規則之後。同權重規則依原始碼順序覆蓋；寫在基準規則之前會被後續基準規則覆蓋。',
     thRule: '規則',
     thWhy: '原因',
     r1k: '頂欄兩行',
-    r1v: '品牌與語言、主題一行，導覽連結一行。品牌用 flex-basis 0 先縮，否則瀏覽器會換行成三行',
-    r2k: '導覽連結橫向可捲',
-    r2v: '不換行，避免一個連結單獨佔一行',
+    r1v: '品牌、語言與主題位於第一行，導覽連結位於第二行。品牌使用 flex-basis: 0，避免頂欄換成三行',
+    r2k: '導覽連結可橫向捲動',
+    r2v: '連結保持單行，避免單個連結獨佔一行',
     r3k: '表格逐欄隱藏',
     r3v: '體積、版本依序讓位，狀態欄留到最後',
-    r4k: '表頭留在視窗裡',
-    r4v: 'thead 用 position: sticky，top 取 --nav-h。頂欄也是 sticky，寫 0 會捲到它底下；頂欄窄螢幕折兩行，高度由 util.js 量出來寫進變數',
+    r4k: '表頭留在視窗內',
+    r4v: 'thead 使用 position: sticky，top 使用 --nav-h。頂欄同樣為 sticky；若 top 為 0，表頭會被頂欄遮住。util.js 測量窄螢幕頂欄高度並寫入變數',
     r5k: '套件名在斜線處斷行',
     r5v: '用 &lt;wbr&gt; 標出斷點。word-break: break-all 會把 app-admin/1password 切成無法辨認的三段',
     r6k: '頁面不橫向捲動',
-    r6v: '程式碼區塊與網址列在自己的容器裡捲動，表格靠逐欄隱藏適配視窗。表格外面不能套 overflow：overflow-x 一旦不是 visible，overflow-y 的 visible 會被算成 auto，表頭的 sticky 就黏在那個容器上',
+    r6v: '程式碼區塊與網址列在各自容器內捲動，表格透過逐欄隱藏適配視窗。表格外層不得設定 overflow；overflow-x 不是 visible 時，overflow-y 的 visible 會計算為 auto，sticky 表頭將綁定到該容器',
     r7k: '內文內距 1rem',
     r7v: '桌面 1.25rem。更小的值會讓正文緊貼視窗邊緣',
-    mobile3: '改完逐寬度實測，320 到 1280 都看：可見欄位、指紋換行、標題字級、頂欄折行、表頭吸頂、<code>documentElement.scrollWidth</code> 不大於 <code>clientWidth</code>。用指定寬度的 iframe 量，改 <code>html.style.width</code> 不觸發媒體查詢。',
+    mobile3: '修改後逐一驗證 320 至 1280 的每個寬度：可見欄位、指紋換行、標題字級、頂欄折行、表頭吸頂、<code>documentElement.scrollWidth</code> 不大於 <code>clientWidth</code>。使用指定寬度的 iframe 測量；修改 <code>html.style.width</code> 不會觸發媒體查詢。',
     hComp: '元件',
     hTable: '資料表',
     thPkg: '套件',
@@ -431,32 +427,32 @@ window.MIRROR_I18N = {
     pending: '待建置',
     table1: '套件列表搜尋只比對套件名。狀態欄保留到最窄版面，用於直接比較發布結果。沒有公開 binpkg 時，發布政策顯示在二進位套件欄；公開索引仍有待移除產物時，政策改為顯示在套件名旁。',
     hCode: '程式碼區塊',
-    code1: '路徑寫在標題列，命令與設定在下方。值用強調色，鍵用內文色，註解與提示符用次要色。每一塊都能整段複製，不需要使用者自己選取。',
-    code2: '內容超寬時橫向捲動，捲軸保留不隱藏——它是還能往右看的唯一提示。調細到 6px，滑桿用 <code>--border</code>，停留時 <code>--fg-soft</code>。系統預設樣式在深色主題下是一條淺灰粗條，全站只有那一處不跟主題。',
+    code1: '路徑位於標題列，命令與設定位於下方。值使用強調色，鍵使用內文色，註解與提示符使用次要色。複製按鈕會選取整個程式碼區塊。',
+    code2: '超寬內容在程式碼區塊內橫向捲動，並保留捲軸作為可捲動提示。捲軸寬度為 6px，滑桿使用 <code>--border</code>，停留時使用 <code>--fg-soft</code>，避免系統預設樣式在深色主題下顯示淺灰色粗條。',
     hLang: '語言',
-    lang1: '簡體是文件原文，直接寫在 HTML 裡；繁體與英文由 <code>i18n.js</code> 在 body 末尾替換。瀏覽器不保證等到那時才開始繪製，所以 <code>early.js</code> 放在 <code>&lt;head&gt;</code> 同步判斷訪客要哪種語言：是簡體就什麼都不做，一影格都不必等；不是簡體才把內文遮到替換完為止，並帶一個 1.5 秒的保底。',
+    lang1: '簡體是來源文案，直接寫在 HTML 中；<code>i18n.js</code> 在 body 末尾替換繁體與英文。瀏覽器可能在替換前開始繪製，因此 <code>early.js</code> 位於 <code>&lt;head&gt;</code>，同步判斷訪客語言。簡體立即顯示；其他語言在替換完成前隱藏內文，並以 1.5 秒為最長等待時間。',
     thMark: '標記',
     thSwap: '替換什麼',
     m1: '元素的文字',
     m2: '整段內容，含裡面的標籤與連結',
     m3: '連結網址。gentoozh.org 按語言分路徑',
-    m4: '整段多寫幾份，只顯示目前語言那一份',
-    lang2: '導覽列與頁尾是全站共用的，每一頁都跟著語言走。語言按鈕每頁都繪製：它決定的是全站偏好，缺一處會讓讀者以為該頁不支援切換。',
+    m4: '每種語言各寫一份，只顯示目前語言的內容',
+    lang2: '導覽列與頁尾由全站共用，並隨目前語言切換。每個頁面都顯示語言按鈕，確保使用者可以修改全站語言偏好。',
     hText: '文字',
-    text1: '先給結論再給理由，因果寫出來，不只並列現象。段落不超過 4 句。不寫總結段，不昇華。簡體用大陸用語，繁體用台灣用語（軟體、網路、程式、資料、預設、記憶體），技術術語保留英文原文。',
-    do1: '因為 portage 接受二進位套件時不比較 CFLAGS，所以這一點只能在建置端保證。',
+    text1: '先寫結論，再說明必要理由；需要因果關係時明確寫出。每段不超過 4 句，不加入重複總結。簡體使用大陸用語，繁體使用台灣用語（軟體、網路、程式、資料、預設、記憶體），技術術語保留英文原文。',
+    do1: 'Portage 接受二進位套件時不比較 CFLAGS，因此建置端必須確保該參數。',
     dont1: '我們非常重視相容性，會盡力確保您的使用體驗。',
     do2: '這裡只有 overlay 的原始碼，不能取代官方來源。',
     dont2: '三樣內容都可以直接瀏覽和下載喔。',
-    specimen: '下面三張表的實例欄不隨語言變。規範約束的是站點寫出來的中文，譯成另一種語言之後，被禁的已經不是同一句。',
+    specimen: '下面三張表的範例欄保持簡體中文，用於檢查來源文案。譯文按目標語言單獨審校。',
     hBanPhrase: '禁止的句式',
     thPhrase: '句式',
     thProblem: '問題',
-    p1: '否定式對比，繞一圈才說到點',
+    p1: '否定式對比會延後核心結論',
     p2: '偽廣度，沒有增加資訊',
     p3: '同上',
     p4: '三項形容詞堆疊，都不可驗證',
-    p5: '該注意的直接寫，不用預告',
+    p5: '直接陳述重點，無須預告',
     p6: '總結段本身就不寫',
     p7: '套話開頭',
     p8: '口語開頭',
@@ -481,7 +477,7 @@ window.MIRROR_I18N = {
     n3: '超大字級的行銷式首屏',
     n4: '圖示裝飾每一個標題',
     n5: '動效。除按鈕的即時回饋外，沒有動畫',
-    never1: '這些是當下生成式工具的預設產物，同時出現會讓任何站點顯得出自同一個模板。這個站點靠排版和資訊組織成立，不靠裝飾。'
+    never1: '這些元素組合後容易形成通用模板外觀。本站透過排版與資訊組織建立層次，裝飾不承擔資訊表達功能。'
   },
   'en': {
     title: 'Design language',
