@@ -5,6 +5,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const html = fs.readFileSync(path.join(ROOT, "site/packages.html"), "utf8");
+const faq = fs.readFileSync(path.join(ROOT, "site/faq.html"), "utf8");
 
 let failed = 0;
 function check(name, cond, detail) {
@@ -152,6 +153,15 @@ check("图例分别说明发布、清单、政策与退役状态",
       ["lgBuilt", "lgPending", "lgExcluded", "lgDashBin", "lgBindist",
        "lgLicense", "lgMeta", "lgRetiring", "lgDashDist"]
         .every((key) => html.includes(`data-i18n="${key}"`)));
+
+check("图例链接到 FAQ 的状态说明",
+      html.includes('href="/faq#package-status"') &&
+      html.includes('data-i18n="lgMore"'));
+
+check("FAQ 说明 bindist 的常见原因与判定边界",
+      faq.includes("源码包和上游预编译包都可能设置这项限制") &&
+      faq.includes('包名含 <code>-bin</code> 本身不是判定依据') &&
+      faq.includes('distfiles 是否镜像仍按 <code>RESTRICT</code>'));
 
 check("distfiles 破折号区分无文件与未完整镜像",
       matrix.includes('title="distNone"') &&

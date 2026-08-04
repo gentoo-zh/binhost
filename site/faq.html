@@ -14,6 +14,21 @@
 <meta name="twitter:card" content="summary">
 <!-- /chrome:head -->
 <title>FAQ — distfiles.gentoozh.org</title>
+<style>
+.status-guide { width: 100%; border-collapse: collapse; margin: 0.7rem 0 1.75rem; }
+.status-guide th, .status-guide td {
+  padding: 0.55rem 0.65rem; text-align: left; vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+.status-guide th { color: var(--fg-soft); font-size: 0.76rem; font-weight: 500; }
+.status-guide th:first-child, .status-guide td:first-child { width: 8.5rem; }
+.status-guide td:first-child { color: var(--accent); font-size: 0.82rem; white-space: nowrap; }
+.status-guide td:last-child { color: var(--fg-soft); font-size: 0.85rem; line-height: 1.7; }
+@media (max-width: 34rem) {
+  .status-guide th, .status-guide td { padding: 0.5rem 0.35rem; }
+  .status-guide th:first-child, .status-guide td:first-child { width: 6.8rem; }
+}
+</style>
 </head>
 <body>
 
@@ -167,22 +182,36 @@
       主体是 gentoo-zh/overlay 的收录清单。除此之外，本站也发布这些包所需、允许
       再分发的那部分 <code>::gentoo</code> 运行期依赖，两者在同一份索引里，用
       <code>REPO</code> 字段区分。二进制包的许可证必须属于
-      <code>@BINARY-REDISTRIBUTABLE</code>，且不得设置 <code>RESTRICT=bindist</code>。
+      <code>@BINARY-REDISTRIBUTABLE</code>，且 <code>RESTRICT</code> 不得包含 <code>bindist</code>。
       <code>acct-group/*</code>、<code>acct-user/*</code> 与 <code>virtual/*</code> 在使用者
-      系统本地安装。<code>RESTRICT=bindist</code> 只限制二进制包；distfiles 是否镜像由
-      <code>RESTRICT=mirror/fetch</code> 与 <code>SRC_URI</code> 条目独立决定。附带内容仅包含
+      系统本地安装。<code>RESTRICT</code> 中的 <code>bindist</code> 只限制二进制包；
+      distfiles 是否镜像由 <code>mirror</code>、<code>fetch</code> 与每项
+      <code>SRC_URI</code> 独立决定。附带内容仅包含
       这些包的运行期依赖，不替代
       <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">Gentoo
       官方 binhost</a>。
       清单见 <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>。
     </p>
-    <p data-i18n-html="a7b">
-      套件页分开显示公开索引、直接构建清单和当前发布政策。二进制包列的
-      <code>✓</code> 表示公开索引已有 binpkg；<code>待构建</code> 表示直接构建目标尚无
-      公开产物；<code>清单外</code> 表示该包不是直接构建目标，但仍可能作为运行期依赖
-      发布。政策变化后，旧产物会同时显示政策标签和 <code>待移除</code>，并在新一代索引
-      发布成功后清理。
+
+    <h2 id="package-status" data-i18n="q12">如何阅读套件页状态？</h2>
+    <p data-i18n-html="a12">
+      套件页分开显示公开索引、直接构建清单、当前发布政策和 distfiles 镜像状态。
+      同一行可以同时出现多个状态，因为它们说明不同事实。
     </p>
+    <table class="status-guide">
+      <thead><tr><th data-i18n="stStatus">状态</th><th data-i18n="stMeaning">触发条件与常见原因</th></tr></thead>
+      <tbody>
+        <tr><td data-i18n-html="stBuilt"><code>✓</code></td><td data-i18n-html="sdBuilt">公开 binpkg 索引已有该包，可以从本站下载。它不表示该包仍在直接构建清单；同时出现 <code>待移除</code> 时，勾号只表示旧产物暂时仍可用。</td></tr>
+        <tr><td data-i18n-html="stPending"><code>待构建</code></td><td data-i18n-html="sdPending">该包是直接构建目标，但公开索引尚无 binpkg。它可能尚未完成首次建置，也可能没有在最近一轮成功发布；该状态只表示目前没有公开产物。</td></tr>
+        <tr><td data-i18n-html="stExcluded"><code>不构建</code></td><td data-i18n-html="sdExcluded">维护清单明确排除该包。常见原因包括无法建置、缺少支持或需要进一步核对再分发条件；将指针停在标签上可以查看记录的具体原因。</td></tr>
+        <tr><td data-i18n-html="stOffList"><code>清单外</code></td><td data-i18n-html="sdOffList">该包不是直接构建目标。上游已经提供预编译内容或建置收益较低时通常不会直接收录，但运行期依赖闭包仍可能将它作为依赖发布；包名含 <code>-bin</code> 不会自动决定该状态。</td></tr>
+        <tr><td data-i18n-html="stBindist"><code>不提供 binpkg</code></td><td data-i18n-html="sdBindist">当前 ebuild 的 <code>RESTRICT</code> 包含 <code>bindist</code>，因此本站不发布该包的 gpkg。源码包和上游预编译包都可能设置这项限制，常见原因是许可证、上游发布条款或预编译内容的再分发条件不允许本站分发二进制产物；包名含 <code>-bin</code> 本身不是判定依据。distfiles 是否镜像仍按 <code>RESTRICT</code> 中的 <code>mirror</code>、<code>fetch</code> 与每项 <code>SRC_URI</code> 单独判断。</td></tr>
+        <tr><td data-i18n-html="stLicense"><code>许可限制</code></td><td data-i18n-html="sdLicense">当前 ebuild 的 <code>LICENSE</code> 表达式不属于本站固定的 <code>@BINARY-REDISTRIBUTABLE</code>。许可证可能允许附带条件的再分发，但本站不会据此发布 binpkg；该状态与 <code>RESTRICT=bindist</code> 分开判定。</td></tr>
+        <tr><td data-i18n-html="stLocal"><code>本地安装</code></td><td data-i18n-html="sdLocal"><code>acct-group</code> 与 <code>acct-user</code> 只在本机创建账号，<code>virtual</code> 只让 Portage 选择实际实现。这些包无需由本站预编译，因此由使用者系统本地安装。</td></tr>
+        <tr><td data-i18n-html="stRetiring"><code>待移除</code></td><td data-i18n-html="sdRetiring">公开索引仍有旧 binpkg，但当前 overlay、清单或发布政策已不再提供它。旧产物会保留到新一代索引发布成功，避免旧索引指向已删除文件；该状态可以与勾号同时出现。</td></tr>
+        <tr><td data-i18n-html="stDist"><code>Distfiles —</code></td><td data-i18n-html="sdDist">该包没有声明 distfile、<code>RESTRICT</code> 包含 <code>mirror</code> 或 <code>fetch</code>，或声明的文件尚未全部进入镜像。将指针停在破折号上可以区分没有文件与不可用；该状态不表示 binpkg 不可用。</td></tr>
+      </tbody>
+    </table>
 
     <h2 data-i18n="q10">如何在 w3m、lynx 或 curl 中浏览？</h2>
     <p data-i18n-html="a10">
@@ -241,8 +270,28 @@ window.MIRROR_I18N = {
     q7: '都收錄了哪些套件？',
     q10: '如何在 w3m、lynx 或 curl 中瀏覽？',
     a10: '套件資料表與互動式檔案瀏覽需要指令碼；頁面標題、說明與連結仍可讀。純文字的套件清單在 <a href="/packages.txt">/packages.txt</a>，一行一個套件。第二欄 <code>bin+src</code> 表示兩者都有、<code>bin</code> 表示只有二進位套件、<code>src</code> 表示只有 distfiles。目錄瀏覽用 <a href="/_raw/">/_raw/</a>，那是由 nginx 生成的清單，不需要指令碼。其餘各頁的正文都寫在 HTML 裡，文字瀏覽器直接可讀。',
-    a7: '主體是 gentoo-zh/overlay 的收錄清單。除此之外，本站也發布這些套件所需、允許再散佈的那部分 <code>::gentoo</code> 執行期依賴，兩者在同一份索引裡，用 <code>REPO</code> 欄位區分。二進位套件的授權條款必須屬於 <code>@BINARY-REDISTRIBUTABLE</code>，且不得設定 <code>RESTRICT=bindist</code>。<code>acct-group/*</code>、<code>acct-user/*</code> 與 <code>virtual/*</code> 在使用者系統本機安裝。<code>RESTRICT=bindist</code> 只限制二進位套件；distfiles 是否鏡像由 <code>RESTRICT=mirror/fetch</code> 與 <code>SRC_URI</code> 項目另行判定。附帶內容僅包含這些套件的執行期依賴，不取代 <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">Gentoo 官方 binhost</a>。清單見 <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>。',
-    a7b: '套件頁分開顯示公開索引、直接建置清單與目前發布政策。二進位套件欄的 <code>✓</code> 表示公開索引已有 binpkg；<code>待建置</code> 表示直接建置目標尚無公開產物；<code>清單外</code> 表示該套件不是直接建置目標，但仍可能作為執行期依賴發布。政策變更後，舊產物會同時顯示政策標籤與 <code>待移除</code>，並在新一代索引發布成功後清理。'
+    a7: '主體是 gentoo-zh/overlay 的收錄清單。除此之外，本站也發布這些套件所需、允許再散布的那部分 <code>::gentoo</code> 執行期依賴，兩者在同一份索引裡，用 <code>REPO</code> 欄位區分。二進位套件的授權條款必須屬於 <code>@BINARY-REDISTRIBUTABLE</code>，且 <code>RESTRICT</code> 不得包含 <code>bindist</code>。<code>acct-group/*</code>、<code>acct-user/*</code> 與 <code>virtual/*</code> 在使用者系統本機安裝。<code>RESTRICT</code> 中的 <code>bindist</code> 只限制二進位套件；distfiles 是否鏡像由 <code>mirror</code>、<code>fetch</code> 與每個 <code>SRC_URI</code> 項目另行判定。附帶內容僅包含這些套件的執行期依賴，不取代 <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">Gentoo 官方 binhost</a>。清單見 <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>。',
+    q12: '如何閱讀套件頁狀態？',
+    a12: '套件頁分開顯示公開索引、直接建置清單、目前發布政策與 distfiles 鏡像狀態。同一列可以同時出現多個狀態，因為它們說明不同事實。',
+    stStatus: '狀態', stMeaning: '觸發條件與常見原因',
+    stBuilt: '<code>✓</code>',
+    sdBuilt: '公開 binpkg 索引已有該套件，可從本站下載。這不表示該套件仍在直接建置清單；同時出現 <code>待移除</code> 時，勾號只表示舊產物暫時仍可用。',
+    stPending: '<code>待建置</code>',
+    sdPending: '該套件是直接建置目標，但公開索引尚無 binpkg。它可能尚未完成首次建置，也可能沒有在最近一輪成功發布；該狀態只表示目前沒有公開產物。',
+    stExcluded: '<code>不建置</code>',
+    sdExcluded: '維護清單明確排除該套件。常見原因包括無法建置、缺少支援或需要進一步核對再散布條件；將指標停在標籤上可以查看記錄的具體原因。',
+    stOffList: '<code>清單外</code>',
+    sdOffList: '該套件不是直接建置目標。上游已提供預先編譯內容或建置收益較低時通常不會直接收錄，但執行期依賴閉包仍可能將它作為依賴發布；套件名含 <code>-bin</code> 不會自動決定該狀態。',
+    stBindist: '<code>不提供 binpkg</code>',
+    sdBindist: '目前 ebuild 的 <code>RESTRICT</code> 包含 <code>bindist</code>，因此本站不發布該套件的 gpkg。原始碼套件和上游預先編譯套件都可能設定這項限制，常見原因是授權條款、上游發布條款或預先編譯內容的再散布條件不允許本站散布二進位產物；套件名含 <code>-bin</code> 本身不是判定依據。distfiles 是否鏡像仍依 <code>RESTRICT</code> 中的 <code>mirror</code>、<code>fetch</code> 與每個 <code>SRC_URI</code> 項目分別判定。',
+    stLicense: '<code>授權限制</code>',
+    sdLicense: '目前 ebuild 的 <code>LICENSE</code> 表達式不屬於本站固定的 <code>@BINARY-REDISTRIBUTABLE</code>。授權條款可能允許附帶條件的再散布，但本站不會據此發布 binpkg；該狀態與 <code>RESTRICT=bindist</code> 分開判定。',
+    stLocal: '<code>本機安裝</code>',
+    sdLocal: '<code>acct-group</code> 與 <code>acct-user</code> 只在本機建立帳號，<code>virtual</code> 只讓 Portage 選擇實際實作。這些套件無須由本站預先編譯，因此由使用者系統在本機安裝。',
+    stRetiring: '<code>待移除</code>',
+    sdRetiring: '公開索引仍有舊 binpkg，但目前 overlay、清單或發布政策已不再提供它。舊產物會保留到新一代索引發布成功，避免舊索引指向已刪除檔案；該狀態可以與勾號同時出現。',
+    stDist: '<code>Distfiles —</code>',
+    sdDist: '該套件沒有宣告 distfile、<code>RESTRICT</code> 包含 <code>mirror</code> 或 <code>fetch</code>，或宣告的檔案尚未全部進入鏡像。將指標停在破折號上可以區分沒有檔案與不可用；該狀態不表示 binpkg 不可用。'
   },
   'en': { 
     q11: 'How do I obtain the signing key without installing the sec-keys package?',
@@ -268,8 +317,28 @@ window.MIRROR_I18N = {
     q7: 'Which packages are included?',
     q10: 'How do I browse this in w3m, lynx or curl?',
     a10: 'The package data table and interactive file browser require scripts; their headings, descriptions and links remain readable without scripts. A plain text package list is at <a href="/packages.txt">/packages.txt</a>, one package per line. Its second column uses <code>bin+src</code> for both, <code>bin</code> for a binary package only, and <code>src</code> for distfiles only. For directory browsing use <a href="/_raw/">/_raw/</a>, which nginx generates and needs no script. Every other page has its text in the HTML and reads fine in a text browser.',
-    a7: 'Mainly the gentoo-zh/overlay build list. This host also publishes the redistributable part of the <code>::gentoo</code> runtime dependencies those packages need; both live in one index and are told apart by the <code>REPO</code> field. A binary package must use licences in <code>@BINARY-REDISTRIBUTABLE</code> and must not set <code>RESTRICT=bindist</code>. <code>acct-group/*</code>, <code>acct-user/*</code> and <code>virtual/*</code> are installed locally on the user system. <code>RESTRICT=bindist</code> applies only to binary packages; distfile mirroring is governed separately by <code>RESTRICT=mirror/fetch</code> and each <code>SRC_URI</code> entry. The scope of the bundled dependencies stops at those runtime dependencies; this is not a replacement for the <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">official Gentoo binhost</a>. The list is in <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>.',
-    a7b: 'The packages page shows the public index, direct build list and current publication policy separately. A <code>✓</code> in the binary column means the public index contains a binpkg; <code>pending</code> means a direct build target has no public artifact yet; <code>off-list</code> means the package is not a direct target but may still be published as a runtime dependency. After a policy change, an old artifact carries the policy label and <code>pending removal</code> until a new index generation publishes successfully.'
+    a7: 'Mainly the gentoo-zh/overlay build list. This host also publishes the redistributable part of the <code>::gentoo</code> runtime dependencies those packages need; both live in one index and are told apart by the <code>REPO</code> field. A binary package must use licences in <code>@BINARY-REDISTRIBUTABLE</code>, and its <code>RESTRICT</code> must not include <code>bindist</code>. <code>acct-group/*</code>, <code>acct-user/*</code> and <code>virtual/*</code> are installed locally on the user system. The <code>bindist</code> value in <code>RESTRICT</code> applies only to binary packages; distfile mirroring is governed separately by <code>mirror</code>, <code>fetch</code> and each <code>SRC_URI</code> entry. The scope of the bundled dependencies stops at those runtime dependencies; this is not a replacement for the <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">official Gentoo binhost</a>. The list is in <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>.',
+    q12: 'How do I read the package statuses?',
+    a12: 'The packages page shows the public index, direct build list, current publication policy and distfile mirror state separately. Several statuses can appear on one row because they describe different facts.',
+    stStatus: 'Status', stMeaning: 'Trigger and common causes',
+    stBuilt: '<code>✓</code>',
+    sdBuilt: 'The public binpkg index contains this package, so it can be downloaded from this host. This does not mean the package remains a direct build target; when <code>pending removal</code> also appears, the tick only means the old artifact is temporarily available.',
+    stPending: '<code>pending</code>',
+    sdPending: 'The package is a direct build target, but the public index has no binpkg. Its first build may not have completed, or the latest cycle may not have published it; this status only says that no public artifact is currently available.',
+    stExcluded: '<code>excluded</code>',
+    sdExcluded: 'The maintenance list explicitly excludes the package. Common reasons include build failure, missing support or a redistribution condition that needs review; hover over the label for the recorded reason.',
+    stOffList: '<code>off-list</code>',
+    sdOffList: 'The package is not a direct build target. Packages with upstream prebuilt content or little build benefit are often left off the list, but the runtime dependency closure may still publish them as dependencies. A <code>-bin</code> name does not determine this status.',
+    stBindist: '<code>no binpkg</code>',
+    sdBindist: 'The current ebuild\'s <code>RESTRICT</code> includes <code>bindist</code>, so this host does not publish a gpkg for the package. Source and upstream-prebuilt packages can both carry this restriction, commonly because a licence, upstream release terms or redistribution conditions for prebuilt content prohibit this host from distributing binary artifacts. A <code>-bin</code> name is not evidence by itself. Distfile mirroring is evaluated separately from the <code>mirror</code> and <code>fetch</code> values in <code>RESTRICT</code> and each <code>SRC_URI</code> entry.',
+    stLicense: '<code>licence restricted</code>',
+    sdLicense: 'The current ebuild\'s <code>LICENSE</code> expression is outside this host\'s fixed <code>@BINARY-REDISTRIBUTABLE</code> set. The licence may permit redistribution under conditions, but this host does not publish a binpkg under that policy. This is evaluated separately from <code>RESTRICT=bindist</code>.',
+    stLocal: '<code>local install</code>',
+    sdLocal: '<code>acct-group</code> and <code>acct-user</code> only create local accounts, while <code>virtual</code> only lets Portage select the actual implementation. These packages do not need to be prebuilt by this host, so the user system installs them locally.',
+    stRetiring: '<code>pending removal</code>',
+    sdRetiring: 'The public index still contains an old binpkg, but the current overlay, list or publication policy no longer provides it. The old artifact remains until a new index generation publishes successfully, preventing the old index from pointing to a deleted file. This status can appear with a tick.',
+    stDist: '<code>Distfiles —</code>',
+    sdDist: 'The package declares no distfile, its <code>RESTRICT</code> includes <code>mirror</code> or <code>fetch</code>, or not every declared file has reached the mirror. Hover over the dash to distinguish no file from unavailable data. This status does not imply that the binpkg is unavailable.'
   }
 };
 </script>
