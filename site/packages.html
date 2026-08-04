@@ -84,17 +84,23 @@
 
   <dl class="legend">
     <dt class="mark yes">&#10003;</dt>
-    <dd data-i18n="lgBuilt">已发布</dd>
+    <dd data-i18n="lgBuilt">公开索引已有 binpkg</dd>
     <dt><span class="pend" data-i18n="pending">待构建</span></dt>
-    <dd data-i18n="lgPending">等待构建</dd>
+    <dd data-i18n="lgPending">已在构建清单，尚无 binpkg</dd>
     <dt><span class="pend" data-i18n="excluded">不构建</span></dt>
-    <dd data-i18n="lgExcluded">不收录</dd>
-    <dt><span class="pend why-tag" data-i18n="why_candidate">未收录</span></dt>
-    <dd data-i18n="lgDashBin">不在收录清单</dd>
-    <dt><span class="pend why-tag" data-i18n="why_license">许可证</span></dt>
-    <dd data-i18n="lgPolicy">当前政策不允许发布</dd>
+    <dd data-i18n="lgExcluded">排除清单指定不构建</dd>
+    <dt><span class="pend why-tag" data-i18n="why_candidate">清单外</span></dt>
+    <dd data-i18n="lgDashBin">不在直接构建清单；运行期依赖仍可能随包发布</dd>
+    <dt><span class="pend why-tag" data-i18n="why_bindist">不提供 binpkg</span></dt>
+    <dd data-i18n="lgBindist"><code>RESTRICT=bindist</code> 禁止发布 binpkg</dd>
+    <dt><span class="pend why-tag" data-i18n="why_license">许可限制</span></dt>
+    <dd data-i18n="lgLicense">许可不属于 <code>@BINARY-REDISTRIBUTABLE</code></dd>
+    <dt><span class="pend why-tag" data-i18n="why_meta">本地安装</span></dt>
+    <dd data-i18n="lgMeta"><code>acct-group</code>、<code>acct-user</code> 与 <code>virtual</code> 由 Portage 本地安装</dd>
+    <dt><span class="pend why-tag" data-i18n="why_retiring">待移除</span></dt>
+    <dd data-i18n="lgRetiring">公开索引仍有旧 binpkg，下一代发布成功后移除</dd>
     <dt class="mark no">&#8212;</dt>
-    <dd data-i18n="lgDashDist">没有 distfile、不允许镜像或尚未完整镜像</dd>
+    <dd data-i18n="lgDashDist">未声明 distfile、禁止镜像或尚未完整镜像</dd>
   </dl>
 
   <p class="count" id="count"></p>
@@ -182,10 +188,10 @@ window.MIRROR_I18N = {
     countFmt: 'overlay {n} 个包\n其中有二进制包 {b} 个\n其中有 distfiles {d} 个',
     pending: '待构建',
     excluded: '不构建',
-    why_prebuilt: '未收录',
-    why_nobuild: '未收录',
+    why_prebuilt: '清单外',
+    why_nobuild: '清单外',
     why_bindist: '不提供 binpkg',
-    why_license: '许可证',
+    why_license: '许可限制',
     why_unknown: '政策不明',
     why_retiring: '待移除',
     why_nokeyword: '无 amd64',
@@ -193,7 +199,7 @@ window.MIRROR_I18N = {
     why_live: '仅 9999',
     why_meta: '本地安装',
     why_removed: '已移除',
-    why_candidate: '未收录',
+    why_candidate: '清单外',
     whyLong_prebuilt: '上游提供预编译内容；这不是发布限制，该包目前不在建置清单中',
     whyLong_nobuild: '未检测到常见建置 eclass；这不是发布限制，该包目前不在建置清单中',
     whyLong_bindist: 'RESTRICT=bindist，本站不发布二进制包；distfiles 按 mirror/fetch 单独判定',
@@ -203,11 +209,18 @@ window.MIRROR_I18N = {
     whyLong_nokeyword: '没有 amd64 keyword',
     whyLong_masked: '被 profiles/package.mask 屏蔽',
     whyLong_live: '只有 live ebuild，不发布稳定的二进制包',
-    whyLong_meta: 'acct-group、acct-user 与 virtual 在使用者系统本地安装',
+    whyLong_meta: 'acct-group、acct-user 与 virtual 由使用者系统的 Portage 本地安装，本站不提供 binpkg',
     whyLong_removed: 'overlay 已移除该包；该行来自仍在公开索引中的产物',
     whyLong_candidate: '检测到建置流程，但该包目前不在建置清单中',
-    lgPolicy: '当前政策不允许发布',
-    lgDashDist: '没有 distfile、不允许镜像或尚未完整镜像',
+    lgBuilt: '公开索引已有 binpkg',
+    lgPending: '已在构建清单，尚无 binpkg',
+    lgExcluded: '排除清单指定不构建',
+    lgDashBin: '不在直接构建清单；运行期依赖仍可能随包发布',
+    lgBindist: '<code>RESTRICT=bindist</code> 禁止发布 binpkg',
+    lgLicense: '许可不属于 <code>@BINARY-REDISTRIBUTABLE</code>',
+    lgMeta: '<code>acct-group</code>、<code>acct-user</code> 与 <code>virtual</code> 由 Portage 本地安装',
+    lgRetiring: '公开索引仍有旧 binpkg，下一代发布成功后移除',
+    lgDashDist: '未声明 distfile、禁止镜像或尚未完整镜像',
     distNone: '该包没有声明 distfile',
     distUnavailable: 'distfile 不允许镜像，或尚未全部出现在镜像索引中',
     distUnknown: '无法获取 distfiles 索引',
@@ -227,13 +240,13 @@ window.MIRROR_I18N = {
     h2overlay: 'overlay 套件',
     depsStale: '本站的資料尚未更新到含這一項的版本，暫時無法列出',
     thSlot: 'Slot', countFmt: 'overlay {n} 個套件\n其中有二進位套件 {b} 個\n其中有 distfiles {d} 個', none: '沒有符合的套件。',
-    lgBuilt: '已發布',
-    lgPending: '等待建置',
-    lgExcluded: '不收錄',
-    lgDashBin: '不在收錄清單',
-    why_prebuilt: '未收錄', why_nobuild: '未收錄', why_bindist: '不提供 binpkg',
-    why_license: '許可證', why_unknown: '政策不明', why_retiring: '待移除',
-    why_nokeyword: '無 amd64', why_masked: '已遮蔽', why_live: '僅 9999', why_meta: '本機安裝', why_removed: '已移除', why_candidate: '未收錄',
+    lgBuilt: '公開索引已有 binpkg',
+    lgPending: '已在建置清單，尚無 binpkg',
+    lgExcluded: '排除清單指定不建置',
+    lgDashBin: '不在直接建置清單；執行期依賴仍可能隨套件發布',
+    why_prebuilt: '清單外', why_nobuild: '清單外', why_bindist: '不提供 binpkg',
+    why_license: '授權限制', why_unknown: '政策不明', why_retiring: '待移除',
+    why_nokeyword: '無 amd64', why_masked: '已遮蔽', why_live: '僅 9999', why_meta: '本機安裝', why_removed: '已移除', why_candidate: '清單外',
     whyLong_prebuilt: '上游提供預先編譯的內容；這不是發布限制，該套件目前不在建置清單中',
     whyLong_nobuild: '未偵測到常見建置 eclass；這不是發布限制，該套件目前不在建置清單中',
     whyLong_bindist: 'RESTRICT=bindist，本站不發布二進位套件；distfiles 依 mirror/fetch 另行判定',
@@ -243,11 +256,14 @@ window.MIRROR_I18N = {
     whyLong_nokeyword: '沒有 amd64 keyword',
     whyLong_masked: '被 profiles/package.mask 遮蔽',
     whyLong_live: '只有 live ebuild，不發布穩定的二進位套件',
-    whyLong_meta: 'acct-group、acct-user 與 virtual 在使用者系統本機安裝',
+    whyLong_meta: 'acct-group、acct-user 與 virtual 由使用者系統的 Portage 本機安裝，本站不提供 binpkg',
     whyLong_removed: 'overlay 已移除該套件；該列來自仍在公開索引中的產物',
     whyLong_candidate: '偵測到建置流程，但該套件目前不在建置清單中',
-    lgPolicy: '目前政策不允許發布',
-    lgDashDist: '沒有 distfile、不允許鏡像或尚未完整鏡像',
+    lgBindist: '<code>RESTRICT=bindist</code> 禁止發布 binpkg',
+    lgLicense: '授權條款不屬於 <code>@BINARY-REDISTRIBUTABLE</code>',
+    lgMeta: '<code>acct-group</code>、<code>acct-user</code> 與 <code>virtual</code> 由 Portage 本機安裝',
+    lgRetiring: '公開索引仍有舊 binpkg，下一代發布成功後移除',
+    lgDashDist: '未宣告 distfile、禁止鏡像或尚未完整鏡像',
     distNone: '該套件沒有宣告 distfile',
     distUnavailable: 'distfile 不允許鏡像，或尚未全部出現在鏡像索引中',
     distUnknown: '無法取得 distfiles 索引',
@@ -267,13 +283,13 @@ window.MIRROR_I18N = {
     lead: 'Overlay packages and ::gentoo runtime dependencies are shown separately. Plain text at <a href="/packages.txt">/packages.txt</a> and <a href="/deps.txt">/deps.txt</a>.',
     loading: 'Loading…', failed: 'Could not load package data: ', thPkg: 'Package', thVer: 'Version', thSize: 'Size', thBin: 'Binary', thDist: 'Distfiles',
     countFmt: 'overlay {n} packages\n{b} with a binary package\n{d} with distfiles', none: 'No matching packages.',
-    lgBuilt: 'Published.',
-    lgPending: 'Waiting to be built.',
-    lgExcluded: 'Not included.',
-    lgDashBin: 'Not on the list.',
-    why_prebuilt: 'not listed', why_nobuild: 'not listed', why_bindist: 'no binpkg',
-    why_license: 'license', why_unknown: 'policy unknown', why_retiring: 'pending removal',
-    why_nokeyword: 'no amd64', why_masked: 'masked', why_live: '9999 only', why_meta: 'local install', why_removed: 'removed', why_candidate: 'not listed',
+    lgBuilt: 'A binpkg is present in the public index.',
+    lgPending: 'On the build list, with no binpkg yet.',
+    lgExcluded: 'The exclusion list disables the build.',
+    lgDashBin: 'Not a direct build target; runtime dependencies may still be published.',
+    why_prebuilt: 'off-list', why_nobuild: 'off-list', why_bindist: 'no binpkg',
+    why_license: 'licence restricted', why_unknown: 'policy unknown', why_retiring: 'pending removal',
+    why_nokeyword: 'no amd64', why_masked: 'masked', why_live: '9999 only', why_meta: 'local install', why_removed: 'removed', why_candidate: 'off-list',
     whyLong_prebuilt: 'Upstream provides prebuilt content. This is not a publication restriction; the package is not currently on the build list.',
     whyLong_nobuild: 'No common build eclass was detected. This is not a publication restriction; the package is not currently on the build list.',
     whyLong_bindist: 'RESTRICT=bindist; this host does not publish a binary package. Distfiles follow mirror and fetch restrictions separately.',
@@ -283,11 +299,14 @@ window.MIRROR_I18N = {
     whyLong_nokeyword: 'No amd64 keyword.',
     whyLong_masked: 'Masked in profiles/package.mask.',
     whyLong_live: 'Only a live ebuild exists, so no stable binary package is published.',
-    whyLong_meta: 'acct-group, acct-user and virtual packages are installed locally.',
+    whyLong_meta: 'Portage installs acct-group, acct-user and virtual packages locally on the user system; this host does not provide a binpkg.',
     whyLong_removed: 'The package left the overlay; this row remains because its artifact is still in the public index.',
     whyLong_candidate: 'A build process was detected, but the package is not currently on the build list.',
-    lgPolicy: 'Current policy blocks publication.',
-    lgDashDist: 'No distfile, mirroring is restricted, or the mirror is incomplete.',
+    lgBindist: '<code>RESTRICT=bindist</code> prohibits binpkg publication.',
+    lgLicense: 'The licence is outside <code>@BINARY-REDISTRIBUTABLE</code>.',
+    lgMeta: 'Portage installs <code>acct-group</code>, <code>acct-user</code> and <code>virtual</code> locally.',
+    lgRetiring: 'An old binpkg remains public until the next generation publishes successfully.',
+    lgDashDist: 'No declared distfile, mirroring is prohibited, or the mirror is incomplete.',
     distNone: 'This package does not declare a distfile.',
     distUnavailable: 'A distfile is restricted from mirroring or is not yet present in the mirror index.',
     distUnknown: 'The distfiles index is unavailable.',
@@ -394,8 +413,16 @@ function reasonDetail(r) {
   const details = [];
   if (r.policy) details.push(t("whyLong_" + r.policy));
   if (r.excluded) details.push(r.excluded);
-  else if (!r.binhost && r.why) details.push(t("whyLong_" + r.why));
+  else if (!r.binhost && r.why && r.why !== r.policy) {
+    details.push(t("whyLong_" + r.why));
+  }
   return details.join(" ");
+}
+
+function reasonTag(code, detail) {
+  const title = detail || t("whyLong_" + code);
+  return '<span class="pend why-tag" title="' + esc(title) + '">' +
+    esc(t("why_" + code)) + '</span>';
 }
 
 function render() {
@@ -421,9 +448,8 @@ function render() {
     hit.map(function (r) {
       const url = "https://github.com/gentoo-zh/overlay/tree/master/" + r.cp;
       const name = esc(r.cp).replace("/", "/<wbr>");
-      const policy = r.policy
-        ? ' <span class="pend why-tag" title="' + esc(t("whyLong_" + r.policy)) + '">' +
-          t("why_" + r.policy) + '</span>'
+      const policy = r.policy && r.ver
+        ? ' ' + reasonTag(r.policy)
         : '';
       const retiring = r.ver &&
         (r.present === false || r.policy || r.excluded);
@@ -442,10 +468,10 @@ function render() {
         '<td class="mark ' + (r.ver ? 'yes' : 'no') + '"' +
           (r.excluded ? ' title="' + esc(r.excluded) + '"' : '') + '>' +
           (r.ver ? '\u2713'
+                 : r.policy ? reasonTag(r.policy, reasonDetail(r))
                  : r.excluded ? '<span class="pend">' + t("excluded") + '</span>'
                  : r.binhost ? '<span class="pend">' + t("pending") + '</span>'
-                 : r.why ? '<span class="pend why-tag" title="' + esc(t("whyLong_" + r.why)) + '">' +
-                             t("why_" + r.why) + '</span>'
+                 : r.why ? reasonTag(r.why)
                  : '\u2014') + '</td>' +
         '<td class="mark ' + (r.dist ? 'yes' : 'no') + '"' +
           (distDetail ? ' title="' + esc(distDetail) + '"' : '') + '>' +

@@ -215,7 +215,8 @@
   </div>
 
   <p class="note" data-i18n-html="table1">
-    包列表搜索只匹配包名。状态列保留到最窄布局，用于直接比较发布结果。
+    包列表搜索只匹配包名。状态列保留到最窄布局，用于直接比较发布结果。没有公开 binpkg
+    时，发布政策显示在二进制包列；公开索引仍有待移除产物时，政策改为显示在包名旁。
   </p>
 
   <h3 data-i18n="hCode">代码块</h3>
@@ -428,7 +429,7 @@ window.MIRROR_I18N = {
     thVer: '版本',
     excluded: '不建置',
     pending: '待建置',
-    table1: '套件列表搜尋只比對套件名。狀態欄保留到最窄版面，用於直接比較發布結果。',
+    table1: '套件列表搜尋只比對套件名。狀態欄保留到最窄版面，用於直接比較發布結果。沒有公開 binpkg 時，發布政策顯示在二進位套件欄；公開索引仍有待移除產物時，政策改為顯示在套件名旁。',
     hCode: '程式碼區塊',
     code1: '路徑寫在標題列，命令與設定在下方。值用強調色，鍵用內文色，註解與提示符用次要色。每一塊都能整段複製，不需要使用者自己選取。',
     code2: '內容超寬時橫向捲動，捲軸保留不隱藏——它是還能往右看的唯一提示。調細到 6px，滑桿用 <code>--border</code>，停留時 <code>--fg-soft</code>。系統預設樣式在深色主題下是一條淺灰粗條，全站只有那一處不跟主題。',
@@ -551,7 +552,7 @@ window.MIRROR_I18N = {
     thVer: 'Version',
     excluded: 'excluded',
     pending: 'pending',
-    table1: 'Package search matches the package name. Status columns remain visible until the narrowest layout because they carry the page\'s primary comparison.',
+    table1: 'Package search matches the package name. Status columns remain visible until the narrowest layout because they carry the page\'s primary comparison. Publication policy appears in the binary column when no public binpkg exists, and beside the package name when it explains an artifact pending removal.',
     hCode: 'Code blocks',
     code1: 'The path goes in the title bar, the command or configuration below it. Values take the accent, keys the body colour, comments and prompts the secondary colour. Every block copies whole, so nobody has to select it by hand.',
     code2: 'Content wider than the block scrolls sideways, and the scrollbar is kept rather than hidden: it is the only sign that there is more to the right. It is thinned to 6px, with the thumb on <code>--border</code> and <code>--fg-soft</code> on hover. The system default is a thick pale grey bar under the dark theme, the one element on the site that would not follow the theme.',
