@@ -19,6 +19,7 @@ BUILD_ECLASS = {
     "distutils-r1", "dotnet-pkg", "qmake-utils", "waf-utils", "scons-utils",
 }
 PREBUILT_ECLASS = {"unpacker", "rpm", "java-pkg-simple"}
+SOURCE_ONLY_CATEGORIES = frozenset({"acct-group", "acct-user", "virtual"})
 
 COMPILE_PHASE = re.compile(r"^(src_configure|src_compile)\s*\(\)", re.M)
 
@@ -90,6 +91,11 @@ def split_cpv(cpv):
     """(cp, version) for a category/package-version string, or (cpv, None)."""
     m = CPV_SPLIT.match(cpv)
     return (m.group("cp"), m.group("ver")) if m else (cpv, None)
+
+
+def source_only(cpv):
+    cp, _version = split_cpv(cpv)
+    return cp.partition("/")[0] in SOURCE_ONLY_CATEGORIES
 
 
 CP_ONLY = re.compile(r"^[a-z][a-z0-9+._-]*/[A-Za-z0-9][A-Za-z0-9+._-]*$")
@@ -284,10 +290,30 @@ def read_list(path):
 
 
 GENTOO_TREE = "/var/db/repos/gentoo"
+BINARY_LICENSES = "-* @BINARY-REDISTRIBUTABLE"
 
 
 class MetadataUnavailable(Exception):
     pass
+
+
+def default_use(iuse):
+    return " ".join(sorted(
+        flag[1:] for flag in iuse.split()
+        if flag.startswith("+") and len(flag) > 1))
+
+
+def effective_license(cpv, fields, current, current_slot, settings):
+    """yes / no / unknown under the supplied Portage license policy."""
+    repo = fields.get("REPO", "")
+    try:
+        metadata = {"USE": fields.get("USE", ""), "LICENSE": current,
+                    "SLOT": current_slot or "0", "repository": repo}
+        if settings._getMissingLicenses(cpv, metadata):
+            return "no"
+    except Exception:                                      # noqa: BLE001
+        return "unknown"
+    return "yes"
 
 
 def isolated_portage_config(env):
@@ -320,6 +346,11 @@ def pinned_portdbapi(overlay, tree=GENTOO_TREE, accept_license=None):
     """
     import os
     import portage
+    locations = (("gentoo-zh", str(overlay)), ("gentoo", str(tree)))
+    for name, location in locations:
+        if not pathlib.Path(location).is_dir():
+            raise MetadataUnavailable(
+                f"{name} repository does not exist: {location}")
     env = dict(os.environ)
     env["PORTAGE_REPOSITORIES"] = (
         "[DEFAULT]\nmain-repo = gentoo\n\n"
@@ -333,7 +364,7 @@ def pinned_portdbapi(overlay, tree=GENTOO_TREE, accept_license=None):
         db = portage.portdbapi(mysettings=settings)
     except Exception as e:                                  # noqa: BLE001
         raise MetadataUnavailable(str(e)) from e
-    for name, want in (("gentoo", str(tree)), ("gentoo-zh", str(overlay))):
+    for name, want in locations:
         got = db.getRepositoryPath(name)
         if got != want:
             raise MetadataUnavailable(f"{name} resolved to {got}, expected {want}")

@@ -63,7 +63,8 @@ def classify(cp, body=None):
             os.environ.update(old)
 
 
-def run_main(index_text, overlay=None, index_path=None, list_lines=(), distfiles=None):
+def run_main(index_text, overlay=None, index_path=None, list_lines=(), distfiles=None,
+             policies=None):
     """The whole generator, so the json and the two text files are covered."""
     import contextlib, io
     with tempfile.TemporaryDirectory() as tmp:
@@ -75,9 +76,16 @@ def run_main(index_text, overlay=None, index_path=None, list_lines=(), distfiles
         old = dict(os.environ)
         try:
             m = fresh(d, index_text, index_path, list_lines, distfiles)
+            policies = policies or {}
+
+            def policy_lookup(cpv):
+                parts = m.catpkgsplit(cpv)
+                cp = f"{parts[0]}/{parts[1]}" if parts else cpv
+                return policies.get(cp, "")
+
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-                rc = m.main(str(ov))
+                rc = m.main(str(ov), policy_lookup=policy_lookup)
         finally:
             os.environ.clear()
             os.environ.update(old)
@@ -138,6 +146,38 @@ def availability_matrix():
         return result, rows, statuses
 
 
+def policy_matrix():
+    with tempfile.TemporaryDirectory() as tmp:
+        overlay = make_overlay(pathlib.Path(tmp) / "overlay", {
+            "app-misc/example": {
+                "body": 'EAPI=8\ninherit unpacker\nKEYWORDS="~amd64"\n'
+            }
+        })
+        result = run_main(
+            "", overlay=overlay, policies={"app-misc/example": "license"})
+        return next(row for row in result[1]["packages"]
+                    if row["cp"] == "app-misc/example")
+
+
+def missing_policy_tree():
+    import contextlib, io
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        overlay = make_overlay(d / "overlay", {"app-misc/example": {}})
+        old = dict(os.environ)
+        try:
+            os.environ["GENTOO_TREE"] = str(d / "missing-gentoo")
+            module = fresh(d, "")
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+                rc = module.main(str(overlay))
+            return (rc == 1 and not (d / "packages.json").exists()
+                    and "gentoo repository does not exist" in buf.getvalue())
+        finally:
+            os.environ.clear()
+            os.environ.update(old)
+
+
 CASES = []
 
 
@@ -193,7 +233,7 @@ case("已设定的索引无法读取时中止，不覆写上一份输出", lambd
         run_main("", index_path="/nonexistent/Packages"))))
 
 case("写出 schema 版本，供页面判断数据是否够新", lambda: (
-    run_main(stanza("dev-libs/lib-1", "gentoo"))[1]["schema"] == 3))
+    run_main(stanza("dev-libs/lib-1", "gentoo"))[1]["schema"] == 4))
 
 case("acct 与 virtual 归为本地安装", lambda: (
     classify("acct-group/example") == "meta"
@@ -203,6 +243,63 @@ case("acct 与 virtual 归为本地安装", lambda: (
 case("virtual 不因 keyword 或 bindist 改变本地安装分类", lambda: (
     classify("virtual/example",
              'EAPI=8\nKEYWORDS="~arm64"\nRESTRICT="bindist"\n') == "meta"))
+
+case("发布政策与建置清单分类分别写入", lambda: (
+    (lambda r: r["binhost"] is False and r["policy"] == "license"
+     and r["why"] == "prebuilt")(policy_matrix())))
+
+
+def resolved_policy(restrict="", missing=(), iuse="", cpv="app-misc/example-1"):
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        old = dict(os.environ)
+        try:
+            module = fresh(d, "")
+
+            class Settings:
+                def _getMissingLicenses(self, _cpv, metadata):
+                    self.metadata = metadata
+                    return list(missing)
+
+            settings = Settings()
+
+            class Database:
+                def __init__(self):
+                    self.settings = settings
+
+                def aux_get(self, _cpv, names, myrepo=None):
+                    values = {"LICENSE": "TEST", "SLOT": "0", "IUSE": iuse,
+                              "RESTRICT": restrict}
+                    return [values[name] for name in names]
+
+            module.pinned_portdbapi = lambda *_args, **_kwargs: Database()
+            state = module.publication_policy("/overlay", "/tree")(
+                cpv)
+            return state, getattr(settings, "metadata", None)
+        finally:
+            os.environ.clear()
+            os.environ.update(old)
+
+
+case("Portage 发布政策分别识别 bindist 与许可证拒绝", lambda: (
+    resolved_policy(restrict="mirror bindist")[0] == "bindist"
+    and resolved_policy(missing=("TEST",))[0] == "license"
+    and resolved_policy()[0] == ""))
+
+case("本地安装类别写入明确的发布政策", lambda: (
+    resolved_policy(cpv="acct-group/example-1")[0] == "meta"
+    and resolved_policy(cpv="acct-user/example-1")[0] == "meta"
+    and resolved_policy(cpv="virtual/example-1")[0] == "meta"
+    and resolved_policy(cpv="app-alternatives/example-1")[0] == ""))
+
+case("本地安装类别仍优先显示 bindist 与许可证限制", lambda: (
+    resolved_policy(restrict="bindist", cpv="virtual/example-1")[0] == "bindist"
+    and resolved_policy(missing=("TEST",), cpv="virtual/example-1")[0] == "license"))
+
+case("许可证政策按 ebuild 默认 USE 判定", lambda: (
+    resolved_policy(iuse="+ssl minimal")[1]["USE"] == "ssl"))
+
+case("Gentoo 主树缺失时中止且不写出降级结果", missing_policy_tree)
 
 case("app-alternatives 不冒充本地安装类别", lambda: (
     classify("app-alternatives/example") == "candidate"))

@@ -15,9 +15,10 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ebuilds import (                                       # noqa: E402
-    ATOM, PREBUILT_ECLASS, bindist_state, builds_from_source,
-    accepts_amd64, inherits, keywords_of, newest_ebuild,
-    read_mask, version_of, vercmp,
+    ATOM, BINARY_LICENSES, PREBUILT_ECLASS, MetadataUnavailable,
+    accepts_amd64, builds_from_source, default_use, effective_license,
+    inherits, keywords_of, newest_ebuild, pinned_portdbapi, read_mask,
+    source_only, version_of, vercmp,
 )
 
 
@@ -27,6 +28,7 @@ EXCLUDED = pathlib.Path(os.environ.get("EXCLUDED", HERE / "excluded.txt"))
 OUT = pathlib.Path(os.environ.get("OUT", HERE.parent / "site" / "packages.json"))
 INDEX = os.environ.get("INDEX", "")
 DIST_INDEX = pathlib.Path(os.environ.get("DIST_INDEX", OUT.parent / "distfiles-index.json"))
+GENTOO_TREE = os.environ.get("GENTOO_TREE", "/var/db/repos/gentoo")
 
 STANZA = re.compile(r"^(\w+): (.*)$", re.M)
 
@@ -34,20 +36,44 @@ STANZA = re.compile(r"^(\w+): (.*)$", re.M)
 def why_not_listed(cp, ver, text, masked):
     if masked.masks(cp, ver):
         return "masked"
-    if cp.startswith(("acct-group/", "acct-user/", "virtual/")):
+    if source_only(cp):
         return "meta"
     if ver == "9999":
         return "live"
     kw = keywords_of(text)
     if kw is not None and not accepts_amd64(kw):
         return "nokeyword"
-    if bindist_state(text) != "no":
-        return "bindist"
     if inherits(text) & PREBUILT_ECLASS or cp.endswith("-bin"):
         return "prebuilt"
     if builds_from_source(text):
         return "candidate"
     return "nobuild"
+
+
+def publication_policy(overlay, tree=GENTOO_TREE):
+    """Return current binpkg policy independently of build-list selection."""
+    database = pinned_portdbapi(
+        overlay, tree, accept_license=BINARY_LICENSES)
+
+    def lookup(cpv):
+        names = ("LICENSE", "SLOT", "IUSE", "RESTRICT")
+        try:
+            license_expr, slot, iuse, restrict = database.aux_get(
+                cpv, names, myrepo="gentoo-zh")
+        except Exception:                                  # noqa: BLE001
+            return "unknown"
+        if "bindist" in restrict.split():
+            return "bindist"
+        fields = {"USE": default_use(iuse), "REPO": "gentoo-zh"}
+        state = effective_license(
+            cpv, fields, license_expr, slot, database.settings)
+        if state == "no":
+            return "license"
+        if state != "yes":
+            return "unknown"
+        return "meta" if source_only(cpv) else ""
+
+    return lookup
 
 
 def read_excluded():
@@ -144,7 +170,7 @@ def mirrored():
         return None
 
 
-def main(overlay):
+def main(overlay, policy_lookup=None):
     overlay = pathlib.Path(overlay)
     if not (overlay / "profiles" / "repo_name").exists():
         sys.exit(f"not an ebuild repository: {overlay}")
@@ -168,6 +194,13 @@ def main(overlay):
         print("!!! 未写出任何文件，保留上一份有效输出", file=sys.stderr)
         return 1
     masked = read_mask(overlay)
+    if policy_lookup is None:
+        try:
+            policy_lookup = publication_policy(overlay)
+        except MetadataUnavailable as e:
+            print(f"!!! 无法读取 binpkg 发布策略：{e}", file=sys.stderr)
+            print("!!! 未写出任何文件，保留上一份有效输出", file=sys.stderr)
+            return 1
     out, missing, present = [], sorted(wanted), set()
     for pkgdir in sorted(overlay.glob("*/*")):
         if not pkgdir.is_dir():
@@ -190,13 +223,17 @@ def main(overlay):
             missing.remove(cp)
 
         text = eb.read_text(errors="ignore")
+        version = version_of(eb, pkgdir.name)
         row = {
             "cp": cp,
             "binhost": cp in wanted,
             "dist": sorted(set(dist)),
         }
+        policy = policy_lookup(f"{cp}-{version}")
+        if policy:
+            row["policy"] = policy
         if cp not in wanted and cp not in excluded:
-            row["why"] = why_not_listed(cp, version_of(eb, pkgdir.name), text, masked)
+            row["why"] = why_not_listed(cp, version, text, masked)
         if cp in excluded:
             row["excluded"] = excluded[cp]
         out.append(row)
@@ -216,7 +253,7 @@ def main(overlay):
 
     tmp = OUT.with_suffix(".json.new")
     tmp.write_text(json.dumps(
-        {"schema": 3, "generated": int(time.time()), "packages": out,
+        {"schema": 4, "generated": int(time.time()), "packages": out,
          "deps": deps},
         ensure_ascii=False, separators=(",", ":")))
     os.replace(tmp, OUT)

@@ -294,9 +294,11 @@ def two_repo_probe():
             (root / "profiles").mkdir(parents=True, exist_ok=True)
             (root / "profiles" / "repo_name").write_text(name + "\n")
             (root / "profiles" / "categories").write_text("app-misc\n")
+            (root / "metadata").mkdir(parents=True, exist_ok=True)
+            layout = "thin-manifests = true\n"
             if name != "gentoo":
-                (root / "metadata").mkdir(parents=True, exist_ok=True)
-                (root / "metadata" / "layout.conf").write_text("masters = gentoo\n")
+                layout += "masters = gentoo\n"
+            (root / "metadata" / "layout.conf").write_text(layout)
             pkg = root / "app-misc" / "shared"
             pkg.mkdir(parents=True, exist_ok=True)
             body = f'EAPI=8\nSLOT="0"\nSRC_URI="{src}"\n'

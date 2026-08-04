@@ -60,9 +60,9 @@ function renderWith(query) {
 
 setRows([
   { cp: "www-client/firefox-zh", desc: "Firefox 中文版", binhost: true, excluded: "",
-    ver: "1.0", size: 10, dist: true, why: "" },
+    ver: "1.0", size: 10, declaresDist: true, dist: true, policy: "", why: "" },
   { cp: "app-misc/foobar", desc: "A fast web browser thing", binhost: true, excluded: "",
-    ver: "2.0", size: 20, dist: true, why: "" },
+    ver: "2.0", size: 20, declaresDist: true, dist: true, policy: "", why: "" },
 ]);
 
 const byName = renderWith("firefox");
@@ -74,11 +74,12 @@ const byDescription = renderWith("browser");
 check("说明字段不参与搜索", !byDescription, byDescription.slice(0, 400));
 
 setRows([{ cp: "media-sound/open-orpheus-bin", desc: "Orpheus", binhost: false,
-           excluded: "", ver: "", size: 0, dist: true, why: "bindist" }]);
+           excluded: "", ver: "", size: 0, declaresDist: true, dist: true,
+           policy: "bindist", why: "prebuilt" }]);
 const bindist = renderWith("");
-check("bindist 只标记二进制包列",
-      bindist.includes("why_bindist") &&
-      /why_bindist<\/span><\/td><td class="mark yes">/.test(bindist),
+check("发布政策与建置清单原因分别显示",
+      bindist.includes("why_bindist") && bindist.includes("why_prebuilt") &&
+      /why_prebuilt<\/span><\/td><td class="mark yes">/.test(bindist),
       bindist.slice(0, 500));
 
 const packages = [
@@ -98,23 +99,48 @@ check("只把 gentoo-zh stanza 算作 overlay 二进制包",
 
 setRows([
   { cp: "app-misc/both", binhost: true, excluded: "", present: true,
-    ver: "1", size: 1, dist: true, why: "" },
+    ver: "1", size: 1, declaresDist: true, dist: true, policy: "", why: "" },
   { cp: "app-misc/bin-only", binhost: true, excluded: "", present: true,
-    ver: "1", size: 1, dist: false, why: "" },
+    ver: "1", size: 1, declaresDist: false, dist: false, policy: "", why: "" },
   { cp: "app-misc/src-only", binhost: false, excluded: "", present: true,
-    ver: "", size: 0, dist: true, why: "candidate" },
+    ver: "", size: 0, declaresDist: true, dist: true, policy: "", why: "candidate" },
   { cp: "virtual/neither", binhost: false, excluded: "", present: true,
-    ver: "", size: 0, dist: false, why: "meta" },
+    ver: "", size: 0, declaresDist: false, dist: false, policy: "", why: "meta" },
+  { cp: "app-i18n/libkkc-data", binhost: false, excluded: "", present: true,
+    ver: "1", size: 1, declaresDist: true, dist: false, policy: "", why: "candidate" },
+  { cp: "acct-group/aptly", binhost: false, excluded: "", present: true,
+    ver: "1", size: 1, declaresDist: false, dist: false, policy: "meta", why: "meta" },
+  { cp: "app-misc/license-retiring", binhost: true, excluded: "", present: true,
+    ver: "1", size: 1, declaresDist: false, dist: false, policy: "license", why: "" },
+  { cp: "app-misc/excluded-retiring", binhost: false, excluded: "manual exclusion", present: true,
+    ver: "1", size: 1, declaresDist: false, dist: false, policy: "", why: "candidate" },
   { cp: "app-misc/removed", binhost: false, excluded: "", present: false,
-    ver: "1", size: 1, dist: false, why: "removed" },
+    ver: "1", size: 1, declaresDist: false, dist: false, policy: "", why: "removed" },
 ]);
 const matrix = renderWith("");
-check("四种发布组合与删除过渡同时渲染",
-      (matrix.match(/class="mark yes"/g) || []).length === 5 &&
-      (matrix.match(/class="mark no"/g) || []).length === 5 &&
-      matrix.includes("why_removed") &&
+check("发布状态、当前政策与删除过渡同时渲染",
+      (matrix.match(/class="mark yes"/g) || []).length === 9 &&
+      (matrix.match(/class="mark no"/g) || []).length === 9 &&
+      (matrix.match(/>why_retiring<\/span>/g) || []).length === 4 &&
+      matrix.includes("whyLong_license") && matrix.includes("whyLong_removed") &&
       !matrix.includes('href="https://github.com/gentoo-zh/overlay/tree/master/app-misc/removed"'),
-      matrix.slice(0, 1200));
+      matrix.slice(0, 1800));
+
+const closureDependency = renderWith("app-i18n/libkkc-data");
+check("依赖闭包里的清单外套件不标成待移除",
+      closureDependency.includes("app-i18n/libkkc-data") &&
+      !closureDependency.includes("why_retiring"),
+      closureDependency.slice(0, 600));
+
+const sourceOnly = renderWith("acct-group/aptly");
+check("公开索引里的本地安装类别标成待移除",
+      sourceOnly.includes("why_meta") && sourceOnly.includes("why_retiring"),
+      sourceOnly.slice(0, 600));
+
+check("distfiles 破折号区分无文件与未完整镜像",
+      matrix.includes('title="distNone"') &&
+      matrix.includes('title="distUnavailable"'),
+      matrix.slice(0, 1800));
 
 console.log(failed ? `\n  ${failed} 项不通过` : "\n  包列表搜索与状态：全部通过");
 process.exit(failed ? 1 : 0);
