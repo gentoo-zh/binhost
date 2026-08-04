@@ -305,6 +305,13 @@ def classification_probe():
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
         overlay = make_overlay(d / "overlay", packages, body=body)
+        management = (
+            ".claude/worktrees", ".git/hooks", ".git/info", ".git/logs",
+            ".git/objects", ".git/refs", ".git/worktrees", ".github/workflows",
+            "metadata/md5-cache", "metadata/news", "profiles/updates",
+        )
+        for relative in management:
+            (overlay / relative).mkdir(parents=True, exist_ok=True)
         (d / "list.txt").write_text("")
         result = subprocess.run(
             [sys.executable, CHECK, "--newcomers", str(overlay), str(d / "list.txt")],
@@ -317,6 +324,7 @@ def classification_probe():
                       "no known build stage", "candidate")
         return result.returncode == 0 and once and all(
             f">>> {category}: 1:" in result.stderr for category in categories) \
+            and not any(relative in result.stderr for relative in management) \
             and result.stdout.splitlines() == ["app-misc/candidate 1"]
 
 
