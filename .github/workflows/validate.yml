@@ -178,6 +178,8 @@ jobs:
         run: node tests/test-app-crumbs.js
       - name: Links that differ per language
         run: node tests/test-i18n-engine.js
+      - name: Mirror defaults follow the selected language
+        run: node tests/test-source-switch.js
       - name: Mirror pickers agree
         run: python3 build/check-pickers.py
       - name: Both setup modes say the same thing
