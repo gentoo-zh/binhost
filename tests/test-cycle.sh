@@ -1,0 +1,82 @@
+#!/bin/bash
+
+set -uo pipefail
+
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+pass=0
+fail=0
+
+ok() {
+    if [[ $2 == "$3" ]]; then
+        printf '  ✓ %s\n' "$1"
+        pass=$((pass + 1))
+    else
+        printf '  ✗ %s\n      得到 %s，应为 %s\n' "$1" "$2" "$3"
+        fail=$((fail + 1))
+    fi
+}
+
+cycle_probe() {
+    local publish_rc="$1" with_report="$2" d out rc
+    d=$(mktemp -d)
+    mkdir -p "${d}/build" "${d}/bin" "${d}/logs" "${d}/overlay"
+    cp "${ROOT}/build/cycle.sh" "${d}/build/cycle.sh"
+    cat > "${d}/build/alert.sh" <<'EOF'
+ALERT_SENT=0
+alert() { printf '%s\n' "$1" >> "${ALERT_LOG}"; }
+alert_exit() { exit "${1:-1}"; }
+EOF
+    cat > "${d}/build/build-progress.sh" <<'EOF'
+#!/bin/bash
+exit 0
+EOF
+    cat > "${d}/build/run-full.sh" <<'EOF'
+#!/bin/bash
+exit 0
+EOF
+    cat > "${d}/build/publish.sh" <<EOF
+#!/bin/bash
+exit ${publish_rc}
+EOF
+    cat > "${d}/bin/git" <<'EOF'
+#!/bin/bash
+case "$*" in *rev-parse*) echo deadbeef;; esac
+exit 0
+EOF
+    chmod +x "${d}/build/"*.sh "${d}/bin/git"
+    if [[ ${with_report} == yes ]]; then
+        printf 'app-misc/example\n' > "${d}/logs/failed.txt"
+        printf '构建失败（1 个）\n    app-misc/example\n' > "${d}/logs/report.txt"
+    fi
+    set +e
+    out=$(cd "${d}" && PATH="${d}/bin:${PATH}" OVERLAY="${d}/overlay" \
+        LOGDIR="${d}/logs" STAGE="${d}/stage" LOCK="${d}/lock" \
+        ALERT_LOG="${d}/alert.log" bash build/cycle.sh 2>&1)
+    rc=$?
+    set -e
+    printf '%s|%s|%s\n' "${rc}" "$(tr '\n' ' ' < "${d}/alert.log")" "${out}"
+    rm -rf "${d}"
+}
+
+echo "== cycle.sh 区分发布与清理失败"
+
+IFS='|' read -r rc message out <<< "$(cycle_probe 3 no)"
+ok "发布后清理受阻时保留退出码 3" "${rc}" "3"
+ok "退出码 3 的通知说明索引已经发布" \
+   "$([[ ${message} == *已发布到镜像机* ]] && echo yes)" "yes"
+ok "退出码 3 的通知不会声称未发布" \
+   "$([[ ${message} != *未发布到镜像机* ]] && echo yes)" "yes"
+
+IFS='|' read -r rc message out <<< "$(cycle_probe 1 yes)"
+ok "发布失败时保留原退出码" "${rc}" "1"
+ok "发布失败时明确说明未发布" \
+   "$([[ ${message} == *未发布到镜像机* ]] && echo yes)" "yes"
+ok "目标套件失败摘要会附在发布告警中" \
+   "$([[ ${message} == *构建失败*app-misc/example* ]] && echo yes)" "yes"
+
+echo
+if (( fail )); then
+    echo ">>> ${fail} 项未通过，${pass} 项通过"
+    exit 1
+fi
+echo ">>> ${pass} 项全部通过"
