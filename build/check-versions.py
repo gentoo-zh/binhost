@@ -15,6 +15,18 @@ from ebuilds import (                                       # noqa: E402
 )
 
 
+MOVE_TARGET = "改分类目标"
+META_PACKAGE = "元包"
+BIN_PACKAGE = "-bin 软件包"
+LIVE_ONLY = "仅有 9999 ebuild"
+NO_AMD64 = "无可用 amd64 版本或已屏蔽"
+BINDIST = "RESTRICT=bindist"
+UNKNOWN_RESTRICT = "RESTRICT 无法判定"
+PREBUILT = "预构建 eclass"
+CANDIDATE = "候选"
+NO_BUILD_STAGE = "无已知构建阶段"
+
+
 def why_unbuildable(pkgdir, masks):
     """Reason no version can be built, or None when one still can.
 
@@ -56,11 +68,25 @@ def read_moves(overlay):
     return resolved
 
 
+def has_ebuild(pkgdir):
+    return pkgdir.is_dir() and any(pkgdir.glob("*.ebuild"))
+
+
+def pending_moves(overlay, wanted):
+    overlay = pathlib.Path(overlay)
+    return {
+        source: target
+        for source, target in read_moves(overlay).items()
+        if source in wanted and target not in wanted
+        and has_ebuild(overlay / target)
+    }
+
+
 def newcomer_classifications(overlay, wanted, masked, move_destinations=()):
     groups = {}
     excluded = read_excluded(overlay)
     for pkgdir in sorted(overlay.glob("*/*")):
-        if not pkgdir.is_dir() or not any(pkgdir.glob("*.ebuild")):
+        if not has_ebuild(pkgdir):
             continue
         cp = f"{pkgdir.parent.name}/{pkgdir.name}"
         if cp in wanted or cp in excluded:
@@ -68,36 +94,36 @@ def newcomer_classifications(overlay, wanted, masked, move_destinations=()):
         category = None
         version = None
         if cp in move_destinations:
-            category = "move destination"
+            category = MOVE_TARGET
         elif cp.startswith(("acct-", "virtual/", "app-alternatives/")):
-            category = "meta package"
+            category = META_PACKAGE
         elif cp.endswith("-bin"):
-            category = "-bin package"
+            category = BIN_PACKAGE
         usable = usable_ebuilds(pkgdir, masked)
         if category is None and not usable:
             reason = why_unbuildable(pkgdir, masked) or ""
-            category = "live only" if "live ebuild" in reason else "no amd64 or masked"
+            category = LIVE_ONLY if "live ebuild" in reason else NO_AMD64
         if category is None:
             eb, version = usable[0]
             text = eb.read_text(errors="ignore")
             restriction = bindist_state(text)
             if restriction == "yes":
-                category = "bindist"
+                category = BINDIST
             elif restriction == "unknown":
-                category = "unknown RESTRICT"
+                category = UNKNOWN_RESTRICT
             elif inherits(text) & PREBUILT_ECLASS:
-                category = "prebuilt eclass"
+                category = PREBUILT
             elif builds_from_source(text):
-                category = "candidate"
+                category = CANDIDATE
             else:
-                category = "no known build stage"
+                category = NO_BUILD_STAGE
         groups.setdefault(category, []).append((cp, version))
     return groups
 
 
 def newcomers(overlay, wanted, masked, move_destinations=()):
     return newcomer_classifications(
-        overlay, wanted, masked, move_destinations).get("candidate", [])
+        overlay, wanted, masked, move_destinations).get(CANDIDATE, [])
 
 
 def in_gentoo(cp, tree):
@@ -139,7 +165,7 @@ def main(overlay, index, listfile):
 
     tree = os.environ.get("GENTOO_TREE", "/var/db/repos/gentoo")
     masked = read_mask(overlay)
-    moves = read_moves(overlay)
+    pending = pending_moves(overlay, wanted)
     stale, absent, gone, blocked = [], [], [], []
     live, banned, upstreamed, unclear = [], [], [], []
     for cp in sorted(wanted):
@@ -168,7 +194,7 @@ def main(overlay, index, listfile):
         elif vercmp(got, cur) != 0:
             stale.append((cp, got, cur))
 
-    fresh = newcomers(overlay, wanted, masked, set(moves.values()))
+    fresh = newcomers(overlay, wanted, masked, set(pending.values()))
 
     print(f">>> 版本核对：清单 {len(wanted)}，索引 {len(have)}，落后 {len(stale)}，"
           f"缺 {len(absent)}，overlay 中不存在 {len(gone)}，已屏蔽 {len(blocked)}，"
@@ -180,8 +206,8 @@ def main(overlay, index, listfile):
     for cp, cur in absent:
         print(f"    缺     {cp}  overlay {cur}")
     for cp in gone:
-        moved = moves.get(cp)
-        if moved and moved not in wanted and (overlay / moved).is_dir():
+        moved = pending.get(cp)
+        if moved:
             print(f"    改分类 {cp} -> {moved}  profiles/updates 要求清单同步替换")
         else:
             print(f"    已移除 {cp}  overlay 中不存在该软件包，可能被删除或改了分类，清单需同步")
@@ -194,7 +220,7 @@ def main(overlay, index, listfile):
     for cp in unclear:
         print(f"    待人工确认 {cp}  RESTRICT 用了变量或条件式，无法确认能否散布，本轮不发布")
     for cp in upstreamed:
-        print(f"    已进主树 {cp}  ::gentoo 也有这个包，需确认是否仍由本站构建")
+        print(f"    已进主树 {cp}  该 CP 同时存在于 ::gentoo，需确认是否仍由本站构建")
     for cp, ver in fresh:
         print(f"    新包   {cp}  {ver}  有构建系统但不在清单，需要判断是否收录")
 
@@ -206,7 +232,7 @@ def list_retirable(overlay, listfile):
     wanted = {l.strip() for l in pathlib.Path(listfile).read_text().splitlines()
               if ATOM.match(l.strip())}
     masked = read_mask(overlay)
-    move_sources = set(read_moves(overlay))
+    move_sources = set(pending_moves(overlay, wanted))
     for cp in sorted(wanted):
         if cp in move_sources:
             continue
@@ -231,13 +257,13 @@ def list_newcomers(overlay, listfile):
     overlay = pathlib.Path(overlay)
     wanted = {l.strip() for l in pathlib.Path(listfile).read_text().splitlines()
               if ATOM.match(l.strip())}
-    moves = read_moves(overlay)
+    moves = pending_moves(overlay, wanted)
     groups = newcomer_classifications(
         overlay, wanted, read_mask(overlay), set(moves.values()))
     for category in sorted(groups):
         atoms = " ".join(cp for cp, _version in groups[category])
         print(f">>> {category}: {len(groups[category])}: {atoms}", file=sys.stderr)
-    for cp, ver in groups.get("candidate", []):
+    for cp, ver in groups.get(CANDIDATE, []):
         print(f"{cp} {ver}")
     return 0
 
@@ -246,9 +272,8 @@ def list_moves(overlay, listfile):
     overlay = pathlib.Path(overlay)
     wanted = {line.strip() for line in pathlib.Path(listfile).read_text().splitlines()
               if ATOM.match(line.strip())}
-    for source, target in sorted(read_moves(overlay).items()):
-        if source in wanted and target not in wanted and (overlay / target).is_dir():
-            print(f"{source}\t{target}")
+    for source, target in sorted(pending_moves(overlay, wanted).items()):
+        print(f"{source}\t{target}")
     return 0
 
 

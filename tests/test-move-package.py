@@ -16,4 +16,4 @@ with tempfile.TemporaryDirectory() as tmp:
     move.main("app-misc/old", "net-misc/new", path)
     assert path.read_text().splitlines() == ["app-misc/z-last", "net-misc/new"]
 
-print("  move 會在同一份清單中替換來源與目標")
+print("  move 会在同一份清单中替换来源与目标")

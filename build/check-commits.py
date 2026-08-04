@@ -110,7 +110,7 @@ def main(rev_range):
         subject = subprocess.run(["git", "log", "-1", "--format=%s", sha],
                                  capture_output=True, text=True, check=True).stdout.strip()
         problems = check(sha)
-        print(f"  {'✗' if problems else '✓'} {sha[:8]}  {subject}")
+        print(f"  {'不通过' if problems else '通过'} {sha[:8]}  {subject}")
         for p in problems:
             print(f"      {p}")
         bad += bool(problems)

@@ -13,6 +13,15 @@ for name in ("newcomers.yml", "retire.yml", "moves.yml"):
     opened = text.index("gh pr create --base master")
     assert pushed < dispatched < opened
 
+newcomers = (ROOT / ".github" / "workflows" / "newcomers.yml").read_text()
+assert "关闭本 PR 并保留远端分支可停止重复提案" in newcomers
+assert "删除远端分支 \\`${branch}\\` 后，下一次检查会重新提出" in newcomers
+assert "否则每天会重新提出" not in newcomers
+
+retire = (ROOT / ".github" / "workflows" / "retire.yml").read_text()
+assert "关闭本 PR 并保留远端分支会停止该软件包的重复提案" in retire
+assert "删除远端分支 \\`${branch}\\` 后，下一次检查会重新判断是否需要提出" in retire
+
 validate = (ROOT / ".github" / "workflows" / "validate.yml").read_text()
 assert "workflow_dispatch:" in validate
 assert "github.event_name == 'workflow_dispatch'" in validate
