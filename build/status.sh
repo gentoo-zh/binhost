@@ -48,7 +48,7 @@ if [[ -z ${COMPONENT} ]]; then
     [[ -d /var/lib/binhost/build ]] && COMPONENT=builder
 fi
 case ${COMPONENT} in
-    mirror)  TRACKED="deploy build/gen-packages.py build/ebuilds.py build/verify-deps.py build/dep-exceptions.txt build/status.sh build/alert.sh nginx" ;;
+    mirror)  TRACKED="deploy build/gen-packages.py build/ebuilds.py build/verify-deps.py build/generation.py build/dep-exceptions.txt build/status.sh build/alert.sh nginx" ;;
     builder) TRACKED="build deploy/systemd" ;;
     *)       TRACKED="" ;;
 esac
