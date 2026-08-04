@@ -5,6 +5,7 @@ set -euo pipefail
 main() {
 TAG="${TAG:-x86-64}"
 BASE="${BASE:-gentoo-zh/binhost-base:${TAG}}"
+SIGNING_IMAGE="${SIGNING_IMAGE:-gentoo/stage3@sha256:7f523210aa362e429cf47742c408400a0b8f8e4b618c39ab7dd691ef56f04d3a}"
 BASE_MAX_AGE_DAYS="${BASE_MAX_AGE_DAYS:-7}"
 OVERLAY="${OVERLAY:-/var/lib/binhost/overlay}"
 TREE="${TREE:-/var/db/repos/gentoo}"
@@ -16,13 +17,22 @@ LOGDIR="${LOGDIR:-/var/lib/binhost/logs/${TAG}}"
 LIST="${LIST:-$(dirname "$0")/packages.txt}"
 SIGNING_KEY="${SIGNING_KEY:-}"
 SIGNING_GNUPGHOME="${SIGNING_GNUPGHOME:-/var/lib/binhost/gnupg}"
+SIGNING_TMP_ROOT="${SIGNING_TMP_ROOT:-/dev/shm}"
 JOBS="${JOBS:-8}"
 MAKEOPTS="${MAKEOPTS:--j12}"
+SIGNING_INPUT=""
 
 DOCKER="docker"
 docker info >/dev/null 2>&1 || DOCKER="sudo docker"
 
 die() { echo "!!! $*" >&2; exit 1; }
+cleanup_signing_input() {
+    [[ -n ${SIGNING_INPUT} ]] || return 0
+    rm -f -- "${SIGNING_INPUT}/private.gpg" "${SIGNING_INPUT}/public.asc"
+    rmdir -- "${SIGNING_INPUT}"
+    SIGNING_INPUT=""
+}
+trap cleanup_signing_input EXIT
 
 if [[ -z ${BINHOST_LOCKED:-} ]]; then
     LOCK="${LOCK:-$(dirname "${STAGE}")/build.lock}"
@@ -33,6 +43,8 @@ fi
 
 [[ -s ${LIST} ]] || die "package list not found or empty: ${LIST}"
 [[ -n ${SIGNING_KEY} ]] || die "SIGNING_KEY unset; unsigned packages are not publishable"
+[[ ${SIGNING_IMAGE} =~ @sha256:[0-9a-f]{64}$ ]] ||
+    die "SIGNING_IMAGE must be pinned by sha256 digest"
 for p in "${OVERLAY}" "${TREE}" "${DISTDIR}" "${SIGNING_GNUPGHOME}"; do
     [[ -d ${p} ]] || die "missing: ${p}"
 done
@@ -63,7 +75,7 @@ empty=$(find "${PKGDIR}" -name '*.gpkg.tar' -size 0 -print -delete | wc -l)
 
 echo ">>> building from ${BASE}"
 
-${DOCKER} run --rm -i --privileged \
+${DOCKER} run --rm -i --security-opt=no-new-privileges \
     -v "${TREE}:/var/db/repos/gentoo:ro" \
     -v "${OVERLAY}:/var/db/repos/gentoo-zh:ro" \
     -v "${DISTDIR}:/var/cache/distfiles" \
@@ -151,40 +163,65 @@ install -m644 "${LOGDIR}/installed.txt" "${STAGE}.new/installed.txt" 2>/dev/null
     die "容器没有写出 installed.txt，无法判定哪些依赖由基础系统提供"
 
 OVERLAY_REV="$(git -C "${OVERLAY}" rev-parse HEAD 2>/dev/null || echo '')"
+[[ -d ${SIGNING_TMP_ROOT} && -w ${SIGNING_TMP_ROOT} ]] ||
+    die "signing tmpfs is unavailable: ${SIGNING_TMP_ROOT}"
+[[ $(stat -f -c %T "${SIGNING_TMP_ROOT}") == tmpfs ]] ||
+    die "signing input directory is not tmpfs: ${SIGNING_TMP_ROOT}"
+${DOCKER} pull -q "${SIGNING_IMAGE}" >/dev/null ||
+    die "cannot pull pinned SIGNING_IMAGE"
+SIGNING_INPUT=$(mktemp -d "${SIGNING_TMP_ROOT}/binhost-signing.XXXXXX")
+(
+    umask 077
+    gpg --homedir "${SIGNING_GNUPGHOME}" --batch --yes \
+        --output "${SIGNING_INPUT}/private.gpg" --export-secret-keys "${SIGNING_KEY}"
+    gpg --homedir "${SIGNING_GNUPGHOME}" --batch --yes --armor \
+        --output "${SIGNING_INPUT}/public.asc" --export "${SIGNING_KEY}"
+)
+[[ -s ${SIGNING_INPUT}/private.gpg && -s ${SIGNING_INPUT}/public.asc ]] ||
+    die "cannot export the selected signing key"
+sign_uid=$(id -u)
+sign_gid=$(id -g)
 # shellcheck disable=SC2016  # The inner shell expands the quoted script.
 if ! ${DOCKER} run --rm --network none --read-only \
-        --tmpfs /tmp:rw,noexec,nosuid,nodev,mode=1777 \
-        --tmpfs /run/lock:rw,noexec,nosuid,nodev,mode=0755 \
-        --tmpfs /root/.gnupg:rw,noexec,nosuid,nodev,mode=0700 \
+        --cap-drop=ALL --security-opt=no-new-privileges \
+        --user "${sign_uid}:${sign_gid}" \
+        --tmpfs "/tmp:rw,noexec,nosuid,nodev,mode=1777,uid=${sign_uid},gid=${sign_gid}" \
+        --tmpfs "/run/lock:rw,noexec,nosuid,nodev,mode=0755,uid=${sign_uid},gid=${sign_gid}" \
+        --tmpfs "/run/gnupg:rw,noexec,nosuid,nodev,mode=0700,uid=${sign_uid},gid=${sign_gid}" \
         -v "${STAGE}.new:/var/cache/binpkgs" \
-        -v "${SIGNING_GNUPGHOME}:/run/signing-source:ro" \
+        -v "${SIGNING_INPUT}/private.gpg:/run/signing-private.gpg:ro" \
+        -v "${SIGNING_INPUT}/public.asc:/run/signing-public.asc:ro" \
         -v "$(dirname "$0")/sign-packages.py:/usr/local/bin/sign-packages.py:ro" \
         -v "$(dirname "$0")/verify-signatures.py:/usr/local/bin/verify-signatures.py:ro" \
-        -e "SIGNING_KEY=${SIGNING_KEY}" -e "OVERLAY_REV=${OVERLAY_REV}" \
-        "${BASE}" /bin/bash -euo pipefail -c '
-            cp -a /run/signing-source/. /root/.gnupg/
-            chown -R 0:0 /root/.gnupg
-            chmod 700 /root/.gnupg
+        -e "HOME=/tmp" -e "SIGNING_KEY=${SIGNING_KEY}" -e "OVERLAY_REV=${OVERLAY_REV}" \
+        "${SIGNING_IMAGE}" /bin/bash -euo pipefail -c '
+            gpg --homedir /run/gnupg --batch --import /run/signing-private.gpg
+            gpg --homedir /run/gnupg --batch --import /run/signing-public.asc
+            printf "%s:6:\n" "${SIGNING_KEY}" |
+                gpg --homedir /run/gnupg --batch --import-ownertrust
+            gpg --homedir /run/gnupg --batch --check-trustdb
             export FEATURES="${FEATURES:-} binpkg-signing"
             export BINPKG_GPG_SIGNING_KEY="${SIGNING_KEY}"
-            export BINPKG_GPG_SIGNING_GPG_HOME=/root/.gnupg
-            gpg --homedir /root/.gnupg --batch --armor --export "${SIGNING_KEY}" \
-                > /tmp/signing-public.asc
+            export BINPKG_GPG_SIGNING_GPG_HOME=/run/gnupg
+            export BINPKG_GPG_VERIFY_GPG_HOME=/run/gnupg
             python3 /usr/local/bin/sign-packages.py /var/cache/binpkgs \
                 --revision "${OVERLAY_REV}" \
-                --public-key /tmp/signing-public.asc \
+                --public-key /run/signing-public.asc \
                 --fingerprint "${SIGNING_KEY}" \
                 --changed-list /var/cache/binpkgs/.signed-packages
-            python3 /usr/local/bin/verify-signatures.py /var/cache/binpkgs \
-                /tmp/signing-public.asc "${SIGNING_KEY}"
         '; then
-    echo "签名或独立验签失败，本轮只执行隔离，不发布新索引" \
+    echo "签名失败，本轮只执行隔离，不发布新索引" \
+        > "${STAGE}.new/publish-blocked.txt"
+elif ! python3 "$(dirname "$0")/verify-signatures.py" "${STAGE}.new" \
+        "${SIGNING_INPUT}/public.asc" "${SIGNING_KEY}"; then
+    echo "宿主机独立验签失败，本轮只执行隔离，不发布新索引" \
         > "${STAGE}.new/publish-blocked.txt"
 elif ! python3 "$(dirname "$0")/persist-packages.py" "${STAGE}.new" \
         "${PKGDIR}" "${STAGE}.new/.signed-packages"; then
     echo "无法持久化已验签的软件包，本轮只执行隔离，不发布新索引" \
         > "${STAGE}.new/publish-blocked.txt"
 fi
+cleanup_signing_input
 rm -f "${STAGE}.new/.signed-packages"
 
 if [[ ! -s ${STAGE}.new/publish-blocked.txt ]] &&

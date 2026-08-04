@@ -37,7 +37,7 @@ ${DOCKER} rm -f "${container}" >/dev/null 2>&1 || true
 echo ">>> preparing ${BASE} from ${STAGE3}"
 ${DOCKER} pull -q "${STAGE3}" >/dev/null
 
-${DOCKER} run -i --privileged --name "${container}" \
+${DOCKER} run -i --security-opt=no-new-privileges --name "${container}" \
     -v "${TREE}:/var/db/repos/gentoo:ro" \
     -v "${OVERLAY}:/var/db/repos/gentoo-zh:ro" \
     -v "${DISTDIR}:/var/cache/distfiles" \

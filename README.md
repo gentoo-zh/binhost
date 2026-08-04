@@ -27,20 +27,20 @@ docs/     运维手册
 
 `@world` 对齐后的容器提交成基础镜像，超过 7 天才刷新，平时的构建从已经对齐好的根开始。
 
-基础镜像更新与每日构建容器都会执行 ebuild，目前仍使用 `--privileged`。签名容器虽然
-没有网络与 ebuild 仓库，根文件系统只读，却复用了执行过 ebuild 的基础镜像。因此，
-ebuild 仍可能通过主机块设备或被修改的签名工具取得私钥；修复条件见
-[`docs/accepted-risks.md`](docs/accepted-risks.md)。
+基础镜像更新与每日构建容器都会执行 ebuild。两者不使用 `--privileged`，采用 Docker
+默认的设备隔离，并启用 `no-new-privileges`；容器不挂载私钥、Docker socket 或主机根
+文件系统。
 
 容器在 emerge 之前记录基础系统的 CPV、SLOT、USE、IUSE、EAPI 与 repository，依赖检查
 按完整 Portage Atom 匹配该快照。构建完成后，脚本还会记录当轮实际使用的 Gentoo
 binhost 索引。若依赖只能从源码取得，则另从当前 Gentoo 仓库记录可匹配的版本；带 USE
 约束的源码依赖不会按未知配置推定为可用。
 
-签名阶段检查索引中的每个 gpkg，只重新签署未由当前密钥有效签名的软件包。签名完成后，
-脚本使用仅包含指定公钥的临时 keyring 验证每个索引条目。全部验签通过后，宿主机将新签名
-的软件包写回持久的 PKGDIR，未变化的软件包在下一轮保持原有字节。这些检查验证签名结果，
-但在上述隔离问题修复前不能证明私钥未被 ebuild 执行环境取得。
+签名阶段使用固定 digest 的官方 stage3，不复用执行过 ebuild 的基础镜像。该容器没有网络、
+Linux capability 与 ebuild 仓库，根文件系统只读；宿主机只挂载暂存目录、必要脚本，以及
+在 tmpfs 中导出的指定私钥与公钥。容器只重新签署未由当前密钥有效签名的软件包。签名完成后，
+宿主机使用指定公钥独立验证每个索引条目，再将变更写回持久的 PKGDIR；未变化的软件包在
+下一轮保持原有字节。
 
 暂存索引必须覆盖 `packages.txt` 中每个包的当前可用版本，并通过运行期依赖检查。
 `Packages`、`Packages.gz`、构建前基础系统快照、Gentoo binhost 可用包快照与
