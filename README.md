@@ -33,7 +33,8 @@ binhost。`RESTRICT=bindist` 只限制二进制包；distfiles 是否镜像由
 
 基础镜像更新与每日构建容器都会执行 ebuild。两者不使用 `--privileged`，采用 Docker
 默认的设备隔离，并启用 `no-new-privileges`；容器不挂载私钥、Docker socket 或主机根
-文件系统。
+文件系统。部署验收确认运行中的构建容器为 `Privileged=false`，且容器内不存在主机根
+设备 `/dev/sda3`；构建脚本不传入 `--device`，也不挂载 `/dev`。
 
 容器在 emerge 之前记录基础系统的 CPV、SLOT、USE、IUSE、EAPI 与 repository，依赖检查
 按完整 Portage Atom 匹配该快照。构建完成后，脚本还会记录当轮实际使用的 Gentoo
