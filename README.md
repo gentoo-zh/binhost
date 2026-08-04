@@ -1,70 +1,104 @@
 # gentoo-zh binhost
 
-[distfiles.gentoozh.org](https://distfiles.gentoozh.org/) 的站点、nginx 配置，以及构建和发布 [gentoo-zh overlay](https://github.com/gentoo-zh/overlay) 二进制包的脚本。
+本仓库维护 [distfiles.gentoozh.org](https://distfiles.gentoozh.org/) 的静态站点、
+nginx 配置，以及构建、签名和发布 [gentoo-zh overlay](https://github.com/gentoo-zh/overlay)
+二进制包的脚本。
 
+使用者可直接查看[配置步骤](https://distfiles.gentoozh.org/)、
+[套件状态](https://distfiles.gentoozh.org/packages)和
+[常见问题](https://distfiles.gentoozh.org/faq)。
+
+## 仓库结构
+
+| 路径 | 内容 |
+| --- | --- |
+| `build/` | 构建、暂存、签名、发布与一致性检查 |
+| `deploy/` | 镜像机和构建机的安装、同步、定时任务与监控 |
+| `nginx/` | HTTP、HTTP/3 和文件服务配置 |
+| `site/` | 静态站点与公开签名密钥 |
+| `docs/` | 已知风险、延后事项与密钥轮替手册 |
+
+## 发布范围
+
+直接构建目标来自 [`build/packages.txt`](build/packages.txt)。公开 binpkg 索引主要包含
+这些 gentoo-zh overlay 套件，并附带它们需要的部分 `::gentoo` 运行期依赖。两类产物在
+同一份 `Packages` 中，以 `REPO` 字段区分。附带内容只覆盖这些运行期依赖，不替代
+[Gentoo 官方 binhost](https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart)。
+
+每个公开 binpkg 必须同时满足以下条件：
+
+- 当前 ebuild 的 `LICENSE` 表达式属于固定的 `@BINARY-REDISTRIBUTABLE`。
+- 当前 ebuild 与缓存 binpkg 的 `RESTRICT` 均不包含 `bindist`。
+- 套件没有列入 [`build/excluded.txt`](build/excluded.txt)。
+- 暂存索引中的运行期依赖可由本轮发布、基础系统、Gentoo binhost 或源码快照满足。
+
+`acct-group/*`、`acct-user/*` 与 `virtual/*` 由使用者系统的 Portage 本地安装，本站不发布
+这些类别的 binpkg。`RESTRICT` 中的 `bindist` 只限制 binpkg；distfiles 是否镜像由
+`mirror`、`fetch` 与每项 `SRC_URI` 独立决定。
+
+[套件页](https://distfiles.gentoozh.org/packages)分别显示公开产物、直接构建清单、当前
+发布政策和 distfiles 镜像状态。`✓` 表示公开索引已有 binpkg，不表示套件仍在直接构建
+清单。各标签的触发条件和常见原因见
+[FAQ 状态说明](https://distfiles.gentoozh.org/faq#package-status)。
+
+## 构建与发布
+
+### 构建环境
+
+构建使用 Docker 中的 Gentoo stage3，目标目录为 `x86-64`，编译参数为：
+
+```text
+CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"
 ```
-build/    构建、发布与各项检查。多数在构建机上运行，
-          镜像机所需的脚本由 install.sh 安装
-deploy/   两台机器的安装、同步与定时任务
-nginx/    服务器配置
-site/     站点
-docs/     运维手册
-```
 
-## 分发
+`build/run-full.sh` 在基础镜像不存在或已满 7 天时重新生成基础镜像。基础镜像先将
+`@world` 与当前 Gentoo 树对齐；对齐失败时保留原有基础镜像，不开始新的完整构建。
+日常构建从已对齐的基础镜像启动。
 
-索引与包体都在 distfiles.gentoozh.org，直接由 nginx 提供。
+基础镜像更新和日常构建都会执行 ebuild。两个容器均不使用 `--privileged`，不挂载
+Docker socket、签名私钥或主机根文件系统，也不从主机挂载 `/dev`。部署验收确认运行中的
+构建容器为 `Privileged=false`，且看不到主机根设备 `/dev/sda3`。
 
-## 构建
+### 依赖与暂存
 
-在 stage3 容器里构建，`CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"`。
-仓库按 CPU 基线切分（`x86-64`），与 Gentoo 官方 binhost 一致。
+构建容器在 emerge 前记录基础系统的 CPV、SLOT、USE、IUSE、EAPI 与 repository，并在
+构建后记录本轮实际使用的 Gentoo binhost 索引。暂存阶段按完整 Portage Atom 匹配这些
+快照，再从当前 Gentoo 与 gentoo-zh 源码仓库补充无 USE 约束的可见版本。
 
-发布的主体是收录清单里的 overlay 包，另外附带这些包所需的部分 `::gentoo` 运行期
-依赖，两者在同一份索引里，用 `REPO` 字段区分。当前 ebuild 的 `LICENSE`
-必须属于 `@BINARY-REDISTRIBUTABLE`；当前 ebuild 与缓存 binpkg 均不得设置
-`RESTRICT=bindist`。
-`acct-group/*`、`acct-user/*` 与 `virtual/*` 由使用者系统从源码本地安装，不进入
-binhost。`RESTRICT=bindist` 只限制二进制包；distfiles 是否镜像由
-`RESTRICT=mirror/fetch` 与 `SRC_URI` 条目独立决定。附带内容仅包含这些包的运行期依赖，
-不替代 Gentoo 官方 binhost。
+一般源码依赖带 USE 约束时，不会因使用者配置未知而推定为可用。对于本地安装的
+`acct-group/*`、`acct-user/*` 与 `virtual/*`，源码快照使用当前 ebuild 的 `IUSE` 默认启用项。
+这套检查不等同于执行完整的 Portage 依赖解析，边界记录在
+[`docs/accepted-risks.md`](docs/accepted-risks.md)。
 
-[套件页](https://distfiles.gentoozh.org/packages)分开显示公开索引、直接构建清单和当前
-发布政策。二进制包列的 `✓` 表示公开索引已有 binpkg；`待构建` 表示直接构建目标尚无
-公开产物；`清单外` 表示该包不是直接构建目标，但仍可能作为运行期依赖发布。政策变化后，
-旧产物会同时显示政策标签和 `待移除`，并在新一代索引发布成功后清理。
+暂存索引必须覆盖直接构建清单中每个套件的当前可用版本，并通过运行期依赖检查。
+无法取得必要快照、依赖无法满足或索引不完整时，本轮不会发布新索引。
 
-`@world` 对齐后的容器提交成基础镜像，超过 7 天才刷新，平时的构建从已经对齐好的根开始。
+### 签名
 
-基础镜像更新与每日构建容器都会执行 ebuild。两者不使用 `--privileged`，采用 Docker
-默认的设备隔离，并启用 `no-new-privileges`；容器不挂载私钥、Docker socket 或主机根
-文件系统。部署验收确认运行中的构建容器为 `Privileged=false`，且容器内不存在主机根
-设备 `/dev/sda3`；构建脚本不传入 `--device`，也不挂载 `/dev`。
+签名阶段使用固定 digest 的官方 stage3，不复用执行过 ebuild 的基础镜像。签名容器没有
+网络与 Linux capability，根文件系统只读，也不包含 ebuild 仓库。宿主机只挂载暂存目录、
+签名脚本，以及从 tmpfs 提供的指定私钥与公钥。
 
-容器在 emerge 之前记录基础系统的 CPV、SLOT、USE、IUSE、EAPI 与 repository，依赖检查
-按完整 Portage Atom 匹配该快照。构建完成后，脚本还会记录当轮实际使用的 Gentoo
-binhost 索引。若依赖只能从源码取得，则另从当前 Gentoo 与 gentoo-zh 仓库记录可匹配的
-版本。一般源码依赖若带 USE 约束，不会因配置未知而推定为可用；对于上述三类
-本地安装包，快照按当前 ebuild 的 `IUSE` 默认启用项匹配完整 Atom。
+签名容器只重新签署没有当前密钥有效签名的软件包。签名完成后，宿主机使用指定公钥独立
+验证每个索引条目，再将已验签的变更写回持久 PKGDIR；没有变化的软件包保持原有字节。
 
-签名阶段使用固定 digest 的官方 stage3，不复用执行过 ebuild 的基础镜像。该容器没有网络、
-Linux capability 与 ebuild 仓库，根文件系统只读；宿主机只挂载暂存目录、必要脚本，以及
-在 tmpfs 中导出的指定私钥与公钥。容器只重新签署未由当前密钥有效签名的软件包。签名完成后，
-宿主机使用指定公钥独立验证每个索引条目，再将变更写回持久的 PKGDIR；未变化的软件包在
-下一轮保持原有字节。
+### 发布与退役
 
-暂存索引必须覆盖 `packages.txt` 中每个包的当前可用版本，并通过运行期依赖检查。
-`Packages`、`Packages.gz`、构建前基础系统快照、Gentoo binhost 可用包快照与
-Gentoo 和 gentoo-zh 源码可用包快照的 SHA-256 写入 `generation.json`，六个文件按
-同一代发布。
-检查失败时保留公开索引。源码本地安装、mask、排除或版本移除等常规退役只在新索引成功
-切换后清理。设置 `RESTRICT=bindist`、许可证不允许再分发或无法确认再分发资格的产物
-会写入 `quarantine.txt` 并立即移除。
+`Packages`、`Packages.gz`、基础系统快照、Gentoo binhost 快照、源码快照与
+`generation.json` 按同一代发布。`generation.json` 记录其余五份文件的 SHA-256；任一
+检查失败时，不切换到新的公开索引。
 
-`PUBLISH=1` 会把基础镜像推到 `ghcr.io/gentoo-zh/binhost-base`。
+源码本地安装、mask、排除或版本移除产生的常规退役，只在新一代索引发布成功后清理。
+缓存产物后来设置 `RESTRICT=bindist`、许可证不再允许发布，或再分发资格无法确认时，
+产物写入 `quarantine.txt`，并在索引切换前立即隔离。这项顺序优先满足合规下架，因此
+旧索引可能暂时返回 404；具体边界见
+[`docs/accepted-risks.md`](docs/accepted-risks.md)。
 
-`run-full.sh` 在基础镜像过期时自动重建它；`status.sh` 依次核对密钥、证书、索引、
-取包、distfiles、exporter 与心跳。
+`build/cycle.sh` 依次更新 overlay、执行完整构建并发布结果。本机锁只允许一个
+`cycle.sh` 或 `run-full.sh` 使用构建暂存区。镜像机没有远端发布锁，因此人工发布前必须
+确认定时构建不会同时发布。
+
+在确认没有自动构建运行后，可在构建机手动执行：
 
 ```bash
 SIGNING_KEY=<指纹> build/run-full.sh
@@ -72,71 +106,76 @@ build/publish.sh
 build/status.sh
 ```
 
-两台机器分别安装。`deploy/install.sh` 在镜像机安装同步、索引、站点、状态检查脚本，以及
-`gen-packages.py`、`verify-deps.py`、`generation.py` 等运行依赖。
-`deploy/install-builder.sh` 在构建机安装整个 `build/` 目录与 systemd 单元：
+设置 `PUBLISH=1` 时，基础镜像会推送到 `ghcr.io/gentoo-zh/binhost-base`。
+
+## 部署
+
+镜像机与构建机分别安装。以下命令假设本机已有可用的 `mirror` 和 `build` SSH 目标：
 
 ```bash
-MONITORS='<抓 9100 的监控机>' SIGNING_FPR=<签名指纹> \
+MONITORS='<抓取 9100 的监控机地址>' SIGNING_FPR=<签名指纹> \
   REMOTE=mirror ./deploy/install.sh
-SIGNING_KEY=<指纹> REMOTE="ssh build" \
-    ./deploy/install-builder.sh
+SIGNING_KEY=<签名指纹> REMOTE="ssh build" \
+  ./deploy/install-builder.sh
 ```
 
-构建机还会建立 overlay 副本与每日构建的 systemd timer。入口 `build/cycle.sh` 依次更新
-overlay、构建、发布并报告失败。
+`deploy/install.sh` 在镜像机安装 nginx、rsync、distfiles 同步、站点同步、状态检查与相关
+定时任务。TLS 证书和 `/etc/binhost/alert.conf` 需要单独配置。
 
-构建机的本机锁只允许一个 `cycle.sh` 运行。镜像机没有远端发布锁，因此不得并行
-执行自动发布与人工 `build/publish.sh`。
+`deploy/install-builder.sh` 在构建机安装 `build/`、systemd 服务与定时器，并建立 overlay
+副本。脚本检测到构建锁时会中止；运行中的构建不应使用 `FORCE=1` 覆盖。
 
 ## 镜像
 
-873 端口开放只读 rsync，无需申请：
+源站同时通过 HTTP 与只读 rsync 提供 binpkg 和 distfiles。rsync 无需申请：
 
-```
-rsync://distfiles.gentoozh.org/gentoo-zh/{binpkgs,distfiles}
+```text
+rsync://distfiles.gentoozh.org/gentoo-zh/binpkgs
+rsync://distfiles.gentoozh.org/gentoo-zh/distfiles
 ```
 
-二进制包与 distfiles 均支持 HTTP 和 rsync。`deploy/mirror-sync.sh` 供只有 HTTP 的下游
-使用，只同步二进制包；distfiles 目前没有对应的 HTTP 同步脚本，应使用 rsync。索引中的
-`PATH` 是相对路径，把 `Packages` 和相同相对路径下的文件一并提供即构成一个完整的
-binhost。
+`Packages` 中的 `PATH` 使用相对路径。镜像同时提供索引和对应相对路径下的文件后，即可
+作为完整 binhost 使用。
+
+[`deploy/mirror-sync.sh`](deploy/mirror-sync.sh) 供只有 HTTP 的下游同步 binpkg；它不处理
+distfiles。完整镜像应使用 rsync module。
 
 ## 站点
 
-推到 master 后由镜像机主动拉取，五分钟内生效（`deploy/site-sync.sh` + cron）。
+镜像机的 `deploy/site-sync.sh` 每五分钟从 `master` 拉取并发布静态站点。站点同步使用
+独立锁，不修改 binpkg 或 distfiles。
 
-需要立即生效或变更 nginx 配置时：
+需要立即发布站点，或同时更新 nginx 配置时执行：
 
 ```bash
 ./deploy-site.sh
 ```
 
+该脚本先通过指纹清单验证公开密钥，再发布站点；nginx 配置通过 `nginx -t` 后才重新载入。
+
 ## 监控
 
-`build/status.sh` 检查签名密钥与证书有效期、索引新鲜度，并实际取回一个包。失败推送到 Telegram。
+`build/status.sh` 检查签名密钥与证书有效期、同代索引、实际取包、distfiles、exporter 与
+心跳。配置 `/etc/binhost/alert.conf` 后，故障会发送到 Telegram。
 
-镜像机每次运行写一个时间戳，构建机上的那份核对它多久没有更新，因为宕机的机器无法自己报告宕机。构建机依据索引的新旧判断：超过两轮没有更新就报出，另有 systemd 的 `OnFailure` 作为后备通道。
-
-后备通道靠退出码区分三种结果，`build/alert-failed.sh` 只对前两种保持沉默：
+镜像机每次检查都会更新时间戳。构建机检查该时间戳，避免镜像机宕机后无法自行报告。
+索引超过两个构建周期没有更新时，构建机发出告警；systemd 的 `OnFailure` 提供后备通道。
 
 | 退出码 | 含义 | 后备通道 |
-|---|---|---|
-| 0 | 全部通过 | 不触发 |
-| 10 | 有故障，已直接推送 Telegram | 不再发第二条 |
-| 11 | 有故障，与上次相同且在冷却期内 | 不再发第二条 |
-| 其他非零 | 有故障但推送失败，或脚本本身出错 | 发出后备告警 |
+| --- | --- | --- |
+| 0 | 全部检查通过 | 不触发 |
+| 10 | 检查失败，Telegram 已发送 | 不重复发送 |
+| 11 | 检查失败，与上次相同且仍在冷却期 | 不重复发送 |
+| 其他非零 | Telegram 发送失败或检查脚本出错 | 发送后备告警 |
 
-只有推送成功才记录通知时间，所以手动执行不会让定时任务误以为已经通知过。
+只有 Telegram 发送成功后才记录通知时间，因此手动检查不会无条件延长冷却期。
 
-## 加入包
+## 维护
 
-见 [CONTRIBUTING.md](CONTRIBUTING.md)。构建不出来或不能分发的包连同原因记在
-[`build/excluded.txt`](build/excluded.txt)。
-
-## 签名密钥
-
-轮替与泄露处置见 [docs/key-rotation.md](docs/key-rotation.md)。
+- 添加、移除或移动套件见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
+- 排除的套件及原因见 [`build/excluded.txt`](build/excluded.txt)。
+- 当前接受的风险与延后事项见 [`docs/accepted-risks.md`](docs/accepted-risks.md)。
+- 签名密钥轮替与泄露处置见 [`docs/key-rotation.md`](docs/key-rotation.md)。
 
 ## 许可
 
