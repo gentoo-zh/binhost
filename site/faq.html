@@ -77,14 +77,15 @@
 
     <h2 data-i18n="q3">OpenRC 和 systemd 都能使用吗？</h2>
     <p data-i18n-html="a3">
-      能。仓库按 CPU 基线切分，不按 init 系统切，这也是官方 binhost 的做法。
-      清单里只有个位数的包在 <code>IUSE</code> 里出现 <code>systemd</code>，其余产物两边一致。
+      本站只使用一个 profile 建置，不分别生成 OpenRC 与 systemd 产物。
+      Portage 会按当前 USE 与依赖判断二进制包是否适用；不适用时改为从源码建置。
     </p>
 
     <h2 data-i18n="q4">二进制包是否可能无法在我的 CPU 上运行？</h2>
     <p data-i18n-html="a4">
-      不会。构建在容器里，<code>CFLAGS</code> 是通用的，不带 <code>-march=native</code>。
-      因为 portage 接受二进制包时不比较 <code>CFLAGS</code>，所以这一点只能在构建端保证。
+      建置环境使用 <code>CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"</code>，不使用
+      <code>-march=native</code>。该设置不能约束 ebuild 附带的上游预编译对象或程序库；
+      Portage 接受二进制包时也不比较 <code>CFLAGS</code>，因此仍可能存在例外。
     </p>
 
     <h2 data-i18n="q5">如何确认安装的包没被修改？</h2>
@@ -95,16 +96,15 @@
     </p>
     <p data-i18n-html="a5b">
       另有一个全局开关 <code>FEATURES=binpkg-request-signature</code>，它对所有来源生效
-      并覆盖上面那条。因为它同样要求你自己用 <code>FEATURES=buildpkg</code> 编出来的包
-      带签名，而那些包默认没有签名，所以打开之后每次本地构建都会在合并时报
-      <code>GnuPG verification failed</code>。要用它就得同时配好
+      并覆盖上面那条。它还要求通过 <code>FEATURES=buildpkg</code> 建置的包带签名；
+      这些包默认没有签名。启用该功能时必须同时配置
       <code>binpkg-signing</code>、本机签名密钥，以及让 gpg 读到 getuto 存的口令。
     </p>
 
     <h2 id="key-download" data-i18n="q11">不安装 sec-keys 包时，如何取得签名公钥？</h2>
     <p data-i18n-html="a11">
-      直接下载那个文件，再把配置第 1 步里 <code>--import</code> 那条命令的路径
-      换成下载到的文件。下载不需要 root。
+      下载签名公钥文件，再将配置第 1 步中 <code>--import</code> 的路径指向该文件。
+      下载不需要 root。
     </p>
 
     <div class="src-pick" data-src-switch="dl" data-src-group="tool"
@@ -128,13 +128,15 @@
 
     <h2 data-i18n="q8">有哪些镜像？</h2>
     <p data-i18n-html="a8">
-      源站 <a href="/">distfiles.gentoozh.org</a>、南京大学
+      源站 <a href="/">distfiles.gentoozh.org</a>、教育网联合镜像站
+      <a href="https://mirrors.cernet.edu.cn/gentoo-zh">mirrors.cernet.edu.cn/gentoo-zh</a>、南京大学
       <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a>
-      与南阳理工学院
-      <a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a>，
-      都提供二进制包与 distfiles。国内取校园镜像更快，
-      在<a href="/">配置</a>页上可以直接切换。
-      镜像上的包与源站逐字节相同并使用同一份签名；切换镜像不影响签名验证。
+      、南阳理工学院
+      <a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a>
+      与河南教育网
+      <a href="https://mirrors.ha.edu.cn/gentoo-zh">mirrors.ha.edu.cn/gentoo-zh</a>
+      均提供二进制包与 distfiles。可在<a href="/">配置</a>页按网络情况切换。
+      镜像同步本站已签名的产物；切换不改变签名验证要求。
     </p>
 
     <h2 data-i18n="q9">如何自行建立镜像？</h2>
@@ -153,9 +155,9 @@
     </div>
 
     <p data-i18n-html="a9b">
-      每日同步一次。因为包名含版本与 build id，内容不再变化，所以已有的文件不会重复传输。
-      <code>--delay-updates</code> 让这一批文件在末尾一次换入。不加则索引可能先落地，
-      而它引用的包尚未传完，这段时间下游返回 404。
+      建议每日同步一次。rsync 会跳过其判定为未变更的文件；同一路径的文件仍可能因
+      重新签名或重新生成而需要传输。<code>--delay-updates</code> 会把已传输的变更文件
+      延后到传输末段逐一替换，但不会将索引与软件包树作为一个整体进行原子切换。
       镜像建成后在 <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issues</a>
       提出，以便在“有哪些镜像？”一项中登记。
     </p>
@@ -210,25 +212,25 @@
 window.MIRROR_I18N = {
   'zh-tw': { 
     q11: '不安裝 sec-keys 套件時，如何取得簽章公鑰？',
-    a11: '直接下載那個檔案，再把設定第 1 步裡 <code>--import</code> 那條命令的路徑換成下載到的檔案。下載不需要 root。',title: 'FAQ',
+    a11: '下載簽章公鑰檔案，再將設定第 1 步中 <code>--import</code> 的路徑指向該檔案。下載不需要 root。',title: 'FAQ',
     q1: '設定好之後為何 emerge 不使用二進位套件，仍然編譯？',
     a1: 'Portage 不會直接比較 profile 名稱，而是依照目前設定檢查二進位套件 metadata。profile 變更可能改變 USE 與依賴選擇，使現有二進位套件不再適用；此時 Portage 會改為編譯原始碼。用 <code>emerge -pv</code> 檢查，前綴為 <code>[binary]</code> 才表示採用了二進位套件。',
     q2: '為什麼要用 binrepos.conf，不能直接設 PORTAGE_BINHOST？',
     a2: '因為 <code>PORTAGE_BINHOST</code> 產生的是隱含儲存庫，無法單獨設定 <code>verify-signature</code>。若為使用本站的套件而關閉驗簽，官方 binhost 的驗簽會一併關閉。',
     q3: 'OpenRC 和 systemd 都能使用嗎？',
-    a3: '可以。儲存庫按 CPU 基線切分，不按 init 系統切，這也是官方 binhost 的做法。清單裡只有個位數的套件在 <code>IUSE</code> 裡出現 <code>systemd</code>，其餘產物兩邊一致。',
+    a3: '本站只使用一個 profile 建置，不分別產生 OpenRC 與 systemd 產物。Portage 會依目前 USE 與相依性判斷二進位套件是否適用；不適用時改為從原始碼建置。',
     q4: '二進位套件是否可能無法在我的 CPU 上執行？',
-    a4: '不會。建置在容器裡，<code>CFLAGS</code> 是通用的，不帶 <code>-march=native</code>。因為 portage 接受二進位套件時不比較 <code>CFLAGS</code>，所以這一點只能在建置端保證。',
+    a4: '建置環境使用 <code>CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"</code>，不使用 <code>-march=native</code>。該設定不能約束 ebuild 附帶的上游預先編譯物件或程式庫；Portage 接受二進位套件時也不比較 <code>CFLAGS</code>，因此仍可能存在例外。',
     q5: '如何確認安裝的套件沒被竄改？',
     a5: '簽章內嵌在每個 gpkg 套件裡（<code>image.tar.zst.sig</code>），和官方 binhost 一樣。設定裡的 <code>verify-signature = true</code> 讓 portage 拒絕本站驗簽不過的套件，它寫在 <code>binrepos.conf</code> 裡，只作用於本站。',
-    a5b: '另有一個全域開關 <code>FEATURES=binpkg-request-signature</code>，它對所有來源生效並覆蓋上面那條。因為它同樣要求你自己用 <code>FEATURES=buildpkg</code> 建出來的套件帶簽章，而那些套件預設沒有簽章，所以開啟之後每次本機建置都會在合併時報 <code>GnuPG verification failed</code>。要用它就得同時配好 <code>binpkg-signing</code>、本機簽章金鑰，以及讓 gpg 讀到 getuto 存的密碼。',
+    a5b: '另有一個全域設定 <code>FEATURES=binpkg-request-signature</code>，它對所有來源生效並覆蓋上面那條。它還要求透過 <code>FEATURES=buildpkg</code> 建置的套件帶簽章；這些套件預設沒有簽章。啟用該功能時必須同時設定 <code>binpkg-signing</code>、本機簽章金鑰，以及讓 gpg 讀到 getuto 儲存的密碼。',
     q6: '如何停用？',
     a6: '刪除 <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code>。已安裝的套件不受影響。',
     q8: '有哪些鏡像？',
-    a8: '來源站 <a href="/">distfiles.gentoozh.org</a>、南京大學 <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a> 與南陽理工學院 <a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a>，都提供二進位套件與 distfiles。中國大陸取校園鏡像較快，在<a href="/">設定</a>頁上可以直接切換。鏡像上的套件與來源站逐位元組相同並使用同一份簽章；切換鏡像不影響簽章驗證。',
+    a8: '來源站 <a href="/">distfiles.gentoozh.org</a>、教育網聯合鏡像站 <a href="https://mirrors.cernet.edu.cn/gentoo-zh">mirrors.cernet.edu.cn/gentoo-zh</a>、南京大學 <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a>、南陽理工學院 <a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a> 與河南教育網 <a href="https://mirrors.ha.edu.cn/gentoo-zh">mirrors.ha.edu.cn/gentoo-zh</a> 均提供二進位套件與 distfiles。可在<a href="/">設定</a>頁依網路情況切換。鏡像同步本站已簽章的產物；切換不改變簽章驗證要求。',
     q9: '如何自行建立鏡像？',
     a9: 'rsync 公開開放，無需申請。rsync module 包含 <code>binpkgs/</code> 與 <code>distfiles/</code>。同步到本機後用 HTTP 提供即構成一個完整的鏡像，因為索引中的 <code>PATH</code> 是相對路徑，不依賴主機名稱。',
-    a9b: '每日同步一次。因為套件名含版本與 build id，內容不再變化，所以已有的檔案不會重複傳輸。<code>--delay-updates</code> 讓這一批檔案在末尾一次換入。不加則索引可能先落地，而它引用的套件尚未傳完，這段時間下游回傳 404。鏡像建成後在 <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issues</a> 提出，以便在「有哪些鏡像？」一項中登記。',
+    a9b: '建議每日同步一次。rsync 會略過其判定為未變更的檔案；同一路徑的檔案仍可能因重新簽章或重新產生而需要傳輸。<code>--delay-updates</code> 會把已傳輸的變更檔案延後到傳輸末段逐一取代，但不會將索引與套件樹作為一個整體進行原子切換。鏡像建成後在 <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issues</a> 提出，以便加入鏡像清單。',
     q7: '都收錄了哪些套件？',
     q10: '如何在 w3m、lynx 或 curl 中瀏覽？',
     a10: '套件資料表與互動式檔案瀏覽需要指令碼；頁面標題、說明與連結仍可讀。純文字的套件清單在 <a href="/packages.txt">/packages.txt</a>，一行一個套件。第二欄 <code>bin+src</code> 表示兩者都有、<code>bin</code> 表示只有二進位套件、<code>src</code> 表示只有 distfiles。目錄瀏覽用 <a href="/_raw/">/_raw/</a>，那是由 nginx 生成的清單，不需要指令碼。其餘各頁的正文都寫在 HTML 裡，文字瀏覽器直接可讀。',
@@ -236,25 +238,25 @@ window.MIRROR_I18N = {
   },
   'en': { 
     q11: 'How do I obtain the signing key without installing the sec-keys package?',
-    a11: 'Download the file directly, then point the <code>--import</code> command in step 1 at the file you downloaded. No root needed to download.',title: 'FAQ',
+    a11: 'Download the signing-key file, then point the <code>--import</code> path in step 1 to that file. Downloading it does not require root.',title: 'FAQ',
     q1: 'Why does emerge still compile after I have configured it?',
     a1: 'Portage does not compare profile names directly; it checks binary package metadata against the current configuration. A profile change can alter USE and dependency choices and make an existing binary package unsuitable, in which case Portage builds from source. Run <code>emerge -pv</code> to check: only a <code>[binary]</code> prefix means the package came from here.',
     q2: 'Why binrepos.conf rather than PORTAGE_BINHOST?',
     a2: 'Because <code>PORTAGE_BINHOST</code> creates an implicit repository that cannot carry its own <code>verify-signature</code>. If you turn verification off to install from here, you turn it off for the official Gentoo binhost as well.',
     q3: 'Does it work on both OpenRC and systemd?',
-    a3: 'Yes. The repository is split by CPU baseline rather than by init system, which is what the official Gentoo binhost does. Only a handful of packages in the list mention <code>systemd</code> in <code>IUSE</code>; everything else is identical either way.',
+    a3: 'This host builds with one profile rather than producing separate OpenRC and systemd artifacts. Portage checks each binary package against the current USE flags and dependencies; when it is not applicable, Portage builds from source.',
     q4: 'Could a binary package fail to run on my CPU?',
-    a4: 'No. Everything is built in a container with generic <code>CFLAGS</code>, never <code>-march=native</code>. It has to be guaranteed at build time, because portage does not compare <code>CFLAGS</code> when it accepts a binary package.',
+    a4: 'The build environment uses <code>CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"</code> and does not use <code>-march=native</code>. This setting cannot constrain upstream prebuilt objects or libraries bundled by an ebuild, and Portage does not compare <code>CFLAGS</code> when accepting a binary package, so exceptions remain possible.',
     q5: 'How do I confirm nothing has been modified?',
     a5: 'The signature is embedded in each gpkg package (<code>image.tar.zst.sig</code>), the same way the official Gentoo binhost does it. <code>verify-signature = true</code> makes portage refuse anything from this repository whose signature does not check out; it lives in <code>binrepos.conf</code> and applies to this repository only.',
-    a5b: 'There is also a global switch, <code>FEATURES=binpkg-request-signature</code>, which applies to every source and overrides the above. Because it equally demands a signature on the packages you build yourself with <code>FEATURES=buildpkg</code>, and those are unsigned by default, turning it on makes every local build fail to merge with <code>GnuPG verification failed</code>. Using it means setting up <code>binpkg-signing</code>, a local signing key, and a way for gpg to read the passphrase getuto stored.',
+    a5b: 'There is also a global setting, <code>FEATURES=binpkg-request-signature</code>, which applies to every source and overrides the above. It also requires signatures on packages built through <code>FEATURES=buildpkg</code>; those packages are unsigned by default. Enabling it therefore requires <code>binpkg-signing</code>, a local signing key, and a way for gpg to read the passphrase stored by getuto.',
     q6: 'How do I stop using it?',
     a6: 'Delete <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code>. Packages that are already installed are unaffected.',
     q8: 'Which mirrors are there?',
-    a8: 'The origin at <a href="/">distfiles.gentoozh.org</a>, Nanjing University at <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a> and Nanyang Institute of Technology at <a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a>, all carrying binary packages and distfiles. Nanjing University is faster from within China and the <a href="/">setup</a> page switches between them. Packages on a mirror are byte-identical to the origin and carry the same signature, so the choice does not affect verification.',
+    a8: 'The origin at <a href="/">distfiles.gentoozh.org</a>, CERNET at <a href="https://mirrors.cernet.edu.cn/gentoo-zh">mirrors.cernet.edu.cn/gentoo-zh</a>, Nanjing University at <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a>, NYIST at <a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a>, and HERNET at <a href="https://mirrors.ha.edu.cn/gentoo-zh">mirrors.ha.edu.cn/gentoo-zh</a> carry binary packages and distfiles. Choose among them on the <a href="/">setup</a> page according to network conditions. Mirrors synchronize the signed artifacts from this host; switching does not change the verification requirement.',
     q9: 'How do I set up a mirror of my own?',
     a9: 'rsync is open and needs no application. The rsync module contains <code>binpkgs/</code> and <code>distfiles/</code>. Sync it locally, serve it over HTTP, and it is a complete mirror, because <code>PATH</code> in the index is relative and does not depend on the hostname.',
-    a9b: 'Sync once a day. Package names carry the version and build id, so their content never changes and existing files are not transferred again. <code>--delay-updates</code> swaps the batch in at the end; without it the index can land before the packages it names, and the mirror answers 404 in between. Once it is running, open a <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issue</a> so it can be listed under “Which mirrors are there?”.',
+    a9b: 'Sync once a day. rsync skips files it determines are unchanged; a file at the same path can still require transfer after it is regenerated or signed again. <code>--delay-updates</code> postpones replacement of transferred files until the final stage of the transfer, one file at a time. It does not atomically switch the index and package tree as one generation. Once the mirror is running, open a <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issue</a> so it can be added to the mirror list.',
     q7: 'Which packages are included?',
     q10: 'How do I browse this in w3m, lynx or curl?',
     a10: 'The package data table and interactive file browser require scripts; their headings, descriptions and links remain readable without scripts. A plain text package list is at <a href="/packages.txt">/packages.txt</a>, one package per line. Its second column uses <code>bin+src</code> for both, <code>bin</code> for a binary package only, and <code>src</code> for distfiles only. For directory browsing use <a href="/_raw/">/_raw/</a>, which nginx generates and needs no script. Every other page has its text in the HTML and reads fine in a text browser.',
