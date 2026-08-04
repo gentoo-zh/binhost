@@ -33,9 +33,9 @@ python3 build/validate.py /var/db/repos/gentoo-zh
 
 ## 无法收录的包
 
-- **`RESTRICT=bindist`**：上游不允许再分发构建产物，CI 会直接拒绝。
+- **`RESTRICT=bindist`**：上游不允许再分发 binpkg，CI 会直接拒绝。
 - **许可证不允许再分发**：构建时 `ACCEPT_LICENSE="-* @BINARY-REDISTRIBUTABLE"` 会拦截，但应在 PR 阶段即予说明。
-- **不属于本 overlay 的包**：收录清单只接受 gentoo-zh overlay 自身的包。::gentoo 的包不受理申请，但它若是已收录包的运行期依赖，会随之一并发布；其余请使用[官方 binhost](https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart)。
+- **不属于本 overlay 的包**：收录清单只接受 gentoo-zh overlay 自身的包。已收录包所需的 `::gentoo` 运行期依赖会随之一并发布，其他 `::gentoo` 包请使用[官方 binhost](https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart)。
 
 ## 合并之后
 
