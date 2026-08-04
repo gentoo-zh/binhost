@@ -365,12 +365,13 @@ ok "指纹均不匹配时不写 known_hosts" "$(hostkey_probe SHA256:NOMATCH)" "
 echo "== status.sh 的部署版本核对"
 
 version_probe() {
-    local ver="$1" sha_out="$2" d out
+    local ver="$1" sha_out="$2" compare_out="${3:-exit 22}" d out
     d=$(mktemp -d); mkdir -p "${d}/bin"
     cat > "${d}/bin/curl" <<EOF
 #!/bin/bash
 case "\$*" in
   *commits/master*) ${sha_out} ;;
+  *compare/*) ${compare_out} ;;
 esac
 exit 22
 EOF
@@ -382,7 +383,7 @@ EOF
         STATE_FILE="${d}/state" VERSION_FILE="${d}/VERSION" \
         SIGNING_GNUPGHOME="${d}/nokey" DISK_PATH="${d}/nodisk" \
         HEARTBEAT="${d}/nowhere/.health" SITE_WORK="${d}/nowork" \
-        SITE_DEST="${d}/nodest" MONITORS_FILE="${d}/nomon" \
+        SITE_DEST="${d}/nodest" MONITORS_FILE="${d}/nomon" COMPONENT=mirror \
         bash build/status.sh 2>&1 | grep '部署版本' )
     rm -rf "${d}"
     case "${out}" in *'<--'*) echo failed ;; *) echo passed ;; esac
@@ -390,10 +391,14 @@ EOF
 
 SHA40=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 SAME='echo "  \"sha\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\","'
+NEW='echo "  \"sha\": \"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\","'
+GENERATION_CHANGED='echo "      \"filename\": \"build/generation.py\","'
 ok "VERSION 带 -dirty 时算故障" "$(version_probe "${SHA40}-dirty" 'exit 22')" "failed"
 ok "VERSION 不是提交号时算故障" "$(version_probe not-a-sha 'exit 22')" "failed"
 ok "无法获取目标版本时算故障，不再当成通过" "$(version_probe "${SHA40}" 'exit 22')" "failed"
 ok "版本一致时才算通过" "$(version_probe "${SHA40}" "${SAME}")" "passed"
+ok "只修改 generation.py 时镜像机仍判定部署落后" \
+   "$(version_probe "${SHA40}" "${NEW}" "${GENERATION_CHANGED}")" "failed"
 
 echo "== status.sh 对 node_exporter 抓取源的判定"
 
