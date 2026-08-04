@@ -17,16 +17,37 @@ docs/     运维手册
 
 ## 构建
 
-在 stage3 容器里构建，`CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"`，`FEATURES=binpkg-signing`。仓库按 CPU 基线切分（`x86-64`），与官方 binhost 一致。
+在 stage3 容器里构建，`CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"`。
+仓库按 CPU 基线切分（`x86-64`），与 Gentoo 官方 binhost 一致。
 
 发布的主体是收录清单里的 overlay 包，另外附带这些包所需的部分 `::gentoo` 运行期
 依赖，两者在同一份索引里，用 `REPO` 字段区分。许可证不允许再分发的、
-`RESTRICT=bindist` 的都不发布。附带的依赖范围只到这些包的运行期依赖，
+`RESTRICT=bindist` 的都不发布。附带内容仅包含这些包的运行期依赖，
 不替代 Gentoo 官方 binhost。
 
 `@world` 对齐后的容器提交成基础镜像，超过 7 天才刷新，平时的构建从已经对齐好的根开始。
 
-`PUBLISH=1` 会把基础镜像推到 `ghcr.io/gentoo-zh/binhost-base`。签名密钥是挂载进容器的，不在镜像里。
+高权限构建容器会执行 ebuild，但不挂载私钥。容器在 emerge 之前记录基础系统的
+CPV、SLOT、USE、IUSE、EAPI 与 repository，依赖检查按完整 Portage Atom 匹配该快照。
+构建完成后，脚本还会记录当轮实际使用的 Gentoo binhost 索引。若依赖只能从源码
+取得，则另从当前 Gentoo 仓库记录可匹配的版本；带 USE 约束的源码依赖不会按未知配置
+推定为可用。
+
+构建完成后，独立签名容器会检查索引中的每个 gpkg，只重新签署未由当前密钥有效签名的
+软件包。该容器不使用
+`--privileged`，没有网络与 ebuild 仓库，根文件系统只读；宿主机仅将暂存目录
+以可写方式挂载。
+签名完成后，脚本使用仅包含指定公钥的临时 keyring 验证每个索引条目。
+私钥只挂载到此阶段，不写入基础镜像。全部验签通过后，宿主机将新签名的软件包写回
+持久的 PKGDIR，未变化的软件包在下一轮保持原有字节。
+
+暂存索引必须覆盖 `packages.txt` 中每个包的当前可用版本，并通过运行期依赖检查。
+`Packages`、`Packages.gz`、构建前基础系统快照、Gentoo binhost 可用包快照与
+Gentoo 源码可用包快照的 SHA-256 写入 `generation.json`，六个文件按同一代发布。
+检查失败时保留公开索引与一般清理计划，
+但仍立即移除 `quarantine.txt` 中不可继续散布的产物。
+
+`PUBLISH=1` 会把基础镜像推到 `ghcr.io/gentoo-zh/binhost-base`。
 
 `run-full.sh` 在基础镜像过期时自动重建它；`status.sh` 依次核对密钥、证书、索引、
 取包、distfiles、exporter 与心跳。
@@ -50,6 +71,9 @@ SIGNING_KEY=<指纹> REMOTE="ssh build" \
 
 构建机那边装的是构建脚本、overlay 副本与每日构建的 systemd timer，
 入口是 `build/cycle.sh`：更新 overlay、构建、发布、报告失败。
+
+构建机的本机锁只允许一个 `cycle.sh` 运行。镜像机没有远端发布锁，因此不得并行
+执行自动发布与人工 `build/publish.sh`。
 
 ## 镜像
 

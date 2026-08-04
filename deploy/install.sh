@@ -33,6 +33,7 @@ say "上传"
 tmp=$(ssh "${REMOTE}" 'mktemp -d')
 # shellcheck disable=SC2029  # tmp is meant to expand locally
 rsync -a deploy/ build/gen-packages.py build/ebuilds.py build/verify-deps.py \
+    build/generation.py \
     build/dep-exceptions.txt build/packages.txt build/excluded.txt build/status.sh build/alert.sh \
     nginx/ site/ "${REMOTE}:${tmp}/"
 
@@ -54,6 +55,7 @@ sudo install -m644 alert.sh            /usr/local/lib/binhost/alert.sh
 sudo install -m644 gen-packages.py     /usr/local/lib/binhost/gen-packages.py
 sudo install -m644 ebuilds.py          /usr/local/lib/binhost/ebuilds.py
 sudo install -m755 verify-deps.py      /usr/local/lib/binhost/verify-deps.py
+sudo install -m755 generation.py       /usr/local/lib/binhost/generation.py
 sudo install -m644 dep-exceptions.txt  /usr/local/lib/binhost/dep-exceptions.txt
 sudo install -m644 packages.txt        /usr/local/lib/binhost/packages.txt
 sudo install -m644 excluded.txt        /usr/local/lib/binhost/excluded.txt

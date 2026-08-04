@@ -1,0 +1,101 @@
+name: moves
+
+on:
+  schedule:
+    - cron: "30 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  find:
+    runs-on: ubuntu-latest
+    container: gentoo/stage3@sha256:7453ebe0a87f90ab16beed03c7f579a3cbb9ba4985e8cc310086277329b2290c  # gentoo/stage3:amd64
+    outputs:
+      rows: ${{ steps.pick.outputs.rows }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Fetch the overlay
+        run: |
+          mkdir -p /tmp/overlay
+          wget -qO- https://github.com/gentoo-zh/overlay/archive/refs/heads/master.tar.gz |
+            tar xz -C /tmp/overlay --strip-components=1
+
+      - name: Read authoritative package moves
+        id: pick
+        run: |
+          set -euo pipefail
+          python3 build/check-versions.py --moves /tmp/overlay build/packages.txt > /tmp/moves.txt
+          : > /tmp/ok.txt
+          cp build/packages.txt /tmp/packages.orig
+          while IFS=$'\t' read -r source target; do
+            [ -n "${source}" ] || continue
+            cp /tmp/packages.orig build/packages.txt
+            python3 build/move-package.py "${source}" "${target}"
+            if python3 build/validate.py /tmp/overlay > /tmp/validate.log 2>&1; then
+              printf '%s\t%s\n' "${source}" "${target}" >> /tmp/ok.txt
+            else
+              echo "  ${source} 移至 ${target} 后 validate 未通过，不提出："
+              grep -E 'packages\.txt' /tmp/validate.log | sed 's/^/    /' || true
+            fi
+          done < /tmp/moves.txt
+          cp /tmp/packages.orig build/packages.txt
+          cat /tmp/ok.txt
+          {
+            echo "rows<<EOF"
+            cat /tmp/ok.txt
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+  propose:
+    needs: find
+    if: needs.find.outputs.rows != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+
+      - name: Open one pull request per move
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ROWS: ${{ needs.find.outputs.rows }}
+        run: |
+          set -euo pipefail
+          git config user.name "Zakk"
+          git config user.email "zakk@gentoozh.org"
+          base=$(git rev-parse HEAD)
+
+          while IFS=$'\t' read -r source target; do
+            [ -n "${source}" ] || continue
+            branch="move/${source//\//-}-to-${target//\//-}"
+            if git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1; then
+              echo "  ${source} 已经有 ${branch}，跳过"
+              continue
+            fi
+
+            git checkout -q -B "${branch}" "${base}"
+            python3 build/move-package.py "${source}" "${target}"
+            git commit -q -m "build: move ${source} to ${target}" -- build/packages.txt
+            git push -q origin "${branch}"
+
+            body=$(printf '%s\n' \
+              "overlay 的 \`profiles/updates\` 已声明 \`${source}\` 移至 \`${target}\`。" \
+              "此提交在同一份清单中删除旧 atom 并加入新 atom，避免新增与退休流程分别提出不完整变更。" \
+              "" \
+              "自动化会在该提交上执行完整的 \`validate\` 工作流程。")
+            if ! gh workflow run validate.yml --ref "${branch}"; then
+              echo "  ${source} 无法触发 validate，删除远端分支 ${branch}"
+              git push -q origin --delete "${branch}" || true
+              continue
+            fi
+            if ! gh pr create --base master --head "${branch}" \
+                 --title "build: move ${source} to ${target}" --body "${body}"; then
+              git push -q origin --delete "${branch}" || true
+              continue
+            fi
+          done <<< "${ROWS}"

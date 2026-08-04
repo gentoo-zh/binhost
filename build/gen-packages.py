@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import functools
 import json
 import os
 import pathlib
@@ -126,7 +127,13 @@ def read_deps():
                     "slot": f.get("SLOT", "0").split("/", 1)[0]})
     if others:
         raise IndexUnreadable(f"索引里有未知仓库的产物：{' '.join(sorted(others))}")
-    out.sort(key=lambda d: (d["cp"], d["slot"], d["ver"]))
+    def compare(left, right):
+        prefix = (left["cp"], left["slot"]), (right["cp"], right["slot"])
+        if prefix[0] != prefix[1]:
+            return -1 if prefix[0] < prefix[1] else 1
+        return vercmp(left["ver"], right["ver"]) or 0
+
+    out.sort(key=functools.cmp_to_key(compare))
     return out
 
 

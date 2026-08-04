@@ -309,6 +309,10 @@ case("只有 MD5 时按 MD5 核对", lambda: (
 case("MD5 不符时同样拒绝", lambda: (
     _digest_probe(md5=md5_of(b"other")) not in (0, None)))
 
+case("SHA1 相符但 MD5 不符时仍然拒绝", lambda: (
+    (lambda rc: rc not in (0, None) and "MD5" in str(rc))(
+        _digest_probe(sha1=digest_of(b"inside\n"), md5=md5_of(b"other")))))
+
 case("索引没有给出摘要时拒绝，不默认放行", lambda: (
     (lambda rc: rc not in (0, None) and "无法确认" in str(rc))(_digest_probe())))
 
@@ -361,6 +365,14 @@ case("被跳过的那个连它的路径一起记下来，好从公开路径移�
     run([stanza("app-misc/a-1"),
          stanza("app-misc/b-1", restrict="bindist")])[3]
     == [("app-misc/b-1", "app-misc/b/b-1.gpkg.tar", "yes")]))
+
+case("同一 CPV 的所有 BUILD_ID 路径都进入隔离清单", lambda: (
+    sorted(path for cpv, path, _state in run([
+        stanza("app-misc/b-1", build_id=1, restrict="bindist",
+               PATH="app-misc/b/b-1-1.gpkg.tar"),
+        stanza("app-misc/b-1", build_id=2, restrict="bindist",
+               PATH="app-misc/b/b-1-2.gpkg.tar")])[3] if cpv == "app-misc/b-1")
+    == ["app-misc/b/b-1-1.gpkg.tar", "app-misc/b/b-1-2.gpkg.tar"]))
 
 case("无法读取 metadata 与 bindist 分别标注，操作提示才不会指错方向", lambda: (
     [s for _, _, s in with_meta([stanza("app-misc/a-1"), stanza("app-misc/b-1")],

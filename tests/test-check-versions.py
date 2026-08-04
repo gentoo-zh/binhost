@@ -8,7 +8,7 @@ import tempfile
 BUILD = pathlib.Path(__file__).resolve().parent.parent / "build"
 
 CHECK = str(BUILD / "check-versions.py")
-def make_overlay(root, packages, masked=(), body=None):
+def make_overlay(root, packages, masked=(), body=None, moves=()):
     root = pathlib.Path(root)
     for cp, vers in packages.items():
         d = root / cp
@@ -22,6 +22,11 @@ def make_overlay(root, packages, masked=(), body=None):
     (prof / "repo_name").write_text("gentoo-zh\n")
     (prof / "package.mask").write_text(
         "".join(f"# masked for removal\n{cp}\n" for cp in masked))
+    if moves:
+        updates = prof / "updates"
+        updates.mkdir()
+        (updates / "1Q-2026").write_text(
+            "".join(f"move {source} {target}\n" for source, target in moves))
     return root
 
 
@@ -37,10 +42,10 @@ def make_tree(root, packages, empty=()):
 
 
 def run(index_lines, list_lines, packages=None, masked=(), tree=(), body=None,
-        tree_empty=()):
+        tree_empty=(), moves=()):
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
-        overlay = make_overlay(d / "overlay", packages or {}, masked, body)
+        overlay = make_overlay(d / "overlay", packages or {}, masked, body, moves)
         gentoo = make_tree(d / "gentoo", tree, tree_empty)
         (d / "Packages").write_text(
             "ACCEPT_KEYWORDS: ~amd64\nPACKAGES: 0\n\n" + "\n\n".join(index_lines) + "\n")
@@ -52,10 +57,10 @@ def run(index_lines, list_lines, packages=None, masked=(), tree=(), body=None,
         return p.returncode, p.stdout
 
 
-def retire(list_lines, packages=None, masked=(), body=None):
+def retire(list_lines, packages=None, masked=(), body=None, moves=()):
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
-        overlay = make_overlay(d / "overlay", packages or {}, masked, body)
+        overlay = make_overlay(d / "overlay", packages or {}, masked, body, moves)
         (d / "list.txt").write_text("\n".join(list_lines) + "\n")
         p = subprocess.run([sys.executable, CHECK, "--retire", str(overlay),
                             str(d / "list.txt")], capture_output=True, text=True)
@@ -121,6 +126,12 @@ OKKW = 'EAPI=8\ninherit cmake\nKEYWORDS="~amd64"\nSLOT="0"\n'
 NOKW = 'EAPI=8\ninherit cmake\nKEYWORDS="~arm64"\nSLOT="0"\n'
 VAGUE = 'EAPI=8\ninherit cmake\nKEYWORDS="~amd64"\nSLOT="0"\nR="x"\nRESTRICT="${R}"\n'
 
+rc, out = run([], [PKG], {PKG: NOW}, body={PKG: VAGUE})
+ok = rc == 1 and "待人工确认" in out
+print(f"  {'✓' if ok else '✗'} {'RESTRICT 无法判定时阻止发布':<24}")
+if not ok:
+    bad += 1
+
 
 def retire_mixed(list_lines, cp, versions):
     """One package, a different ebuild body per version."""
@@ -137,15 +148,16 @@ def retire_mixed(list_lines, cp, versions):
         return p.returncode, [l for l in p.stdout.splitlines() if l.strip()]
 
 MIGRATE = [
-    ("改分类，两边同名，配成一对",
-     [], [MOVED_OLD], {MOVED_NEW: NOW}, (), f"疑似改分类 {MOVED_OLD} -> {MOVED_NEW}"),
+    ("profiles/updates 的 move 配成一对",
+     [], [MOVED_OLD], {MOVED_NEW: NOW}, (), ((MOVED_OLD, MOVED_NEW),),
+     f"改分类 {MOVED_OLD} -> {MOVED_NEW}"),
     ("包真的删了，没有同名新包，仍报已移除",
-     [], [MOVED_OLD], {"net-misc/unrelated": NOW}, (), f"已移除 {MOVED_OLD}"),
-    ("同名新包已经在清单里，不算改分类",
-     [], [MOVED_OLD, MOVED_NEW], {MOVED_NEW: NOW}, (), f"已移除 {MOVED_OLD}"),
+     [], [MOVED_OLD], {"net-misc/unrelated": NOW}, (), (), f"已移除 {MOVED_OLD}"),
+    ("同名新包没有 move 记录时不猜测改分类",
+     [], [MOVED_OLD], {MOVED_NEW: NOW}, (), (), f"已移除 {MOVED_OLD}"),
 ]
-for name, idx, lst, packages, tree, want in MIGRATE:
-    rc, out = run(idx, lst, packages, tree=tree)
+for name, idx, lst, packages, tree, moves, want in MIGRATE:
+    rc, out = run(idx, lst, packages, tree=tree, moves=moves)
     ok = any(l.strip().startswith(want) for l in out.splitlines()) and rc == 1
     print(f"  {'✓' if ok else '✗'} {name:<24} {want}")
     if not ok:
@@ -211,11 +223,19 @@ print(f"  {'✓' if ok else '✗'} {'每行一个制表符分隔包名和原因'
 if not ok:
     bad += 1
 
+rc, got = retire([MOVED_OLD], {MOVED_NEW: NOW},
+                 moves=((MOVED_OLD, MOVED_NEW),))
+ok = got == [] and rc == 0
+print(f"  {'✓' if ok else '✗'} {'move 来源不由 retire 单独提出':<24} {got if got else '（无）'}")
+if not ok:
+    bad += 1
 
-def newcomers(packages, list_lines, masked=(), restrict=None, keywords=None, body=None):
+
+def newcomers(packages, list_lines, masked=(), restrict=None, keywords=None, body=None,
+              moves=()):
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
-        overlay = make_overlay(d / "overlay", packages, masked, body)
+        overlay = make_overlay(d / "overlay", packages, masked, body, moves)
         for cp, extra in (restrict or {}).items():
             for eb in (overlay / cp).glob("*.ebuild"):
                 eb.write_text(eb.read_text() + f'RESTRICT="{extra}"\n')
@@ -244,8 +264,12 @@ NEW = [
      {"body": {PKG: 'EAPI=8\nKEYWORDS="~amd64"\nSLOT="0"\nsrc_compile() {\n\temake\n}\n'}}, [f"{PKG} {NOW}"]),
     ("既没有构建 eclass 也没有编译阶段的不报", {PKG: NOW}, [],
      {"body": {PKG: 'EAPI=8\nKEYWORDS="~amd64"\nSLOT="0"\n'}}, []),
+    ("仅自定义 src_install 仍不视为源码构建", {PKG: NOW}, [],
+     {"body": {PKG: 'EAPI=8\nKEYWORDS="~amd64"\nSLOT="0"\nsrc_install() {\n\tdobin tool\n}\n'}}, []),
     ("unpacker 即使写了 src_compile 也不报", {PKG: NOW}, [],
      {"body": {PKG: 'EAPI=8\ninherit unpacker\nKEYWORDS="~amd64"\nSLOT="0"\nsrc_compile() {\n\t:\n}\n'}}, []),
+    ("move 目标不由 newcomers 单独提出", {MOVED_NEW: NOW}, [MOVED_OLD],
+     {"moves": ((MOVED_OLD, MOVED_NEW),)}, []),
 ]
 
 for name, pkgs, lst, kw, want in NEW:
@@ -254,5 +278,69 @@ for name, pkgs, lst, kw, want in NEW:
     print(f"  {'✓' if ok else '✗'} {name:<24} {got if got else '（无）'}")
     if not ok:
         bad += 1
+
+rc, out = run([stanza(f"{PKG}-{NOW}").replace("REPO: gentoo-zh", "REPO: gentoo")],
+              [PKG], {PKG: NOW})
+ok = rc == 1 and "缺" in out
+print(f"  {'✓' if ok else '✗'} {'::gentoo stanza 不算 overlay 已发布版本':<24}")
+if not ok:
+    bad += 1
+
+
+def classification_probe():
+    packages = {
+        "virtual/meta": "0", "app-misc/live": "9999",
+        "app-misc/no-amd64": "1", "app-misc/bindist": "1",
+        "app-misc/unknown": "1", "app-misc/tool-bin": "1",
+        "app-misc/prebuilt": "1", "app-misc/no-build": "1",
+        "app-misc/candidate": "1",
+    }
+    body = {
+        "app-misc/no-amd64": NOKW,
+        "app-misc/bindist": BINDIST,
+        "app-misc/unknown": VAGUE,
+        "app-misc/prebuilt": 'EAPI=8\ninherit unpacker\nKEYWORDS="~amd64"\nSLOT="0"\n',
+        "app-misc/no-build": 'EAPI=8\nKEYWORDS="~amd64"\nSLOT="0"\n',
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        overlay = make_overlay(d / "overlay", packages, body=body)
+        (d / "list.txt").write_text("")
+        result = subprocess.run(
+            [sys.executable, CHECK, "--newcomers", str(overlay), str(d / "list.txt")],
+            capture_output=True, text=True)
+        atoms = [cp for cp in packages if cp != "app-misc/live"]
+        atoms.append("app-misc/live")
+        once = all(result.stderr.count(cp) == 1 for cp in atoms)
+        categories = ("meta package", "live only", "no amd64 or masked", "bindist",
+                      "unknown RESTRICT", "-bin package", "prebuilt eclass",
+                      "no known build stage", "candidate")
+        return result.returncode == 0 and once and all(
+            f">>> {category}: 1:" in result.stderr for category in categories) \
+            and result.stdout.splitlines() == ["app-misc/candidate 1"]
+
+
+ok = classification_probe()
+print(f"  {'✓' if ok else '✗'} {'每个 newcomer 恰好归入一个可审计分类':<24}")
+if not ok:
+    bad += 1
+
+
+def move_rows():
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        overlay = make_overlay(d / "overlay", {MOVED_NEW: NOW},
+                               moves=((MOVED_OLD, MOVED_NEW),))
+        (d / "list.txt").write_text(MOVED_OLD + "\n")
+        p = subprocess.run([sys.executable, CHECK, "--moves", str(overlay),
+                            str(d / "list.txt")], capture_output=True, text=True)
+        return p.returncode, p.stdout.splitlines()
+
+
+rc, rows = move_rows()
+ok = rc == 0 and rows == [f"{MOVED_OLD}\t{MOVED_NEW}"]
+print(f"  {'✓' if ok else '✗'} {'move 清单只输出权威配对':<24} {rows}")
+if not ok:
+    bad += 1
 
 sys.exit(1 if bad else 0)

@@ -29,12 +29,26 @@ def stanza(cpv, repo="gentoo-zh", rdepend=None, slot="0", use=None, iuse=None,
     return "\n".join(lines)
 
 
-def run(stanzas, installed=None):
+def installed_db(packages):
+    fields = []
+    for value in packages:
+        cpv = value if value.rsplit("/", 1)[-1].rsplit("-", 1)[-1][:1].isdigit() \
+            else f"{value}-1"
+        fields.append({"CPV": cpv, "SLOT": "0", "EAPI": "8", "REPO": "gentoo"})
+    return verify.index_db(fields)
+
+
+def run(stanzas, installed=None, available=None):
     fields = verify.parse(HEADER + "\n\n" + "\n\n".join(stanzas) + "\n")
-    return verify.check(fields, installed)
+    if isinstance(installed, set):
+        installed = installed_db(installed)
+    if isinstance(available, set):
+        available = installed_db(available)
+    return verify.check(fields, installed, available)
 
 
-def run_main(stanzas, exceptions=None, installed="", no_installed_file=False):
+def run_main(stanzas, exceptions=None, installed=None, no_installed_file=False,
+             available=None):
     import contextlib, io, tempfile
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
@@ -45,12 +59,17 @@ def run_main(stanzas, exceptions=None, installed="", no_installed_file=False):
         if no_installed_file:
             inst = str(d / "missing.txt")
         else:
-            (d / "installed.txt").write_text(installed)
+            (d / "installed.txt").write_text(
+                installed if installed is not None else "PACKAGES: 0\nVERSION: 1\n\n")
+        available_path = None
+        if available is not None:
+            available_path = str(d / "official.txt")
+            (d / "official.txt").write_text(available)
         out, err = io.StringIO(), io.StringIO()
         try:
             with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
                 rc = verify.main(str(d / "Packages"), exceptions=str(exc),
-                                 installed=inst)
+                                 installed=inst, available=available_path)
         except SystemExit as e:
             return 2, out.getvalue(), f"{err.getvalue()}{e}"
         return rc, out.getvalue(), err.getvalue()
@@ -72,6 +91,11 @@ case("基础系统清单里有的包不算缺陷", lambda: (
     (lambda r: not r[0] and set(r[1]) == {"sys-libs/glibc"})(
         run([stanza("app-misc/a-1", rdepend="sys-libs/glibc")],
             installed={"sys-libs/glibc"}))))
+
+case("Gentoo binhost 清单里有的包不算缺陷", lambda: (
+    (lambda r: not r[0] and set(r[2]) == {">=dev-libs/lib-2"})(
+        run([stanza("app-misc/a-1", rdepend=">=dev-libs/lib-2")],
+            installed=set(), available={"dev-libs/lib-2"}))))
 
 case("索引与基础系统都没有的包算缺陷，不再默认成基础系统", lambda: (
     (lambda r: set(r[0]) == {"sys-libs/glibc"} and not r[1])(
@@ -157,13 +181,64 @@ case("精确版本指到旧的那一个时算满足", lambda: (
              stanza("dev-libs/lib-2", repo="gentoo")]))))
 
 case("基础系统清单不存在时直接判不通过", lambda: (
-    (lambda r: r[0] == 2 and "读不到基础系统清单" in r[2])(
+    (lambda r: r[0] == 2 and "无法读取基础系统清单" in r[2])(
         run_main([stanza("app-misc/a-1", rdepend="sys-libs/glibc")],
                  no_installed_file=True))))
 
-case("清单里列 CPV 时按 cp 归类", lambda: (
+case("结构化快照按完整原子匹配", lambda: (
     run_main([stanza("app-misc/a-1", rdepend="sys-libs/glibc")],
-             installed="sys-libs/glibc-2.43-r2\n")[0] == 0))
+             installed="PACKAGES: 1\nVERSION: 1\n\nCPV: sys-libs/glibc-2.43-r2\n"
+                       "SLOT: 0\nUSE:\nIUSE:\nEAPI: 8\nREPO: gentoo\n")[0] == 0))
+
+case("缺少匹配字段的结构化快照直接判不通过", lambda: (
+    (lambda r: r[0] == 2 and "不是完整的基础系统快照" in r[2])(
+        run_main([stanza("app-misc/a-1", rdepend="sys-libs/glibc")],
+                 installed="PACKAGES: 1\nVERSION: 1\n\n"
+                           "CPV: sys-libs/glibc-2.43-r2\nSLOT: 0\n"))))
+
+case("基础快照版本不满足时算缺陷", lambda: (
+    (lambda r: set(r[0]) == {">=dev-libs/lib-2"})(
+        verify.check(
+            verify.parse(HEADER + "\n\n" +
+                         stanza("app-misc/a-1", rdepend=">=dev-libs/lib-2") + "\n"),
+            verify.index_db([{"CPV": "dev-libs/lib-1", "SLOT": "0",
+                              "EAPI": "8", "REPO": "gentoo"}])))))
+
+case("基础快照 slot 不满足时算缺陷", lambda: (
+    (lambda r: set(r[0]) == {"dev-libs/lib:2"})(
+        verify.check(
+            verify.parse(HEADER + "\n\n" +
+                         stanza("app-misc/a-1", rdepend="dev-libs/lib:2") + "\n"),
+            verify.index_db([{"CPV": "dev-libs/lib-1", "SLOT": "0",
+                              "EAPI": "8", "REPO": "gentoo"}])))))
+
+case("基础快照 USE 不满足时算缺陷", lambda: (
+    (lambda r: set(r[0]) == {"dev-libs/lib[foo]"})(
+        verify.check(
+            verify.parse(HEADER + "\n\n" +
+                         stanza("app-misc/a-1", rdepend="dev-libs/lib[foo]") + "\n"),
+            verify.index_db([{"CPV": "dev-libs/lib-1", "SLOT": "0",
+                              "USE": "bar", "IUSE": "foo bar", "EAPI": "8",
+                              "REPO": "gentoo"}])))))
+
+case("基础快照仓库不满足时算缺陷", lambda: (
+    (lambda r: set(r[0]) == {"dev-libs/lib::gentoo-zh"})(
+        verify.check(
+            verify.parse(HEADER + "\n\n" + stanza(
+                "app-misc/a-1", rdepend="dev-libs/lib::gentoo-zh") + "\n"),
+            verify.index_db([{"CPV": "dev-libs/lib-1", "SLOT": "0",
+                              "EAPI": "8", "REPO": "gentoo"}])))))
+
+case("旧式 CPV 清单直接判不通过", lambda: (
+    (lambda r: r[0] == 2 and "不是完整的基础系统快照" in r[2])(
+        run_main([stanza("app-misc/a-1", rdepend="sys-libs/glibc")],
+                 installed="sys-libs/glibc-2.43-r2\n"))))
+
+case("不完整的 Gentoo binhost 快照直接判不通过", lambda: (
+    (lambda r: r[0] == 2 and "不是完整的Gentoo binhost 可用包快照" in r[2])(
+        run_main([stanza("app-misc/a-1", rdepend="dev-libs/lib")],
+                 available="PACKAGES: 1\nVERSION: 1\n\n"
+                           "CPV: dev-libs/lib-2\nSLOT: 0\n"))))
 
 case("不满足时退出码非零", lambda: (
     run_main([stanza("app-misc/a-1", rdepend=">=dev-libs/lib-2"),
@@ -189,6 +264,82 @@ case("注释与空行不算例外", lambda: (
     run_main([stanza("app-misc/a-1", rdepend=">=dev-libs/lib-2"),
               stanza("dev-libs/lib-1", repo="gentoo")],
              exceptions="# >=dev-libs/lib-2\t被注释掉了\n\n")[0] == 1))
+
+
+def generated_available_snapshot():
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp)
+        package = root / "Packages"
+        package.write_text(
+            HEADER + "\n\n" +
+            stanza("app-misc/a-1", rdepend="dev-libs/lib[foo]") + "\n")
+        installed = root / "installed.txt"
+        installed.write_text("PACKAGES: 0\nVERSION: 1\n\n")
+        source = root / "source-Packages"
+        source.write_text(
+            "PACKAGES: 2\nTIMESTAMP: 123\nVERSION: 0\n\n" +
+            stanza("dev-libs/lib-2", repo="gentoo", use="foo", iuse="foo") +
+            "\n\n" + stanza("dev-libs/unused-1", repo="gentoo") + "\n")
+        output = root / "official.txt"
+        if verify.main(package, installed=installed, available=source,
+                       write_available_path=output) != 0:
+            return False
+        text = output.read_text()
+        if ("CPV: dev-libs/lib-2" not in text or
+                "CPV: dev-libs/unused-1" in text or
+                "SOURCE_TIMESTAMP: 123" not in text):
+            return False
+        if verify.main(package, installed=installed, available=output) != 0:
+            return False
+        output.write_text(text.replace("USE: foo", "USE: bar"))
+        return verify.main(package, installed=installed, available=output) == 1
+
+
+case("可用包快照只保留用到的 CP，且损坏匹配字段后会失败",
+     generated_available_snapshot)
+
+
+def generated_source_snapshot():
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp)
+        package = root / "Packages"
+        package.write_text(
+            HEADER + "\n\n" + stanza(
+                "app-misc/a-1", rdepend=">=media-libs/openh264-2.4:0/8=") + "\n")
+        installed = root / "installed.txt"
+        installed.write_text("PACKAGES: 0\nVERSION: 1\n\n")
+        official = root / "official.txt"
+        official.write_text("PACKAGES: 0\nVERSION: 1\n\n")
+        source = root / "source.txt"
+
+        def resolve(atom):
+            assert str(atom) == ">=media-libs/openh264-2.4:0/8="
+            return [{"CPV": "media-libs/openh264-2.6.0", "SLOT": "0/8",
+                     "USE": "", "IUSE": "", "EAPI": "8", "REPO": "gentoo"}]
+
+        if verify.main(package, installed=installed, available=official,
+                       source_tree=root, write_source_path=source,
+                       resolve_source=resolve) != 0:
+            return False
+        text = source.read_text()
+        if verify.main(package, installed=installed, available=official,
+                       source=source) != 0:
+            return False
+        source.write_text(text.replace("SLOT: 0/8", "SLOT: 0/7"))
+        return verify.main(package, installed=installed, available=official,
+                           source=source) == 1
+
+
+case("源码快照按完整原子筛选，且不把 slot 不符的版本算作可用",
+     generated_source_snapshot)
+
+case("带 USE 约束的原子不会由未知配置的源码包兜底", lambda: (
+    not verify.select_source(
+        {"dev-libs/lib[foo]"},
+        lambda atom: [{"CPV": "dev-libs/lib-1", "SLOT": "0", "USE": "foo",
+                       "IUSE": "foo", "EAPI": "8", "REPO": "gentoo"}])))
 
 print(f"  {'用例':<44} 结果")
 bad = 0

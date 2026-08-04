@@ -173,6 +173,8 @@ STATE = "/var/lib/emirrordist/orphans.json"
 
 RECYCLE = "/var/lib/emirrordist/recycle"
 
+RECYCLE_RETENTION_SECONDS = 14 * 24 * 3600
+
 MAX_REAP_SHARE = 1 / 3
 
 MIN_RESTRICTED_TO_DOUBT = 20
@@ -223,10 +225,37 @@ def recycle(path):
                 raise
             shutil.copy2(path, dst)
             path.unlink()
+        os.utime(dst, None)
         return True
     except OSError as e:                                   # noqa: BLE001
         print(f"!! 无法回收 {path.name}: {e}", file=sys.stderr)
         return False
+
+
+def expire_recycle(now=None, retention=None):
+    """Delete recycled files after their independent retention period."""
+    now = int(time.time()) if now is None else now
+    retention = RECYCLE_RETENTION_SECONDS if retention is None else retention
+    root = pathlib.Path(RECYCLE)
+    expired, failed = [], []
+    if not root.exists():
+        return expired, failed
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        try:
+            if now - int(path.stat().st_mtime) < retention:
+                continue
+            path.unlink()
+            expired.append(path.name)
+        except OSError:
+            failed.append(path.name)
+    for path in sorted((p for p in root.rglob("*") if p.is_dir()), reverse=True):
+        try:
+            path.rmdir()
+        except OSError:
+            pass
+    return expired, failed
 
 
 def reap(orphan, paths, grace=None, budget=None):
@@ -284,6 +313,8 @@ def main(overlay, dest, aux=None):
     overlay, dest = pathlib.Path(overlay), pathlib.Path(dest)
     if not (overlay / "profiles" / "repo_name").exists():
         sys.exit(f"不是 ebuild 仓库：{overlay}")
+
+    expired, expiry_failed = expire_recycle()
 
     users, unsure, unfetchable = scan(overlay, aux)
     paths = {p.name: p for p in dest.rglob("*") if p.is_file() and p.name not in MARKERS}
@@ -389,7 +420,13 @@ def main(overlay, dest, aux=None):
     for f in deleted[:20]:
         print(f"  清理 {f}")
 
-    return 1 if (missing or refused or failed or restricted_failed or too_many) else 0
+    if expired:
+        print(f"回收目录到期清理 {len(expired)} 个")
+    if expiry_failed:
+        print(f"!! 回收目录有 {len(expiry_failed)} 个到期文件无法删除", file=sys.stderr)
+
+    return 1 if (missing or refused or failed or restricted_failed or too_many
+                 or expiry_failed) else 0
 
 
 if __name__ == "__main__":

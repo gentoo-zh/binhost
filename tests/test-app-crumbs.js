@@ -103,7 +103,7 @@ try { crumbsFor("/distfiles/100%/"); } catch (e) { survived = false; }
 check("地址里有非法的 % 时不抛异常", survived, "抛了异常");
 
 const cjk = parse(crumbsFor("/distfiles/中文/").html);
-check("中文目录名照常编码",
+check("中文目录名按相同规则编码",
       cjk[2] && cjk[2][1] === "/distfiles/" + encodeURIComponent("中文") + "/",
       JSON.stringify(cjk[2]));
 

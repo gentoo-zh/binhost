@@ -30,14 +30,13 @@ if (( ${#want[@]} == 0 || ${#got[@]} == 0 || ${#unexpected[@]} )); then
     exit 1
 fi
 
-# One rsync, so a failure cannot leave assets from one generation beside pages
-# from another. --delay-updates renames everything in at the end, which keeps
-# that window down to the renames themselves.
+# Receiving files and deletions are delayed until transfer completion. Final
+# replacement still consists of per-file renames.
 #
 # --delete only considers what the includes select. DEST also holds the
 # published packages, and rsync does not delete excluded paths unless asked
 # with --delete-excluded, so those stay.
-rsync -a --checksum --safe-links --delete --delay-updates \
+rsync -a --checksum --safe-links --delete --delete-delay --delay-updates \
     --include='/assets/***' \
     --include='/gentoo-zh-binhost.asc' \
     --include='/*.html' \

@@ -75,7 +75,10 @@ stage_index() {
         done
     } > "${dir}/stage/Packages"
     gzip -c "${dir}/stage/Packages" > "${dir}/stage/Packages.gz"
-    printf 'sys-libs/glibc-2.43-r2\n' > "${dir}/stage/installed.txt"
+    printf 'PACKAGES: 0\nVERSION: 1\n\n' > "${dir}/stage/installed.txt"
+    printf 'PACKAGES: 0\nVERSION: 1\n\n' > "${dir}/stage/official.txt"
+    printf 'PACKAGES: 0\nVERSION: 1\n\n' > "${dir}/stage/source.txt"
+    python3 "${ROOT}/build/generation.py" create "${dir}/stage"
 }
 
 echo "== 两条发布路径确实执行同一支 publish-site.sh"
@@ -182,6 +185,37 @@ ok "页面内容已更新" "${dd}" "<p>new</p>"
 ok "同大小同 mtime 但内容不同时仍然更新" "${ee}" "AAAA"
 ok "已发布的包与 distfiles 不受删除影响" "${ff}" "3"
 
+pubsite_interrupted() {
+    local d rc
+    d=$(mktemp -d)
+    mkdir -p "${d}/site" "${d}/dest" "${d}/bin"
+    printf 'KEY\n' > "${d}/site/gentoo-zh-binhost.asc"
+    printf '<p>old</p>\n' > "${d}/dest/old.html"
+    cat > "${d}/bin/gpg" <<'EOF'
+#!/bin/bash
+printf 'pub:u:255:22::::::::scSC:\nfpr:::::::::AAAA0000000000000000000000000000000000AA:\n'
+EOF
+    cat > "${d}/bin/rsync" <<EOF
+#!/bin/bash
+case " \$* " in
+  *' --delete-delay '*) exit 23 ;;
+  *) rm -f '${d}/dest/old.html'; exit 23 ;;
+esac
+EOF
+    chmod +x "${d}/bin/gpg" "${d}/bin/rsync"
+    echo AAAA0000000000000000000000000000000000AA > "${d}/fpr"
+    PATH="${d}/bin:${PATH}" FPR_FILE="${d}/fpr" \
+        bash "${ROOT}/deploy/publish-site.sh" "${d}/site" "${d}/dest" \
+        >/dev/null 2>&1
+    rc=$?
+    printf '%s %s\n' "${rc}" "$(test -e "${d}/dest/old.html" && echo 保留 || echo 删除)"
+    rm -rf "${d}"
+}
+
+read -r rc old_state <<< "$(pubsite_interrupted)"
+ok "站点传输中断时退出码非零" "$((rc != 0))" "1"
+ok "站点传输中断时延迟删除旧文件" "${old_state}" "保留"
+
 echo "== publish.sh 的索引替换"
 
 swap_probe() {
@@ -191,28 +225,101 @@ swap_probe() {
         sed -e "1d" -e "\$d" > "${d}/swap.sh"
     printf 'old\n' > "${d}/Packages"
     printf 'oldgz\n' > "${d}/Packages.gz"
+    printf 'oldinstalled\n' > "${d}/installed.txt"
+    printf 'oldofficial\n' > "${d}/official.txt"
+    printf 'oldsource\n' > "${d}/source.txt"
+    printf 'oldgeneration\n' > "${d}/generation.json"
     printf 'new\n' > "${d}/.Packages.new"
+    printf 'newinstalled\n' > "${d}/.installed.txt.new"
+    printf 'newofficial\n' > "${d}/.official.txt.new"
+    printf 'newsource\n' > "${d}/.source.txt.new"
+    printf 'newgeneration\n' > "${d}/.generation.json.new"
     if [ "${mode}" != "gzmissing" ]; then
         printf 'newgz\n' > "${d}/.Packages.gz.new"
     fi
     sh "${d}/swap.sh" "${d}" >/dev/null 2>&1
-    printf '%s %s %s %s\n' "$?" \
+    printf '%s %s %s %s %s %s %s %s\n' "$?" \
         "$(tr -d '\n' < "${d}/Packages")" \
         "$(tr -d '\n' < "${d}/Packages.gz")" \
-        "$(find "${d}" -maxdepth 1 -name '.Packages*' | wc -l)"
+        "$(tr -d '\n' < "${d}/installed.txt")" \
+        "$(tr -d '\n' < "${d}/official.txt")" \
+        "$(tr -d '\n' < "${d}/source.txt")" \
+        "$(tr -d '\n' < "${d}/generation.json")" \
+        "$(find "${d}" -maxdepth 1 \( -name '.*.prev' -o -name '.*.absent' -o -name '.*.new' \) | wc -l)"
     rm -rf "${d}"
 }
 
-read -r rc pk gz leftover <<< "$(swap_probe ok)"
-ok "两个索引都换成新的" "${pk} ${gz}" "new newgz"
+read -r rc pk gz installed official source generation leftover <<< "$(swap_probe ok)"
+ok "索引与快照都换成新的" \
+   "${pk} ${gz} ${installed} ${official} ${source} ${generation}" \
+   "new newgz newinstalled newofficial newsource newgeneration"
 ok "换完不留临时文件" "${leftover}" "0"
 ok "正常情况下退出码为零" "${rc}" "0"
 
-read -r rc pk gz leftover <<< "$(swap_probe gzmissing)"
+read -r rc pk gz installed official source generation leftover <<< "$(swap_probe gzmissing)"
 ok "Packages.gz 换不成时报错" "${rc}" "1"
 ok "Packages.gz 换不成时把 Packages 还原回旧的" "${pk}" "old"
-ok "还原之后两个索引仍是同一代" "${pk} ${gz}" "old oldgz"
+ok "还原之后所有文件仍是同一代" \
+   "${pk} ${gz} ${installed} ${official} ${source} ${generation}" \
+   "old oldgz oldinstalled oldofficial oldsource oldgeneration"
 ok "还原之后不留临时文件" "${leftover}" "0"
+
+echo "== daily.sh 的旧代过渡"
+
+daily_generation_probe() {
+    local mode="$1" d out calls
+    d=$(mktemp -d)
+    mkdir -p "${d}/binpkgs" "${d}/lib"
+    # shellcheck disable=SC2016  # Match ${FAILURES} literally in the source.
+    sed -n '/^BINPKGS=/,/^if \[\[ -s \${FAILURES}/p' "${ROOT}/deploy/daily.sh" |
+        sed '$d' > "${d}/block.sh"
+    cat > "${d}/lib/generation.py" <<'PY'
+import os
+import pathlib
+import sys
+pathlib.Path(os.environ["CALLS"]).open("a").write("generation\n")
+sys.exit(int(os.environ.get("GENERATION_RC", "0")))
+PY
+    cat > "${d}/lib/verify-deps.py" <<'PY'
+import os
+import pathlib
+pathlib.Path(os.environ["CALLS"]).open("a").write("deps\n")
+PY
+    case ${mode} in
+        valid)   : > "${d}/binpkgs/generation.json" ;;
+        invalid) : > "${d}/binpkgs/generation.json" ;;
+        broken)  ln -s missing "${d}/binpkgs/generation.json" ;;
+    esac
+    out=$(
+        # shellcheck disable=SC2317,SC2329  # The sourced block invokes this function.
+        step() { shift; "$@"; }
+        export CALLS="${d}/calls" GENERATION_RC=0
+        [[ ${mode} == invalid || ${mode} == broken ]] && GENERATION_RC=1
+        # shellcheck disable=SC1091  # block.sh is generated above.
+        LIB="${d}/lib" BINPKGS="${d}/binpkgs" . "${d}/block.sh"
+    )
+    if [[ -f ${d}/calls ]]; then
+        calls=$(tr '\n' ' ' < "${d}/calls")
+    else
+        calls=""
+    fi
+    printf '%s|%s\n' "${out}" "${calls% }"
+    rm -rf "${d}"
+}
+
+IFS='|' read -r out calls <<< "$(daily_generation_probe missing)"
+ok "旧代缺少 generation.json 时不执行验证" "${calls}" ""
+ok "旧代缺少清单时说明略过原因" "$([[ ${out} == *尚未发布* ]] && echo yes)" "yes"
+
+IFS='|' read -r out calls <<< "$(daily_generation_probe valid)"
+ok "同代清单存在且有效时继续反向验证" "${calls}" "generation deps"
+
+IFS='|' read -r out calls <<< "$(daily_generation_probe invalid)"
+ok "同代清单存在但损坏时不执行反向验证" "${calls}" "generation"
+ok "损坏的同代清单不会按旧代跳过" "$([[ ${out} != *尚未发布* ]] && echo yes)" "yes"
+
+IFS='|' read -r out calls <<< "$(daily_generation_probe broken)"
+ok "断开的 generation.json 符号链接仍进入验证" "${calls}" "generation"
 
 echo "== provision.sh 的主机密钥核对"
 
@@ -403,7 +510,7 @@ percpkg_probe() {
     printf '#!/bin/bash\nexit 0\n' > "${d}/bin/emerge"
     chmod +x "${d}/bin/emerge"
     # Run build-container.sh's per-package loop verbatim, with emerge stubbed
-    sed -n '/^    i=0$/,/^    rm -f \/var\/log\/binhost\/progress$/p' \
+    sed -n '/^    done_count=0$/,/^    rm -f \/var\/log\/binhost\/progress$/p' \
         "${ROOT}/build/build-container.sh" > "${d}/loop.sh"
     ( cd "${d}" && PATH="${d}/bin:${PATH}" bash -c '
         atoms=(app-misc/a app-misc/b app-misc/c)
@@ -427,8 +534,8 @@ EOF
 }
 
 IFS='|' read -r seen left <<< "$(percpkg_probe)"
-ok "循环中会写出第 N 个与总数和当前套件" "${seen}" "2 3 app-misc/b"
-ok "循环结束后进度文件被清掉" "${left}" "无"
+ok "循环中会写出已完成数量、总数和当前套件" "${seen}" "1 3 app-misc/b"
+ok "循环结束后移除进度文件" "${left}" "无"
 
 echo "== publish.sh"
 
@@ -444,7 +551,23 @@ ok "清理仍被上限拦下" "$?" "3"
 ok "但不可再散布的那个已经移除" \
    "$(test -e "${d}/remote/app-misc/banned-1.0-1.gpkg.tar" && echo 在 || echo 不在)" "不在"
 ok "受上限保护的旧包一个没动" "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "30"
-contains "输出说明它不受上限约束" "${out}" "不受清理上限约束"
+contains "输出说明先执行隔离" "${out}" "先从公开路径移除"
+rm -rf "${d}"
+
+d=$(setup_publish)
+stage_index "${d}" 1
+mkdir -p "${d}/remote/app-misc"
+printf 'old index\n' > "${d}/remote/Packages"
+printf 'restricted\n' > "${d}/remote/app-misc/restricted.gpkg.tar"
+printf 'app-misc/restricted.gpkg.tar\n' > "${d}/stage/quarantine.txt"
+printf '目标版本检查失败\n' > "${d}/stage/publish-blocked.txt"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "发布闸门失败时退出码非零" "$?" "1"
+ok "发布闸门失败时仍执行隔离" \
+   "$(test -e "${d}/remote/app-misc/restricted.gpkg.tar" && echo 在 || echo 不在)" "不在"
+ok "发布闸门失败时保留公开索引" "$(tr -d '\n' < "${d}/remote/Packages")" "old index"
+contains "发布闸门失败时输出具体原因" "${out}" "目标版本检查失败"
 rm -rf "${d}"
 
 d=$(setup_publish)
@@ -455,7 +578,7 @@ printf '../../etc/passwd\n' > "${d}/stage/quarantine.txt"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
 ok "隔离清单里的越界路径被拒绝" "$?" "1"
-contains "并且说明本轮不继续" "${out}" "本轮不再继续"
+contains "并且说明隔离失败" "${out}" "产物未能移除"
 rm -rf "${d}"
 
 d=$(setup_publish)
@@ -463,7 +586,7 @@ stage_index "${d}" 2
 printf '2\n7\n' > "${d}/stage/counts.txt"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
-ok "有 counts.txt 时照常发布" "$?" "0"
+ok "有 counts.txt 时正常发布" "$?" "0"
 ok "status.json 分开记 overlay 与依赖数" \
    "$(python3 -c "import json;d=json.load(open('${d}/remote/status.json'));print(d['overlay'],d['deps'])" 2>/dev/null)" \
    "2 7"
@@ -508,7 +631,7 @@ contains "并且说明如何强制" "${out}" "FORCE_RETIRE=1"
 
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" FORCE_RETIRE=1 bash build/publish.sh 2>&1)
-ok "FORCE_RETIRE=1 时照常清理" "$?" "0"
+ok "FORCE_RETIRE=1 时正常清理" "$?" "0"
 ok "清理后只剩索引里的那两个" "$(find "${d}/remote" -name '*.gpkg.tar' | wc -l)" "2"
 rm -rf "${d}"
 
@@ -519,7 +642,7 @@ for ((i = 0; i < 10; i++)); do echo x > "${d}/remote/app-misc/p${i}-1.0-1.gpkg.t
 echo x > "${d}/remote/app-misc/gone-1.0-1.gpkg.tar"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
-ok "正常一轮退役少量包时照常执行" "$?" "0"
+ok "正常一轮退役少量包时正常执行" "$?" "0"
 ok "退役的那一个已删除" "$(test -e "${d}/remote/app-misc/gone-1.0-1.gpkg.tar" && echo 在 || echo 无)" "无"
 ok "索引里的仍然存在" "$(find "${d}/remote" -name 'p*.gpkg.tar' | wc -l)" "10"
 rm -rf "${d}"
@@ -669,7 +792,7 @@ ok "清理比例超上限时以 3 退出" "$?" "3"
 ok "并且未删除任何旧包" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "20"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
       FORCE_REMOVE=1 bash deploy/mirror-sync.sh 2>&1)
-ok "FORCE_REMOVE=1 时照常清理" "$?" "0"
+ok "FORCE_REMOVE=1 时正常清理" "$?" "0"
 ok "清理后旧包不再存在" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "0"
 rm -rf "${d}"
 
@@ -733,7 +856,7 @@ for ((i = 0; i < 10; i++)); do echo x > "${d}/dest/app-misc/old${i}-1.0-1.gpkg.t
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
       bash deploy/mirror-sync.sh 2>&1)
 ok "大量新档不会把删除比例稀释掉" "$?" "3"
-ok "并且旧档一个都没删" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "10"
+ok "并且旧文件均保留" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "10"
 rm -rf "${d}"
 
 echo

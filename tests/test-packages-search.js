@@ -66,11 +66,11 @@ setRows([
 ]);
 
 const byDesc = renderWith("browser");
-check("靠说明命中的行补了一句 hit-desc",
+check("说明字段匹配的行显示 hit-desc",
       byDesc.includes('class="hit-desc"'), byDesc.slice(0, 400));
-check("补的那一句里把命中的词标记出来",
+check("附加说明会标记匹配词",
       /<mark>browser<\/mark>/i.test(byDesc), byDesc.slice(0, 400));
-check("只有靠说明命中的那一行有",
+check("仅说明字段匹配的行显示附加说明",
       (byDesc.match(/class="hit-desc"/g) || []).length === 1);
 
 const byName = renderWith("firefox");

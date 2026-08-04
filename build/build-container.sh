@@ -55,7 +55,7 @@ fi
 
 sudo install -dm755 -o "$(id -u)" -g "$(id -g)" \
     "${PKGDIR}" "$(dirname "${STAGE}")" "${LOGDIR}" "${GENTOO_BINPKGS}"
-rm -f "${LOGDIR}"/*.log "${LOGDIR}"/failed.txt
+rm -f "${LOGDIR}"/*.log "${LOGDIR}"/failed.txt "${LOGDIR}"/gentoo-Packages
 
 empty=$(find "${PKGDIR}" -name '*.gpkg.tar' -size 0 -print -delete | wc -l)
 (( empty )) && echo ">>> 移除 ${empty} 个 0 字节的缓存包" 
@@ -70,18 +70,15 @@ ${DOCKER} run --rm -i --privileged \
     -v "${PKGDIR}:/var/cache/binpkgs" \
     -v "${GENTOO_BINPKGS}:/var/cache/binhost/gentoo" \
     -v "${LIST}:/tmp/packages.txt:ro" \
-    -v "${SIGNING_GNUPGHOME}:/root/.gnupg" \
+    -v "$(dirname "$0")/snapshot-binrepo.py:/usr/local/bin/snapshot-binrepo:ro" \
+    -v "$(dirname "$0")/snapshot-vdb.py:/usr/local/bin/snapshot-vdb:ro" \
     -v "${LOGDIR}:/var/log/binhost" \
-    -e "SIGNING_KEY=${SIGNING_KEY}" \
     -e "OVERLAY_REV=$(git -C "${OVERLAY}" rev-parse HEAD 2>/dev/null || echo '')" \
     "${BASE}" /bin/bash -euo pipefail -s <<'INNER'
 
 mkdir -p /run/lock
 
 cat >> /etc/portage/make.conf <<EOF
-FEATURES="\${FEATURES} binpkg-signing gpg-keepalive"
-BINPKG_GPG_SIGNING_KEY="${SIGNING_KEY}"
-BINPKG_GPG_SIGNING_GPG_HOME="/root/.gnupg"
 PORTAGE_BINHOST_TTL="3600"
 EOF
 
@@ -101,6 +98,8 @@ echo ">>> ${#atoms[@]} packages"
 
 EMERGE=(emerge --usepkg --changed-use --with-bdeps=y --quiet-build)
 
+python3 /usr/local/bin/snapshot-vdb /var/db/pkg /var/log/binhost/installed.txt
+
 echo "::: 整体解析"
 failed=()
 if "${EMERGE[@]}" "${atoms[@]}" > /var/log/binhost/whole.log 2>&1; then
@@ -109,10 +108,9 @@ if "${EMERGE[@]}" "${atoms[@]}" > /var/log/binhost/whole.log 2>&1; then
 else
     echo "!!! 整体失败，退回逐包（每包一份日志）"
     tail -5 /var/log/binhost/whole.log | sed 's/^/    /'
-    i=0
+    done_count=0
     for atom in "${atoms[@]}"; do
-        i=$(( i + 1 ))
-        printf '%s %s %s\n' "${i}" "${#atoms[@]}" "${atom}" \
+        printf '%s %s %s\n' "${done_count}" "${#atoms[@]}" "${atom}" \
             > /var/log/binhost/progress
         echo "::: ${atom}"
         log=/var/log/binhost/${atom//\//_}.log
@@ -123,17 +121,17 @@ else
         else
             rm -f "${log}"
         fi
+        done_count=$(( done_count + 1 ))
     done
     rm -f /var/log/binhost/progress
 fi
 
 emaint binhost --fix
-
-# What the root already provides, as CPVs. A dependency the index does not
-# carry is only acceptable when it is in here. Read straight from the vdb so
-# this does not depend on portage-utils being installed.
-( cd /var/db/pkg && ls -d ./*/* 2>/dev/null | sed 's:^\./::' ) | sort -u \
-    > /var/log/binhost/installed.txt
+if ! python3 /usr/local/bin/snapshot-binrepo \
+        /etc/portage/binrepos.conf/gentoo.conf /var/cache/edb/binhost \
+        /var/log/binhost/gentoo-Packages; then
+    echo "!! 无法记录 Gentoo binhost 索引，本轮发布闸门将阻断" >&2
+fi
 
 if (( ${#failed[@]} )); then
     printf '!!! %d failed:\n' "${#failed[@]}"
@@ -152,19 +150,74 @@ OVERLAY_REV="$(git -C "${OVERLAY}" rev-parse HEAD 2>/dev/null || echo '')" \
 install -m644 "${LOGDIR}/installed.txt" "${STAGE}.new/installed.txt" 2>/dev/null ||
     die "容器没有写出 installed.txt，无法判定哪些依赖由基础系统提供"
 
-# The staged index has to satisfy its own runtime dependencies before it can
-# replace the public one. Verifying after publishing means a broken generation
-# is already reachable.
-python3 "$(dirname "$0")/verify-deps.py" "${STAGE}.new/Packages" \
-    --installed "${STAGE}.new/installed.txt" ||
-    die "staged 索引没有通过依赖验证，本轮不发布"
+OVERLAY_REV="$(git -C "${OVERLAY}" rev-parse HEAD 2>/dev/null || echo '')"
+# shellcheck disable=SC2016  # The inner shell expands the quoted script.
+if ! ${DOCKER} run --rm --network none --read-only \
+        --tmpfs /tmp:rw,noexec,nosuid,nodev,mode=1777 \
+        --tmpfs /run/lock:rw,noexec,nosuid,nodev,mode=0755 \
+        --tmpfs /root/.gnupg:rw,noexec,nosuid,nodev,mode=0700 \
+        -v "${STAGE}.new:/var/cache/binpkgs" \
+        -v "${SIGNING_GNUPGHOME}:/run/signing-source:ro" \
+        -v "$(dirname "$0")/sign-packages.py:/usr/local/bin/sign-packages.py:ro" \
+        -v "$(dirname "$0")/verify-signatures.py:/usr/local/bin/verify-signatures.py:ro" \
+        -e "SIGNING_KEY=${SIGNING_KEY}" -e "OVERLAY_REV=${OVERLAY_REV}" \
+        "${BASE}" /bin/bash -euo pipefail -c '
+            cp -a /run/signing-source/. /root/.gnupg/
+            chown -R 0:0 /root/.gnupg
+            chmod 700 /root/.gnupg
+            export FEATURES="${FEATURES:-} binpkg-signing"
+            export BINPKG_GPG_SIGNING_KEY="${SIGNING_KEY}"
+            export BINPKG_GPG_SIGNING_GPG_HOME=/root/.gnupg
+            gpg --homedir /root/.gnupg --batch --armor --export "${SIGNING_KEY}" \
+                > /tmp/signing-public.asc
+            python3 /usr/local/bin/sign-packages.py /var/cache/binpkgs \
+                --revision "${OVERLAY_REV}" \
+                --public-key /tmp/signing-public.asc \
+                --fingerprint "${SIGNING_KEY}" \
+                --changed-list /var/cache/binpkgs/.signed-packages
+            python3 /usr/local/bin/verify-signatures.py /var/cache/binpkgs \
+                /tmp/signing-public.asc "${SIGNING_KEY}"
+        '; then
+    echo "签名或独立验签失败，本轮只执行隔离，不发布新索引" \
+        > "${STAGE}.new/publish-blocked.txt"
+elif ! python3 "$(dirname "$0")/persist-packages.py" "${STAGE}.new" \
+        "${PKGDIR}" "${STAGE}.new/.signed-packages"; then
+    echo "无法持久化已验签的软件包，本轮只执行隔离，不发布新索引" \
+        > "${STAGE}.new/publish-blocked.txt"
+fi
+rm -f "${STAGE}.new/.signed-packages"
 
-gzip -kf "${STAGE}.new/Packages"
+if [[ ! -s ${STAGE}.new/publish-blocked.txt ]] &&
+   ! python3 "$(dirname "$0")/verify-deps.py" "${STAGE}.new/Packages" \
+        --installed "${STAGE}.new/installed.txt" \
+        --available "${LOGDIR}/gentoo-Packages" \
+        --write-available "${STAGE}.new/official.txt" \
+        --source-tree "${TREE}" --write-source "${STAGE}.new/source.txt"; then
+    echo "暂存索引未通过运行期依赖验证，本轮只执行隔离" \
+        > "${STAGE}.new/publish-blocked.txt"
+fi
+
+if [[ ! -s ${STAGE}.new/publish-blocked.txt ]] &&
+   ! GENTOO_TREE="${TREE}" python3 "$(dirname "$0")/check-versions.py" \
+        "${OVERLAY}" "${STAGE}.new/Packages" "${LIST}"; then
+    echo "暂存索引未覆盖清单中的当前可用版本，本轮只执行隔离" \
+        > "${STAGE}.new/publish-blocked.txt"
+fi
+
+if [[ ! -s ${STAGE}.new/publish-blocked.txt ]]; then
+    gzip -kf "${STAGE}.new/Packages"
+    python3 "$(dirname "$0")/generation.py" create "${STAGE}.new" ||
+        die "无法建立同代清单"
+fi
 
 rm -rf "${STAGE}.old"
 [[ -d ${STAGE} ]] && mv "${STAGE}" "${STAGE}.old"
 mv "${STAGE}.new" "${STAGE}"
 echo ">>> staged at ${STAGE} (previous generation kept at ${STAGE}.old)"
+
+if [[ -s ${STAGE}/publish-blocked.txt ]]; then
+    cat "${STAGE}/publish-blocked.txt" >&2
+fi
 
 if [[ -s ${LOGDIR}/failed.txt ]]; then
     python3 "$(dirname "$0")/classify-failures.py" "${LOGDIR}" | tee "${LOGDIR}/report.txt"

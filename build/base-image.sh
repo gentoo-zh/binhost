@@ -23,6 +23,12 @@ for p in "${TREE}" "${OVERLAY}" "${DISTDIR}" "${SIGNING_GNUPGHOME}"; do
     [[ -d ${p} ]] || die "missing: ${p}"
 done
 
+PUBLIC_KEY=$(mktemp)
+trap 'rm -f "${PUBLIC_KEY}"' EXIT
+gpg --homedir "${SIGNING_GNUPGHOME}" --batch --armor --export "${SIGNING_KEY}" \
+    > "${PUBLIC_KEY}"
+[[ -s ${PUBLIC_KEY} ]] || die "cannot export SIGNING_KEY"
+
 sudo install -dm755 -o "$(id -u)" -g "$(id -g)" "${PKGDIR}"
 
 container="binhost-base-build-${TAG}"
@@ -36,7 +42,7 @@ ${DOCKER} run -i --privileged --name "${container}" \
     -v "${OVERLAY}:/var/db/repos/gentoo-zh:ro" \
     -v "${DISTDIR}:/var/cache/distfiles" \
     -v "${PKGDIR}:/var/cache/binpkgs" \
-    -v "${SIGNING_GNUPGHOME}:/root/.gnupg" \
+    -v "${PUBLIC_KEY}:/tmp/binhost.asc:ro" \
     -e "MAKEOPTS=${MAKEOPTS}" -e "JOBS=${JOBS}" -e "SIGNING_KEY=${SIGNING_KEY}" \
     "${STAGE3}" /bin/bash -euo pipefail -s <<'INNER'
 
@@ -64,7 +70,6 @@ EOF
 
 getuto
 
-gpg --homedir /root/.gnupg --armor --export "${SIGNING_KEY}" > /tmp/binhost.asc
 gpg --homedir /etc/portage/gnupg --batch --import /tmp/binhost.asc
 echo "${SIGNING_KEY}:6:" | gpg --homedir /etc/portage/gnupg --batch --import-ownertrust
 
