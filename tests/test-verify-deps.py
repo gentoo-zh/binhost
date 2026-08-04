@@ -335,6 +335,86 @@ def generated_source_snapshot():
 case("源码快照按完整原子筛选，且不把 slot 不符的版本算作可用",
      generated_source_snapshot)
 
+
+def generated_overlay_source_snapshot():
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp)
+        package = root / "Packages"
+        package.write_text(
+            HEADER + "\n\n" + stanza(
+                "app-misc/a-1", rdepend="virtual/local::gentoo-zh") + "\n")
+        installed = root / "installed.txt"
+        installed.write_text("PACKAGES: 0\nVERSION: 1\n\n")
+        official = root / "official.txt"
+        official.write_text("PACKAGES: 0\nVERSION: 1\n\n")
+        source = root / "source.txt"
+        overlay = root / "overlay"
+        overlay.mkdir()
+
+        def resolve(atom):
+            assert str(atom) == "virtual/local::gentoo-zh"
+            return [{"CPV": "virtual/local-0", "SLOT": "0", "USE": "",
+                     "IUSE": "", "EAPI": "8", "REPO": "gentoo-zh"}]
+
+        if verify.main(package, installed=installed, available=official,
+                       source_tree=root, source_overlay=overlay,
+                       write_source_path=source, resolve_source=resolve) != 0:
+            return False
+        text = source.read_text()
+        if "SOURCE_OVERLAY_REPOSITORY: gentoo-zh" not in text:
+            return False
+        if verify.main(package, installed=installed, available=official,
+                       source=source) != 0:
+            return False
+        source.write_text(text.replace("REPO: gentoo-zh", "REPO: gentoo"))
+        return verify.main(package, installed=installed, available=official,
+                           source=source) == 1
+
+
+case("gentoo-zh 的本地安装依赖写入源码快照并保留仓库约束",
+     generated_overlay_source_snapshot)
+
+case("源码快照只启用 IUSE 中带加号的默认项", lambda: (
+    verify.default_use("+ssl -minimal python +zstd") == "ssl zstd"))
+
+
+def generated_source_only_use_snapshot():
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp)
+        package = root / "Packages"
+        package.write_text(
+            HEADER + "\n\n" + stanza(
+                "dev-vcs/git-2.55.0",
+                rdepend=">=virtual/perl-libnet-3.110.0-r4[ssl,-minimal]") + "\n")
+        installed = root / "installed.txt"
+        installed.write_text("PACKAGES: 0\nVERSION: 1\n\n")
+        official = root / "official.txt"
+        official.write_text("PACKAGES: 0\nVERSION: 1\n\n")
+        source = root / "source.txt"
+
+        def resolve(atom):
+            assert str(atom) == ">=virtual/perl-libnet-3.110.0-r4[ssl,-minimal]"
+            return [{"CPV": "virtual/perl-libnet-3.150.0-r3", "SLOT": "0",
+                     "USE": "ssl", "IUSE": "+ssl -minimal", "EAPI": "8",
+                     "REPO": "gentoo"}]
+
+        if verify.main(package, installed=installed, available=official,
+                       source_tree=root, write_source_path=source,
+                       resolve_source=resolve) != 0:
+            return False
+        text = source.read_text()
+        if "USE: ssl" not in text or "IUSE: +ssl -minimal" not in text:
+            return False
+        source.write_text(text.replace("USE: ssl", "USE:"))
+        return verify.main(package, installed=installed, available=official,
+                           source=source) == 1
+
+
+case("本地安装类别按 ebuild 默认 USE 满足带 USE 约束的原子",
+     generated_source_only_use_snapshot)
+
 case("带 USE 约束的原子不会由未知配置的源码包兜底", lambda: (
     not verify.select_source(
         {"dev-libs/lib[foo]"},

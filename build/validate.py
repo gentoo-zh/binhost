@@ -107,7 +107,8 @@ def main(overlay):
             errors.append(
                 f"{LIST.name}:{lineno}: RESTRICT 用了变量或条件式，无法静态判定： {cp}")
         elif states == {"yes"}:
-            errors.append(f"{LIST.name}:{lineno}: RESTRICT=bindist, cannot be redistributed: {cp}")
+            errors.append(
+                f"{LIST.name}:{lineno}: RESTRICT=bindist, binpkg cannot be redistributed: {cp}")
 
         kw = keywords_of(text)
         if kw is not None and not accepts_amd64(kw):

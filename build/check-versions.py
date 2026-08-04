@@ -198,7 +198,7 @@ def main(overlay, index, listfile):
 
     print(f">>> 版本核对：清单 {len(wanted)}，索引 {len(have)}，落后 {len(stale)}，"
           f"缺 {len(absent)}，overlay 中不存在 {len(gone)}，已屏蔽 {len(blocked)}，"
-          f"只有 9999 的 {len(live)}，不可再散布的 {len(banned)}，"
+          f"只有 9999 的 {len(live)}，不发布 binpkg 的 {len(banned)}，"
           f"RESTRICT 无法判定的 {len(unclear)}，"
           f"::gentoo 也有的 {len(upstreamed)}，未收录的新包 {len(fresh)}")
     for cp, got, cur in stale:
@@ -216,7 +216,7 @@ def main(overlay, index, listfile):
     for cp in live:
         print(f"    仅 9999 {cp}  只有 live ebuild，无法构建可发布的版本")
     for cp in banned:
-        print(f"    不可散布 {cp}  全部可用版本都是 RESTRICT=bindist，应从清单移除")
+        print(f"    无 binpkg {cp}  全部可用版本都是 RESTRICT=bindist，应从清单移除")
     for cp in unclear:
         print(f"    待人工确认 {cp}  RESTRICT 用了变量或条件式，无法确认能否散布，本轮不发布")
     for cp in upstreamed:
@@ -249,7 +249,7 @@ def list_retirable(overlay, listfile):
         if "unknown" in states:
             print(f"!! {cp} 的 RESTRICT 无法静态判定，不提出退休", file=sys.stderr)
         elif states == {"yes"}:
-            print(f"{cp}\t全部可用版本都是 RESTRICT=bindist，不可再散布")
+            print(f"{cp}\t全部可用版本都是 RESTRICT=bindist，不发布 binpkg")
     return 0
 
 

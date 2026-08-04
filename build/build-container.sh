@@ -233,7 +233,8 @@ if [[ ! -s ${STAGE}.new/publish-blocked.txt ]] &&
         --installed "${STAGE}.new/installed.txt" \
         --available "${LOGDIR}/gentoo-Packages" \
         --write-available "${STAGE}.new/official.txt" \
-        --source-tree "${TREE}" --write-source "${STAGE}.new/source.txt"; then
+        --source-tree "${TREE}" --source-overlay "${OVERLAY}" \
+        --write-source "${STAGE}.new/source.txt"; then
     echo "暂存索引未通过运行期依赖验证，本轮只执行隔离" \
         > "${STAGE}.new/publish-blocked.txt"
 fi

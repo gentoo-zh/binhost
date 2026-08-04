@@ -81,25 +81,59 @@ def safe_path(value):
 
 
 GENTOO_TREE = os.environ.get("GENTOO_TREE", "/var/db/repos/gentoo")
+BINARY_LICENSES = "-* @BINARY-REDISTRIBUTABLE"
+SOURCE_ONLY_CATEGORIES = frozenset({"acct-group", "acct-user", "virtual"})
+IMMEDIATE_QUARANTINE_STATES = frozenset({"yes", "license", "unknown"})
 
 RUNTIME_FIELDS = ("RDEPEND", "PDEPEND", "IDEPEND")
 
 
-def portage_restrict(overlay):
-    """(cpv, repo) -> RESTRICT from Portage metadata, eclasses included.
+def source_only(cpv):
+    cp, _version = split_cpv(cpv)
+    return cp.partition("/")[0] in SOURCE_ONLY_CATEGORIES
+
+
+def effective_license(cpv, f, current, current_slot, settings):
+    repo = f.get("REPO", "")
+    try:
+        metadata = {"USE": f.get("USE", ""), "LICENSE": current,
+                    "SLOT": current_slot or "0", "repository": repo}
+        if settings._getMissingLicenses(cpv, metadata):
+            return "no"
+    except Exception:                                      # noqa: BLE001
+        return "unknown"
+    return "yes"
+
+
+def portage_policy(overlay):
+    """Return current RESTRICT and binary-license policy readers.
 
     The repository is selected per stanza because the same CPV can exist in
-    both trees with different RESTRICT. USE conditionals are left unevaluated,
-    so bindist behind any flag counts.
+    both trees with different metadata. The license reader evaluates the
+    current expression with the USE flags recorded in the cached binpkg.
     """
-    db = pinned_portdbapi(overlay, GENTOO_TREE)
+    db = pinned_portdbapi(overlay, GENTOO_TREE, accept_license=BINARY_LICENSES)
 
-    def get(cpv, repo):
+    def get_restrict(cpv, repo):
         try:
             return db.aux_get(cpv, ["RESTRICT"], myrepo=repo or None)[0]
         except Exception:                                  # noqa: BLE001
             return None
-    return get
+
+    def get_license(cpv, f):
+        repo = f.get("REPO", "")
+        try:
+            current, current_slot = db.aux_get(
+                cpv, ["LICENSE", "SLOT"], myrepo=repo or None)
+        except Exception:                                  # noqa: BLE001
+            return "unknown"
+        return effective_license(cpv, f, current, current_slot, db.settings)
+
+    return get_restrict, get_license
+
+
+def portage_restrict(overlay):
+    return portage_policy(overlay)[0]
 
 
 def effective_bindist(cpv, f, lookup):
@@ -205,16 +239,19 @@ def runtime_closure(candidates, seeds):
     return seen, unresolved
 
 
-def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None):
+def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None,
+           license_lookup=None):
     excluded = read_excluded() if excluded is None else excluded
     masked = read_mask(overlay) if overlay is not None else Masks()
     if lookup is None:
         try:
             if overlay is None:
                 raise MetadataUnavailable("no overlay to resolve gentoo-zh against")
-            lookup = portage_restrict(overlay)
+            lookup, license_lookup = portage_policy(overlay)
         except MetadataUnavailable as e:
             return [], 0, f"Portage metadata unavailable, nothing published: {e}", [], {}
+    elif license_lookup is None:
+        license_lookup = lambda _cpv, _fields: "yes"
     if with_deps is None:
         with_deps = os.environ.get("PUBLISH_DEPS", "1") == "1"
     skipped = 0
@@ -246,8 +283,44 @@ def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None):
     # dependency can never be resolved to something we then refuse to publish.
     candidates = {}
     for key, (bid, f, s) in newest.items():
-        state = effective_bindist(key[0], f, lookup)
-        if state != "no":
+        cp, ver = split_cpv(key[0])
+        repo = f.get("REPO")
+        repository_tree = None
+        if repo == "gentoo-zh" and overlay is not None:
+            repository_tree = overlay
+        elif repo == "gentoo" and pathlib.Path(GENTOO_TREE).is_dir():
+            repository_tree = pathlib.Path(GENTOO_TREE)
+        current_exists = (has_ebuild(repository_tree, key[0])
+                          if repository_tree is not None else None)
+
+        lifecycle_state = None
+        if repo == "gentoo-zh" and cp in excluded:
+            lifecycle_state = "excluded"
+        elif (repo == "gentoo-zh" and ver is not None
+              and masked.masks(cp, ver)):
+            lifecycle_state = "masked"
+        elif source_only(key[0]):
+            lifecycle_state = "source"
+        elif current_exists is False:
+            lifecycle_state = "removed"
+
+        bindist = effective_bindist(key[0], f, lookup)
+        if bindist == "yes":
+            state = bindist
+        elif (bindist == "unknown" and lifecycle_state is not None
+              and current_exists is False):
+            state = lifecycle_state
+        elif bindist == "unknown":
+            state = bindist
+        else:
+            license_state = license_lookup(key[0], f)
+            if license_state != "yes":
+                state = "license" if license_state == "no" else license_state
+            elif lifecycle_state is not None:
+                state = lifecycle_state
+            else:
+                state = "publish"
+        if state != "publish":
             refused.extend((key[0], path, state)
                            for path in sorted(paths_by_key[key]))
             skipped += 1
@@ -343,12 +416,25 @@ def main(pkgdir, stage, overlay=None, rev="", lookup=None):
             continue
         reported.add((cpv, state))
         if state == "unknown":
-            print(f"!! 不发布 {cpv}：无法读取 RESTRICT，无法确认可否散布",
+            print(f"!! 不发布 {cpv}：无法确认当前 RESTRICT 或 LICENSE",
                   file=sys.stderr)
+        elif state == "license":
+            print(f"!! 不发布 {cpv}：LICENSE 不属于 @BINARY-REDISTRIBUTABLE",
+                  file=sys.stderr)
+        elif state == "source":
+            print(f"!! 不发布 {cpv}：该类别应在使用者系统本地安装",
+                  file=sys.stderr)
+        elif state == "masked":
+            print(f"!! 不发布 {cpv}：该版本已被 overlay 屏蔽", file=sys.stderr)
+        elif state == "excluded":
+            print(f"!! 不发布 {cpv}：该包列在 excluded.txt", file=sys.stderr)
+        elif state == "removed":
+            print(f"!! 不发布 {cpv}：该版本已从源仓库移除", file=sys.stderr)
         else:
-            print(f"!! 不发布 {cpv}：RESTRICT=bindist，不可再散布", file=sys.stderr)
+            print(f"!! 不发布 {cpv}：RESTRICT=bindist，不发布 binpkg", file=sys.stderr)
     (stage / "quarantine.txt").write_text(
-        "".join(f"{rel}\n" for _, rel, _ in sorted(refused)))
+        "".join(f"{rel}\n" for _, rel, state in sorted(refused)
+                if state in IMMEDIATE_QUARANTINE_STATES))
 
     stanzas = []
     src_root = os.open(pkgdir, os.O_RDONLY | os.O_DIRECTORY)
@@ -410,7 +496,7 @@ def main(pkgdir, stage, overlay=None, rev="", lookup=None):
     print(f">>> staged {len(stanzas)}（overlay {ours}，运行期依赖 {len(stanzas) - ours}），"
           f"skipped {skipped} not ours to publish")
     if refused:
-        print(f">>> 其中 {len(refused)} 个因不可散布或无法确认被跳过")
+        print(f">>> 其中 {len(refused)} 个因发布策略或无法确认被跳过")
     if unresolved:
         print(f">>> {len(unresolved)} 个依赖原子在索引中没有匹配，"
               f"由基础系统提供或未建置，见 unresolved.txt；"
