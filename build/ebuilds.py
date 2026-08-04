@@ -291,15 +291,17 @@ class MetadataUnavailable(Exception):
 
 
 def pinned_portdbapi(overlay, tree=GENTOO_TREE, accept_license=None):
-    """A portdbapi reading exactly the two trees given, not the host's config.
+    """A portdbapi reading exactly the two trees given, not repos.conf.
 
     Locations go through an explicit config so the result does not depend on
     repos.conf or on whether something else imported portage first, and the
     resolved paths are checked afterwards because a silently different tree
-    would be answered from with no error.
+    would be answered from with no error. A supplied license policy is also
+    isolated from host package.license and license_groups overrides.
     """
     import os
     import portage
+    import tempfile
     env = dict(os.environ)
     env["PORTAGE_REPOSITORIES"] = (
         "[DEFAULT]\nmain-repo = gentoo\n\n"
@@ -307,8 +309,21 @@ def pinned_portdbapi(overlay, tree=GENTOO_TREE, accept_license=None):
         f"[gentoo-zh]\nlocation = {overlay}\nmasters = gentoo\n")
     if accept_license is not None:
         env["ACCEPT_LICENSE"] = accept_license
+    config_root = None
     try:
-        db = portage.portdbapi(mysettings=portage.config(env=env))
+        settings = portage.config(env=env)
+        if accept_license is not None:
+            config_root = tempfile.TemporaryDirectory(prefix="binhost-portage-")
+            config = pathlib.Path(config_root.name) / "etc/portage"
+            config.mkdir(parents=True)
+            if settings.profile_path is not None:
+                (config / "make.profile").symlink_to(settings.profile_path)
+            env["ACCEPT_KEYWORDS"] = settings["ACCEPT_KEYWORDS"]
+            # local_config=False makes Portage accept every license.
+            settings = portage.config(config_root=config_root.name, env=env)
+        db = portage.portdbapi(mysettings=settings)
+        if config_root is not None:
+            db._binhost_config_root = config_root
     except Exception as e:                                  # noqa: BLE001
         raise MetadataUnavailable(str(e)) from e
     for name, want in (("gentoo", str(tree)), ("gentoo-zh", str(overlay))):

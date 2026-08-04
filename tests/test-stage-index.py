@@ -170,6 +170,61 @@ case("许可证表达式无法判定时不默认放行", lambda: (
         "app-misc/a-1", {"LICENSE": "MIT", "SLOT": "0", "REPO": "gentoo-zh"},
         "BROKEN", "0", FakeLicenseSettings()) == "unknown"))
 
+
+def host_license_override(kind):
+    from portage.package.ebuild.config import LocationsManager
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp)
+        tree = root / "gentoo"
+        overlay = root / "gentoo-zh"
+        for repo, name in ((tree, "gentoo"), (overlay, "gentoo-zh")):
+            profiles = repo / "profiles"
+            profiles.mkdir(parents=True)
+            (profiles / "repo_name").write_text(name + "\n")
+            (profiles / "categories").write_text("app-misc\n")
+        metadata = overlay / "metadata"
+        metadata.mkdir()
+        (metadata / "layout.conf").write_text("masters = gentoo\n")
+
+        profile = tree / "profiles/test"
+        profile.mkdir()
+        (profile / "eapi").write_text("8\n")
+        (profile / "make.defaults").write_text('ARCH="amd64"\n')
+
+        config = root / "host/etc/portage"
+        config.mkdir(parents=True)
+        (config / "make.profile").symlink_to(profile)
+        if kind == "package.license":
+            value = "app-misc/example all-rights-reserved\n"
+        else:
+            value = "BINARY-REDISTRIBUTABLE all-rights-reserved\n"
+        (config / kind).write_text(value)
+
+        real_init = LocationsManager.__init__
+
+        def host_config(self, *args, **kwargs):
+            if kwargs.get("config_root") is None:
+                kwargs["config_root"] = str(root / "host")
+            return real_init(self, *args, **kwargs)
+
+        LocationsManager.__init__ = host_config
+        try:
+            db = stage_index.pinned_portdbapi(
+                overlay, tree, accept_license=stage_index.BINARY_LICENSES)
+            return stage_index.effective_license(
+                "app-misc/example-1", {"USE": "", "REPO": "gentoo-zh"},
+                "all-rights-reserved", "0", db.settings) == "no"
+        finally:
+            LocationsManager.__init__ = real_init
+
+
+case("主机 package.license 不得放宽发布策略", lambda: (
+    host_license_override("package.license")))
+
+case("主机 license_groups 不得放宽发布策略", lambda: (
+    host_license_override("license_groups")))
+
 case("许可证策略拒绝的产物进入隔离清单", lambda: (
     run([stanza("app-misc/a-1", license="NO-REDIST")],
         licenses={"app-misc/a-1": "no"})[3]
