@@ -29,6 +29,11 @@ binhost。`RESTRICT=bindist` 只限制二进制包；distfiles 是否镜像由
 `RESTRICT=mirror/fetch` 与 `SRC_URI` 条目独立决定。附带内容仅包含这些包的运行期依赖，
 不替代 Gentoo 官方 binhost。
 
+[套件页](https://distfiles.gentoozh.org/packages)分开显示公开索引、直接构建清单和当前
+发布政策。二进制包列的 `✓` 表示公开索引已有 binpkg；`待构建` 表示直接构建目标尚无
+公开产物；`清单外` 表示该包不是直接构建目标，但仍可能作为运行期依赖发布。政策变化后，
+旧产物会同时显示政策标签和 `待移除`，并在新一代索引发布成功后清理。
+
 `@world` 对齐后的容器提交成基础镜像，超过 7 天才刷新，平时的构建从已经对齐好的根开始。
 
 基础镜像更新与每日构建容器都会执行 ebuild。两者不使用 `--privileged`，采用 Docker
