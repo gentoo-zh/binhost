@@ -62,7 +62,7 @@ async function render(build) {
   const done = await render({
     state: "done", started: 100, finished: 5733, duration: 5633, generated: 5733,
   });
-  check("完成的建置显示实际结束时间与用时",
+  check("完成的构建显示实际结束时间与用时",
         done.includes("最近建置") && done.includes("1 小時 33 分") && done.includes("完成於 "),
         done);
 
@@ -70,14 +70,14 @@ async function render(build) {
     state: "running", kind: "source", done: 7, total: 9,
     now: "app-misc/<unsafe>", generated: Math.floor(Date.now() / 1000),
   });
-  check("进行中的建置仍显示进度且转义包名",
+  check("进行中的构建仍显示进度且转义包名",
         running.includes("7/9") && running.includes("正在建置") &&
         running.includes("app-misc/&lt;unsafe&gt;") && !running.includes("最近建置"),
         running);
 
   const legacy = await render({ state: "done", generated: 5733 });
-  check("旧状态数据不会伪造建置用时", !legacy.includes("最近建置"), legacy);
+  check("旧状态数据不会伪造构建用时", !legacy.includes("最近建置"), legacy);
 
-  console.log(failed ? `\n  ${failed} 项不通过` : "\n  首页建置状态：全部通过");
+  console.log(failed ? `\n  ${failed} 项不通过` : "\n  首页构建状态：全部通过");
   process.exit(failed ? 1 : 0);
 })();

@@ -78,7 +78,7 @@ setRows([{ cp: "media-sound/open-orpheus-bin", desc: "Orpheus", binhost: false,
            excluded: "", ver: "", size: 0, declaresDist: true, dist: true,
            policy: "bindist", why: "prebuilt" }]);
 const bindist = renderWith("");
-check("发布政策与建置清单原因分别显示",
+check("发布政策与构建清单原因分别显示",
       (bindist.match(/>why_bindist<\/span>/g) || []).length === 1 &&
       !bindist.includes(">why_prebuilt</span>") &&
       bindist.includes("whyLong_bindist whyLong_prebuilt") &&
@@ -150,9 +150,14 @@ check("未发布的本地安装类别只显示一个状态标签",
       localOnly.slice(0, 600));
 
 check("图例分别说明发布、清单、政策与退役状态",
-      ["lgBuilt", "lgPending", "lgExcluded", "lgDashBin", "lgBindist",
-       "lgLicense", "lgMeta", "lgRetiring", "lgDashDist"]
-        .every((key) => html.includes(`data-i18n="${key}"`)));
+      ["lgBuilt", "lgPending", "lgExcluded", "lgDashBin", "lgRetiring", "lgDashDist"]
+        .every((key) => html.includes(`data-i18n="${key}"`)) &&
+      ["lgBindist", "lgLicense", "lgMeta"]
+        .every((key) => html.includes(`data-i18n-html="${key}"`)));
+
+check("图例中的代码标记按富文本渲染",
+      ["lgBindist", "lgLicense", "lgMeta"].every((key) =>
+        html.includes(`data-i18n-html="${key}"`)));
 
 check("图例链接到 FAQ 的状态说明",
       html.includes('href="/faq#package-status"') &&

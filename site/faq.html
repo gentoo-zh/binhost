@@ -92,13 +92,13 @@
 
     <h2 data-i18n="q3">OpenRC 和 systemd 都能使用吗？</h2>
     <p data-i18n-html="a3">
-      本站只使用一个 profile 建置，不分别生成 OpenRC 与 systemd 产物。
-      Portage 会按当前 USE 与依赖判断二进制包是否适用；不适用时改为从源码建置。
+      本站只使用一个 profile 构建，不分别生成 OpenRC 与 systemd 产物。
+      Portage 会按当前 USE 与依赖判断二进制包是否适用；不适用时改为从源码构建。
     </p>
 
     <h2 data-i18n="q4">二进制包是否可能无法在我的 CPU 上运行？</h2>
     <p data-i18n-html="a4">
-      建置环境使用 <code>CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"</code>，不使用
+      构建环境使用 <code>CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"</code>，不使用
       <code>-march=native</code>。该设置不能约束 ebuild 附带的上游预编译对象或程序库；
       Portage 接受二进制包时也不比较 <code>CFLAGS</code>，因此仍可能存在例外。
     </p>
@@ -106,12 +106,12 @@
     <h2 data-i18n="q5">如何确认安装的包没被修改？</h2>
     <p data-i18n-html="a5">
       签名内嵌在每个 gpkg 包里（<code>image.tar.zst.sig</code>），和官方 binhost 一样。
-      配置里的 <code>verify-signature = true</code> 让 portage 拒绝本源里验签不过的包，
+      配置里的 <code>verify-signature = true</code> 让 Portage 拒绝本源里验签不过的包，
       它写在 <code>binrepos.conf</code> 里，只作用于本源。
     </p>
     <p data-i18n-html="a5b">
       另有一个全局开关 <code>FEATURES=binpkg-request-signature</code>，它对所有来源生效
-      并覆盖上面那条。它还要求通过 <code>FEATURES=buildpkg</code> 建置的包带签名；
+      并覆盖上面那条。它还要求通过 <code>FEATURES=buildpkg</code> 构建的包带签名；
       这些包默认没有签名。启用该功能时必须同时配置
       <code>binpkg-signing</code>、本机签名密钥，以及让 gpg 读到 getuto 存的口令。
     </p>
@@ -193,23 +193,23 @@
       清单见 <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>。
     </p>
 
-    <h2 id="package-status" data-i18n="q12">如何阅读套件页状态？</h2>
+    <h2 id="package-status" data-i18n="q12">如何阅读包列表状态？</h2>
     <p data-i18n-html="a12">
-      套件页分开显示公开索引、直接构建清单、当前发布政策和 distfiles 镜像状态。
+      包列表分开显示公开索引、直接构建清单、当前发布政策和 distfiles 镜像状态。
       同一行可以同时出现多个状态，因为它们说明不同事实。
     </p>
     <table class="status-guide">
       <thead><tr><th data-i18n="stStatus">状态</th><th data-i18n="stMeaning">触发条件与常见原因</th></tr></thead>
       <tbody>
         <tr><td data-i18n-html="stBuilt"><code>✓</code></td><td data-i18n-html="sdBuilt">公开 binpkg 索引已有该包，可以从本站下载。它不表示该包仍在直接构建清单；同时出现 <code>待移除</code> 时，勾号只表示旧产物暂时仍可用。</td></tr>
-        <tr><td data-i18n-html="stPending"><code>待构建</code></td><td data-i18n-html="sdPending">该包是直接构建目标，但公开索引尚无 binpkg。它可能尚未完成首次建置，也可能没有在最近一轮成功发布；该状态只表示目前没有公开产物。</td></tr>
-        <tr><td data-i18n-html="stExcluded"><code>不构建</code></td><td data-i18n-html="sdExcluded">维护清单明确排除该包。常见原因包括无法建置、缺少支持或需要进一步核对再分发条件；将指针停在标签上可以查看记录的具体原因。</td></tr>
-        <tr><td data-i18n-html="stOffList"><code>清单外</code></td><td data-i18n-html="sdOffList">该包不是直接构建目标。上游已经提供预编译内容或建置收益较低时通常不会直接收录，但运行期依赖闭包仍可能将它作为依赖发布；包名含 <code>-bin</code> 不会自动决定该状态。</td></tr>
-        <tr><td data-i18n-html="stBindist"><code>不提供 binpkg</code></td><td data-i18n-html="sdBindist">当前 ebuild 的 <code>RESTRICT</code> 包含 <code>bindist</code>，因此本站不发布该包的 gpkg。源码包和上游预编译包都可能设置这项限制，常见原因是许可证、上游发布条款或预编译内容的再分发条件不允许本站分发二进制产物；包名含 <code>-bin</code> 本身不是判定依据。distfiles 是否镜像仍按 <code>RESTRICT</code> 中的 <code>mirror</code>、<code>fetch</code> 与每项 <code>SRC_URI</code> 单独判断。</td></tr>
-        <tr><td data-i18n-html="stLicense"><code>许可限制</code></td><td data-i18n-html="sdLicense">当前 ebuild 的 <code>LICENSE</code> 表达式不属于本站固定的 <code>@BINARY-REDISTRIBUTABLE</code>。许可证可能允许附带条件的再分发，但本站不会据此发布 binpkg；该状态与 <code>RESTRICT=bindist</code> 分开判定。</td></tr>
-        <tr><td data-i18n-html="stLocal"><code>本地安装</code></td><td data-i18n-html="sdLocal"><code>acct-group</code> 与 <code>acct-user</code> 只在本机创建账号，<code>virtual</code> 只让 Portage 选择实际实现。这些包无需由本站预编译，因此由使用者系统本地安装。</td></tr>
+        <tr><td data-i18n-html="stPending"><code>待构建</code></td><td data-i18n-html="sdPending">该包是直接构建目标，但公开索引尚无 binpkg。它可能尚未完成首次构建，也可能最近一轮未成功发布；该状态只表示目前没有公开产物。</td></tr>
+        <tr><td data-i18n-html="stExcluded"><code>不构建</code></td><td data-i18n-html="sdExcluded">维护清单明确排除该包。常见原因包括无法构建、缺少支持或需要进一步核对再分发条件；标签提示中会显示记录的具体原因。</td></tr>
+        <tr><td data-i18n-html="stOffList"><code>清单外</code></td><td data-i18n-html="sdOffList">该包不是直接构建目标。上游已经提供预编译内容或构建收益较低时通常不会直接收录，但运行期依赖闭包仍可能将它作为依赖发布；包名含 <code>-bin</code> 不会自动决定该状态。</td></tr>
+        <tr><td data-i18n-html="stBindist"><code>不提供 binpkg</code></td><td data-i18n-html="sdBindist">当前 ebuild 的 <code>RESTRICT</code> 包含 <code>bindist</code>，因此本站不发布该包的 binpkg。源码包和上游预编译包都可能设置这项限制，常见原因是许可证、上游发布条款或预编译内容的再分发条件不允许本站分发二进制产物；包名含 <code>-bin</code> 本身不是判定依据。distfiles 是否镜像仍按 <code>RESTRICT</code> 中的 <code>mirror</code>、<code>fetch</code> 与每项 <code>SRC_URI</code> 单独判断。</td></tr>
+        <tr><td data-i18n-html="stLicense"><code>许可证限制</code></td><td data-i18n-html="sdLicense">当前 ebuild 的 <code>LICENSE</code> 表达式不属于本站固定的 <code>@BINARY-REDISTRIBUTABLE</code>。许可证可能允许附带条件的再分发，但本站不会据此发布 binpkg；该状态与 <code>RESTRICT=bindist</code> 分开判定。</td></tr>
+        <tr><td data-i18n-html="stLocal"><code>本地安装</code></td><td data-i18n-html="sdLocal"><code>acct-group</code> 与 <code>acct-user</code> 由 Portage 在使用者系统创建账号，<code>virtual</code> 由 Portage 选择实际实现。这些包无需本站预编译。</td></tr>
         <tr><td data-i18n-html="stRetiring"><code>待移除</code></td><td data-i18n-html="sdRetiring">公开索引仍有旧 binpkg，但当前 overlay、清单或发布政策已不再提供它。旧产物会保留到新一代索引发布成功，避免旧索引指向已删除文件；该状态可以与勾号同时出现。</td></tr>
-        <tr><td data-i18n-html="stDist"><code>Distfiles —</code></td><td data-i18n-html="sdDist">该包没有声明 distfile、<code>RESTRICT</code> 包含 <code>mirror</code> 或 <code>fetch</code>，或声明的文件尚未全部进入镜像。将指针停在破折号上可以区分没有文件与不可用；该状态不表示 binpkg 不可用。</td></tr>
+        <tr><td data-i18n-html="stDist"><code>Distfiles —</code></td><td data-i18n-html="sdDist">该包没有声明 distfile、<code>RESTRICT</code> 包含 <code>mirror</code> 或 <code>fetch</code>，或声明的文件尚未全部进入镜像。破折号提示会区分没有文件与不可用；该状态不表示 binpkg 不可用。</td></tr>
       </tbody>
     </table>
 
@@ -258,7 +258,7 @@ window.MIRROR_I18N = {
     q4: '二進位套件是否可能無法在我的 CPU 上執行？',
     a4: '建置環境使用 <code>CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"</code>，不使用 <code>-march=native</code>。該設定不能約束 ebuild 附帶的上游預先編譯物件或程式庫；Portage 接受二進位套件時也不比較 <code>CFLAGS</code>，因此仍可能存在例外。',
     q5: '如何確認安裝的套件沒被竄改？',
-    a5: '簽章內嵌在每個 gpkg 套件裡（<code>image.tar.zst.sig</code>），和官方 binhost 一樣。設定裡的 <code>verify-signature = true</code> 讓 portage 拒絕本站驗簽不過的套件，它寫在 <code>binrepos.conf</code> 裡，只作用於本站。',
+    a5: '簽章內嵌在每個 gpkg 套件裡（<code>image.tar.zst.sig</code>），和官方 binhost 一樣。設定裡的 <code>verify-signature = true</code> 讓 Portage 拒絕本站驗簽不過的套件，它寫在 <code>binrepos.conf</code> 裡，只作用於本站。',
     a5b: '另有一個全域設定 <code>FEATURES=binpkg-request-signature</code>，它對所有來源生效並覆蓋上面那條。它還要求透過 <code>FEATURES=buildpkg</code> 建置的套件帶簽章；這些套件預設沒有簽章。啟用該功能時必須同時設定 <code>binpkg-signing</code>、本機簽章金鑰，以及讓 gpg 讀到 getuto 儲存的密碼。',
     q6: '如何停用？',
     a6: '刪除 <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code>。已安裝的套件不受影響。',
@@ -279,19 +279,19 @@ window.MIRROR_I18N = {
     stPending: '<code>待建置</code>',
     sdPending: '該套件是直接建置目標，但公開索引尚無 binpkg。它可能尚未完成首次建置，也可能沒有在最近一輪成功發布；該狀態只表示目前沒有公開產物。',
     stExcluded: '<code>不建置</code>',
-    sdExcluded: '維護清單明確排除該套件。常見原因包括無法建置、缺少支援或需要進一步核對再散布條件；將指標停在標籤上可以查看記錄的具體原因。',
+    sdExcluded: '維護清單明確排除該套件。常見原因包括無法建置、缺少支援或需要進一步核對再散布條件；標籤提示中會顯示記錄的具體原因。',
     stOffList: '<code>清單外</code>',
     sdOffList: '該套件不是直接建置目標。上游已提供預先編譯內容或建置收益較低時通常不會直接收錄，但執行期依賴閉包仍可能將它作為依賴發布；套件名含 <code>-bin</code> 不會自動決定該狀態。',
     stBindist: '<code>不提供 binpkg</code>',
-    sdBindist: '目前 ebuild 的 <code>RESTRICT</code> 包含 <code>bindist</code>，因此本站不發布該套件的 gpkg。原始碼套件和上游預先編譯套件都可能設定這項限制，常見原因是授權條款、上游發布條款或預先編譯內容的再散布條件不允許本站散布二進位產物；套件名含 <code>-bin</code> 本身不是判定依據。distfiles 是否鏡像仍依 <code>RESTRICT</code> 中的 <code>mirror</code>、<code>fetch</code> 與每個 <code>SRC_URI</code> 項目分別判定。',
+    sdBindist: '目前 ebuild 的 <code>RESTRICT</code> 包含 <code>bindist</code>，因此本站不發布該套件的 binpkg。原始碼套件和上游預先編譯套件都可能設定這項限制，常見原因是授權條款、上游發布條款或預先編譯內容的再散布條件不允許本站散布二進位產物；套件名含 <code>-bin</code> 本身不是判定依據。distfiles 是否鏡像仍依 <code>RESTRICT</code> 中的 <code>mirror</code>、<code>fetch</code> 與每個 <code>SRC_URI</code> 項目分別判定。',
     stLicense: '<code>授權限制</code>',
     sdLicense: '目前 ebuild 的 <code>LICENSE</code> 表達式不屬於本站固定的 <code>@BINARY-REDISTRIBUTABLE</code>。授權條款可能允許附帶條件的再散布，但本站不會據此發布 binpkg；該狀態與 <code>RESTRICT=bindist</code> 分開判定。',
     stLocal: '<code>本機安裝</code>',
-    sdLocal: '<code>acct-group</code> 與 <code>acct-user</code> 只在本機建立帳號，<code>virtual</code> 只讓 Portage 選擇實際實作。這些套件無須由本站預先編譯，因此由使用者系統在本機安裝。',
+    sdLocal: '<code>acct-group</code> 與 <code>acct-user</code> 由 Portage 在使用者系統建立帳號，<code>virtual</code> 由 Portage 選擇實際實作。這些套件無須本站預先編譯。',
     stRetiring: '<code>待移除</code>',
     sdRetiring: '公開索引仍有舊 binpkg，但目前 overlay、清單或發布政策已不再提供它。舊產物會保留到新一代索引發布成功，避免舊索引指向已刪除檔案；該狀態可以與勾號同時出現。',
     stDist: '<code>Distfiles —</code>',
-    sdDist: '該套件沒有宣告 distfile、<code>RESTRICT</code> 包含 <code>mirror</code> 或 <code>fetch</code>，或宣告的檔案尚未全部進入鏡像。將指標停在破折號上可以區分沒有檔案與不可用；該狀態不表示 binpkg 不可用。'
+    sdDist: '該套件沒有宣告 distfile、<code>RESTRICT</code> 包含 <code>mirror</code> 或 <code>fetch</code>，或宣告的檔案尚未全部進入鏡像。破折號提示會區分沒有檔案與不可用；該狀態不表示 binpkg 不可用。'
   },
   'en': { 
     q11: 'How do I obtain the signing key without installing the sec-keys package?',
@@ -326,19 +326,19 @@ window.MIRROR_I18N = {
     stPending: '<code>pending</code>',
     sdPending: 'The package is a direct build target, but the public index has no binpkg. Its first build may not have completed, or the latest cycle may not have published it; this status only says that no public artifact is currently available.',
     stExcluded: '<code>excluded</code>',
-    sdExcluded: 'The maintenance list explicitly excludes the package. Common reasons include build failure, missing support or a redistribution condition that needs review; hover over the label for the recorded reason.',
+    sdExcluded: 'The maintenance list explicitly excludes the package. Common reasons include build failure, missing support or a redistribution condition that needs review; the label tooltip shows the recorded reason.',
     stOffList: '<code>off-list</code>',
     sdOffList: 'The package is not a direct build target. Packages with upstream prebuilt content or little build benefit are often left off the list, but the runtime dependency closure may still publish them as dependencies. A <code>-bin</code> name does not determine this status.',
     stBindist: '<code>no binpkg</code>',
-    sdBindist: 'The current ebuild\'s <code>RESTRICT</code> includes <code>bindist</code>, so this host does not publish a gpkg for the package. Source and upstream-prebuilt packages can both carry this restriction, commonly because a licence, upstream release terms or redistribution conditions for prebuilt content prohibit this host from distributing binary artifacts. A <code>-bin</code> name is not evidence by itself. Distfile mirroring is evaluated separately from the <code>mirror</code> and <code>fetch</code> values in <code>RESTRICT</code> and each <code>SRC_URI</code> entry.',
+    sdBindist: 'The current ebuild\'s <code>RESTRICT</code> includes <code>bindist</code>, so this host does not publish a binpkg for the package. Source and upstream-prebuilt packages can both carry this restriction, commonly because a licence, upstream release terms or redistribution conditions for prebuilt content prohibit this host from distributing binary artifacts. A <code>-bin</code> name is not evidence by itself. Distfile mirroring is evaluated separately from the <code>mirror</code> and <code>fetch</code> values in <code>RESTRICT</code> and each <code>SRC_URI</code> entry.',
     stLicense: '<code>licence restricted</code>',
     sdLicense: 'The current ebuild\'s <code>LICENSE</code> expression is outside this host\'s fixed <code>@BINARY-REDISTRIBUTABLE</code> set. The licence may permit redistribution under conditions, but this host does not publish a binpkg under that policy. This is evaluated separately from <code>RESTRICT=bindist</code>.',
     stLocal: '<code>local install</code>',
-    sdLocal: '<code>acct-group</code> and <code>acct-user</code> only create local accounts, while <code>virtual</code> only lets Portage select the actual implementation. These packages do not need to be prebuilt by this host, so the user system installs them locally.',
+    sdLocal: 'Portage creates the accounts from <code>acct-group</code> and <code>acct-user</code> on the user system, while <code>virtual</code> lets Portage select the actual implementation. These packages do not need to be prebuilt by this host.',
     stRetiring: '<code>pending removal</code>',
     sdRetiring: 'The public index still contains an old binpkg, but the current overlay, list or publication policy no longer provides it. The old artifact remains until a new index generation publishes successfully, preventing the old index from pointing to a deleted file. This status can appear with a tick.',
     stDist: '<code>Distfiles —</code>',
-    sdDist: 'The package declares no distfile, its <code>RESTRICT</code> includes <code>mirror</code> or <code>fetch</code>, or not every declared file has reached the mirror. Hover over the dash to distinguish no file from unavailable data. This status does not imply that the binpkg is unavailable.'
+    sdDist: 'The package declares no distfile, its <code>RESTRICT</code> includes <code>mirror</code> or <code>fetch</code>, or not every declared file has reached the mirror. The dash tooltip distinguishes no file from unavailable data. This status does not imply that the binpkg is unavailable.'
   }
 };
 </script>
