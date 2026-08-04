@@ -321,6 +321,18 @@ ok "损坏的同代清单不会按旧代跳过" "$([[ ${out} != *尚未发布* ]
 IFS='|' read -r out calls <<< "$(daily_generation_probe broken)"
 ok "断开的 generation.json 符号链接仍进入验证" "${calls}" "generation"
 
+echo "== build-container.sh 交回 PKGDIR 属主"
+
+owner_line=$(grep -n 'chown -R' "${ROOT}/build/build-container.sh" | head -1 | cut -d: -f1)
+inner_end=$(grep -n '^INNER$' "${ROOT}/build/build-container.sh" | tail -1 | cut -d: -f1)
+# shellcheck disable=SC2016  # matching the literal text of the script
+persist=$(grep -n 'python3 "$(dirname "$0")/persist-packages.py"' "${ROOT}/build/build-container.sh" | head -1 | cut -d: -f1)
+ok "建置容器结束后交回 PKGDIR 属主" "$(( owner_line > inner_end ))" "1"
+ok "交回属主排在持久化之前" "$(( owner_line < persist ))" "1"
+# shellcheck disable=SC2016  # matching the literal text of the script
+handback=$(grep -c 'chown -R "$(id -u):$(id -g)" "${PKGDIR}"' "${ROOT}/build/build-container.sh")
+ok "交回的是 PKGDIR 而不是别的目录" "${handback}" "1"
+
 echo "== provision.sh 的主机密钥核对"
 
 hostkey_probe() {
