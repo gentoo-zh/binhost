@@ -58,9 +58,20 @@ if ! ./build/run-full.sh; then
     alert_exit
 fi
 
-if ! ./build/publish.sh; then
-    alert "binhost 发布阶段失败（$(hostname)）：包已构建，未同步到镜像机"
-    alert_exit
+publish_rc=0
+./build/publish.sh || publish_rc=$?
+if (( publish_rc )); then
+    if (( publish_rc == 3 )); then
+        message="binhost 已发布到镜像机，但退休清理被上限阻止（$(hostname)）"
+    else
+        message="binhost 发布阶段失败（$(hostname)）：包已构建，未发布到镜像机"
+        if [[ -s ${LOGDIR}/report.txt ]]; then
+            message="${message}
+$(cat "${LOGDIR}/report.txt")"
+        fi
+    fi
+    alert "${message}"
+    alert_exit "${publish_rc}"
 fi
 
 if [[ -s ${LOGDIR}/failed.txt ]]; then
