@@ -13,7 +13,7 @@ push() {
     # shellcheck disable=SC2029
     if ! ssh "${REMOTE}" "cat > ${SITE_ROOT}/.${OUT}.new &&
                           mv -f ${SITE_ROOT}/.${OUT}.new ${SITE_ROOT}/${OUT}"; then
-        echo "!! 建置进度未能送到 ${REMOTE}" >&2
+        echo "!! 构建进度未能发送到 ${REMOTE}" >&2
         return 1
     fi
 }

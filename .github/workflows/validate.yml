@@ -224,7 +224,7 @@ jobs:
       - name: The same failure is not notified twice
         run: bash tests/test-status-dedup.sh
 
-      - name: install.sh 送到远端的脚本能解析，防火墙有回滚
+      - name: install.sh 传输的远端脚本能解析，防火墙有回滚
         run: bash tests/test-install-remote-script.sh
 
   nginx:
@@ -268,9 +268,9 @@ jobs:
           hdr() { curl -sS -o /dev/null -D - -H "$H" "http://127.0.0.1$1" | tr -d '\r' | grep -i "^$2:" | cut -d' ' -f2-; }
           [ "$(hdr /faq x-content-type-options)" = nosniff ] || fail "页面没有 nosniff"
           case "$(hdr /faq content-security-policy)" in "default-src 'self'"*) ;; *) fail "页面 CSP 不对" ;; esac
-          case "$(hdr /distfiles/c6/t.tar.gz content-security-policy)" in "default-src 'none'; sandbox") ;; *) fail "distfile 未使用 sandbox 那一份" ;; esac
-          case "$(hdr /distfiles/c6/ content-security-policy)" in "default-src 'self'"*) ;; *) fail "distfiles 目录页使用的不是站点那一份 CSP" ;; esac
-          case "$(hdr /binpkgs/x86-64/ content-security-policy)" in "default-src 'self'"*) ;; *) fail "binpkgs 目录页使用的不是站点那一份 CSP" ;; esac
+          case "$(hdr /distfiles/c6/t.tar.gz content-security-policy)" in "default-src 'none'; sandbox") ;; *) fail "distfile 的 CSP 缺少 sandbox" ;; esac
+          case "$(hdr /distfiles/c6/ content-security-policy)" in "default-src 'self'"*) ;; *) fail "distfiles 目录页未使用站点 CSP" ;; esac
+          case "$(hdr /binpkgs/x86-64/ content-security-policy)" in "default-src 'self'"*) ;; *) fail "binpkgs 目录页未使用站点 CSP" ;; esac
           [ "$(hdr /binpkgs/x86-64/Packages x-content-type-options)" = nosniff ] || fail "索引没有 nosniff"
 
           printf 'User-agent: *\nDisallow: /distfiles/\n' > /srv/mirrors/robots.txt

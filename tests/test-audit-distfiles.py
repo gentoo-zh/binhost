@@ -264,7 +264,7 @@ case("同名不覆盖回收桶里已有的", lambda: (
     lambda r: sorted(r[2]) == ["dup.tar.gz", "dup.tar.gz.1"]
 )(run_main({f"app-misc/p{i}": {"1": [f"p{i}.tar.gz"]} for i in range(20)},
            [f"p{i}.tar.gz" for i in range(20)] + ["dup.tar.gz"],
-           preload={"dup.tar.gz": "早先回收的那一份"})))
+           preload={"dup.tar.gz": "先前回收的文件"})))
 
 case("回收失败要反映在退出码上", lambda: (
     lambda r: r[0] == 1

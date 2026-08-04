@@ -50,7 +50,7 @@ render() {
     ( bash "${tmp}/render.sh" > "${out}" 2>/dev/null ) || true
 }
 
-echo "== install.sh 送到远端的脚本"
+echo "== install.sh 传输的远端脚本"
 
 render deploy/install.sh "${tmp}/remote.sh"
 n=$(wc -l < "${tmp}/remote.sh")

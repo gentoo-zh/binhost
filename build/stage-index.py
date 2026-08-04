@@ -481,7 +481,7 @@ def main(pkgdir, stage, overlay=None, rev="", lookup=None):
         print(f">>> 其中 {len(refused)} 个因发布策略或无法确认被跳过")
     if unresolved:
         print(f">>> {len(unresolved)} 个依赖原子在索引中没有匹配，"
-              f"由基础系统提供或未建置，见 unresolved.txt；"
+              f"由基础系统提供或未构建，见 unresolved.txt；"
               f"因此不能宣称已发布的内容依赖完整")
     return 0
 

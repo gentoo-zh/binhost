@@ -113,7 +113,7 @@ def main(overlay):
         kw = keywords_of(text)
         if kw is not None and not accepts_amd64(kw):
             errors.append(
-                f"{LIST.name}:{lineno}: KEYWORDS 未包含 amd64，建置机无法安装： {cp}")
+                f"{LIST.name}:{lineno}: KEYWORDS 未包含 amd64，构建机无法安装： {cp}")
 
         eclasses = inherits(text)
         if eclasses & PREBUILT_ECLASS:
