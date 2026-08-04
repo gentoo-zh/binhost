@@ -218,7 +218,7 @@ def main(overlay, index, listfile):
     for cp in banned:
         print(f"    无 binpkg {cp}  全部可用版本都是 RESTRICT=bindist，应从清单移除")
     for cp in unclear:
-        print(f"    待人工确认 {cp}  RESTRICT 用了变量或条件式，无法确认能否散布，本轮不发布")
+        print(f"    待核对 {cp}  RESTRICT 使用变量或条件式，binhost 维护者需确认 binpkg 再分发资格，本轮不发布")
     for cp in upstreamed:
         print(f"    已进主树 {cp}  该 CP 同时存在于 ::gentoo，需确认是否仍由本站构建")
     for cp, ver in fresh:

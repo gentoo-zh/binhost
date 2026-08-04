@@ -161,7 +161,7 @@ NOKW = 'EAPI=8\ninherit cmake\nKEYWORDS="~arm64"\nSLOT="0"\n'
 VAGUE = 'EAPI=8\ninherit cmake\nKEYWORDS="~amd64"\nSLOT="0"\nR="x"\nRESTRICT="${R}"\n'
 
 rc, out = run([], [PKG], {PKG: NOW}, body={PKG: VAGUE})
-ok = rc == 1 and "待人工确认" in out
+ok = rc == 1 and "待核对" in out and "binhost 维护者" in out
 print(f"  {'✓' if ok else '✗'} {'RESTRICT 无法判定时阻止发布':<24}")
 if not ok:
     bad += 1
