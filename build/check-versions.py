@@ -60,7 +60,7 @@ def newcomer_classifications(overlay, wanted, masked, move_destinations=()):
     groups = {}
     excluded = read_excluded(overlay)
     for pkgdir in sorted(overlay.glob("*/*")):
-        if not pkgdir.is_dir():
+        if not pkgdir.is_dir() or not any(pkgdir.glob("*.ebuild")):
             continue
         cp = f"{pkgdir.parent.name}/{pkgdir.name}"
         if cp in wanted or cp in excluded:
