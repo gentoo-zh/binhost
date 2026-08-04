@@ -265,7 +265,7 @@ fi
 
 job=$(curl -fsS --max-time 15 "${SITE}/build-status.json" 2>/dev/null)
 if [[ -z ${job} ]]; then
-    bad "建置状态" "无法获取 build-status.json"
+    bad "构建状态" "无法获取 build-status.json"
 else
     jstate=$(grep -o '"state":"[a-z]*"' <<< "${job}" | cut -d'"' -f4)
     jphase=$(grep -o '"phase":"[a-z-]*"' <<< "${job}" | cut -d'"' -f4)
@@ -275,20 +275,20 @@ else
     jprog=$(grep -o '"progress_at":[0-9]*' <<< "${job}" | cut -d: -f2)
     [[ ${jprog} =~ ^[0-9]+$ ]] || jprog="${jts}"
     if [[ ! ${jts} =~ ^[0-9]+$ ]]; then
-        bad "建置状态" "generated 无法解析"
+        bad "构建状态" "generated 无法解析"
     else
         jage=$(( ( $(date +%s) - jts ) / 3600 ))
         page=$(( ( $(date +%s) - jprog ) / 3600 ))
         if [[ ${jstate} == failed ]]; then
-            bad "建置状态" "上一轮建置失败（${jage} 小时前）"
+            bad "构建状态" "上一轮构建失败（${jage} 小时前）"
         elif [[ ${jstate} == running ]] && (( page >= BUILD_STALE_H )); then
-            bad "建置状态" "${jphase:-未知} 阶段已 ${page} 小时没有进展"
+            bad "构建状态" "${jphase:-未知} 阶段已 ${page} 小时没有进展"
         elif [[ ${jstate} == running ]] && (( jage >= BUILD_STALE_H )); then
-            bad "建置状态" "进度状态已 ${jage} 小时未更新"
+            bad "构建状态" "进度状态已 ${jage} 小时未更新"
         elif (( jage >= HEARTBEAT_MAX_H )); then
-            bad "建置状态" "${jage} 小时未更新（阈值 ${HEARTBEAT_MAX_H}h）"
+            bad "构建状态" "${jage} 小时未更新（阈值 ${HEARTBEAT_MAX_H}h）"
         else
-            note "建置状态" "${jstate:-未知}，${jage} 小时前"
+            note "构建状态" "${jstate:-未知}，${jage} 小时前"
         fi
     fi
 fi

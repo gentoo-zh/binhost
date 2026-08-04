@@ -141,7 +141,7 @@ def check_emitted(root):
                 continue
             for w in COLLOQUIAL_EMIT:
                 if w in chunk:
-                    hits.append(f"{line}: 口语词「{w}」  {chunk.strip()[:60]}")
+                    hits.append(f"{line}: 口语词 `{w}`  {chunk.strip()[:60]}")
                     break
         if hits:
             print(f"!!! {f}", file=sys.stderr)
@@ -247,7 +247,7 @@ def check_comments(root):
                 continue
             for w in COLLOQUIAL:
                 if w in chunk:
-                    hits.append(f"{line}: 口语词「{w}」  {chunk.strip()[:60]}")
+                    hits.append(f"{line}: 口语词 `{w}`  {chunk.strip()[:60]}")
                     break
         if hits:
             bad += 1

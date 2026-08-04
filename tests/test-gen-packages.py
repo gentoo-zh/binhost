@@ -244,7 +244,7 @@ case("virtual 不因 keyword 或 bindist 改变本地安装分类", lambda: (
     classify("virtual/example",
              'EAPI=8\nKEYWORDS="~arm64"\nRESTRICT="bindist"\n') == "meta"))
 
-case("发布政策与建置清单分类分别写入", lambda: (
+case("发布政策与构建清单分类分别写入", lambda: (
     (lambda r: r["binhost"] is False and r["policy"] == "license"
      and r["why"] == "prebuilt")(policy_matrix())))
 

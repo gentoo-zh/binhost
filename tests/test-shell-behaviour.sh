@@ -333,7 +333,7 @@ owner_line=$(grep -n 'chown -R' "${ROOT}/build/build-container.sh" | head -1 | c
 inner_end=$(grep -n '^INNER$' "${ROOT}/build/build-container.sh" | tail -1 | cut -d: -f1)
 # shellcheck disable=SC2016  # matching the literal text of the script
 persist=$(grep -n 'python3 "$(dirname "$0")/persist-packages.py"' "${ROOT}/build/build-container.sh" | head -1 | cut -d: -f1)
-ok "建置容器结束后交回 PKGDIR 属主" "$(( owner_line > inner_end ))" "1"
+ok "构建容器结束后交回 PKGDIR 属主" "$(( owner_line > inner_end ))" "1"
 ok "交回属主排在持久化之前" "$(( owner_line < persist ))" "1"
 # shellcheck disable=SC2016  # matching the literal text of the script
 handback=$(grep -c 'chown -R "$(id -u):$(id -g)" "${PKGDIR}"' "${ROOT}/build/build-container.sh")
@@ -455,7 +455,7 @@ ok "抓取源清单为空时算故障" "$(exporter_probe "")" "failed"
 ok "有抓取源时才算通过" \
    "$(exporter_probe " elements = { 1.2.3.4, 5.6.7.8 }")" "passed"
 
-echo "== 建置进度是真实进度，不是监看进程的心跳"
+echo "== 构建进度是真实进度，不是监控进程的心跳"
 
 snap() {
     local d out
@@ -517,7 +517,7 @@ ok "完成状态的用时由同一轮起止时间计算" "$(( finished - started
 
 start_line=$(grep -n '^BUILD_STARTED=' build/cycle.sh | head -1 | cut -d: -f1)
 watch_line=$(grep -n 'build-progress.sh watch' build/cycle.sh | cut -d: -f1)
-ok "取得建置锁后先记录开始时间再启动监看" \
+ok "取得构建锁后先记录开始时间再启动监控" \
    "$([ -n "${start_line}" ] && [ "${start_line}" -lt "${watch_line}" ] && echo yes || echo no)" "yes"
 
 build_status_probe() {
@@ -537,13 +537,13 @@ EOF
         STATE_FILE="${d}/s" VERSION_FILE="${d}/v" SIGNING_GNUPGHOME="${d}/n" \
         DISK_PATH="${d}/n" HEARTBEAT="${d}/n/.h" SITE_WORK="${d}/n" \
         SITE_DEST="${d}/n" MONITORS_FILE="${d}/n" \
-        bash build/status.sh 2>&1 | grep 建置状态 )
+        bash build/status.sh 2>&1 | grep 构建状态 )
     rm -rf "${d}"
     case "${out}" in *'<--'*) echo failed ;; *) echo passed ;; esac
 }
 
 NOW=$(date +%s); STALE=$(( NOW - 4 * 3600 ))
-ok "监看在刷新但建置无进展时算故障" \
+ok "监控持续刷新但构建无进展时判为故障" \
    "$(build_status_probe "{\"state\":\"running\",\"phase\":\"per-package\",\"progress_at\":${STALE},\"generated\":${NOW}}")" \
    "failed"
 ok "两者都新时正常" \

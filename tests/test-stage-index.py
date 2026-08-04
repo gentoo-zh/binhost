@@ -795,7 +795,7 @@ case("万用版本匹配带 revision 的版本", lambda: (
           stanza("dev-libs/lib-1-r1", repo="gentoo")])
     == ["app-misc/a-1", "dev-libs/lib-1-r1"]))
 
-case("同一个 CPV 跨仓库时，发布的是种子所在仓库的那一份", lambda: (
+case("同一个 CPV 跨仓库时发布种子所属仓库的 stanza", lambda: (
     (lambda r: [(f["CPV"], f["REPO"]) for _b, f, _s in r[0]]
      == [("app-misc/a-1", "gentoo-zh")])(
         run([stanza("app-misc/a-1", repo="gentoo-zh", build_id=1),
@@ -807,7 +807,7 @@ case("BUILD_ID 只在同一个仓库内比较", lambda: (
         run([stanza("app-misc/a-1", repo="gentoo-zh", build_id=9),
              stanza("app-misc/a-1", repo="gentoo-zh", build_id=15)], with_deps=True))))
 
-case("依赖同时存在于两个仓库时，取 overlay 的那一份", lambda: (
+case("依赖同时存在于两个仓库时选择 overlay stanza", lambda: (
     (lambda r: sorted((f["CPV"], f["REPO"]) for _b, f, _s in r[0])
      == [("app-misc/a-1", "gentoo-zh"), ("dev-libs/lib-1", "gentoo-zh")])(
         run([stanza("app-misc/a-1", rdepend="dev-libs/lib"),
@@ -815,7 +815,7 @@ case("依赖同时存在于两个仓库时，取 overlay 的那一份", lambda: 
              stanza("dev-libs/lib-1", repo="gentoo", build_id=2)],
             overlay_has=["app-misc/a-1", "dev-libs/lib-1"], with_deps=True))))
 
-case("::gentoo 限定的依赖取主树那一份", lambda: (
+case("::gentoo 限定依赖选择主树 stanza", lambda: (
     (lambda r: sorted((f["CPV"], f["REPO"]) for _b, f, _s in r[0])
      == [("app-misc/a-1", "gentoo-zh"), ("dev-libs/lib-1", "gentoo")])(
         run([stanza("app-misc/a-1", rdepend="dev-libs/lib::gentoo"),
@@ -823,7 +823,7 @@ case("::gentoo 限定的依赖取主树那一份", lambda: (
              stanza("dev-libs/lib-1", repo="gentoo", build_id=2)],
             overlay_has=["app-misc/a-1"], with_deps=True))))
 
-case("闭包读的是最终要发布的那一份 stanza", lambda: (
+case("闭包读取最终发布的 stanza", lambda: (
     deps([stanza("app-misc/a-1", build_id=15, rdepend="dev-libs/other"),
           stanza("app-misc/a-1", build_id=9, rdepend="dev-libs/lib"),
           LIB, OTHER])
