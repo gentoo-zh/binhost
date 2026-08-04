@@ -4,7 +4,7 @@
 
 ```
 build/    构建、发布与各项检查。多数在构建机上运行，
-          gen-packages.py、status.sh 等几支由 install.sh 装到镜像机
+          镜像机所需的脚本由 install.sh 安装
 deploy/   两台机器的安装、同步与定时任务
 nginx/    服务器配置
 site/     站点
@@ -21,8 +21,12 @@ docs/     运维手册
 仓库按 CPU 基线切分（`x86-64`），与 Gentoo 官方 binhost 一致。
 
 发布的主体是收录清单里的 overlay 包，另外附带这些包所需的部分 `::gentoo` 运行期
-依赖，两者在同一份索引里，用 `REPO` 字段区分。许可证不允许再分发的、
-`RESTRICT=bindist` 的都不发布。附带内容仅包含这些包的运行期依赖，
+依赖，两者在同一份索引里，用 `REPO` 字段区分。当前 ebuild 的 `LICENSE`
+必须属于 `@BINARY-REDISTRIBUTABLE`；当前 ebuild 与缓存 binpkg 均不得设置
+`RESTRICT=bindist`。
+`acct-group/*`、`acct-user/*` 与 `virtual/*` 由使用者系统从源码本地安装，不进入
+binhost。`RESTRICT=bindist` 只限制二进制包；distfiles 是否镜像由
+`RESTRICT=mirror/fetch` 与 `SRC_URI` 条目独立决定。附带内容仅包含这些包的运行期依赖，
 不替代 Gentoo 官方 binhost。
 
 `@world` 对齐后的容器提交成基础镜像，超过 7 天才刷新，平时的构建从已经对齐好的根开始。
@@ -33,8 +37,9 @@ docs/     运维手册
 
 容器在 emerge 之前记录基础系统的 CPV、SLOT、USE、IUSE、EAPI 与 repository，依赖检查
 按完整 Portage Atom 匹配该快照。构建完成后，脚本还会记录当轮实际使用的 Gentoo
-binhost 索引。若依赖只能从源码取得，则另从当前 Gentoo 仓库记录可匹配的版本；带 USE
-约束的源码依赖不会按未知配置推定为可用。
+binhost 索引。若依赖只能从源码取得，则另从当前 Gentoo 与 gentoo-zh 仓库记录可匹配的
+版本。一般源码依赖若带 USE 约束，不会因配置未知而推定为可用；对于上述三类
+本地安装包，快照按当前 ebuild 的 `IUSE` 默认启用项匹配完整 Atom。
 
 签名阶段使用固定 digest 的官方 stage3，不复用执行过 ebuild 的基础镜像。该容器没有网络、
 Linux capability 与 ebuild 仓库，根文件系统只读；宿主机只挂载暂存目录、必要脚本，以及
@@ -44,9 +49,11 @@ Linux capability 与 ebuild 仓库，根文件系统只读；宿主机只挂载�
 
 暂存索引必须覆盖 `packages.txt` 中每个包的当前可用版本，并通过运行期依赖检查。
 `Packages`、`Packages.gz`、构建前基础系统快照、Gentoo binhost 可用包快照与
-Gentoo 源码可用包快照的 SHA-256 写入 `generation.json`，六个文件按同一代发布。
-检查失败时保留公开索引与一般清理计划，
-但仍立即移除 `quarantine.txt` 中不可继续散布的产物。
+Gentoo 和 gentoo-zh 源码可用包快照的 SHA-256 写入 `generation.json`，六个文件按
+同一代发布。
+检查失败时保留公开索引。源码本地安装、mask、排除或版本移除等常规退役只在新索引成功
+切换后清理。设置 `RESTRICT=bindist`、许可证不允许再分发或无法确认再分发资格的产物
+会写入 `quarantine.txt` 并立即移除。
 
 `PUBLISH=1` 会把基础镜像推到 `ghcr.io/gentoo-zh/binhost-base`。
 
@@ -84,7 +91,10 @@ overlay、构建、发布并报告失败。
 rsync://distfiles.gentoozh.org/gentoo-zh/{binpkgs,distfiles}
 ```
 
-两样都能走 HTTP 或 rsync。`deploy/mirror-sync.sh` 是给只有 HTTP 的下游用的，它只同步二进制包；distfiles 目前没有对应的 HTTP 同步脚本，用 rsync。索引中的 `PATH` 是相对路径，把 `Packages` 和同样相对路径下的文件一并提供即构成一个完整的 binhost。
+二进制包与 distfiles 均支持 HTTP 和 rsync。`deploy/mirror-sync.sh` 供只有 HTTP 的下游
+使用，只同步二进制包；distfiles 目前没有对应的 HTTP 同步脚本，应使用 rsync。索引中的
+`PATH` 是相对路径，把 `Packages` 和相同相对路径下的文件一并提供即构成一个完整的
+binhost。
 
 ## 站点
 
