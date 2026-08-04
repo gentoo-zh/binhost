@@ -151,6 +151,10 @@ if (( ${#failed[@]} )); then
 fi
 INNER
 
+# The build container writes PKGDIR as root, so the directories it creates are
+# not writable by this user. persist-packages.py runs here, unprivileged, and
+# cannot place its temporary file next to the package it replaces.
+sudo chown -R "$(id -u):$(id -g)" "${PKGDIR}"
 
 rm -rf "${STAGE}.new"
 install -dm755 "${STAGE}.new"
