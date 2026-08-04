@@ -40,7 +40,7 @@ echo "overlay $(git -C "${OVERLAY}" rev-parse --short HEAD)"
 
 export BINHOST_LOCKED=1
 
-rm -f "${LOGDIR}/whole.log"
+rm -f "${LOGDIR}/whole.log" "${LOGDIR}/progress"
 ./build/build-progress.sh watch "${LOGDIR}/whole.log" &
 progress=$!
 on_exit() {
@@ -48,6 +48,7 @@ on_exit() {
     state='done'
     (( rc )) && state='failed'
     kill "${progress}" 2>/dev/null || true
+    wait "${progress}" 2>/dev/null || true
     ./build/build-progress.sh finish "${state}"
 }
 trap 'on_exit "$?"' EXIT
@@ -60,15 +61,6 @@ fi
 if ! ./build/publish.sh; then
     alert "binhost 发布阶段失败（$(hostname)）：包已构建，未同步到镜像机"
     alert_exit
-fi
-
-if ! python3 ./build/check-versions.py \
-        "${OVERLAY}" "${STAGE}/Packages" ./build/packages.txt > "${LOGDIR}/versions.txt" 2>&1; then
-    cat "${LOGDIR}/versions.txt"
-    alert "binhost 版本核对不一致（$(hostname)）:
-$(head -20 "${LOGDIR}/versions.txt")"
-else
-    cat "${LOGDIR}/versions.txt"
 fi
 
 if [[ -s ${LOGDIR}/failed.txt ]]; then

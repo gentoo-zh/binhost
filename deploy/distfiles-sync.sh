@@ -8,27 +8,15 @@ REPO="${REPO:-gentoo-zh}"
 OVERLAY="${OVERLAY:-/var/lib/binhost-overlay}"
 STATE="${STATE:-/var/lib/emirrordist}"
 JOBS="${JOBS:-6}"
-DELETION_DELAY="${DELETION_DELAY:-86400}"
-RECYCLE="${RECYCLE:-/var/lib/emirrordist/recycle}"
-RECYCLE_DELAY="${RECYCLE_DELAY:-1209600}"
 
-install -dm755 "${DEST}" "${STATE}" "${STATE}/tmp" "${RECYCLE}" /var/log/emirrordist
+install -dm755 "${DEST}" "${STATE}" "${STATE}/tmp" /var/log/emirrordist
 
-delete=(--delete
-        --deletion-db "${STATE}/deletion.db"
-        --deletion-delay "${DELETION_DELAY}"
-        --scheduled-deletion-log /var/log/emirrordist/deletions.log
-        --recycle-dir "${RECYCLE}"
-        --recycle-db "${STATE}/recycle.db"
-        --recycle-deletion-delay "${RECYCLE_DELAY}")
-[[ ${DELETE:-1} == 0 ]] && delete=()
-
+# audit-distfiles.py is the only process allowed to remove public files.
 emirrordist \
     --mirror \
     --repo "${REPO}" \
     --distfiles "${DEST}" \
     --jobs "${JOBS}" \
-    "${delete[@]}" \
     --distfiles-db "${STATE}/distfiles.db" \
     --failure-log /var/log/emirrordist/failures.log \
     --success-log /var/log/emirrordist/successes.log \

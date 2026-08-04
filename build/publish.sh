@@ -11,6 +11,39 @@ REMOTE_ROOT="${REMOTE_ROOT:-/srv/pub/binpkgs/${TAG}}"
 MAX_RETIRE_SHARE="${MAX_RETIRE_SHARE:-20}"
 MAX_RETIRE_COUNT="${MAX_RETIRE_COUNT:-60}"
 
+# Quarantine is independent of whether the new generation can be published.
+# shellcheck disable=SC2029
+ssh "${REMOTE}" "install -dm755 ${REMOTE_ROOT}"
+QUARANTINE="${STAGE}/quarantine.txt"
+if [[ -s ${QUARANTINE} ]]; then
+    q=$(wc -l < "${QUARANTINE}")
+    echo ">>> ${q} 个产物不可继续散布，先从公开路径移除"
+    # shellcheck disable=SC2029
+    gone=$(ssh "${REMOTE}" "
+        set -eu
+        cd ${REMOTE_ROOT} || exit 1
+        tmp=\$(mktemp -d) || exit 1
+        trap 'rm -rf \"\${tmp}\"' EXIT
+        cat > \"\${tmp}/deny\"
+        n=0
+        while IFS= read -r rel; do
+            [ -n \"\${rel}\" ] || continue
+            case \"\${rel}\" in /*|*..*) echo \"拒绝：\${rel}\" >&2; exit 1 ;; esac
+            if [ -e \"\${rel}\" ]; then rm -f -- \"\${rel}\" && n=\$(( n + 1 )); fi
+        done < \"\${tmp}/deny\"
+        find . -mindepth 1 -type d -empty -delete
+        echo \"\${n}\"" < "${QUARANTINE}") || {
+        echo "!! 不可继续散布的产物未能移除" >&2
+        exit 1
+    }
+    echo ">>> 实际移除 ${gone} 个"
+fi
+
+if [[ -s ${STAGE}/publish-blocked.txt ]]; then
+    cat "${STAGE}/publish-blocked.txt" >&2
+    exit 1
+fi
+
 index_header_ok() {
     local file="$1" listed="$2" n
     n=$(grep -c '^PACKAGES: ' "${file}")
@@ -95,10 +128,12 @@ for p in "${paths[@]}"; do
 done
 (( missing )) && { echo "索引有 ${missing} 处不合规，中止发布" >&2; exit 1; }
 
-echo ">>> 发布 ${#paths[@]} 个包到 ${REMOTE}:${REMOTE_ROOT}"
+python3 "$(dirname "$0")/generation.py" verify "${STAGE}" || {
+    echo "同代清单验证失败，中止发布" >&2
+    exit 1
+}
 
-# shellcheck disable=SC2029  # the path is meant to expand locally
-ssh "${REMOTE}" "install -dm755 ${REMOTE_ROOT}"
+echo ">>> 发布 ${#paths[@]} 个包到 ${REMOTE}:${REMOTE_ROOT}"
 
 # shellcheck disable=SC2029
 before=$(ssh "${REMOTE}" "find ${REMOTE_ROOT} -name '*.gpkg.tar' -printf x 2>/dev/null | wc -c")
@@ -108,57 +143,46 @@ printf '%s\n' "${paths[@]}" |
     rsync -a --info=stats2 --files-from=- "${STAGE}/" "${REMOTE}:${REMOTE_ROOT}/" |
     { grep -E "files transferred|Total transferred file size" || true; } | sed 's/^/    /'
 
-QUARANTINE="${STAGE}/quarantine.txt"
-if [[ -s ${QUARANTINE} ]]; then
-    q=$(wc -l < "${QUARANTINE}")
-    echo ">>> ${q} 个不可再散布，先从公开路径移除，不受清理上限约束"
-    # shellcheck disable=SC2029  # REMOTE_ROOT is meant to expand locally
-    gone=$(ssh "${REMOTE}" "
-        set -eu
-        cd ${REMOTE_ROOT} || exit 1
-        tmp=\$(mktemp -d) || exit 1
-        trap 'rm -rf \"\${tmp}\"' EXIT
-        cat > \"\${tmp}/deny\"
-        n=0
-        while IFS= read -r rel; do
-            [ -n \"\${rel}\" ] || continue
-            case \"\${rel}\" in /*|*..*) echo \"拒绝：\${rel}\" >&2; exit 1 ;; esac
-            if [ -e \"\${rel}\" ]; then rm -f -- \"\${rel}\" && n=\$(( n + 1 )); fi
-        done < \"\${tmp}/deny\"
-        find . -mindepth 1 -type d -empty -delete
-        echo \"\${n}\"" < "${QUARANTINE}") || {
-        echo "!! 不可再散布的产物未能移除，本轮不再继续" >&2
-        exit 1
-    }
-    echo ">>> 实际移除 ${gone} 个"
-fi
-
-rsync -a "${STAGE}/installed.txt" "${REMOTE}:${REMOTE_ROOT}/installed.txt"
+rsync -a "${STAGE}/installed.txt" "${REMOTE}:${REMOTE_ROOT}/.installed.txt.new"
+rsync -a "${STAGE}/official.txt" "${REMOTE}:${REMOTE_ROOT}/.official.txt.new"
+rsync -a "${STAGE}/source.txt" "${REMOTE}:${REMOTE_ROOT}/.source.txt.new"
+rsync -a "${STAGE}/generation.json" "${REMOTE}:${REMOTE_ROOT}/.generation.json.new"
 rsync -a "${STAGE}/Packages" "${REMOTE}:${REMOTE_ROOT}/.Packages.new"
 rsync -a "${STAGE}/Packages.gz" "${REMOTE}:${REMOTE_ROOT}/.Packages.gz.new"
 
-# The two indexes cannot be swapped in one rename. Keep a copy of the old
-# Packages so a failure on the second swap puts the pair back to one
-# generation instead of leaving Packages new and Packages.gz old for good.
+# These files identify one generation. Restore the complete previous set
+# if any rename fails.
 # shellcheck disable=SC2029  # REMOTE_ROOT is meant to expand locally
 ssh "${REMOTE}" "sh -s '${REMOTE_ROOT}'" <<'SWAP'
 set -u
 cd "$1" || exit 1
-if [ -e Packages ]; then
-    cp -p Packages .Packages.prev || exit 1
-fi
-if ! mv -f .Packages.new Packages; then
-    rm -f .Packages.prev
-    exit 1
-fi
-if ! mv -f .Packages.gz.new Packages.gz; then
-    if [ -e .Packages.prev ]; then
-        mv -f .Packages.prev Packages
+files='Packages Packages.gz installed.txt official.txt source.txt generation.json'
+for name in $files; do
+    if [ -e "$name" ]; then
+        cp -p "$name" ".$name.prev" || exit 1
+    else
+        : > ".$name.absent" || exit 1
     fi
-    echo "!! Packages.gz 未能替换，已还原 Packages" >&2
-    exit 1
-fi
-rm -f .Packages.prev
+done
+for name in $files; do
+    if ! mv -f ".$name.new" "$name"; then
+        for restore in $files; do
+            if [ -e ".$restore.prev" ]; then
+                mv -f ".$restore.prev" "$restore"
+            elif [ -e ".$restore.absent" ]; then
+                rm -f "$restore"
+            fi
+        done
+        for cleanup in $files; do
+            rm -f ".$cleanup.prev" ".$cleanup.absent" ".$cleanup.new"
+        done
+        echo "!! 同代文件未能全部替换，已还原上一代" >&2
+        exit 1
+    fi
+done
+for cleanup in $files; do
+    rm -f ".$cleanup.prev" ".$cleanup.absent"
+done
 SWAP
 
 ts=$(awk '/^TIMESTAMP: /{print $2; exit}' "${STAGE}/Packages")

@@ -229,8 +229,10 @@ def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None):
     # stanza from the other tree win on BUILD_ID and be published in place of
     # the one an overlay seed authorised.
     newest = {}
+    paths_by_key = {}
     for f, s in entries:
         key = (f["CPV"], f.get("REPO", ""))
+        paths_by_key.setdefault(key, set()).add(str(safe_path(f["PATH"])))
         bid = int(f.get("BUILD_ID", 0))
         prev = newest.get(key)
         if prev is None:
@@ -246,7 +248,8 @@ def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None):
     for key, (bid, f, s) in newest.items():
         state = effective_bindist(key[0], f, lookup)
         if state != "no":
-            refused.append((key[0], str(safe_path(f.get("PATH", ""))), state))
+            refused.extend((key[0], path, state)
+                           for path in sorted(paths_by_key[key]))
             skipped += 1
             continue
         candidates[key] = (bid, f, s)
@@ -296,12 +299,19 @@ def digest_mismatch(f, digest):
     hash to that, the source changed under us and the stanza no longer
     describes what we would publish.
     """
+    declared = []
+    mismatches = []
     for name in DIGESTS:
         want = f.get(name, "").strip().lower()
-        if want:
-            return None if want == digest[name] else (
+        if not want:
+            continue
+        declared.append(name)
+        if want != digest[name]:
+            mismatches.append(
                 f"{name} 与索引不符：索引 {want}，复制后 {digest[name]}")
-    return "索引没有给出 MD5 或 SHA1，无法确认复制的内容"
+    if not declared:
+        return "索引没有给出 MD5 或 SHA1，无法确认复制的内容"
+    return "；".join(mismatches) or None
 
 
 def rewrite_header(header, count, rev):
@@ -327,9 +337,13 @@ def main(pkgdir, stage, overlay=None, rev="", lookup=None):
     kept, skipped, error, refused, unresolved = select(entries, overlay, lookup=lookup)
     if error:
         sys.exit(error)
+    reported = set()
     for cpv, _, state in refused:
+        if (cpv, state) in reported:
+            continue
+        reported.add((cpv, state))
         if state == "unknown":
-            print(f"!! 不发布 {cpv}：读不到它的 RESTRICT，无法确认可否散布",
+            print(f"!! 不发布 {cpv}：无法读取 RESTRICT，无法确认可否散布",
                   file=sys.stderr)
         else:
             print(f"!! 不发布 {cpv}：RESTRICT=bindist，不可再散布", file=sys.stderr)

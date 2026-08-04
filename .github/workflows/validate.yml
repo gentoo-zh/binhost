@@ -2,6 +2,7 @@ name: validate
 
 on:
   pull_request:
+  workflow_dispatch:
   push:
     branches: [master]
 
@@ -33,6 +34,24 @@ jobs:
       - name: Published index satisfies its own runtime dependencies
         run: python3 tests/test-verify-deps.py
 
+      - name: The base snapshot retains Portage matching metadata
+        run: python3 tests/test-snapshot-vdb.py
+
+      - name: The configured Gentoo binrepo index is captured intact
+        run: python3 tests/test-snapshot-binrepo.py
+
+      - name: A generation cannot mix indexes and snapshots
+        run: python3 tests/test-generation.py
+
+      - name: The private key stays outside untrusted build containers
+        run: python3 tests/test-signing-boundary.py
+
+      - name: Packages already signed by the current key stay unchanged
+        run: python3 tests/test-sign-packages.py
+
+      - name: Verified signatures persist without following cache symlinks
+        run: python3 tests/test-persist-packages.py
+
       - name: Package list separates the two repositories
         run: python3 tests/test-gen-packages.py
 
@@ -47,6 +66,12 @@ jobs:
 
       - name: Removing a package from the list
         run: python3 tests/test-retire-package.py
+
+      - name: Moving a package in the list
+        run: python3 tests/test-move-package.py
+
+      - name: Automated pull requests dispatch validation first
+        run: python3 tests/test-workflow-dispatch.py
 
       - name: Version comparison fixture still matches portage
         run: python3 tests/test-vercmp-fixture.py
@@ -75,7 +100,7 @@ jobs:
         run: OUT=/tmp/packages.json python3 build/gen-packages.py /tmp/overlay
 
   commits:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -83,7 +108,8 @@ jobs:
           fetch-depth: 0
       - name: Commit messages follow the convention
         run: |
-          base=$(git merge-base "origin/${{ github.base_ref }}" HEAD)
+          target="${{ github.event_name == 'pull_request' && github.base_ref || 'master' }}"
+          base=$(git merge-base "origin/${target}" HEAD)
           python3 build/check-commits.py "${base}..HEAD"
       - name: The checker itself still holds
         run: python3 tests/test-check-commits.py
@@ -144,6 +170,8 @@ jobs:
         run: python3 build/check-chrome.py site
       - name: Search hint on the packages page
         run: node tests/test-packages-search.js
+      - name: Packages page failure state
+        run: node tests/test-packages-error.js
       - name: File browser breadcrumbs
         run: node tests/test-app-crumbs.js
       - name: Links that differ per language

@@ -87,6 +87,11 @@ case("同一个包发布了两个版本时两个都列", lambda: (
                                           stanza("dev-libs/lib-2", "gentoo")]))]
     == ["1", "2"]))
 
+case("版本按 Portage 规则排序，不按字符串排序", lambda: (
+    [d["ver"] for d in load("\n\n".join([stanza("dev-libs/lib-1.10", "gentoo"),
+                                            stanza("dev-libs/lib-1.9", "gentoo")]))]
+    == ["1.9", "1.10"]))
+
 case("同一个包的两个 slot 都列，并标出 slot", lambda: (
     [(d["slot"], d["ver"]) for d in load("\n\n".join([
         stanza("dev-libs/lib-1", "gentoo", slot="1"),
@@ -115,7 +120,7 @@ case("未知仓库的产物不静默归入 ::gentoo，整轮中止", lambda: (
     (lambda r: r[0] == 1 and r[1] is None and "未知仓库" in r[4])(
         run_main(stanza("app-misc/a-1", "some-other-overlay")))))
 
-case("已设定的索引读不到时中止，不覆写上一份输出", lambda: (
+case("已设定的索引无法读取时中止，不覆写上一份输出", lambda: (
     (lambda r: r[0] == 1 and r[1] is None and "不存在" in r[4])(
         run_main("", index_path="/nonexistent/Packages"))))
 

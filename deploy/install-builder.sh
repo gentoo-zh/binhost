@@ -17,7 +17,7 @@ say() { printf '\n=== %s ===\n' "$1"; }
 say "确认没有构建正在进行"
 if ${REMOTE} "[ -e '${ROOT}/stage/build.lock' ] && ! flock -n '${ROOT}/stage/build.lock' -c true"; then
     echo "有一轮构建正在进行（${ROOT}/stage/build.lock）。" >&2
-    echo "等它结束再部署；确实要现在覆盖就传 FORCE=1。" >&2
+    echo "请等待当前构建结束；如需立即覆盖，请设置 FORCE=1。" >&2
     [ "${FORCE:-}" = 1 ] || exit 1
     echo "已设置 FORCE=1，继续部署。" >&2
 else

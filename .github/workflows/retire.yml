@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 
@@ -92,10 +93,16 @@ jobs:
               "" \
               "\`overlay 中已不存在该软件包\` 只从 \`packages.txt\` 删除；其余原因会同时写进 \`build/excluded.txt\`，" \
               "站点的包列表会把它连同原因一起显示出来。")
+            if ! gh workflow run validate.yml --ref "${branch}"; then
+              echo "  ${cp} 无法触发 validate，删除远端分支 ${branch}"
+              git push -q origin --delete "${branch}" || true
+              continue
+            fi
             if ! gh pr create --base master --head "${branch}" \
                  --title "build: retire ${cp}" --body "${body}" >> /tmp/urls.txt; then
               echo "  ${cp} PR 创建失败，删除远端分支 ${branch}"
               git push -q origin --delete "${branch}" || true
+              continue
             fi
           done
 

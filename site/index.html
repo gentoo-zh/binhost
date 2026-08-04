@@ -68,7 +68,7 @@
 
   <p class="lead" data-i18n-html="lead">
     gentoo-zh overlay 的二进制包与 distfiles 镜像。两者相互独立，按需分别配置。
-    二进制包里另附带这些包运行期依赖所需的部分 ::gentoo 包，不替代官方完整 binhost；
+    二进制包里另附带这些包运行期依赖所需的部分 ::gentoo 包，不替代 Gentoo 官方 binhost；
     distfiles 的 ::gentoo 部分用 <a href="https://gentoozh.org/mirrorlist/">社区镜像列表</a>里的节点。
   </p>
 
@@ -158,7 +158,7 @@
 
   <div data-pane="quick" hidden>
     <p class="note" data-i18n="quickNote">
-      这一段把三步一次做完。想知道每一步在做什么，切到手动配置。
+      快速配置会执行全部三个设置步骤；手动配置会分别显示每一步的内容。
     </p>
 
     <div class="code">
@@ -258,7 +258,7 @@
 
   <p class="note" data-i18n-html="repoNote">
     默认是南京大学，中国大陆下载会更快；源站在美国，部分地区下载可能较为缓慢。
-    两边的包都是一样的，签名也是同一份，更换哪个都不会影响验签。
+    两边的包逐字节相同并使用同一份签名；切换镜像不影响签名验证。
   </p>
 
   <div class="step">
@@ -333,13 +333,13 @@ window.MIRROR_I18N = {
     factFetching: ' 正在取二進位套件',
     modeManual: '手動設定',
     modeQuick: '快速設定',
-    quickNote: '這一段把三步一次做完。想知道每一步在做什麼，切到手動設定。',
+    quickNote: '快速設定會執行全部三個設定步驟；手動設定會分別顯示每一步的內容。',
     title: '設定',
-    lead: 'gentoo-zh overlay 的二進位套件與 distfiles 鏡像。兩者相互獨立，按需分別設定。二進位套件裡另附帶這些套件執行期依賴所需的部分 ::gentoo 套件，不取代官方完整 binhost；distfiles 的 ::gentoo 部分用 <a href="https://gentoozh.org/zh-tw/mirrorlist/">社群鏡像列表</a>裡的節點。',
+    lead: 'gentoo-zh overlay 的二進位套件與 distfiles 鏡像。兩者相互獨立，按需分別設定。二進位套件裡另附帶這些套件執行期依賴所需的部分 ::gentoo 套件，不取代 Gentoo 官方 binhost；distfiles 的 ::gentoo 部分用 <a href="https://gentoozh.org/zh-tw/mirrorlist/">社群鏡像列表</a>裡的節點。',
     h2bin: '二進位套件', h2dist: 'Distfiles',
     sigNote: '驗簽由第 2 步的 <code>verify-signature = true</code> 提供，只作用於本站。<code>FEATURES=binpkg-request-signature</code> 是全域的，會覆蓋它，也會要求你自己用 <code>FEATURES=buildpkg</code> 建出來的套件帶簽章——那些套件預設沒有簽章，於是每次本機建置都會在合併時報 <code>GnuPG verification failed</code>。要開它就得同時配好 <code>binpkg-signing</code> 與本機簽章金鑰。',
     srcLabel: '鏡像', srcLabelFirst: '優先', srcCernet: '教育網聯合鏡像站', srcNju: '南京大學', srcNyist: '南陽理工', srcHernet: '河南教育網', srcOrigin: '來源站',
-    repoNote: '預設是南京大學，中國大陸下載會更快；來源站在美國，部分地區下載可能較為緩慢。兩邊的套件都是一樣的，簽章也是同一份，更換哪個都不會影響驗簽。',
+    repoNote: '預設是南京大學，中國大陸下載會更快；來源站在美國，部分地區下載可能較為緩慢。兩邊的套件逐位元組相同並使用同一份簽章；切換鏡像不影響簽章驗證。',
     distNote: '這裡只有 overlay 的原始碼，不能替代官方來源，因此是追加而非替換。位址不寫 <code>distfiles/</code>，portage 會自動附加。這裡把鏡像都列出：<code>GENTOO_MIRRORS</code> 是按順序嘗試的列表，選中的無法取得時會落到後面的位址。',
     distOptOut: '因版權等原因不希望某個套件被鏡像時，在其 ebuild 中加入 <code>RESTRICT="mirror"</code>，同步工具會跳過。',
     step1: '匯入簽章公鑰', step2: '加入倉庫', step3: '打開 getbinpkg（附加）',
@@ -357,9 +357,9 @@ window.MIRROR_I18N = {
     factFetching: ' fetching binaries',
     modeManual: 'Step by step',
     modeQuick: 'Quick setup',
-    quickNote: 'One block, all three steps. Switch to step by step to see what each one does.',
+    quickNote: 'Quick setup performs all three configuration steps; step-by-step setup shows each step separately.',
     title: 'Setup',
-    lead: 'Binary package and distfiles mirror for the gentoo-zh overlay. The two are independent and configured separately. The binary packages also carry the ::gentoo runtime dependencies those packages need, which is not a replacement for the official binhost. For ::gentoo distfiles, use a node from the <a href="https://gentoozh.org/en/mirrorlist/">community mirror list</a>.',
+    lead: 'Binary package and distfiles mirror for the gentoo-zh overlay. The two are independent and configured separately. The binary packages also carry the ::gentoo runtime dependencies those packages need, which is not a replacement for the official Gentoo binhost. For ::gentoo distfiles, use a node from the <a href="https://gentoozh.org/en/mirrorlist/">community mirror list</a>.',
     h2bin: 'Binary packages', h2dist: 'Distfiles',
     sigNote: 'Verification comes from <code>verify-signature = true</code> in step 2 and applies to this repository only. <code>FEATURES=binpkg-request-signature</code> is global, overrides that, and also demands a signature on the packages you build yourself with <code>FEATURES=buildpkg</code>. Those are unsigned by default, so every local build fails to merge with <code>GnuPG verification failed</code>. Enabling it means setting up <code>binpkg-signing</code> and a local signing key as well.',
     srcLabel: 'Mirror', srcLabelFirst: 'First', srcCernet: 'CERNET', srcNju: 'Nanjing University', srcNyist: 'NYIST', srcHernet: 'HERNET', srcOrigin: 'Origin',

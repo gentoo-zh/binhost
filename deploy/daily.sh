@@ -59,16 +59,17 @@ if step "distfiles 同步" /usr/local/bin/binhost-distfiles-sync; then
     step "distfiles 对账" python3 "${LIB}/audit-distfiles.py" "${OVERLAY}" "${DISTDIR}"
 fi
 
-# The base system list arrives with the index. An index published before this
-# check existed does not have one, and that is not a dependency problem, so it
-# is reported and skipped. An unreadable list is still a failure: verify-deps
-# refuses to guess.
-BASELINE=/srv/pub/binpkgs/x86-64/installed.txt
-if [[ -e ${BASELINE} ]]; then
+# generation.json arrives with the first index created by the generation-aware
+# builder. Older public indexes predate this check and are skipped, while any
+# existing entry, including a broken symlink, must still pass verification.
+BINPKGS="${BINPKGS:-/srv/pub/binpkgs/x86-64}"
+GENERATION="${BINPKGS}/generation.json"
+if [[ ! -e ${GENERATION} && ! -L ${GENERATION} ]]; then
+    echo "跳过同代清单与依赖反向验证：${GENERATION} 尚未发布，下一轮构建会带上它"
+elif step "同代清单验证" python3 "${LIB}/generation.py" verify "${BINPKGS}"; then
     step "依赖反向验证" python3 "${LIB}/verify-deps.py" \
-        /srv/pub/binpkgs/x86-64/Packages --installed "${BASELINE}"
-else
-    echo "跳过依赖反向验证：${BASELINE} 尚未发布，下一轮建置会带上它"
+        "${BINPKGS}/Packages" --installed "${BINPKGS}/installed.txt" \
+        --available "${BINPKGS}/official.txt" --source "${BINPKGS}/source.txt"
 fi
 
 if [[ -s ${FAILURES} ]]; then

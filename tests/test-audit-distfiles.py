@@ -220,6 +220,46 @@ case("原文件很旧时回收仍然留得住", lambda: (
            [f"p{i}.tar.gz" for i in range(20)] + ["old.tar.gz"],
            aged={"old.tar.gz": 90 * 86400})))
 
+
+def recycle_mtime_probe():
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        source = d / "old.tar.gz"
+        source.write_text("x")
+        os.utime(source, (NOW - 90 * 86400, NOW - 90 * 86400))
+        old = audit.RECYCLE
+        audit.RECYCLE = str(d / "recycle")
+        try:
+            assert audit.recycle(source)
+            return abs((d / "recycle" / "old.tar.gz").stat().st_mtime - time.time()) < 5
+        finally:
+            audit.RECYCLE = old
+
+
+case("回收时间从移入回收目录时重新计算", recycle_mtime_probe)
+
+
+def expiry_probe():
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp) / "recycle"
+        root.mkdir()
+        old_file = root / "old.tar.gz"
+        new_file = root / "new.tar.gz"
+        old_file.write_text("old")
+        new_file.write_text("new")
+        os.utime(old_file, (NOW - 15 * 86400, NOW - 15 * 86400))
+        old = audit.RECYCLE
+        audit.RECYCLE = str(root)
+        try:
+            expired, failed = audit.expire_recycle(now=NOW)
+            return expired == ["old.tar.gz"] and not failed and not old_file.exists() \
+                and new_file.exists()
+        finally:
+            audit.RECYCLE = old
+
+
+case("回收目录仅删除超过独立保留期的文件", expiry_probe)
+
 case("同名不覆盖回收桶里已有的", lambda: (
     lambda r: sorted(r[2]) == ["dup.tar.gz", "dup.tar.gz.1"]
 )(run_main({f"app-misc/p{i}": {"1": [f"p{i}.tar.gz"]} for i in range(20)},
@@ -419,7 +459,7 @@ case("孤儿状态的锁建不出来时同样抛错", lambda: (
     _reap_lock_unavailable() is not None))
 
 
-case("拿不到帐本锁时抛错，不是照常清理", lambda: (
+case("无法取得账本锁时抛错并停止清理", lambda: (
     (lambda m: m is not None and "本轮不做任何清理" in m)(_lock_unavailable())))
 
 case("拿不到帐本锁时整轮拒绝清理", lambda: (
@@ -500,7 +540,7 @@ def scan_with_manifest(pkgs, manifests):
         return audit.scan(ov, aux)
 
 
-case("裸文件名照样归属，只是取不回来，不落入不确定", lambda: (
+case("裸文件名仍可归属，无法获取不等于无法判定", lambda: (
     (lambda r: r[0]["manual.zip"] == [("app-misc/m", False)]
      and r[2] == {"manual.zip"} and not r[1])(
         scan_with_manifest({"app-misc/m": [("app-misc/m-1", {"manual.zip": []}, "")]},

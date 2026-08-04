@@ -1,22 +1,27 @@
 #!/usr/bin/env python3
 """
-verify-deps.py <Packages> [--installed <cpv list>]
+verify-deps.py <Packages> [--installed <base snapshot>]
+               [--available <binrepo snapshot>] [--source <tree snapshot>]
 
 Checks an index against itself: every runtime dependency of every stanza must
-match a published CPV, or name a package the base system already provides.
+match a published CPV, name a package the base system already provides, or
+match a package captured from the configured Gentoo binary repository or
+Gentoo source tree.
 
-The base system is read from --installed, the package list the build container
-wrote from its own vdb. Without that file there is no way to tell a dependency
-the consumer already has from one this round failed to build, so every atom the
-index cannot satisfy counts as a finding.
+The base system is read from the immutable vdb snapshot written before emerge.
+Without that file there is no way to tell a dependency the consumer already has
+from one this round failed to build, so every atom the index cannot satisfy
+counts as a finding.
 """
 
 import pathlib
 import re
+import subprocess
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from ebuilds import index_db, runtime_atoms, split_cpv   # noqa: E402
+from portage.dep import Atom                             # noqa: E402
 
 RUNTIME_FIELDS = ("RDEPEND", "PDEPEND", "IDEPEND")
 
@@ -43,46 +48,146 @@ def parse(text):
     for s in text.split("\n\n")[1:]:
         if not s.strip():
             continue
-        f = dict(re.findall(r"^(\w+): (.*)$", s, re.M))
+        f = dict(re.findall(r"^(\w+): ?(.*)$", s, re.M))
         if f.get("CPV"):
             out.append(f)
     return out
 
 
-def read_installed(path):
-    """CPs the build root already provides, or None when not supplied."""
+SNAPSHOT_FIELDS = ("CPV", "SLOT", "USE", "IUSE", "EAPI", "REPO")
+
+
+def read_snapshot(path, description):
+    """Return fields and a Portage database for a structured snapshot."""
     if not path:
-        return None
+        return [], None
     p = pathlib.Path(path)
     if not p.exists():
         raise FileNotFoundError(path)
-    out = set()
-    for line in p.read_text().splitlines():
-        line = line.strip()
-        if line and not line.startswith("#"):
-            out.add(split_cpv(line)[0] or line)
-    return out
+    text = p.read_text()
+    fields = parse(text)
+    declared = re.search(r"^PACKAGES: ([0-9]+)$", text, re.M)
+    if (not declared or int(declared.group(1)) != len(fields)
+            or any(not set(SNAPSHOT_FIELDS).issubset(field) for field in fields)):
+        raise ValueError(f"{path} 不是完整的{description}")
+    return fields, index_db(fields)
 
 
-def check(fields, installed=None):
-    """(unsatisfied, absent, seen).
+def read_source_index(path):
+    p = pathlib.Path(path)
+    if not p.exists():
+        raise FileNotFoundError(path)
+    text = p.read_text()
+    fields = parse(text)
+    declared = re.search(r"^PACKAGES: ([0-9]+)$", text, re.M)
+    if not declared or int(declared.group(1)) != len(fields) or not fields:
+        raise ValueError(f"{path} 不是完整的 binrepo 索引")
+    return text, fields
+
+
+def write_snapshot(path, header, fields):
+    stanzas = []
+    for field in fields:
+        values = {name: field.get(name, "") for name in SNAPSHOT_FIELDS}
+        values["SLOT"] = values["SLOT"] or "0"
+        values["EAPI"] = values["EAPI"] or "0"
+        values["BUILD_ID"] = field.get("BUILD_ID", "0") or "0"
+        values["BUILD_TIME"] = field.get("BUILD_TIME", "0") or "0"
+        stanzas.append("\n".join(
+            f"{name}: {values[name]}".rstrip() for name in
+            (*SNAPSHOT_FIELDS, "BUILD_ID", "BUILD_TIME")))
+    text = "\n".join(header)
+    if stanzas:
+        text += "\n\n" + "\n\n".join(stanzas)
+    pathlib.Path(path).write_text(text + "\n")
+
+
+def write_available(path, source_text, source_fields, atoms):
+    cps = {Atom(atom).cp for atom in atoms}
+    selected = [field for field in source_fields
+                if split_cpv(field["CPV"])[0] in cps]
+    source_count = re.search(r"^PACKAGES: ([0-9]+)$", source_text, re.M).group(1)
+    source_timestamp = re.search(r"^TIMESTAMP: ([0-9]+)$", source_text, re.M)
+    header = [f"PACKAGES: {len(selected)}", f"SOURCE_PACKAGES: {source_count}"]
+    if source_timestamp:
+        header.append(f"SOURCE_TIMESTAMP: {source_timestamp.group(1)}")
+    header.append("VERSION: 1")
+    write_snapshot(path, header, selected)
+
+
+def source_resolver(tree):
+    import os
+    import portage
+
+    env = dict(os.environ)
+    env["ACCEPT_KEYWORDS"] = "~amd64"
+    env["PORTAGE_REPOSITORIES"] = (
+        "[DEFAULT]\nmain-repo = gentoo\n\n"
+        f"[gentoo]\nlocation = {pathlib.Path(tree).resolve()}\n")
+    database = portage.portdbapi(mysettings=portage.config(env=env))
+
+    def resolve(atom):
+        fields = []
+        names = ("SLOT", "USE", "IUSE_EFFECTIVE", "EAPI", "repository")
+        for cpv in database.xmatch("match-visible", atom):
+            values = dict(zip(names, database.aux_get(cpv, names)))
+            fields.append({
+                "CPV": cpv,
+                "SLOT": values["SLOT"],
+                "USE": "",
+                "IUSE": values["IUSE_EFFECTIVE"],
+                "EAPI": values["EAPI"],
+                "REPO": values["repository"],
+            })
+        return fields
+
+    return resolve
+
+
+def select_source(atoms, resolve):
+    selected = {}
+    for value in atoms:
+        atom = Atom(value)
+        if atom.use is not None:
+            continue
+        for field in resolve(atom):
+            key = (field["CPV"], field.get("REPO", ""))
+            selected[key] = field
+    return [selected[key] for key in sorted(selected)]
+
+
+def write_source(path, tree, atoms, resolve=None):
+    fields = select_source(atoms, resolve or source_resolver(tree))
+    try:
+        revision = subprocess.run(
+            ["git", "-C", str(tree), "rev-parse", "HEAD"], capture_output=True,
+            text=True).stdout.strip()
+    except FileNotFoundError:
+        revision = ""
+    header = [f"PACKAGES: {len(fields)}", "SOURCE_REPOSITORY: gentoo"]
+    if revision:
+        header.append(f"SOURCE_REVISION: {revision}")
+    header.append("VERSION: 1")
+    write_snapshot(path, header, fields)
+
+
+def check(fields, installed=None, available=None, source=None):
+    """(unsatisfied, base, external, source, seen).
 
     unsatisfied: atoms nothing published satisfies and the base system does
     not provide either. Both a wrong version of a carried package and a
     package nobody has count here.
     base: atoms the base system provides, which the consumer already has.
+    external: atoms the captured Gentoo binrepo provides.
+    source: atoms the captured Gentoo source tree provides.
     seen: every atom the index names, so a stale exception can be told from
     one that simply does not apply to this index.
-
-    The base system is matched by package name only: installed.txt carries no
-    slot or USE metadata, so checking the whole atom against it would reject
-    packages the root plainly has.
 
     With no installed list every unmatched atom is a finding: guessing that an
     absent package must be part of the base system is what hid failed builds.
     """
     db = index_db(fields)
-    unsatisfied, base, seen = {}, {}, set()
+    unsatisfied, base, external, source_matches, seen = {}, {}, {}, {}, set()
 
     def satisfied(node, cpv, out):
         """True when the index or the base system satisfies this node.
@@ -111,8 +216,14 @@ def check(fields, installed=None):
         seen.add(str(node))
         if db.match(node):
             return True
-        if installed is not None and node.cp in installed:
+        if installed is not None and installed.match(node):
             base.setdefault(str(node), set()).add(cpv)
+            return True
+        if available is not None and available.match(node):
+            external.setdefault(str(node), set()).add(cpv)
+            return True
+        if source is not None and source.match(node):
+            source_matches.setdefault(str(node), set()).add(cpv)
             return True
         out.append(node)
         return False
@@ -128,18 +239,60 @@ def check(fields, installed=None):
             satisfied(node, cpv, missing)
             for atom in missing:
                 unsatisfied.setdefault(str(atom), set()).add(cpv)
-    return unsatisfied, base, seen
+    return unsatisfied, base, external, source_matches, seen
 
 
-def main(path, exceptions=None, installed=None):
+def main(path, exceptions=None, installed=None, available=None,
+         write_available_path=None, source=None, source_tree=None,
+         write_source_path=None, resolve_source=None):
     fields = parse(pathlib.Path(path).read_text())
     if not fields:
         sys.exit(f"{path} 中没有任何 stanza")
     try:
-        have = read_installed(installed)
-    except FileNotFoundError as e:
-        sys.exit(f"读不到基础系统清单 {e}，无法判定缺失的依赖，本轮不通过")
-    unsatisfied, base, seen = check(fields, have)
+        _installed_fields, have = read_snapshot(installed, "基础系统快照")
+    except (FileNotFoundError, ValueError) as e:
+        sys.exit(f"无法读取基础系统清单 {e}，无法判定缺失的依赖，本轮不通过")
+    try:
+        if write_available_path:
+            if not available:
+                raise ValueError("未提供用于生成可用包快照的 binrepo 索引")
+            source_text, available_fields = read_source_index(available)
+            available_db = index_db(available_fields)
+        else:
+            available_fields, available_db = read_snapshot(
+                available, "Gentoo binhost 可用包快照")
+    except (FileNotFoundError, ValueError) as e:
+        sys.exit(f"无法读取 Gentoo binhost 清单 {e}，本轮不通过")
+
+    unsatisfied, base, external, source_matches, seen = check(
+        fields, have, available_db)
+    if write_available_path:
+        try:
+            write_available(write_available_path, source_text, available_fields,
+                            external)
+            _selected, selected_db = read_snapshot(
+                write_available_path, "Gentoo binhost 可用包快照")
+        except (FileNotFoundError, OSError, ValueError) as e:
+            sys.exit(f"无法生成 Gentoo binhost 可用包快照 {e}，本轮不通过")
+        available_db = selected_db
+        unsatisfied, base, external, source_matches, seen = check(
+            fields, have, available_db)
+    try:
+        if write_source_path:
+            if not source_tree:
+                raise ValueError("未提供用于生成源码快照的 Gentoo 仓库")
+            write_source(write_source_path, source_tree, unsatisfied,
+                         resolve=resolve_source)
+            _source_fields, source_db = read_snapshot(
+                write_source_path, "Gentoo 源码可用包快照")
+        else:
+            _source_fields, source_db = read_snapshot(
+                source, "Gentoo 源码可用包快照")
+    except (FileNotFoundError, OSError, ValueError) as e:
+        sys.exit(f"无法读取或生成 Gentoo 源码清单 {e}，本轮不通过")
+    if source_db is not None:
+        unsatisfied, base, external, source_matches, seen = check(
+            fields, have, available_db, source_db)
     known = read_exceptions(exceptions)
 
     accepted = {a for a in unsatisfied if a in known}
@@ -149,13 +302,15 @@ def main(path, exceptions=None, installed=None):
     if have is None:
         print("!! 未提供基础系统清单，索引之外的依赖一律计为未满足", file=sys.stderr)
     print(f"索引 {len(fields)} 个，{len(base)} 个原子由基础系统提供，"
+          f"{len(external)} 个由 Gentoo binhost 提供，"
+          f"{len(source_matches)} 个由 Gentoo 源码仓库提供，"
           f"{len(accepted)} 个是已列出的例外")
     for atom in stale:
         print(f"!! 例外 {atom} 本轮已能满足，应从 dep-exceptions.txt 删除",
               file=sys.stderr)
     if unsatisfied:
         print(f"!! {len(unsatisfied)} 个运行期依赖没有一个已发布版本满足，"
-              f"基础系统也不提供", file=sys.stderr)
+              f"基础系统、Gentoo binhost 与源码仓库也不提供", file=sys.stderr)
         for atom, who in sorted(unsatisfied.items())[:20]:
             print(f"   {atom}  <- {' '.join(sorted(who)[:3])}", file=sys.stderr)
         return 1
@@ -163,11 +318,20 @@ def main(path, exceptions=None, installed=None):
 
 
 if __name__ == "__main__":
-    args = sys.argv[1:]
-    inst = None
-    if "--installed" in args:
-        i = args.index("--installed")
-        inst = args[i + 1] if i + 1 < len(args) else None
-        del args[i:i + 2]
-    sys.exit(main(args[0] if args else "/srv/pub/binpkgs/x86-64/Packages",
-                  installed=inst))
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("path", nargs="?",
+                        default="/srv/pub/binpkgs/x86-64/Packages")
+    parser.add_argument("--installed")
+    parser.add_argument("--available")
+    parser.add_argument("--write-available")
+    parser.add_argument("--source")
+    parser.add_argument("--source-tree")
+    parser.add_argument("--write-source")
+    options = parser.parse_args()
+    sys.exit(main(options.path, installed=options.installed,
+                  available=options.available,
+                  write_available_path=options.write_available,
+                  source=options.source, source_tree=options.source_tree,
+                  write_source_path=options.write_source))
