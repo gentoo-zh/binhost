@@ -6,6 +6,8 @@ REMOTE="${REMOTE:-mirror}"
 SITE_ROOT="${SITE_ROOT:-/srv/mirrors}"
 OUT="${OUT:-build-status.json}"
 EVERY="${EVERY:-60}"
+BUILD_STARTED="${BUILD_STARTED:-$(date +%s)}"
+[[ ${BUILD_STARTED} =~ ^[0-9]+$ ]] || BUILD_STARTED="$(date +%s)"
 
 push() {
     # shellcheck disable=SC2029
@@ -17,8 +19,8 @@ push() {
 }
 
 emit() {
-    printf '{"state":"running","phase":"%s","done":%s,"total":%s,"plan":%s,' \
-        "$1" "$2" "$3" "$4"
+    printf '{"state":"running","phase":"%s","started":%s,"done":%s,"total":%s,"plan":%s,' \
+        "$1" "${BUILD_STARTED}" "$2" "$3" "$4"
     printf '"now":"%s","kind":"%s","progress_at":%s,"generated":%s}\n' \
         "$5" "$6" "$7" "$(date +%s)"
 }
@@ -62,8 +64,14 @@ finish)
         done|failed) ;;
         *) echo "用法： $0 finish [done|failed]" >&2; exit 1 ;;
     esac
-    printf '{"state":"%s","phase":"%s","progress_at":%s,"generated":%s}\n' \
-        "${state}" "${state}" "$(date +%s)" "$(date +%s)" | push
+    finished="$(date +%s)"
+    duration=0
+    (( finished >= BUILD_STARTED )) && duration=$(( finished - BUILD_STARTED ))
+    {
+        printf '{"state":"%s","phase":"%s","started":%s,"finished":%s,"duration":%s,' \
+            "${state}" "${state}" "${BUILD_STARTED}" "${finished}" "${duration}"
+        printf '"progress_at":%s,"generated":%s}\n' "${finished}" "${finished}"
+    } | push
     ;;
 *)
     echo "用法： $0 watch <log> | $0 finish [done|failed]" >&2

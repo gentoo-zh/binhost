@@ -266,6 +266,12 @@ ok "还原之后不留临时文件" "${leftover}" "0"
 
 echo "== daily.sh 的旧代过渡"
 
+audit_line=$(grep -n 'step "distfiles 对账"' "${ROOT}/deploy/daily.sh" | cut -d: -f1)
+index_line=$(grep -n 'step "distfiles 索引"' "${ROOT}/deploy/daily.sh" | cut -d: -f1)
+packages_line=$(grep -n 'step "包列表"' "${ROOT}/deploy/daily.sh" | cut -d: -f1)
+ok "distfiles 回收完成后才重建公开索引" "$((audit_line < index_line))" "1"
+ok "包列表使用回收后的 distfiles 索引" "$((index_line < packages_line))" "1"
+
 daily_generation_probe() {
     local mode="$1" d out calls
     d=$(mktemp -d)
@@ -456,7 +462,7 @@ snap() {
     d=$(mktemp -d)
     [ -n "$1" ] && printf '%s\n' "$1" > "${d}/progress"
     [ -n "$2" ] && printf '%s\n' "$2" > "${d}/whole.log"
-    out=$( cd "${ROOT}" && bash -c \
+    out=$( cd "${ROOT}" && BUILD_STARTED=100 bash -c \
         'source <(sed -n "/^emit()/,/^}/p;/^snapshot()/,/^}/p" build/build-progress.sh)
          snapshot "'"${d}"'/whole.log"' )
     rm -rf "${d}"
@@ -470,6 +476,7 @@ s=$(snap "42 173 app-misc/foo" "")
 ok "逐包阶段报出真实完成数" "$(field_of "${s}" "done")" "42"
 ok "逐包阶段报出总数" "$(field_of "${s}" total)" "173"
 ok "逐包阶段标出 phase" "$(phase_of "${s}")" "per-package"
+ok "逐包阶段保留本轮开始时间" "$(field_of "${s}" started)" "100"
 case "${s}" in *'"now":"app-misc/foo"'*) ok "逐包阶段报出当前套件" yes yes ;;
                *) ok "逐包阶段报出当前套件" no yes ;; esac
 
@@ -485,6 +492,33 @@ s=$(snap "7 9 app-misc/x" "")
 gen=$(field_of "${s}" generated); prog=$(field_of "${s}" progress_at)
 ok "progress_at 与 generated 分开输出" \
    "$([ -n "${gen}" ] && [ -n "${prog}" ] && echo both || echo missing)" "both"
+
+finish_status() {
+    local d
+    d=$(mktemp -d); mkdir -p "${d}/bin"
+    cat > "${d}/bin/ssh" <<'EOF'
+#!/bin/bash
+cat > "${CAPTURE}"
+EOF
+    chmod +x "${d}/bin/ssh"
+    ( cd "${ROOT}" && PATH="${d}/bin:${PATH}" CAPTURE="${d}/status.json" \
+        BUILD_STARTED=100 bash build/build-progress.sh finish "done" >/dev/null )
+    cat "${d}/status.json"
+    rm -rf "${d}"
+}
+
+s=$(finish_status)
+started=$(field_of "${s}" started)
+finished=$(field_of "${s}" finished)
+duration=$(field_of "${s}" duration)
+ok "完成状态保留开始与结束时间" \
+   "$([ -n "${started}" ] && [ -n "${finished}" ] && echo both || echo missing)" "both"
+ok "完成状态的用时由同一轮起止时间计算" "$(( finished - started ))" "${duration}"
+
+start_line=$(grep -n '^BUILD_STARTED=' build/cycle.sh | head -1 | cut -d: -f1)
+watch_line=$(grep -n 'build-progress.sh watch' build/cycle.sh | cut -d: -f1)
+ok "取得建置锁后先记录开始时间再启动监看" \
+   "$([ -n "${start_line}" ] && [ "${start_line}" -lt "${watch_line}" ] && echo yes || echo no)" "yes"
 
 build_status_probe() {
     local json="$1" d out

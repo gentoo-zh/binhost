@@ -170,6 +170,8 @@ jobs:
         run: python3 build/check-chrome.py site
       - name: Search hint on the packages page
         run: node tests/test-packages-search.js
+      - name: Build timing on the home page
+        run: node tests/test-index-facts.js
       - name: Packages page failure state
         run: node tests/test-packages-error.js
       - name: File browser breadcrumbs

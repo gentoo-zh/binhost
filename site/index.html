@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=369ad2d5">
+<link rel="stylesheet" href="/assets/site.css?v=96452951">
 <script src="/assets/early.js?v=0888406a"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -345,9 +345,10 @@ window.MIRROR_I18N = {
     step1: '匯入簽章公鑰', step2: '加入倉庫', step3: '打開 getbinpkg（附加）',
     keyAlt: '也可不安裝該套件，直接下載公鑰檔案，見 <a href="/faq#key-download">FAQ</a>。',
     keyNote: '<code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。沒有它，上面三條 gpg 命令會以 <code>no writable keyring found</code> 失敗——gpg 不會自己建這個目錄，而 portage 只在第一次取二進位套件時才會呼叫它，那已經是第 2、3 步之後了。簽章用的是 getuto 建立的 Portage Local Trust Key，口令在 <code>/etc/portage/gnupg/pass</code>，因此要用 <code>--passphrase-file</code> 讀。驗簽以 <code>portage</code> 使用者執行，該使用者對 trustdb 沒有寫入權限，所以 trustdb 要預先算好。',
-    factBinRow: '二進位套件', factDistRow: 'distfiles',
+    factBinRow: '二進位套件', factDistRow: 'distfiles', factBuildRow: '最近建置',
     factPkgs: ' 個 gentoo-zh', factDeps: ' 個 ::gentoo 依賴',
-    factDist: ' 個檔案', factTime: '更新於 ',
+    factDist: ' 個檔案', factTime: '更新於 ', factFinished: '完成於 ',
+    hour: ' 小時', minute: ' 分', second: ' 秒',
     h2contact: '聯絡', ctForum: '論壇'
   },
   'en': {
@@ -369,9 +370,10 @@ window.MIRROR_I18N = {
     step1: 'Import the signing key', step2: 'Add the repository', step3: 'Enable getbinpkg (append)',
     keyAlt: 'You can fetch the key file directly instead of installing the package; see the <a href="/faq#key-download">FAQ</a>.',
     keyNote: '<code>getuto</code> creates <code>/etc/portage/gnupg</code>. Without it the three gpg commands above fail with <code>no writable keyring found</code>: gpg does not create the directory itself, and portage only invokes getuto when it first fetches a binary package, which is after steps 2 and 3. The signature is made with the Portage Local Trust Key getuto created. Its passphrase is in <code>/etc/portage/gnupg/pass</code>, hence <code>--passphrase-file</code>. Verification runs as the <code>portage</code> user, which has no write access to the trustdb, so the trustdb must be computed beforehand.',
-    factBinRow: 'Binary packages', factDistRow: 'distfiles',
+    factBinRow: 'Binary packages', factDistRow: 'distfiles', factBuildRow: 'Latest build',
     factPkgs: ' from gentoo-zh', factDeps: ' ::gentoo dependencies',
-    factDist: ' files', factTime: 'updated ',
+    factDist: ' files', factTime: 'updated ', factFinished: 'finished ',
+    hour: ' h', minute: ' min', second: ' s',
     h2contact: 'Contact', ctForum: 'Forum'
   }
 };
@@ -397,15 +399,32 @@ window.MIRROR_I18N = {
       .toISOString().slice(0, 16).replace('T', ' ') + ' UTC+8';
   }
 
+  function duration(seconds) {
+    var value = Math.max(0, Number(seconds) || 0);
+    var hours = Math.floor(value / 3600);
+    var minutes = Math.floor(value % 3600 / 60);
+    var rest = Math.floor(value % 60);
+    if (hours) {
+      return hours + s('hour', ' 小时') +
+             (minutes ? ' ' + minutes + s('minute', ' 分') : '');
+    }
+    if (minutes) {
+      return minutes + s('minute', ' 分') +
+             (rest ? ' ' + rest + s('second', ' 秒') : '');
+    }
+    return rest + s('second', ' 秒');
+  }
+
   // One row per source, labelled, so figures that share a generation share
   // its time and a bare number never stands on its own.
-  function fact(label, parts, generated) {
+  function fact(label, parts, generated, timeLabel) {
     var body = parts.map(function (p) {
       return '<span class="part"><b class="num">' + p[0] + '</b>' + p[1] + '</span>';
     }).join('<span class="sep">·</span>');
     return '<span><span class="who">' + label + '</span>' + body + '</span>' +
            '<span class="when">' +
-           (generated ? s('factTime', '更新于 ') + '<b>' + stamp(generated) + '</b>' : '') +
+           (generated ? (timeLabel || s('factTime', '更新于 ')) +
+                        '<b>' + stamp(generated) + '</b>' : '') +
            '</span>';
   }
 
@@ -425,6 +444,11 @@ window.MIRROR_I18N = {
     if (dist && dist.files) {
       html += fact(s('factDistRow', 'distfiles'),
                    [[dist.files, s('factDist', ' 个文件')]], dist.generated);
+    }
+    if (job && job.state === 'done' && Number(job.finished) > 0 &&
+        Number.isFinite(job.duration) && job.duration >= 0) {
+      html += fact(s('factBuildRow', '最近构建'), [[duration(job.duration), '']],
+                   job.finished, s('factFinished', '完成于 '));
     }
     var fresh = job && job.generated &&
                 (Date.now() / 1000 - job.generated) < 3 * 3600;

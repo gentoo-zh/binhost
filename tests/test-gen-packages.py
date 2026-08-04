@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import json
 import os
 import pathlib
 import sys
@@ -17,16 +18,19 @@ def stanza(cpv, repo, slot="0"):
             f"REPO: {repo}\nSLOT: {slot}")
 
 
-def fresh(d, index_text=None, index_path=None):
+def fresh(d, index_text=None, index_path=None, list_lines=(), distfiles=None):
     """gen-packages reads its paths at import, so each case needs its own."""
     if index_text is not None:
         (d / "Packages").write_text(HEADER + "\n\n" + index_text + "\n")
     os.environ["INDEX"] = index_path or str(d / "Packages")
     os.environ["OUT"] = str(d / "packages.json")
-    (d / "list.txt").write_text("")
+    (d / "list.txt").write_text("\n".join(list_lines) + ("\n" if list_lines else ""))
     os.environ["LIST"] = str(d / "list.txt")
     os.environ["EXCLUDED"] = str(BUILD / "excluded.txt")
-    os.environ["DIST_INDEX"] = str(d / "nope.json")
+    dist_index = d / "distfiles-index.json"
+    if distfiles is not None:
+        dist_index.write_text(json.dumps({"generated": 1, "files": distfiles}))
+    os.environ["DIST_INDEX"] = str(dist_index)
     spec = importlib.util.spec_from_file_location(
         "gen_packages", BUILD / "gen-packages.py")
     m = importlib.util.module_from_spec(spec)
@@ -45,9 +49,23 @@ def load(index_text):
             os.environ.update(old)
 
 
-def run_main(index_text, overlay=None, index_path=None):
+def classify(cp, body=None):
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        old = dict(os.environ)
+        try:
+            module = fresh(d, "")
+            masked = type("Visible", (), {"masks": lambda *_args: False})()
+            text = body or 'EAPI=8\ninherit cmake\nKEYWORDS="~amd64"\n'
+            return module.why_not_listed(cp, "1", text, masked)
+        finally:
+            os.environ.clear()
+            os.environ.update(old)
+
+
+def run_main(index_text, overlay=None, index_path=None, list_lines=(), distfiles=None):
     """The whole generator, so the json and the two text files are covered."""
-    import contextlib, io, json
+    import contextlib, io
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
         ov = pathlib.Path(overlay or (d / "overlay"))
@@ -56,7 +74,7 @@ def run_main(index_text, overlay=None, index_path=None):
             (ov / "profiles" / "repo_name").write_text("gentoo-zh\n")
         old = dict(os.environ)
         try:
-            m = fresh(d, index_text, index_path)
+            m = fresh(d, index_text, index_path, list_lines, distfiles)
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
                 rc = m.main(str(ov))
@@ -68,6 +86,56 @@ def run_main(index_text, overlay=None, index_path=None):
         deps_txt = (d / "deps.txt").read_text() if (d / "deps.txt").exists() else None
         pkgs_txt = (d / "packages.txt").read_text() if (d / "packages.txt").exists() else None
         return rc, data, deps_txt, pkgs_txt, buf.getvalue()
+
+
+def make_overlay(root, packages):
+    root = pathlib.Path(root)
+    (root / "profiles").mkdir(parents=True)
+    (root / "profiles" / "repo_name").write_text("gentoo-zh\n")
+    for cp, spec in packages.items():
+        pkgdir = root / cp
+        pkgdir.mkdir(parents=True)
+        ver = spec.get("ver", "1")
+        body = spec.get(
+            "body", 'EAPI=8\ninherit cmake\nKEYWORDS="~amd64"\nSLOT="0"\n')
+        (pkgdir / f"{pkgdir.name}-{ver}.ebuild").write_text(body)
+        files = spec.get("dist", [])
+        (pkgdir / "Manifest").write_text(
+            "".join(f"DIST {name} 1 BLAKE2B x SHA512 y\n" for name in files))
+    return root
+
+
+def availability_matrix():
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        overlay = make_overlay(d / "overlay", {
+            "app-misc/both": {"dist": ["both.tar"]},
+            "app-misc/bin-only": {},
+            "app-misc/src-only": {"dist": ["src.tar"]},
+            "app-misc/live-only": {
+                "ver": "9999",
+                "body": 'EAPI=8\ninherit git-r3 cmake\nKEYWORDS="~amd64"\nSLOT="0"\n',
+            },
+            "virtual/neither": {},
+            "app-misc/repo-collision": {},
+        })
+        index = "\n\n".join([
+            stanza("app-misc/both-1", "gentoo-zh"),
+            stanza("app-misc/bin-only-1", "gentoo-zh"),
+            stanza("app-misc/repo-collision-9", "gentoo"),
+            stanza("app-misc/removed-1", "gentoo-zh"),
+        ])
+        result = run_main(
+            index, overlay=overlay,
+            list_lines=("app-misc/both", "app-misc/bin-only"),
+            distfiles=("both.tar", "src.tar"))
+        rows = {row["cp"]: row for row in result[1]["packages"]}
+        statuses = {
+            line.split()[0]: line.split()[1]
+            for line in result[3].splitlines()
+            if line and not line.startswith("#")
+        }
+        return result, rows, statuses
 
 
 CASES = []
@@ -125,7 +193,19 @@ case("已设定的索引无法读取时中止，不覆写上一份输出", lambd
         run_main("", index_path="/nonexistent/Packages"))))
 
 case("写出 schema 版本，供页面判断数据是否够新", lambda: (
-    run_main(stanza("dev-libs/lib-1", "gentoo"))[1]["schema"] == 2))
+    run_main(stanza("dev-libs/lib-1", "gentoo"))[1]["schema"] == 3))
+
+case("acct 与 virtual 归为本地安装", lambda: (
+    classify("acct-group/example") == "meta"
+    and classify("acct-user/example") == "meta"
+    and classify("virtual/example") == "meta"))
+
+case("virtual 不因 keyword 或 bindist 改变本地安装分类", lambda: (
+    classify("virtual/example",
+             'EAPI=8\nKEYWORDS="~arm64"\nRESTRICT="bindist"\n') == "meta"))
+
+case("app-alternatives 不冒充本地安装类别", lambda: (
+    classify("app-alternatives/example") == "candidate"))
 
 case("deps.txt 单独成档，不占用 packages.txt 的状态栏", lambda: (
     (lambda r: "dev-libs/lib" in r[2] and "dev-libs/lib" not in r[3])(
@@ -134,6 +214,41 @@ case("deps.txt 单独成档，不占用 packages.txt 的状态栏", lambda: (
 case("deps.txt 的说明行都以 # 开头", lambda: (
     all(l.startswith("#") or not l.strip() or l.split()[0].count("/") == 1
         for l in run_main(stanza("dev-libs/lib-1", "gentoo"))[2].splitlines())))
+
+case("binpkg 与 distfiles 四种组合分别写出", lambda: (
+    availability_matrix()[2] == {
+        "app-misc/bin-only": "bin",
+        "app-misc/both": "bin+src",
+        "app-misc/live-only": "--",
+        "app-misc/repo-collision": "--",
+        "app-misc/removed": "bin",
+        "app-misc/src-only": "src",
+        "virtual/neither": "--",
+    }))
+
+case("同名 ::gentoo 依赖不算 overlay binpkg", lambda: (
+    "app-misc/repo-collision" not in availability_matrix()[0][4]
+    and availability_matrix()[2]["app-misc/repo-collision"] == "--"))
+
+case("overlay 所有包都列出，包括两者都没有的包", lambda: (
+    set(availability_matrix()[1]) == {
+        "app-misc/bin-only", "app-misc/both", "app-misc/live-only",
+        "app-misc/removed",
+        "app-misc/repo-collision", "app-misc/src-only", "virtual/neither",
+    }))
+
+case("只有 9999 的包仍列出并标明原因", lambda: (
+    availability_matrix()[1]["app-misc/live-only"].get("why") == "live"))
+
+case("已删除但尚未退役的公开产物保留过渡状态", lambda: (
+    availability_matrix()[1]["app-misc/removed"] == {
+        "cp": "app-misc/removed", "binhost": False, "dist": [],
+        "present": False, "why": "removed",
+    }))
+
+case("包数据与纯文本清单不再写入说明", lambda: (
+    all("desc" not in row for row in availability_matrix()[1].values())
+    and "DESCRIPTION" not in availability_matrix()[0][3]))
 
 print(f"  {'用例':<44} 结果")
 bad = 0
