@@ -34,16 +34,16 @@ python3 build/validate.py /var/db/repos/gentoo-zh
 ## 无法收录的包
 
 - **`RESTRICT=bindist`**：上游不允许再分发 binpkg，CI 会直接拒绝。
-- **许可证不允许再分发**：构建时 `ACCEPT_LICENSE="-* @BINARY-REDISTRIBUTABLE"` 会拦截，但应在 PR 阶段即予说明。
+- **许可证不允许再分发**：构建时 `ACCEPT_LICENSE="-* @BINARY-REDISTRIBUTABLE"` 会拦截；提交 PR 时应说明该限制。
 - **不属于本 overlay 的包**：收录清单只接受 gentoo-zh overlay 自身的包。已收录包所需的 `::gentoo` 运行期依赖会随之一并发布，其他 `::gentoo` 包请使用[官方 binhost](https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart)。
 
 ## 合并之后
 
 合并不等于立即可用。包在下一轮构建时产出，构建由 binhost-build.timer 在每日 16:00（Asia/Shanghai）触发，另有最多 15 分钟的随机延迟，产物签名后发布。
 
-清单决定构建什么。构建一个包会把它的依赖一并编出来，其中属于本 overlay 的、
-以及运行期依赖里属于 `::gentoo` 的，都会随之发布，因此实际发布数多于清单条数。
-只在构建期用到的依赖不发布。
+清单决定直接构建目标。构建软件包时会同时构建其依赖；其中属于本 overlay 的依赖和
+`::gentoo` 运行期依赖会随之一并发布，因此实际发布数多于清单条数。仅用于构建的依赖
+不会发布。
 
 ## 站点与脚本
 
@@ -60,9 +60,9 @@ python3 -m http.server -d site 8000
 
 ## 提交信息
 
-主题写英文，正文写中文。这和 PR 的约定一致：标题英文，正文用提出者的语言。
-`git log --oneline` 与 GitHub 的列表只显示主题，英文对外读得通；理由写在正文，
-中文表达更准。
+主题使用英文，正文使用中文。PR 标题同样使用英文，正文使用提出者的语言。
+`git log --oneline` 与 GitHub 列表只显示主题，因此主题必须能独立说明改动范围。
+正文用于记录改动原因和剩余风险。
 
 主题写成 `scope: subject`：
 
@@ -72,20 +72,19 @@ site-sync: delete pages removed from the repository
 test: skip repository-level tests on build-only machines
 ```
 
-`scope` 要指得到这个提交改动的部分：脚本名去掉扩展名（`stage-index`、`site-sync`），
-改动涉及多个脚本时用目录名（`build`、`deploy`、`site`、`nginx`），改 CI 用 `ci`。
-一族文件共用横线前的那一段，所以动了几个 `test-*.py` 写 `test:` 即可。
+`scope` 应明确对应改动范围：单个脚本使用去掉扩展名的脚本名（`stage-index`、
+`site-sync`），多个脚本使用目录名（`build`、`deploy`、`site`、`nginx`），CI 改动使用
+`ci`。同一组文件使用连字符前的共同部分；修改多个 `test-*.py` 时使用 `test:`。
 
-一个主题只讲一件事。「删对文件、发得出告警、看得见 distfiles」是三个提交。
+一个主题只讲一件事。`删对文件`、`发得出告警`、`看得见 distfiles` 是三个提交。
 
-主题不超过 69 个字符（GLEP 66，与 overlay 同一个限制），结尾不加句号。正文与主题之间空一行，正文每行不超过 78 列，
-缩进的引文和断不开的地址不计。
+主题不超过 69 个字符（GLEP 66，与 overlay 同一个限制），结尾不加句号。正文与主题
+之间空一行，正文每行不超过 78 列；缩进的引文和无法换行的地址不计。
 
-正文写**为什么**，不写做了什么——做了什么 diff 里有，改动的由来、原先错在哪、
-剩余风险在 diff 里看不出来。测试只在结果影响了设计决定，或者证明了一个并非显而
-易见的反例时才写进正文；例行执行的命令、通过的项数不写。
+正文说明改动原因、原有缺陷和剩余风险；具体修改已经由 diff 展示。测试结果仅在影响
+设计决定或证明关键反例时写入正文，不记录例行命令和通过项数。
 
-中文不用全角引号 `「」`『』，代码和字面量用反引号。工具署名一律不写。这两条
+中文不使用全角引号，代码和字面量使用反引号。工具署名一律不写。这两条
 check-commits.py 都会查。
 
 ### 一个逻辑改动一个提交
