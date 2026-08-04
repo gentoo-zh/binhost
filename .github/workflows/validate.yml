@@ -10,11 +10,22 @@ jobs:
   packages:
     runs-on: ubuntu-latest
     container: gentoo/stage3@sha256:7453ebe0a87f90ab16beed03c7f579a3cbb9ba4985e8cc310086277329b2290c  # gentoo/stage3:amd64
+    env:
+      FEATURES: -ipc-sandbox -network-sandbox
+      PORTAGE_REPOSITORIES: |
+        [DEFAULT]
+        main-repo = gentoo
+
+        [gentoo]
+        location = /tmp/ci-gentoo
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Fetch the overlay
         run: |
+          mkdir -p /tmp/ci-gentoo/profiles
+          printf 'gentoo\n' > /tmp/ci-gentoo/profiles/repo_name
+          printf 'app-misc\n' > /tmp/ci-gentoo/profiles/categories
           mkdir -p /tmp/overlay
           wget -qO- https://github.com/gentoo-zh/overlay/archive/refs/heads/master.tar.gz |
             tar xz -C /tmp/overlay --strip-components=1
@@ -96,8 +107,11 @@ jobs:
           cp /tmp/packages.txt.bak build/packages.txt
           python3 build/validate.py /tmp/overlay
 
-      - name: Check the list generator runs
-        run: OUT=/tmp/packages.json python3 build/gen-packages.py /tmp/overlay
+      - name: The list generator rejects an incomplete repository set
+        run: |
+          ! OUT=/tmp/packages.json GENTOO_TREE=/tmp/missing-gentoo \
+            python3 build/gen-packages.py /tmp/overlay
+          test ! -e /tmp/packages.json
 
   commits:
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'

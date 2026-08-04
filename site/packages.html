@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=96452951">
+<link rel="stylesheet" href="/assets/site.css?v=099dbb69">
 <script src="/assets/early.js?v=0888406a"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -89,10 +89,12 @@
     <dd data-i18n="lgPending">等待构建</dd>
     <dt><span class="pend" data-i18n="excluded">不构建</span></dt>
     <dd data-i18n="lgExcluded">不收录</dd>
-    <dt><span class="pend why-tag" data-i18n="why_prebuilt">预编译</span></dt>
+    <dt><span class="pend why-tag" data-i18n="why_candidate">未收录</span></dt>
     <dd data-i18n="lgDashBin">不在收录清单</dd>
+    <dt><span class="pend why-tag" data-i18n="why_license">许可证</span></dt>
+    <dd data-i18n="lgPolicy">当前政策不允许发布</dd>
     <dt class="mark no">&#8212;</dt>
-    <dd data-i18n="lgDashDist">没有源码文件，或下载失败</dd>
+    <dd data-i18n="lgDashDist">没有 distfile、不允许镜像或尚未完整镜像</dd>
   </dl>
 
   <p class="count" id="count"></p>
@@ -180,24 +182,35 @@ window.MIRROR_I18N = {
     countFmt: 'overlay {n} 个包\n其中有二进制包 {b} 个\n其中有 distfiles {d} 个',
     pending: '待构建',
     excluded: '不构建',
-    why_prebuilt: '预编译',
-    why_nobuild: '无构建',
+    why_prebuilt: '未收录',
+    why_nobuild: '未收录',
     why_bindist: '不提供 binpkg',
+    why_license: '许可证',
+    why_unknown: '政策不明',
+    why_retiring: '待移除',
     why_nokeyword: '无 amd64',
     why_masked: '已屏蔽',
     why_live: '仅 9999',
     why_meta: '本地安装',
     why_removed: '已移除',
-    why_candidate: '待复查',
-    whyLong_prebuilt: '上游发布二进制包，无编译过程',
-    whyLong_nobuild: '字体、词库、主题，无构建系统',
+    why_candidate: '未收录',
+    whyLong_prebuilt: '上游提供预编译内容；这不是发布限制，该包目前不在建置清单中',
+    whyLong_nobuild: '未检测到常见建置 eclass；这不是发布限制，该包目前不在建置清单中',
     whyLong_bindist: 'RESTRICT=bindist，本站不发布二进制包；distfiles 按 mirror/fetch 单独判定',
+    whyLong_license: '当前 ebuild 的许可证不属于 @BINARY-REDISTRIBUTABLE，本站不发布二进制包',
+    whyLong_unknown: '无法确定当前 ebuild 是否符合二进制包发布政策',
+    whyLong_retiring: '公开索引仍包含旧产物；新一代索引成功切换后移除',
     whyLong_nokeyword: '没有 amd64 keyword',
     whyLong_masked: '被 profiles/package.mask 屏蔽',
     whyLong_live: '只有 live ebuild，不发布稳定的二进制包',
     whyLong_meta: 'acct-group、acct-user 与 virtual 在使用者系统本地安装',
     whyLong_removed: 'overlay 已移除该包；该行来自仍在公开索引中的产物',
-    whyLong_candidate: '有构建系统但未收录，需人工确认',
+    whyLong_candidate: '检测到建置流程，但该包目前不在建置清单中',
+    lgPolicy: '当前政策不允许发布',
+    lgDashDist: '没有 distfile、不允许镜像或尚未完整镜像',
+    distNone: '该包没有声明 distfile',
+    distUnavailable: 'distfile 不允许镜像，或尚未全部出现在镜像索引中',
+    distUnknown: '无法获取 distfiles 索引',
     none: '没有匹配的包。',
     ph: '搜索包名',
     noJs: '这张表由脚本渲染。纯文本查阅 <a href="/packages.txt">/packages.txt</a>。'
@@ -218,18 +231,26 @@ window.MIRROR_I18N = {
     lgPending: '等待建置',
     lgExcluded: '不收錄',
     lgDashBin: '不在收錄清單',
-    why_prebuilt: '預編譯', why_nobuild: '無建置', why_bindist: '不提供 binpkg',
-    why_nokeyword: '無 amd64', why_masked: '已遮蔽', why_live: '僅 9999', why_meta: '本機安裝', why_removed: '已移除', why_candidate: '待複查',
-    whyLong_prebuilt: '上游發布二進位套件，無編譯過程',
-    whyLong_nobuild: '字型、詞庫、佈景，無建置系統',
+    why_prebuilt: '未收錄', why_nobuild: '未收錄', why_bindist: '不提供 binpkg',
+    why_license: '許可證', why_unknown: '政策不明', why_retiring: '待移除',
+    why_nokeyword: '無 amd64', why_masked: '已遮蔽', why_live: '僅 9999', why_meta: '本機安裝', why_removed: '已移除', why_candidate: '未收錄',
+    whyLong_prebuilt: '上游提供預先編譯的內容；這不是發布限制，該套件目前不在建置清單中',
+    whyLong_nobuild: '未偵測到常見建置 eclass；這不是發布限制，該套件目前不在建置清單中',
     whyLong_bindist: 'RESTRICT=bindist，本站不發布二進位套件；distfiles 依 mirror/fetch 另行判定',
+    whyLong_license: '目前 ebuild 的許可證不屬於 @BINARY-REDISTRIBUTABLE，本站不發布二進位套件',
+    whyLong_unknown: '無法確定目前 ebuild 是否符合二進位套件發布政策',
+    whyLong_retiring: '公開索引仍包含舊產物；新一代索引成功切換後移除',
     whyLong_nokeyword: '沒有 amd64 keyword',
     whyLong_masked: '被 profiles/package.mask 遮蔽',
     whyLong_live: '只有 live ebuild，不發布穩定的二進位套件',
     whyLong_meta: 'acct-group、acct-user 與 virtual 在使用者系統本機安裝',
     whyLong_removed: 'overlay 已移除該套件；該列來自仍在公開索引中的產物',
-    whyLong_candidate: '有建置系統但未收錄，需人工確認',
-    lgDashDist: '沒有原始碼檔案，或下載失敗',
+    whyLong_candidate: '偵測到建置流程，但該套件目前不在建置清單中',
+    lgPolicy: '目前政策不允許發布',
+    lgDashDist: '沒有 distfile、不允許鏡像或尚未完整鏡像',
+    distNone: '該套件沒有宣告 distfile',
+    distUnavailable: 'distfile 不允許鏡像，或尚未全部出現在鏡像索引中',
+    distUnknown: '無法取得 distfiles 索引',
     ph: '搜尋套件名稱',
     noJs: '這張表由指令碼算繪。純文字查閱 <a href="/packages.txt">/packages.txt</a>。'
   },
@@ -250,18 +271,26 @@ window.MIRROR_I18N = {
     lgPending: 'Waiting to be built.',
     lgExcluded: 'Not included.',
     lgDashBin: 'Not on the list.',
-    why_prebuilt: 'prebuilt', why_nobuild: 'no build', why_bindist: 'no binpkg',
-    why_nokeyword: 'no amd64', why_masked: 'masked', why_live: '9999 only', why_meta: 'local install', why_removed: 'removed', why_candidate: 'review',
-    whyLong_prebuilt: 'Upstream ships a binary; nothing is compiled.',
-    whyLong_nobuild: 'Fonts, dictionaries, themes. No build system.',
+    why_prebuilt: 'not listed', why_nobuild: 'not listed', why_bindist: 'no binpkg',
+    why_license: 'license', why_unknown: 'policy unknown', why_retiring: 'pending removal',
+    why_nokeyword: 'no amd64', why_masked: 'masked', why_live: '9999 only', why_meta: 'local install', why_removed: 'removed', why_candidate: 'not listed',
+    whyLong_prebuilt: 'Upstream provides prebuilt content. This is not a publication restriction; the package is not currently on the build list.',
+    whyLong_nobuild: 'No common build eclass was detected. This is not a publication restriction; the package is not currently on the build list.',
     whyLong_bindist: 'RESTRICT=bindist; this host does not publish a binary package. Distfiles follow mirror and fetch restrictions separately.',
+    whyLong_license: 'The current ebuild license is outside @BINARY-REDISTRIBUTABLE, so this host does not publish a binary package.',
+    whyLong_unknown: 'The current ebuild could not be evaluated against the binary-package publication policy.',
+    whyLong_retiring: 'The public index still contains an old artifact. It is removed after a new index generation switches successfully.',
     whyLong_nokeyword: 'No amd64 keyword.',
     whyLong_masked: 'Masked in profiles/package.mask.',
     whyLong_live: 'Only a live ebuild exists, so no stable binary package is published.',
     whyLong_meta: 'acct-group, acct-user and virtual packages are installed locally.',
     whyLong_removed: 'The package left the overlay; this row remains because its artifact is still in the public index.',
-    whyLong_candidate: 'Has a build system but is not on the list.',
-    lgDashDist: 'No source files, or the download failed.',
+    whyLong_candidate: 'A build process was detected, but the package is not currently on the build list.',
+    lgPolicy: 'Current policy blocks publication.',
+    lgDashDist: 'No distfile, mirroring is restricted, or the mirror is incomplete.',
+    distNone: 'This package does not declare a distfile.',
+    distUnavailable: 'A distfile is restricted from mirroring or is not yet present in the mirror index.',
+    distUnknown: 'The distfiles index is unavailable.',
     ph: 'Search package name',
     noJs: 'This table is rendered by a script. Plain text at <a href="/packages.txt">/packages.txt</a>.'
   }
@@ -361,6 +390,14 @@ function fmtTime(unix) {
     .toISOString().slice(0, 16).replace("T", " ") + " UTC+8";
 }
 
+function reasonDetail(r) {
+  const details = [];
+  if (r.policy) details.push(t("whyLong_" + r.policy));
+  if (r.excluded) details.push(r.excluded);
+  else if (!r.binhost && r.why) details.push(t("whyLong_" + r.why));
+  return details.join(" ");
+}
+
 function render() {
   const q = document.getElementById("q").value.trim().toLowerCase();
   let hit = rows;
@@ -384,13 +421,24 @@ function render() {
     hit.map(function (r) {
       const url = "https://github.com/gentoo-zh/overlay/tree/master/" + r.cp;
       const name = esc(r.cp).replace("/", "/<wbr>");
-      const removed = r.present === false
-        ? ' <span class="pend why-tag" title="' + esc(t("whyLong_removed")) + '">' +
-          t("why_removed") + '</span>'
+      const policy = r.policy
+        ? ' <span class="pend why-tag" title="' + esc(t("whyLong_" + r.policy)) + '">' +
+          t("why_" + r.policy) + '</span>'
         : '';
+      const retiring = r.ver &&
+        (r.present === false || r.policy || r.excluded);
+      const retirementDetail = [reasonDetail(r), t("whyLong_retiring")]
+        .filter(Boolean).join(" ");
+      const retiringTag = retiring
+        ? ' <span class="pend why-tag" title="' + esc(retirementDetail) + '">' +
+          t("why_retiring") + '</span>'
+        : '';
+      const distDetail = distFailed ? t("distUnknown")
+        : !r.declaresDist ? t("distNone")
+        : r.dist ? "" : t("distUnavailable");
       return '<tr>' +
         '<td class="name">' + (r.present === false ? name :
-          '<a href="' + esc(url) + '">' + name + '</a>') + removed + '</td>' +
+          '<a href="' + esc(url) + '">' + name + '</a>') + policy + retiringTag + '</td>' +
         '<td class="mark ' + (r.ver ? 'yes' : 'no') + '"' +
           (r.excluded ? ' title="' + esc(r.excluded) + '"' : '') + '>' +
           (r.ver ? '\u2713'
@@ -399,7 +447,9 @@ function render() {
                  : r.why ? '<span class="pend why-tag" title="' + esc(t("whyLong_" + r.why)) + '">' +
                              t("why_" + r.why) + '</span>'
                  : '\u2014') + '</td>' +
-        '<td class="mark ' + (r.dist ? 'yes' : 'no') + '">' + (r.dist ? '\u2713' : '\u2014') + '</td>' +
+        '<td class="mark ' + (r.dist ? 'yes' : 'no') + '"' +
+          (distDetail ? ' title="' + esc(distDetail) + '"' : '') + '>' +
+          (r.dist ? '\u2713' : '\u2014') + '</td>' +
         '<td class="ver">' + r.ver + '</td>' +
         '<td class="size">' + human(r.size) + '</td></tr>';
     }).join("");
@@ -454,8 +504,9 @@ Promise.all([
     const dist = p.dist && p.dist.length > 0 && p.dist.every(function (f) { return have.has(f); });
     return { cp: p.cp, binhost: p.binhost, excluded: p.excluded || "",
              present: p.present !== false,
-             why: p.why || "", ver: b.ver || "", size: b.size || 0,
-             dist: dist };
+             policy: p.policy || "", why: p.why || "",
+             ver: b.ver || "", size: b.size || 0,
+             declaresDist: !!(p.dist && p.dist.length), dist: dist };
   });
   renderDeps(res[0]);
   counts();

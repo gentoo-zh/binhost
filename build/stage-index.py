@@ -13,8 +13,9 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from ebuilds import (                                       # noqa: E402
-    Masks, MetadataUnavailable, candidate_key, index_db, pinned_portdbapi,
-    read_mask, runtime_atoms, split_cpv, vercmp,
+    BINARY_LICENSES, Masks, MetadataUnavailable, candidate_key,
+    effective_license, index_db, pinned_portdbapi, read_mask, runtime_atoms,
+    source_only, split_cpv, vercmp,
 )
 from portage.dep import paren_enclose                       # noqa: E402
 
@@ -81,28 +82,9 @@ def safe_path(value):
 
 
 GENTOO_TREE = os.environ.get("GENTOO_TREE", "/var/db/repos/gentoo")
-BINARY_LICENSES = "-* @BINARY-REDISTRIBUTABLE"
-SOURCE_ONLY_CATEGORIES = frozenset({"acct-group", "acct-user", "virtual"})
 IMMEDIATE_QUARANTINE_STATES = frozenset({"yes", "license", "unknown"})
 
 RUNTIME_FIELDS = ("RDEPEND", "PDEPEND", "IDEPEND")
-
-
-def source_only(cpv):
-    cp, _version = split_cpv(cpv)
-    return cp.partition("/")[0] in SOURCE_ONLY_CATEGORIES
-
-
-def effective_license(cpv, f, current, current_slot, settings):
-    repo = f.get("REPO", "")
-    try:
-        metadata = {"USE": f.get("USE", ""), "LICENSE": current,
-                    "SLOT": current_slot or "0", "repository": repo}
-        if settings._getMissingLicenses(cpv, metadata):
-            return "no"
-    except Exception:                                      # noqa: BLE001
-        return "unknown"
-    return "yes"
 
 
 def portage_policy(overlay):

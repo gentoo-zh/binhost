@@ -21,13 +21,12 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from ebuilds import (                                     # noqa: E402
-    index_db, isolated_portage_config, runtime_atoms, split_cpv,
+    default_use, index_db, isolated_portage_config, runtime_atoms, source_only,
+    split_cpv,
 )
 from portage.dep import Atom                             # noqa: E402
 
 RUNTIME_FIELDS = ("RDEPEND", "PDEPEND", "IDEPEND")
-SOURCE_ONLY_CATEGORIES = frozenset({"acct-group", "acct-user", "virtual"})
-
 EXCEPTIONS = pathlib.Path(__file__).with_name("dep-exceptions.txt")
 
 
@@ -118,12 +117,6 @@ def write_available(path, source_text, source_fields, atoms):
     write_snapshot(path, header, selected)
 
 
-def default_use(iuse):
-    return " ".join(sorted(
-        flag[1:] for flag in iuse.split()
-        if flag.startswith("+") and len(flag) > 1))
-
-
 def source_resolver(tree, overlay=None):
     import os
     import portage
@@ -165,8 +158,7 @@ def select_source(atoms, resolve):
     selected = {}
     for value in atoms:
         atom = Atom(value)
-        category = atom.cp.partition("/")[0]
-        if atom.use is not None and category not in SOURCE_ONLY_CATEGORIES:
+        if atom.use is not None and not source_only(atom.cp):
             continue
         for field in resolve(atom):
             key = (field["CPV"], field.get("REPO", ""))

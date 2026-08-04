@@ -464,6 +464,7 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 
 .pkgs td.mark .why-tag,
 .pkgs td.name .why-tag {
+  display: inline-block; white-space: nowrap;
   color: var(--fg-soft); font-size: 0.74rem; font-style: normal; opacity: 0.75;
 }
 .pkgs td.ver, .pkgs th.ver { text-align: right; white-space: nowrap; }
