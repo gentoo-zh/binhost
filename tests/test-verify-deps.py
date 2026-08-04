@@ -421,6 +421,80 @@ case("带 USE 约束的原子不会由未知配置的源码包兜底", lambda: (
         lambda atom: [{"CPV": "dev-libs/lib-1", "SLOT": "0", "USE": "foo",
                        "IUSE": "foo", "EAPI": "8", "REPO": "gentoo"}])))
 
+
+def real_source_visibility(host_file=None, host_value="", keywords="~amd64",
+                           license_name="MIT", profile_mask=False):
+    import tempfile
+    from portage.dep import Atom
+    from portage.package.ebuild.config import LocationsManager
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp)
+        root.chmod(0o755)
+        tree = root / "gentoo"
+        overlay = root / "gentoo-zh"
+        for repo, name in ((tree, "gentoo"), (overlay, "gentoo-zh")):
+            profiles = repo / "profiles"
+            profiles.mkdir(parents=True)
+            (profiles / "repo_name").write_text(name + "\n")
+            (profiles / "categories").write_text("app-misc\n")
+        (tree / "profiles/license_groups").write_text("FREE MIT\n")
+        profile = tree / "profiles/test"
+        profile.mkdir()
+        (profile / "eapi").write_text("8\n")
+        (profile / "make.defaults").write_text(
+            'ARCH="amd64"\nACCEPT_LICENSE="@FREE"\n')
+        if profile_mask:
+            (profile / "package.mask").write_text("app-misc/example\n")
+
+        metadata = overlay / "metadata"
+        metadata.mkdir()
+        (metadata / "layout.conf").write_text(
+            "masters = gentoo\nthin-manifests = true\n")
+        package = overlay / "app-misc/example"
+        package.mkdir(parents=True)
+        (package / "example-1.ebuild").write_text(
+            f'EAPI=8\nSLOT="0"\nKEYWORDS="{keywords}"\n'
+            f'LICENSE="{license_name}"\n')
+        (package / "Manifest").write_text("")
+
+        config = root / "host/etc/portage"
+        config.mkdir(parents=True)
+        (config / "make.profile").symlink_to(profile)
+        if host_file is not None:
+            (config / host_file).write_text(host_value + "\n")
+
+        real_init = LocationsManager.__init__
+
+        def host_config(self, *args, **kwargs):
+            if kwargs.get("config_root") is None:
+                kwargs["config_root"] = str(root / "host")
+            return real_init(self, *args, **kwargs)
+
+        LocationsManager.__init__ = host_config
+        try:
+            resolve = verify.source_resolver(tree, overlay)
+            return resolve(Atom("app-misc/example::gentoo-zh"))
+        finally:
+            LocationsManager.__init__ = real_init
+
+
+case("源码快照不读取主机 package.mask", lambda: (
+    [field["CPV"] for field in real_source_visibility(
+        "package.mask", "app-misc/example")] == ["app-misc/example-1"]))
+
+case("源码快照不读取主机 package.accept_keywords", lambda: (
+    not real_source_visibility(
+        "package.accept_keywords", "app-misc/example **", keywords="")))
+
+case("源码快照不读取主机 package.unmask", lambda: (
+    not real_source_visibility(
+        "package.unmask", "app-misc/example", profile_mask=True)))
+
+case("源码快照明确接受源码包的许可证", lambda: (
+    [field["CPV"] for field in real_source_visibility(
+        license_name="all-rights-reserved")] == ["app-misc/example-1"]))
+
 print(f"  {'用例':<44} 结果")
 bad = 0
 for name, fn in CASES:

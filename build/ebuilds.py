@@ -290,6 +290,25 @@ class MetadataUnavailable(Exception):
     pass
 
 
+def isolated_portage_config(env):
+    """Load the active profile without host /etc/portage package overrides."""
+    import portage
+    import tempfile
+
+    base = portage.config(env=env)
+    config_root = tempfile.TemporaryDirectory(prefix="binhost-portage-")
+    config = pathlib.Path(config_root.name) / "etc/portage"
+    config.mkdir(parents=True)
+    if base.profile_path is not None:
+        (config / "make.profile").symlink_to(base.profile_path)
+    isolated_env = dict(env)
+    isolated_env["ACCEPT_KEYWORDS"] = base["ACCEPT_KEYWORDS"]
+    # local_config=False makes Portage accept every license.
+    settings = portage.config(config_root=config_root.name, env=isolated_env)
+    settings._binhost_config_root = config_root
+    return settings
+
+
 def pinned_portdbapi(overlay, tree=GENTOO_TREE, accept_license=None):
     """A portdbapi reading exactly the two trees given, not repos.conf.
 
@@ -301,7 +320,6 @@ def pinned_portdbapi(overlay, tree=GENTOO_TREE, accept_license=None):
     """
     import os
     import portage
-    import tempfile
     env = dict(os.environ)
     env["PORTAGE_REPOSITORIES"] = (
         "[DEFAULT]\nmain-repo = gentoo\n\n"
@@ -309,21 +327,10 @@ def pinned_portdbapi(overlay, tree=GENTOO_TREE, accept_license=None):
         f"[gentoo-zh]\nlocation = {overlay}\nmasters = gentoo\n")
     if accept_license is not None:
         env["ACCEPT_LICENSE"] = accept_license
-    config_root = None
     try:
-        settings = portage.config(env=env)
-        if accept_license is not None:
-            config_root = tempfile.TemporaryDirectory(prefix="binhost-portage-")
-            config = pathlib.Path(config_root.name) / "etc/portage"
-            config.mkdir(parents=True)
-            if settings.profile_path is not None:
-                (config / "make.profile").symlink_to(settings.profile_path)
-            env["ACCEPT_KEYWORDS"] = settings["ACCEPT_KEYWORDS"]
-            # local_config=False makes Portage accept every license.
-            settings = portage.config(config_root=config_root.name, env=env)
+        settings = (isolated_portage_config(env) if accept_license is not None
+                    else portage.config(env=env))
         db = portage.portdbapi(mysettings=settings)
-        if config_root is not None:
-            db._binhost_config_root = config_root
     except Exception as e:                                  # noqa: BLE001
         raise MetadataUnavailable(str(e)) from e
     for name, want in (("gentoo", str(tree)), ("gentoo-zh", str(overlay))):

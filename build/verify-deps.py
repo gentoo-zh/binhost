@@ -20,7 +20,9 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from ebuilds import index_db, runtime_atoms, split_cpv   # noqa: E402
+from ebuilds import (                                     # noqa: E402
+    index_db, isolated_portage_config, runtime_atoms, split_cpv,
+)
 from portage.dep import Atom                             # noqa: E402
 
 RUNTIME_FIELDS = ("RDEPEND", "PDEPEND", "IDEPEND")
@@ -128,6 +130,8 @@ def source_resolver(tree, overlay=None):
 
     env = dict(os.environ)
     env["ACCEPT_KEYWORDS"] = "~amd64"
+    # Source availability is independent of the user's accepted licenses.
+    env["ACCEPT_LICENSE"] = "*"
     repositories = (
         "[DEFAULT]\nmain-repo = gentoo\n\n"
         f"[gentoo]\nlocation = {pathlib.Path(tree).resolve()}\n")
@@ -137,7 +141,7 @@ def source_resolver(tree, overlay=None):
             f"location = {pathlib.Path(overlay).resolve()}\n"
             "masters = gentoo\n")
     env["PORTAGE_REPOSITORIES"] = repositories
-    database = portage.portdbapi(mysettings=portage.config(env=env))
+    database = portage.portdbapi(mysettings=isolated_portage_config(env))
 
     def resolve(atom):
         fields = []
