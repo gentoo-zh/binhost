@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=369ad2d5">
+<link rel="stylesheet" href="/assets/site.css?v=96452951">
 <script src="/assets/early.js?v=0888406a"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -170,7 +170,7 @@
     <tbody>
       <tr><td>62rem</td><td data-i18n="bp1">藏体积列。宽于它时包名不断行</td></tr>
       <tr><td>52rem</td><td data-i18n="bp2">藏版本列。指纹改成占满一行按分组换行</td></tr>
-      <tr><td>44rem</td><td data-i18n="bp3">隐藏说明列与文件浏览器的日期列；仅说明字段匹配时，另显示一行说明</td></tr>
+      <tr><td>44rem</td><td data-i18n="bp3">隐藏文件浏览器的日期列</td></tr>
       <tr><td>34rem</td><td data-i18n="bp4">手机布局：顶栏折两行，内边距与代码字号收紧</td></tr>
     </tbody>
   </table>
@@ -185,7 +185,7 @@
     <tbody>
       <tr><td data-i18n="r1k">顶栏两行</td><td data-i18n="r1v">品牌与语言、主题一行，导航链接一行。品牌用 flex-basis 0 先缩，否则浏览器会换行成三行</td></tr>
       <tr><td data-i18n="r2k">导航链接横向可滑</td><td data-i18n="r2v">不换行，避免一个链接单独占一行</td></tr>
-      <tr><td data-i18n="r3k">表格逐列隐藏</td><td data-i18n="r3v">体积、版本、说明按这个顺序让位，状态列留到最后</td></tr>
+      <tr><td data-i18n="r3k">表格逐列隐藏</td><td data-i18n="r3v">体积、版本依次让位，状态列留到最后</td></tr>
       <tr><td data-i18n="r4k">表头留在视口里</td><td data-i18n="r4v">thead 用 position: sticky，top 取 --nav-h。顶栏也是 sticky，写 0 会滚到它底下；顶栏窄屏折两行，高度由 util.js 量出来写进变量</td></tr>
       <tr><td data-i18n="r5k">包名在斜线处断行</td><td data-i18n="r5v">用 &lt;wbr&gt; 标出断点。word-break: break-all 会把 app-admin/1password 切成无法辨认的三段</td></tr>
       <tr><td data-i18n="r6k">页面不横向滚动</td><td data-i18n="r6v">代码块与地址栏在自己的容器里滚，表格靠逐列隐藏适配视口。表格外面不能套 overflow：overflow-x 一旦不是 visible，overflow-y 的 visible 会被算成 auto，表头的 sticky 就黏在那个容器上</td></tr>
@@ -205,19 +205,17 @@
   <h3 data-i18n="hTable">数据表</h3>
   <div class="demo" style="padding: 0;">
     <table class="listing pkgs" style="margin: 0;">
-      <thead><tr><th data-i18n="thPkg">包</th><th class="desc" data-i18n="thDesc">说明</th><th class="mark" data-i18n="thBin">二进制包</th><th class="ver" data-i18n="thVer">版本</th></tr></thead>
+      <thead><tr><th data-i18n="thPkg">包</th><th class="mark" data-i18n="thBin">二进制包</th><th class="ver" data-i18n="thVer">版本</th></tr></thead>
       <tbody>
-        <tr><td class="name"><a href="#">app-admin/chezmoi</a></td><td class="desc">Manage your dotfiles across machines</td><td class="mark yes">✓</td><td class="ver">2.71.1</td></tr>
-        <tr><td class="name"><a href="#">app-misc/crush</a></td><td class="desc">A command line shell</td><td class="mark no"><span class="pend" data-i18n="excluded">不构建</span></td><td class="ver"></td></tr>
-        <tr><td class="name"><a href="#">app-text/goldendict</a></td><td class="desc">Feature-rich dictionary lookup program</td><td class="mark no"><span class="pend" data-i18n="pending">待构建</span></td><td class="ver"></td></tr>
+        <tr><td class="name"><a href="#">app-admin/chezmoi</a></td><td class="mark yes">✓</td><td class="ver">2.71.1</td></tr>
+        <tr><td class="name"><a href="#">app-misc/crush</a></td><td class="mark no"><span class="pend" data-i18n="excluded">不构建</span></td><td class="ver"></td></tr>
+        <tr><td class="name"><a href="#">app-text/goldendict</a></td><td class="mark no"><span class="pend" data-i18n="pending">待构建</span></td><td class="ver"></td></tr>
       </tbody>
     </table>
   </div>
 
   <p class="note" data-i18n-html="table1">
-    搜索同时比对包名和说明。说明列被隐藏的宽度上，仅说明字段匹配时，会在包名下方
-    显示说明，并以 <code>&lt;mark&gt;</code> 标记匹配词，底色为 <code>--accent-weak</code>。
-    否则结果里会出现名字与搜索词无关的包，页面上找不到理由。
+    包列表搜索只匹配包名。状态列保留到最窄布局，用于直接比较发布结果。
   </p>
 
   <h3 data-i18n="hCode">代码块</h3>
@@ -403,7 +401,7 @@ window.MIRROR_I18N = {
     thBpDo: '做什麼',
     bp1: '隱藏體積欄。寬於它時套件名不斷行',
     bp2: '隱藏版本欄。指紋改成佔滿一行按分組換行',
-    bp3: '隱藏說明欄與檔案瀏覽器的日期欄；僅說明欄符合搜尋條件時，另顯示一行說明',
+    bp3: '隱藏檔案瀏覽器的日期欄',
     bp4: '手機版面：頂欄折兩行，內距與程式碼字級收緊',
     mobile2: '四塊都寫在基準規則之後。同權重下後出現的規則生效，混在基準規則中間會被其後的基準規則覆蓋。',
     thRule: '規則',
@@ -413,7 +411,7 @@ window.MIRROR_I18N = {
     r2k: '導覽連結橫向可捲',
     r2v: '不換行，避免一個連結單獨佔一行',
     r3k: '表格逐欄隱藏',
-    r3v: '體積、版本、說明按這個順序讓位，狀態欄留到最後',
+    r3v: '體積、版本依序讓位，狀態欄留到最後',
     r4k: '表頭留在視窗裡',
     r4v: 'thead 用 position: sticky，top 取 --nav-h。頂欄也是 sticky，寫 0 會捲到它底下；頂欄窄螢幕折兩行，高度由 util.js 量出來寫進變數',
     r5k: '套件名在斜線處斷行',
@@ -426,12 +424,11 @@ window.MIRROR_I18N = {
     hComp: '元件',
     hTable: '資料表',
     thPkg: '套件',
-    thDesc: '說明',
     thBin: '二進位套件',
     thVer: '版本',
     excluded: '不建置',
     pending: '待建置',
-    table1: '搜尋同時比對套件名和說明。說明欄被隱藏的寬度上，僅說明欄符合搜尋條件時，會在套件名下方顯示說明，並以 <code>&lt;mark&gt;</code> 標記符合的詞，底色為 <code>--accent-weak</code>。否則結果裡會出現名稱與搜尋詞無關的套件，頁面上找不到理由。',
+    table1: '套件列表搜尋只比對套件名。狀態欄保留到最窄版面，用於直接比較發布結果。',
     hCode: '程式碼區塊',
     code1: '路徑寫在標題列，命令與設定在下方。值用強調色，鍵用內文色，註解與提示符用次要色。每一塊都能整段複製，不需要使用者自己選取。',
     code2: '內容超寬時橫向捲動，捲軸保留不隱藏——它是還能往右看的唯一提示。調細到 6px，滑桿用 <code>--border</code>，停留時 <code>--fg-soft</code>。系統預設樣式在深色主題下是一條淺灰粗條，全站只有那一處不跟主題。',
@@ -527,7 +524,7 @@ window.MIRROR_I18N = {
     thBpDo: 'Effect',
     bp1: 'Hide the size column. Above it, package names do not wrap',
     bp2: 'Hide the version column. The fingerprint takes a full line and wraps by group',
-    bp3: 'Hide the description column and the file browser\'s date column; a row matched on its description carries that description underneath',
+    bp3: 'Hide the file browser\'s date column',
     bp4: 'Phone layout: the header wraps to two lines, padding and code size tighten',
     mobile2: 'All four blocks sit after the base rules. At equal specificity the later rule wins, so one placed among the base rules is overridden by the base rules below it. The fingerprint rule was lost that way once.',
     thRule: 'Rule',
@@ -537,7 +534,7 @@ window.MIRROR_I18N = {
     r2k: 'Navigation links scroll sideways',
     r2v: 'They do not wrap, so no single link ends up on a line of its own',
     r3k: 'Columns hide one at a time',
-    r3v: 'Size, version and description give way in that order; the status column is the last to go',
+    r3v: 'Size and version give way in that order; status stays to the end',
     r4k: 'The table header stays in view',
     r4v: 'thead is position: sticky with top at --nav-h. The header bar is sticky as well, so a top of 0 puts the table header underneath it; the bar wraps to two lines on a narrow screen and util.js measures its height into the variable',
     r5k: 'Package names break at the slash',
@@ -550,12 +547,11 @@ window.MIRROR_I18N = {
     hComp: 'Components',
     hTable: 'Data tables',
     thPkg: 'Package',
-    thDesc: 'Description',
     thBin: 'Binary',
     thVer: 'Version',
     excluded: 'excluded',
     pending: 'pending',
-    table1: 'Search matches the package name and the description at once. At widths where the description column is hidden, a row matched on its description carries that description under the name, with the matched term wrapped in <code>&lt;mark&gt;</code> over <code>--accent-weak</code>. Without it the results hold packages whose names have nothing to do with the query, and the page gives no reason why.',
+    table1: 'Package search matches the package name. Status columns remain visible until the narrowest layout because they carry the page\'s primary comparison.',
     hCode: 'Code blocks',
     code1: 'The path goes in the title bar, the command or configuration below it. Values take the accent, keys the body colour, comments and prompts the secondary colour. Every block copies whole, so nobody has to select it by hand.',
     code2: 'Content wider than the block scrolls sideways, and the scrollbar is kept rather than hidden: it is the only sign that there is more to the right. It is thinned to 6px, with the thumb on <code>--border</code> and <code>--fg-soft</code> on hover. The system default is a thick pale grey bar under the dark theme, the one element on the site that would not follow the theme.',

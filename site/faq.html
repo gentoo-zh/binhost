@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=369ad2d5">
+<link rel="stylesheet" href="/assets/site.css?v=96452951">
 <script src="/assets/early.js?v=0888406a"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -164,9 +164,13 @@
     <p data-i18n-html="a7">
       主体是 gentoo-zh/overlay 的收录清单。除此之外，本站也发布这些包所需、允许
       再分发的那部分 <code>::gentoo</code> 运行期依赖，两者在同一份索引里，用
-      <code>REPO</code> 字段区分。许可证不允许再分发的、带
-      <code>RESTRICT=bindist</code> 的都不收录。附带内容仅包含这些包的运行期
-      依赖，不替代 <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">Gentoo
+      <code>REPO</code> 字段区分。二进制包的许可证必须属于
+      <code>@BINARY-REDISTRIBUTABLE</code>，且不得设置 <code>RESTRICT=bindist</code>。
+      <code>acct-group/*</code>、<code>acct-user/*</code> 与 <code>virtual/*</code> 在使用者
+      系统本地安装。<code>RESTRICT=bindist</code> 只限制二进制包；distfiles 是否镜像由
+      <code>RESTRICT=mirror/fetch</code> 与 <code>SRC_URI</code> 条目独立决定。附带内容仅包含
+      这些包的运行期依赖，不替代
+      <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">Gentoo
       官方 binhost</a>。
       清单见 <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>。
     </p>
@@ -175,7 +179,8 @@
     <p data-i18n-html="a10">
       包数据表与交互式文件浏览需要脚本；页面标题、说明与链接仍可读取。
       纯文本的包清单在 <a href="/packages.txt">/packages.txt</a>，一行一个包，
-      第二列 <code>bin</code> 表示有二进制包、<code>src</code> 表示只镜像源码。
+      第二列 <code>bin+src</code> 表示两者都有、<code>bin</code> 表示只有二进制包、
+      <code>src</code> 表示只有 distfiles。
       目录浏览用 <a href="/_raw/">/_raw/</a>，那是由 nginx 生成的列表，不需要脚本。
       其余各页的正文都写在 HTML 里，文字浏览器直接可读。
     </p>
@@ -226,8 +231,8 @@ window.MIRROR_I18N = {
     a9b: '每日同步一次。因為套件名含版本與 build id，內容不再變化，所以已有的檔案不會重複傳輸。<code>--delay-updates</code> 讓這一批檔案在末尾一次換入。不加則索引可能先落地，而它引用的套件尚未傳完，這段時間下游回傳 404。鏡像建成後在 <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issues</a> 提出，以便在「有哪些鏡像？」一項中登記。',
     q7: '都收錄了哪些套件？',
     q10: '如何在 w3m、lynx 或 curl 中瀏覽？',
-    a10: '套件資料表與互動式檔案瀏覽需要指令碼；頁面標題、說明與連結仍可讀。純文字的套件清單在 <a href="/packages.txt">/packages.txt</a>，一行一個套件，第二欄 <code>bin</code> 表示有二進位套件、<code>src</code> 表示只鏡像原始碼。目錄瀏覽用 <a href="/_raw/">/_raw/</a>，那是由 nginx 生成的清單，不需要指令碼。其餘各頁的正文都寫在 HTML 裡，文字瀏覽器直接可讀。',
-    a7: '主體是 gentoo-zh/overlay 的收錄清單。除此之外，本站也發布這些套件所需、允許再散佈的那部分 <code>::gentoo</code> 執行期依賴，兩者在同一份索引裡，用 <code>REPO</code> 欄位區分。授權條款不允許再散佈的、帶 <code>RESTRICT=bindist</code> 的都不收錄。附帶內容僅包含這些套件的執行期依賴，不取代 <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">Gentoo 官方 binhost</a>。清單見 <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>。'
+    a10: '套件資料表與互動式檔案瀏覽需要指令碼；頁面標題、說明與連結仍可讀。純文字的套件清單在 <a href="/packages.txt">/packages.txt</a>，一行一個套件。第二欄 <code>bin+src</code> 表示兩者都有、<code>bin</code> 表示只有二進位套件、<code>src</code> 表示只有 distfiles。目錄瀏覽用 <a href="/_raw/">/_raw/</a>，那是由 nginx 生成的清單，不需要指令碼。其餘各頁的正文都寫在 HTML 裡，文字瀏覽器直接可讀。',
+    a7: '主體是 gentoo-zh/overlay 的收錄清單。除此之外，本站也發布這些套件所需、允許再散佈的那部分 <code>::gentoo</code> 執行期依賴，兩者在同一份索引裡，用 <code>REPO</code> 欄位區分。二進位套件的授權條款必須屬於 <code>@BINARY-REDISTRIBUTABLE</code>，且不得設定 <code>RESTRICT=bindist</code>。<code>acct-group/*</code>、<code>acct-user/*</code> 與 <code>virtual/*</code> 在使用者系統本機安裝。<code>RESTRICT=bindist</code> 只限制二進位套件；distfiles 是否鏡像由 <code>RESTRICT=mirror/fetch</code> 與 <code>SRC_URI</code> 項目另行判定。附帶內容僅包含這些套件的執行期依賴，不取代 <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">Gentoo 官方 binhost</a>。清單見 <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>。'
   },
   'en': { 
     q11: 'How do I obtain the signing key without installing the sec-keys package?',
@@ -252,8 +257,8 @@ window.MIRROR_I18N = {
     a9b: 'Sync once a day. Package names carry the version and build id, so their content never changes and existing files are not transferred again. <code>--delay-updates</code> swaps the batch in at the end; without it the index can land before the packages it names, and the mirror answers 404 in between. Once it is running, open a <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issue</a> so it can be listed under “Which mirrors are there?”.',
     q7: 'Which packages are included?',
     q10: 'How do I browse this in w3m, lynx or curl?',
-    a10: 'The package data table and interactive file browser require scripts; their headings, descriptions and links remain readable without scripts. A plain text package list is at <a href="/packages.txt">/packages.txt</a>, one package per line, the second column <code>bin</code> meaning a binary package exists and <code>src</code> meaning only the sources are mirrored. For directory browsing use <a href="/_raw/">/_raw/</a>, which nginx generates and needs no script. Every other page has its text in the HTML and reads fine in a text browser.',
-    a7: 'Mainly the gentoo-zh/overlay build list. This host also publishes the redistributable part of the <code>::gentoo</code> runtime dependencies those packages need; both live in one index and are told apart by the <code>REPO</code> field. Anything the licence does not permit redistributing, and anything with <code>RESTRICT=bindist</code>, is excluded. The scope of the bundled dependencies stops at those runtime dependencies; this is not a replacement for the <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">official Gentoo binhost</a>. The list is in <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>.'
+    a10: 'The package data table and interactive file browser require scripts; their headings, descriptions and links remain readable without scripts. A plain text package list is at <a href="/packages.txt">/packages.txt</a>, one package per line. Its second column uses <code>bin+src</code> for both, <code>bin</code> for a binary package only, and <code>src</code> for distfiles only. For directory browsing use <a href="/_raw/">/_raw/</a>, which nginx generates and needs no script. Every other page has its text in the HTML and reads fine in a text browser.',
+    a7: 'Mainly the gentoo-zh/overlay build list. This host also publishes the redistributable part of the <code>::gentoo</code> runtime dependencies those packages need; both live in one index and are told apart by the <code>REPO</code> field. A binary package must use licences in <code>@BINARY-REDISTRIBUTABLE</code> and must not set <code>RESTRICT=bindist</code>. <code>acct-group/*</code>, <code>acct-user/*</code> and <code>virtual/*</code> are installed locally on the user system. <code>RESTRICT=bindist</code> applies only to binary packages; distfile mirroring is governed separately by <code>RESTRICT=mirror/fetch</code> and each <code>SRC_URI</code> entry. The scope of the bundled dependencies stops at those runtime dependencies; this is not a replacement for the <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">official Gentoo binhost</a>. The list is in <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>.'
   }
 };
 </script>

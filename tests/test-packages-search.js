@@ -45,7 +45,7 @@ const blocks = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/scrip
   .map((m) => m[1]);
 if (!blocks.length) { console.log("  ✗ packages.html 未包含内联脚本"); process.exit(1); }
 const script = blocks.sort((a, b) => b.length - a.length)[0] +
-  "\n;globalThis.__t = { setRows: function (v) { rows = v; } };";
+  "\n;globalThis.__t = { setRows: function (v) { rows = v; }, parsePackages: parsePackages };";
 (0, eval)(script);
 
 const setRows = (data) => globalThis.__t.setRows(data);
@@ -65,34 +65,56 @@ setRows([
     ver: "2.0", size: 20, dist: true, why: "" },
 ]);
 
-const byDesc = renderWith("browser");
-check("说明字段匹配的行显示 hit-desc",
-      byDesc.includes('class="hit-desc"'), byDesc.slice(0, 400));
-check("附加说明会标记匹配词",
-      /<mark>browser<\/mark>/i.test(byDesc), byDesc.slice(0, 400));
-check("仅说明字段匹配的行显示附加说明",
-      (byDesc.match(/class="hit-desc"/g) || []).length === 1);
-
 const byName = renderWith("firefox");
-check("名字命中的行不补（说明列本来就在，补了是重复）",
-      !byName.includes('class="hit-desc"'));
+check("包名搜索保留匹配行",
+      byName.includes("www-client/firefox-zh") && !byName.includes("app-misc/foobar"),
+      byName.slice(0, 400));
 
-const noQuery = renderWith("");
-check("没有搜索词时一行都不补",
-      !noQuery.includes('class="hit-desc"'));
+const byDescription = renderWith("browser");
+check("说明字段不参与搜索", !byDescription, byDescription.slice(0, 400));
 
-setRows([{ cp: "app-misc/evil", desc: 'x <img src=q onerror=alert(1)> browser',
-           binhost: true, excluded: "", ver: "1", size: 1, dist: true, why: "" }]);
-const escaped = renderWith("browser");
-check("说明里的标签被转义，没有原样进 DOM",
-      !escaped.includes("<img src=q") && escaped.includes("&lt;img"),
-      escaped.slice(0, 400));
+setRows([{ cp: "media-sound/open-orpheus-bin", desc: "Orpheus", binhost: false,
+           excluded: "", ver: "", size: 0, dist: true, why: "bindist" }]);
+const bindist = renderWith("");
+check("bindist 只标记二进制包列",
+      bindist.includes("why_bindist") &&
+      /why_bindist<\/span><\/td><td class="mark yes">/.test(bindist),
+      bindist.slice(0, 500));
 
-setRows([{ cp: "app-misc/e2", desc: "see <b>bold</b> here", binhost: true, excluded: "",
-           ver: "1", size: 1, dist: true, why: "" }]);
-const escaped2 = renderWith("<b>");
-check("命中的词带标签时同样转义",
-      escaped2.includes("<mark>&lt;b&gt;</mark>"), escaped2.slice(0, 400));
+const packages = [
+  "PACKAGES: 3",
+  "",
+  "CPV: app-misc/same-9\nREPO: gentoo\nSIZE: 90",
+  "",
+  "CPV: app-misc/same-1\nREPO: gentoo-zh\nSIZE: 10",
+  "",
+  "CPV: app-misc/other-2\nREPO: gentoo-zh\nSIZE: 20",
+].join("\n");
+const overlayBuilt = globalThis.__t.parsePackages(packages, "gentoo-zh");
+check("只把 gentoo-zh stanza 算作 overlay 二进制包",
+      overlayBuilt["app-misc/same"].ver === "1" &&
+      overlayBuilt["app-misc/other"].ver === "2",
+      JSON.stringify(overlayBuilt));
 
-console.log(failed ? `\n  ${failed} 项不通过` : "\n  搜索命中说明的提示：全部通过");
+setRows([
+  { cp: "app-misc/both", binhost: true, excluded: "", present: true,
+    ver: "1", size: 1, dist: true, why: "" },
+  { cp: "app-misc/bin-only", binhost: true, excluded: "", present: true,
+    ver: "1", size: 1, dist: false, why: "" },
+  { cp: "app-misc/src-only", binhost: false, excluded: "", present: true,
+    ver: "", size: 0, dist: true, why: "candidate" },
+  { cp: "virtual/neither", binhost: false, excluded: "", present: true,
+    ver: "", size: 0, dist: false, why: "meta" },
+  { cp: "app-misc/removed", binhost: false, excluded: "", present: false,
+    ver: "1", size: 1, dist: false, why: "removed" },
+]);
+const matrix = renderWith("");
+check("四种发布组合与删除过渡同时渲染",
+      (matrix.match(/class="mark yes"/g) || []).length === 5 &&
+      (matrix.match(/class="mark no"/g) || []).length === 5 &&
+      matrix.includes("why_removed") &&
+      !matrix.includes('href="https://github.com/gentoo-zh/overlay/tree/master/app-misc/removed"'),
+      matrix.slice(0, 1200));
+
+console.log(failed ? `\n  ${failed} 项不通过` : "\n  包列表搜索与状态：全部通过");
 process.exit(failed ? 1 : 0);

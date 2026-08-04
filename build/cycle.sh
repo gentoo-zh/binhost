@@ -34,6 +34,9 @@ if ! flock -n 9; then
     alert_exit
 fi
 
+BUILD_STARTED=$(date +%s)
+export BUILD_STARTED
+
 git -C "${OVERLAY}" fetch --quiet origin master
 git -C "${OVERLAY}" reset --quiet --hard origin/master
 echo "overlay $(git -C "${OVERLAY}" rev-parse --short HEAD)"

@@ -51,12 +51,11 @@ fi
 : > "${FAILURES}"
 
 if step "distfiles 同步" /usr/local/bin/binhost-distfiles-sync; then
+    step "distfiles 对账" python3 "${LIB}/audit-distfiles.py" "${OVERLAY}" "${DISTDIR}"
     step "distfiles 索引" /usr/local/bin/binhost-distfiles-index
     step "包列表" env LIST="${LIB}/packages.txt" EXCLUDED="${LIB}/excluded.txt" \
         OUT=/srv/mirrors/packages.json INDEX=/srv/pub/binpkgs/x86-64/Packages \
         python3 "${LIB}/gen-packages.py" "${OVERLAY}"
-
-    step "distfiles 对账" python3 "${LIB}/audit-distfiles.py" "${OVERLAY}" "${DISTDIR}"
 fi
 
 # generation.json arrives with the first index created by the generation-aware

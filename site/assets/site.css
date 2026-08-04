@@ -408,7 +408,7 @@ button:active, .copy-chip:active { transform: translateY(1px); }
   justify-content: start; gap: 0.35rem 1.75rem;
   margin: -0.75rem 0 2rem;
   font-family: var(--mono); font-size: 0.78rem; line-height: 1.75; color: var(--fg-soft);
-  min-height: calc(2 * 1.75 * 0.95rem + 0.35rem);
+  min-height: calc(3 * 1.75 * 0.95rem + 0.7rem);
 }
 .facts > span { display: inline-flex; align-items: baseline; gap: 0.3em; flex-wrap: wrap; }
 .facts .part, .facts .when { display: inline-flex; align-items: baseline; gap: 0.3em;
@@ -462,23 +462,11 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 }
 
 
-.pkgs td.desc, .pkgs th.desc { white-space: normal; color: var(--fg-soft); }
-.pkgs td.desc {
-  white-space: nowrap; max-width: 0;
-  overflow-x: auto; overflow-y: hidden;
-  scrollbar-width: none;
+.pkgs td.mark .why-tag,
+.pkgs td.name .why-tag {
+  color: var(--fg-soft); font-size: 0.74rem; font-style: normal; opacity: 0.75;
 }
-.pkgs td.desc::-webkit-scrollbar { display: none; }
-.pkgs td.desc .why { color: var(--fg-soft); font-style: italic; opacity: 0.85; }
-.pkgs td.mark .why-tag { color: var(--fg-soft); font-style: normal; opacity: 0.75; }
 .pkgs td.ver, .pkgs th.ver { text-align: right; white-space: nowrap; }
-
-
-.pkgs .hit-desc { display: none; }
-.pkgs mark {
-  background: var(--accent-weak); color: var(--fg);
-  border-radius: 0.15rem; padding: 0 0.1em;
-}
 
 
 .fpr-box { margin-left: auto; display: flex; align-items: center; gap: 0.35rem; }
@@ -548,12 +536,6 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 
 @media (max-width: 44rem) {
   .listing td.date, .listing th.date { display: none; }
-  .pkgs td.desc, .pkgs th.desc { display: none; }
-  .pkgs .hit-desc {
-    display: block; margin-top: 0.2rem;
-    font-size: 0.78rem; line-height: 1.35;
-    color: var(--fg-soft); white-space: normal;
-  }
 }
 
 @media (max-width: 34rem) {
@@ -562,7 +544,10 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
   .deps-table td.ver, .deps-table th.ver { width: 6.4rem; }
 
   /* two columns leave the timestamp too little room and it breaks mid-value */
-  .facts { grid-template-columns: auto; gap: 0.1rem; }
+  .facts {
+    grid-template-columns: auto; gap: 0.1rem;
+    min-height: calc(6 * 1.75 * 0.95rem + 0.5rem);
+  }
   .facts .job { margin-top: 0.35rem; }
 
   .pkgs th.mark { width: 4.5rem; }

@@ -28,25 +28,21 @@ OUT = pathlib.Path(os.environ.get("OUT", HERE.parent / "site" / "packages.json")
 INDEX = os.environ.get("INDEX", "")
 DIST_INDEX = pathlib.Path(os.environ.get("DIST_INDEX", OUT.parent / "distfiles-index.json"))
 
-CPV = re.compile(r"^CPV: (\S+)", re.M)
 STANZA = re.compile(r"^(\w+): (.*)$", re.M)
-
-
-def field(text, name):
-    m = re.search(rf'^{name}="([^"]*)"', text, re.M)
-    return m.group(1).strip() if m else ""
 
 
 def why_not_listed(cp, ver, text, masked):
     if masked.masks(cp, ver):
         return "masked"
+    if cp.startswith(("acct-group/", "acct-user/", "virtual/")):
+        return "meta"
+    if ver == "9999":
+        return "live"
     kw = keywords_of(text)
     if kw is not None and not accepts_amd64(kw):
         return "nokeyword"
     if bindist_state(text) != "no":
         return "bindist"
-    if cp.startswith(("acct-", "virtual/", "app-alternatives/")):
-        return "meta"
     if inherits(text) & PREBUILT_ECLASS or cp.endswith("-bin"):
         return "prebuilt"
     if builds_from_source(text):
@@ -74,7 +70,11 @@ def read_built():
     if not p.exists():
         return set()
     out = set()
-    for cpv in CPV.findall(p.read_text(errors="ignore")):
+    for stanza in p.read_text(errors="ignore").split("\n\n")[1:]:
+        fields = dict(STANZA.findall(stanza))
+        if fields.get("REPO") != "gentoo-zh":
+            continue
+        cpv = fields.get("CPV", "")
         parts = catpkgsplit(cpv)
         if parts:
             out.add(f"{parts[0]}/{parts[1]}")
@@ -168,22 +168,23 @@ def main(overlay):
         print("!!! 未写出任何文件，保留上一份有效输出", file=sys.stderr)
         return 1
     masked = read_mask(overlay)
-    out, missing = [], sorted(wanted)
+    out, missing, present = [], sorted(wanted), set()
     for pkgdir in sorted(overlay.glob("*/*")):
         if not pkgdir.is_dir():
             continue
         cp = f"{pkgdir.parent.name}/{pkgdir.name}"
         eb = newest_ebuild(pkgdir)
         if eb is None:
-            continue
+            live = sorted(pkgdir.glob("*.ebuild"))
+            if not live:
+                continue
+            eb = live[-1]
+        present.add(cp)
 
         manifest = pkgdir / "Manifest"
         dist = []
         if manifest.exists():
             dist = re.findall(r"^DIST (\S+)", manifest.read_text(errors="ignore"), re.M)
-
-        if not dist and cp not in wanted and cp not in built:
-            continue
 
         if cp in wanted:
             missing.remove(cp)
@@ -191,7 +192,6 @@ def main(overlay):
         text = eb.read_text(errors="ignore")
         row = {
             "cp": cp,
-            "desc": field(text, "DESCRIPTION"),
             "binhost": cp in wanted,
             "dist": sorted(set(dist)),
         }
@@ -200,6 +200,10 @@ def main(overlay):
         if cp in excluded:
             row["excluded"] = excluded[cp]
         out.append(row)
+
+    for cp in sorted(built - present):
+        out.append({"cp": cp, "binhost": False, "dist": [],
+                    "present": False, "why": "removed"})
 
     out.sort(key=lambda p: p["cp"])
 
@@ -212,27 +216,36 @@ def main(overlay):
 
     tmp = OUT.with_suffix(".json.new")
     tmp.write_text(json.dumps(
-        {"schema": 2, "generated": int(time.time()), "packages": out,
+        {"schema": 3, "generated": int(time.time()), "packages": out,
          "deps": deps},
         ensure_ascii=False, separators=(",", ":")))
     os.replace(tmp, OUT)
 
     txt = OUT.with_name("packages.txt")
-    lines = [f"# gentoo-zh overlay，{len(out)} 个包",
+    lines = [f"# gentoo-zh overlay 与仍在公开索引中的旧产物，{len(out)} 个包",
              f"# 生成于 {time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime())}",
-             "# 第二列：bin 有二进制包，src 只镜像源码，-- 两者都没有，"
-             "?? 无法确定（distfiles 索引未能读取）",
+             "# 第二列：bin+src 两者都有，bin 只有二进制包，src 只有 distfiles，"
+             "-- 两者都没有，?? 无法确定 distfiles 状态",
              ""]
     for pkg in out:
-        if pkg["binhost"]:
-            mark = "bin"
-        elif not pkg["dist"]:
-            mark = "--"
+        has_bin = pkg["cp"] in built
+        if not pkg["dist"]:
+            has_dist = False
         elif have is None:
-            mark = "??"
+            has_dist = None
         else:
-            mark = "src" if all(f in have for f in pkg["dist"]) else "--"
-        lines.append(f"{pkg['cp']:<44} {mark}  {pkg['desc']}".rstrip())
+            has_dist = all(f in have for f in pkg["dist"])
+        if has_dist is None:
+            mark = "bin+??" if has_bin else "??"
+        elif has_bin and has_dist:
+            mark = "bin+src"
+        elif has_bin:
+            mark = "bin"
+        elif has_dist:
+            mark = "src"
+        else:
+            mark = "--"
+        lines.append(f"{pkg['cp']:<44} {mark}".rstrip())
     tmp_txt = txt.with_suffix(".txt.new")
     tmp_txt.write_text("\n".join(lines) + "\n")
     os.replace(tmp_txt, txt)
@@ -251,8 +264,9 @@ def main(overlay):
     os.replace(tmp_dep, dep_txt)
 
     with_dist = sum(1 for p in out if p["dist"])
-    print(f">>> {len(out)} packages ({sum(p['binhost'] for p in out)} on the binhost "
-          f"list, {with_dist} with distfiles, {len(deps)} ::gentoo deps) -> {OUT}")
+    print(f">>> {len(out)} packages ({len(built)} published binpkg, "
+          f"{sum(p['binhost'] for p in out)} on the build list, "
+          f"{with_dist} declaring distfiles, {len(deps)} ::gentoo deps) -> {OUT}")
     if have is None:
         print("!!! distfiles 索引未能读取，源码一列按无法确定输出", file=sys.stderr)
     return 0
