@@ -42,6 +42,14 @@ location ^~ /distfiles/ {
 	}
 }
 
+location = /binpkgs/x86-64 {
+	return 301 /binpkgs/stable/x86-64/;
+}
+
+location ^~ /binpkgs/x86-64/ {
+	rewrite ^/binpkgs/x86-64/(.*)$ /binpkgs/stable/x86-64/$1 permanent;
+}
+
 location ^~ /binpkgs/ {
 	root /srv/pub;
 	include /etc/nginx/conf.d/headers-files.inc;

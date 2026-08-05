@@ -360,8 +360,8 @@ ok "stable 默认使用独立缓存与暂存路径" "${storage}" "stable/x86-64"
 ok "stable 默认使用独立基础镜像标签" "${image}" "stable-x86-64"
 ok "stable 默认只接受主树稳定关键字" "${keywords}" "amd64"
 ok "stable 默认只对 gentoo-zh 接受测试关键字" "${overlay_keywords}" "~amd64"
-ok "stable 默认发布到兼容路径" \
-   "${remote_root}" "/srv/pub/binpkgs/x86-64"
+ok "stable 默认发布到明确的稳定频道路径" \
+   "${remote_root}" "/srv/pub/binpkgs/stable/x86-64"
 
 IFS='|' read -r channel storage image keywords overlay_keywords remote_root <<< \
     "$(channel_probe unstable)"
@@ -378,8 +378,8 @@ ok "stable 使用独立缓存与暂存路径" "${storage}" "stable/x86-64"
 ok "stable 使用独立基础镜像标签" "${image}" "stable-x86-64"
 ok "stable 的 Gentoo 主树只接受稳定关键字" "${keywords}" "amd64"
 ok "stable 只对 gentoo-zh 接受测试关键字" "${overlay_keywords}" "~amd64"
-ok "stable 发布到既有兼容路径" \
-   "${remote_root}" "/srv/pub/binpkgs/x86-64"
+ok "stable 发布到明确的稳定频道路径" \
+   "${remote_root}" "/srv/pub/binpkgs/stable/x86-64"
 
 CHANNEL=other bash -c '. "$1"' _ "${ROOT}/build/channel.sh" >/dev/null 2>&1
 channel_rc=$?

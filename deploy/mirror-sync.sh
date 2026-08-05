@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-BASE="${BASE:-https://distfiles.gentoozh.org/binpkgs/x86-64}"
+BASE="${BASE:-https://distfiles.gentoozh.org/binpkgs/stable/x86-64}"
 DEST="${DEST:-./x86-64}"
 MAX_REMOVE_SHARE="${MAX_REMOVE_SHARE:-20}"
 MAX_REMOVE_COUNT="${MAX_REMOVE_COUNT:-60}"

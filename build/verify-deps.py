@@ -352,7 +352,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("path", nargs="?",
-                        default="/srv/pub/binpkgs/x86-64/Packages")
+                        default="/srv/pub/binpkgs/stable/x86-64/Packages")
     parser.add_argument("--installed")
     parser.add_argument("--available")
     parser.add_argument("--write-available")

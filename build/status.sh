@@ -215,7 +215,7 @@ check_channel_index() {
     fi
 }
 
-check_channel_index stable "/binpkgs/${TAG}"
+check_channel_index stable "/binpkgs/stable/${TAG}"
 check_channel_index unstable "/binpkgs/unstable/${TAG}"
 
 dist=$(curl -fsS --max-time 15 "${SITE}/distfiles-status.json" 2>/dev/null)

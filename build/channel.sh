@@ -18,7 +18,7 @@ stable)
     CHANNEL_IMAGE_TAG="stable-${TAG}"
     CHANNEL_ACCEPT_KEYWORDS="amd64"
     CHANNEL_OVERLAY_KEYWORDS="~amd64"
-    CHANNEL_REMOTE_ROOT="/srv/pub/binpkgs/${TAG}"
+    CHANNEL_REMOTE_ROOT="/srv/pub/binpkgs/stable/${TAG}"
     CHANNEL_PROGRESS_OUT="build-status.json"
     ;;
 *)
