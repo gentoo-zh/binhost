@@ -59,6 +59,10 @@ CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"
 Docker socket、签名私钥或主机根文件系统，也不从主机挂载 `/dev`。部署验收确认运行中的
 构建容器为 `Privileged=false`，且看不到主机根设备 `/dev/sda3`。
 
+基础镜像更新和每轮完整构建都会执行 `@preserved-rebuild`，再确认 Portage 没有留下保留库。
+重建失败、检查失败或仍有保留库时，本轮不会提交新基础镜像，也不会进入暂存、签名或发布
+阶段。
+
 ### 依赖与暂存
 
 构建容器在 emerge 前记录基础系统的 CPV、SLOT、USE、IUSE、EAPI 与 repository，并在
