@@ -588,6 +588,68 @@ IFS='|' read -r seen left <<< "$(percpkg_probe)"
 ok "循环中会写出已完成数量、总数和当前套件" "${seen}" "1 3 app-misc/b"
 ok "循环结束后移除进度文件" "${left}" "无"
 
+echo "== preserved-rebuild 是发布前的硬闸门"
+
+preserved_probe() {
+    local emerge_rc="$1" portageq_rc="$2" preserved="$3" d rc out calls log_state
+    d=$(mktemp -d); mkdir -p "${d}/bin"
+    cat > "${d}/bin/emerge" <<EOF
+#!/bin/bash
+printf 'emerge %s\n' "\$*" >> "${d}/calls"
+exit ${emerge_rc}
+EOF
+    cat > "${d}/bin/portageq" <<EOF
+#!/bin/bash
+printf 'portageq %s\n' "\$*" >> "${d}/calls"
+printf '%s\n' '${preserved}'
+exit ${portageq_rc}
+EOF
+    chmod +x "${d}/bin/emerge" "${d}/bin/portageq"
+    out=$(PATH="${d}/bin:${PATH}" bash "${ROOT}/build/rebuild-preserved.sh" \
+        "${d}/rebuild.log" 2>&1)
+    rc=$?
+    calls=$(tr '\n' '|' < "${d}/calls" 2>/dev/null)
+    log_state=$(test -e "${d}/rebuild.log" && echo kept || echo removed)
+    printf '%s;%s;%s;%s\n' "${rc}" "${calls}" "${log_state}" "${out//$'\n'/|}"
+    rm -rf "${d}"
+}
+
+IFS=';' read -r rc calls log_state out <<< "$(preserved_probe 0 1 '')"
+ok "没有保留库时闸门通过" "${rc}" "0"
+contains "执行 Portage 的重建集合" "${calls}" \
+    "emerge --usepkg --changed-use --with-bdeps=y --keep-going --quiet-build @preserved-rebuild"
+contains "重建后查询保留库" "${calls}" "portageq list_preserved_libs /"
+ok "成功日志不会残留" "${log_state}" "removed"
+
+IFS=';' read -r rc calls log_state out <<< "$(preserved_probe 2 1 '')"
+ok "重建失败时闸门失败" "$(( rc != 0 ))" "1"
+ok "重建失败后不执行不可靠的残留检查" \
+   "$(grep -c 'portageq' <<< "${calls}")" "0"
+ok "重建失败日志保留" "${log_state}" "kept"
+
+IFS=';' read -r rc calls log_state out <<< \
+    "$(preserved_probe 0 0 'dev-libs/example: /usr/lib64/libexample.so.1')"
+ok "仍有保留库时闸门失败" "$(( rc != 0 ))" "1"
+contains "输出残留库的具体路径" "${out}" "/usr/lib64/libexample.so.1"
+
+IFS=';' read -r rc calls log_state out <<< "$(preserved_probe 0 13 'permission denied')"
+ok "无法查询保留库时闸门失败" "$(( rc != 0 ))" "1"
+contains "查询错误不会被当成空集合" "${out}" "无法检查保留库"
+
+base_rebuild_line=$(grep -n '/usr/local/bin/rebuild-preserved' \
+    "${ROOT}/build/base-image.sh" | tail -1 | cut -d: -f1)
+base_last_ebuild_line=$(grep -nE 'emerge |perl-cleaner ' \
+    "${ROOT}/build/base-image.sh" | tail -1 | cut -d: -f1)
+ok "基础镜像在全部 ebuild 操作后处理保留库" \
+   "$(( base_rebuild_line > base_last_ebuild_line ))" "1"
+
+container_rebuild_line=$(grep -n '^/usr/local/bin/rebuild-preserved' \
+    "${ROOT}/build/build-container.sh" | cut -d: -f1)
+emaint_line=$(grep -n '^emaint binhost --fix' \
+    "${ROOT}/build/build-container.sh" | cut -d: -f1)
+ok "完整构建在修复索引前处理保留库" \
+   "$(( container_rebuild_line < emaint_line ))" "1"
+
 echo "== publish.sh"
 
 d=$(setup_publish)

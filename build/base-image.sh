@@ -43,6 +43,7 @@ ${DOCKER} run -i --security-opt=no-new-privileges --name "${container}" \
     -v "${DISTDIR}:/var/cache/distfiles" \
     -v "${PKGDIR}:/var/cache/binpkgs" \
     -v "${PUBLIC_KEY}:/tmp/binhost.asc:ro" \
+    -v "$(dirname "$0")/rebuild-preserved.sh:/usr/local/bin/rebuild-preserved:ro" \
     -e "MAKEOPTS=${MAKEOPTS}" -e "JOBS=${JOBS}" -e "SIGNING_KEY=${SIGNING_KEY}" \
     "${STAGE3}" /bin/bash -euo pipefail -s <<'INNER'
 
@@ -92,6 +93,11 @@ else
         echo "!! gentoolkit 安装失败，本次未清理缓存"
 fi
 
+echo ">>> rebuilding preserved library consumers"
+if ! /usr/local/bin/rebuild-preserved /tmp/preserved-rebuild.log; then
+    touch /tmp/preserved-rebuild-incomplete
+fi
+
 rm -rf /etc/portage/gnupg/private-keys-v1.d \
        /etc/portage/gnupg/pass \
        /etc/portage/gnupg/openpgp-revocs.d
@@ -102,6 +108,11 @@ previous=$(${DOCKER} image inspect "${BASE}-prev" --format '{{.Id}}' 2>/dev/null
 if ${DOCKER} cp "${container}:/tmp/world-incomplete" - >/dev/null 2>&1; then
     ${DOCKER} rm -f "${container}" >/dev/null
     die "@world 未能对齐，保留现有的 ${BASE}"
+fi
+
+if ${DOCKER} cp "${container}:/tmp/preserved-rebuild-incomplete" - >/dev/null 2>&1; then
+    ${DOCKER} rm -f "${container}" >/dev/null
+    die "@preserved-rebuild 未完成，保留现有的 ${BASE}"
 fi
 
 echo ">>> committing ${BASE}"

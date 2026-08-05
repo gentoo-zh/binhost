@@ -82,6 +82,7 @@ ${DOCKER} run --rm -i --security-opt=no-new-privileges \
     -v "${PKGDIR}:/var/cache/binpkgs" \
     -v "${GENTOO_BINPKGS}:/var/cache/binhost/gentoo" \
     -v "${LIST}:/tmp/packages.txt:ro" \
+    -v "$(dirname "$0")/rebuild-preserved.sh:/usr/local/bin/rebuild-preserved:ro" \
     -v "$(dirname "$0")/snapshot-binrepo.py:/usr/local/bin/snapshot-binrepo:ro" \
     -v "$(dirname "$0")/snapshot-vdb.py:/usr/local/bin/snapshot-vdb:ro" \
     -v "${LOGDIR}:/var/log/binhost" \
@@ -137,6 +138,9 @@ else
     done
     rm -f /var/log/binhost/progress
 fi
+
+echo "::: 重建保留库的使用者"
+/usr/local/bin/rebuild-preserved /var/log/binhost/preserved-rebuild.log
 
 emaint binhost --fix
 if ! python3 /usr/local/bin/snapshot-binrepo \
