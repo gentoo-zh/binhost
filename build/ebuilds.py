@@ -316,7 +316,7 @@ def effective_license(cpv, fields, current, current_slot, settings):
     return "yes"
 
 
-def isolated_portage_config(env):
+def isolated_portage_config(env, package_accept_keywords=()):
     """Load the active profile without host /etc/portage package overrides."""
     import portage
     import tempfile
@@ -327,6 +327,11 @@ def isolated_portage_config(env):
     config.mkdir(parents=True)
     if base.profile_path is not None:
         (config / "make.profile").symlink_to(base.profile_path)
+    if package_accept_keywords:
+        keyword_dir = config / "package.accept_keywords"
+        keyword_dir.mkdir()
+        (keyword_dir / "binhost").write_text(
+            "\n".join(package_accept_keywords) + "\n")
     isolated_env = dict(env)
     isolated_env["ACCEPT_KEYWORDS"] = base["ACCEPT_KEYWORDS"]
     # local_config=False makes Portage accept every license.

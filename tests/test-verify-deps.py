@@ -423,7 +423,8 @@ case("带 USE 约束的原子不会由未知配置的源码包兜底", lambda: (
 
 
 def real_source_visibility(host_file=None, host_value="", keywords="~amd64",
-                           license_name="MIT", profile_mask=False):
+                           license_name="MIT", profile_mask=False,
+                           repository="gentoo-zh"):
     import tempfile
     from portage.dep import Atom
     from portage.package.ebuild.config import LocationsManager
@@ -439,6 +440,9 @@ def real_source_visibility(host_file=None, host_value="", keywords="~amd64",
             (profiles / "repo_name").write_text(name + "\n")
             (profiles / "categories").write_text("app-misc\n")
         (tree / "profiles/license_groups").write_text("FREE MIT\n")
+        tree_metadata = tree / "metadata"
+        tree_metadata.mkdir()
+        (tree_metadata / "layout.conf").write_text("thin-manifests = true\n")
         profile = tree / "profiles/test"
         profile.mkdir()
         (profile / "eapi").write_text("8\n")
@@ -451,7 +455,8 @@ def real_source_visibility(host_file=None, host_value="", keywords="~amd64",
         metadata.mkdir()
         (metadata / "layout.conf").write_text(
             "masters = gentoo\nthin-manifests = true\n")
-        package = overlay / "app-misc/example"
+        repo_path = overlay if repository == "gentoo-zh" else tree
+        package = repo_path / "app-misc/example"
         package.mkdir(parents=True)
         (package / "example-1.ebuild").write_text(
             f'EAPI=8\nSLOT="0"\nKEYWORDS="{keywords}"\n'
@@ -474,7 +479,7 @@ def real_source_visibility(host_file=None, host_value="", keywords="~amd64",
         LocationsManager.__init__ = host_config
         try:
             resolve = verify.source_resolver(tree, overlay)
-            return resolve(Atom("app-misc/example::gentoo-zh"))
+            return resolve(Atom(f"app-misc/example::{repository}"))
         finally:
             LocationsManager.__init__ = real_init
 
@@ -490,6 +495,13 @@ case("源码快照不读取主机 package.accept_keywords", lambda: (
 case("源码快照不读取主机 package.unmask", lambda: (
     not real_source_visibility(
         "package.unmask", "app-misc/example", profile_mask=True)))
+
+case("源码快照接受 overlay 的测试关键字", lambda: (
+    [field["CPV"] for field in real_source_visibility()] ==
+    ["app-misc/example-1"]))
+
+case("源码快照不接受 Gentoo 主树的测试关键字", lambda: (
+    not real_source_visibility(repository="gentoo")))
 
 case("源码快照明确接受源码包的许可证", lambda: (
     [field["CPV"] for field in real_source_visibility(

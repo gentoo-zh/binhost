@@ -339,6 +339,18 @@ ok "交回属主排在持久化之前" "$(( owner_line < persist ))" "1"
 handback=$(grep -c 'chown -R "$(id -u):$(id -g)" "${PKGDIR}"' "${ROOT}/build/build-container.sh")
 ok "交回的是 PKGDIR 而不是别的目录" "${handback}" "1"
 
+echo "== 基础镜像只对 overlay 放宽测试关键字"
+
+base_image=$(<"${ROOT}/build/base-image.sh")
+ok "全局关键字保持稳定 amd64" \
+   "$(grep -Fc 'ACCEPT_KEYWORDS="amd64"' <<< "${base_image}")" "1"
+ok "不再全局接受测试关键字" \
+   "$(grep -Fc 'ACCEPT_KEYWORDS="~amd64"' <<< "${base_image}")" "0"
+ok "只对 gentoo-zh 仓库接受测试关键字" \
+   "$(grep -Fc '*/*::gentoo-zh ~amd64' <<< "${base_image}")" "1"
+ok "仓库关键字写入 Portage 的标准配置目录" \
+   "$(grep -Fc '/etc/portage/package.accept_keywords/gentoo-zh' <<< "${base_image}")" "1"
+
 echo "== provision.sh 的主机密钥核对"
 
 hostkey_probe() {

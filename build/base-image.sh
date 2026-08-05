@@ -60,12 +60,17 @@ CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"
 CXXFLAGS="\${CFLAGS}"
 MAKEOPTS="${MAKEOPTS}"
 
-ACCEPT_KEYWORDS="~amd64"
+ACCEPT_KEYWORDS="amd64"
 ACCEPT_LICENSE="-* @BINARY-REDISTRIBUTABLE"
 
 FEATURES="buildpkg getbinpkg binpkg-multi-instance parallel-fetch -news"
 
 EMERGE_DEFAULT_OPTS="--jobs=${JOBS} --load-average=$(nproc) --quiet-build"
+EOF
+
+mkdir -p /etc/portage/package.accept_keywords
+cat > /etc/portage/package.accept_keywords/gentoo-zh <<'EOF'
+*/*::gentoo-zh ~amd64
 EOF
 
 getuto

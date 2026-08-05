@@ -122,7 +122,7 @@ def source_resolver(tree, overlay=None):
     import portage
 
     env = dict(os.environ)
-    env["ACCEPT_KEYWORDS"] = "~amd64"
+    env["ACCEPT_KEYWORDS"] = "amd64"
     # Source availability is independent of the user's accepted licenses.
     env["ACCEPT_LICENSE"] = "*"
     repositories = (
@@ -134,7 +134,9 @@ def source_resolver(tree, overlay=None):
             f"location = {pathlib.Path(overlay).resolve()}\n"
             "masters = gentoo\n")
     env["PORTAGE_REPOSITORIES"] = repositories
-    database = portage.portdbapi(mysettings=isolated_portage_config(env))
+    settings = isolated_portage_config(
+        env, ("*/*::gentoo-zh ~amd64",))
+    database = portage.portdbapi(mysettings=settings)
 
     def resolve(atom):
         fields = []

@@ -55,6 +55,11 @@ CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"
 `@world` 与当前 Gentoo 树对齐；对齐失败时保留原有基础镜像，不开始新的完整构建。
 日常构建从已对齐的基础镜像启动。
 
+基础系统与 Gentoo 主树依赖使用稳定 `amd64`。gentoo-zh overlay 的 ebuild 使用
+`~amd64`，因此构建配置只对 `*/*::gentoo-zh` 接受测试关键字；主树依赖不会随之切换到
+测试分支。overlay 套件若明确依赖主树测试版本，该套件会在依赖解析阶段失败，不能以稳定
+依赖产物发布。
+
 基础镜像更新和日常构建都会执行 ebuild。两个容器均不使用 `--privileged`，不挂载
 Docker socket、签名私钥或主机根文件系统，也不从主机挂载 `/dev`。部署验收确认运行中的
 构建容器为 `Privileged=false`，且看不到主机根设备 `/dev/sda3`。
