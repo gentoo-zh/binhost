@@ -76,6 +76,40 @@ location ^~ /binpkgs/ {
 	}
 }
 
+location ^~ /unstable/binpkgs/ {
+	root /srv/pub;
+	include /etc/nginx/conf.d/headers-files.inc;
+
+	location ~ /$ {
+		root /srv/mirrors;
+		add_header Cache-Control "no-cache";
+		include /etc/nginx/conf.d/headers-site.inc;
+		try_files /_app.html =404;
+	}
+
+	location ~ \.gpkg\.tar$ {
+		root /srv/pub;
+		gzip off;
+		access_log /var/log/nginx/mirror.log mirror;
+		access_log /var/log/nginx/binpkg.log mirror;
+		include /etc/nginx/conf.d/headers-files.inc;
+	}
+
+	location ~ ^/unstable/binpkgs/x86-64/status\.json$ {
+		root /srv/pub;
+		add_header Cache-Control "no-cache";
+		include /etc/nginx/conf.d/headers-files.inc;
+		open_file_cache off;
+	}
+
+	location ~ /Packages(\.gz)?$ {
+		root /srv/pub;
+		add_header Cache-Control "public, max-age=300, must-revalidate";
+		include /etc/nginx/conf.d/headers-files.inc;
+		open_file_cache off;
+	}
+}
+
 location ^~ /gentoo-zh/ {
 	rewrite ^/gentoo-zh/(.*)$ /$1 permanent;
 }

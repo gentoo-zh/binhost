@@ -251,12 +251,14 @@ jobs:
       - name: Answer real requests
         run: |
           cp site/_app.html site/index.html site/faq.html /srv/mirrors/
-          mkdir -p /srv/pub/binpkgs/x86-64 /srv/pub/binpkgs/stable/x86-64 \
-            /srv/pub/binpkgs/unstable/x86-64 /srv/pub/distfiles
+          mkdir -p /srv/pub/binpkgs/x86-64 \
+            /srv/pub/unstable/binpkgs/x86-64 /srv/pub/distfiles
           printf 'PACKAGES: 1\n\nCPV: a/b-1\n' > /srv/pub/binpkgs/x86-64/Packages
+          printf 'PACKAGES: 1\n\nCPV: c/d-1\n' > /srv/pub/unstable/binpkgs/x86-64/Packages
+          printf 'stable package body\n' > /srv/pub/binpkgs/x86-64/a-b-1.gpkg.tar
+          printf 'unstable package body\n' > /srv/pub/unstable/binpkgs/x86-64/c-d-1.gpkg.tar
           echo '{}' > /srv/pub/binpkgs/x86-64/status.json
-          echo '{}' > /srv/pub/binpkgs/stable/x86-64/status.json
-          echo '{}' > /srv/pub/binpkgs/unstable/x86-64/status.json
+          echo '{}' > /srv/pub/unstable/binpkgs/x86-64/status.json
           printf '[structure]\n0=filename-hash BLAKE2B 8\n' > /srv/pub/distfiles/layout.conf
           mkdir -p /srv/pub/distfiles/c6 && echo x > /srv/pub/distfiles/c6/t.tar.gz
           nginx
@@ -267,7 +269,12 @@ jobs:
           fail() { echo "!! $1"; exit 1; }
 
           [ "$(code /binpkgs/x86-64/nope.gpkg.tar)" = 404 ] || fail "不存在的包没有返回 404"
-          [ "$(code /binpkgs/x86-64/Packages)" = 200 ]      || fail "索引无法获取"
+          [ "$(code /binpkgs/x86-64/Packages)" = 200 ]      || fail "stable 索引无法获取"
+          [ "$(code /unstable/binpkgs/x86-64/Packages)" = 200 ] || fail "unstable 索引无法获取"
+          [ "$(curl -sS -o /dev/null -w '%{http_code}' -H "$H" -H 'Range: bytes=0-5' \
+            http://127.0.0.1/binpkgs/x86-64/a-b-1.gpkg.tar)" = 206 ] || fail "stable 套件不支持续传"
+          [ "$(curl -sS -o /dev/null -w '%{http_code}' -H "$H" -H 'Range: bytes=0-7' \
+            http://127.0.0.1/unstable/binpkgs/x86-64/c-d-1.gpkg.tar)" = 206 ] || fail "unstable 套件不支持续传"
           [ "$(code /distfiles/layout.conf)" = 200 ]        || fail "distfiles 无法获取"
           [ "$(code /distfiles/c6/t.tar.gz)" = 200 ]        || fail "distfiles 布局不对"
           [ "$(code /distfiles/distfiles/layout.conf)" = 404 ] || fail "distfiles 多了一层"
@@ -277,11 +284,12 @@ jobs:
           case "$(hdr /faq content-security-policy)" in "default-src 'self'"*) ;; *) fail "页面 CSP 不对" ;; esac
           case "$(hdr /distfiles/c6/t.tar.gz content-security-policy)" in "default-src 'none'; sandbox") ;; *) fail "distfile 的 CSP 缺少 sandbox" ;; esac
           case "$(hdr /distfiles/c6/ content-security-policy)" in "default-src 'self'"*) ;; *) fail "distfiles 目录页未使用站点 CSP" ;; esac
-          case "$(hdr /binpkgs/x86-64/ content-security-policy)" in "default-src 'self'"*) ;; *) fail "binpkgs 目录页未使用站点 CSP" ;; esac
-          [ "$(hdr /binpkgs/x86-64/Packages x-content-type-options)" = nosniff ] || fail "索引没有 nosniff"
+          case "$(hdr /binpkgs/x86-64/ content-security-policy)" in "default-src 'self'"*) ;; *) fail "stable 目录页未使用站点 CSP" ;; esac
+          case "$(hdr /unstable/binpkgs/x86-64/ content-security-policy)" in "default-src 'self'"*) ;; *) fail "unstable 目录页未使用站点 CSP" ;; esac
+          [ "$(hdr /binpkgs/x86-64/Packages x-content-type-options)" = nosniff ] || fail "stable 索引没有 nosniff"
+          [ "$(hdr /unstable/binpkgs/x86-64/Packages x-content-type-options)" = nosniff ] || fail "unstable 索引没有 nosniff"
           for channel_status in /binpkgs/x86-64/status.json \
-            /binpkgs/stable/x86-64/status.json \
-            /binpkgs/unstable/x86-64/status.json; do
+            /unstable/binpkgs/x86-64/status.json; do
             case "$(hdr "${channel_status}" cache-control)" in
               *no-cache*) ;;
               *) fail "${channel_status} 可能返回缓存状态" ;;
@@ -297,7 +305,8 @@ jobs:
           case "$(hdr /t.json cache-control)" in *no-cache*) ;; *) fail "json 不该长缓存" ;; esac
           [ "$(code /_raw/)" = 200 ] || fail "/_raw/ 目录浏览打不开"
 
-          [ "$(code /binpkgs/x86-64/)" = 200 ] || fail "目录浏览打不开"
+          [ "$(code /binpkgs/x86-64/)" = 200 ] || fail "stable 目录浏览打不开"
+          [ "$(code /unstable/binpkgs/x86-64/)" = 200 ] || fail "unstable 目录浏览打不开"
           [ "$(code /files/)" = 200 ]          || fail "浏览根打不开"
 
           [ "$(code /faq)" = 200 ]              || fail "/faq 打不开"

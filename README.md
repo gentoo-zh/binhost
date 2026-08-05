@@ -104,8 +104,8 @@ Docker socket、签名私钥或主机根文件系统，也不从主机挂载 `/d
 
 | 频道 | 公开路径 | 每日构建时间（UTC+8） |
 | --- | --- | --- |
-| stable | `/binpkgs/x86-64`、`/binpkgs/stable/x86-64` | 16:00 后随机 0–15 分钟 |
-| unstable | `/binpkgs/unstable/x86-64` | 04:00 后随机 0–15 分钟 |
+| stable | `/binpkgs/x86-64` | 16:00 后随机 0–15 分钟 |
+| unstable | `/unstable/binpkgs/x86-64` | 04:00 后随机 0–15 分钟 |
 
 镜像机没有远端发布锁，因此人工发布前必须确认定时构建不会同时发布。
 

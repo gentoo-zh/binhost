@@ -10,7 +10,7 @@ unstable)
     CHANNEL_IMAGE_TAG="${TAG}"
     CHANNEL_ACCEPT_KEYWORDS="~amd64"
     CHANNEL_OVERLAY_KEYWORDS=""
-    CHANNEL_REMOTE_ROOT="/srv/pub/binpkgs/unstable/${TAG}"
+    CHANNEL_REMOTE_ROOT="/srv/pub/unstable/binpkgs/${TAG}"
     CHANNEL_PROGRESS_OUT="build-status-unstable.json"
     ;;
 stable)
