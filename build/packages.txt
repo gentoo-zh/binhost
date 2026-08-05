@@ -174,6 +174,7 @@ sci-ml/llama-cpp
 sys-apps/aptly
 sys-apps/pacman
 sys-apps/pnpm
+sys-boot/zfsbootmenu
 sys-fs/ssdfs-tools
 sys-libs/libsolv
 sys-power/tlpui
