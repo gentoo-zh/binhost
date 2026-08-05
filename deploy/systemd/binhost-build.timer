@@ -1,5 +1,5 @@
 [Unit]
-Description=每日构建并发布 binhost
+Description=每日构建并发布 binhost 稳定频道
 
 [Timer]
 OnCalendar=*-*-* 16:00:00 Asia/Shanghai

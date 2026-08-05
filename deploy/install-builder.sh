@@ -60,15 +60,18 @@ rsync -a -e "${REMOTE% *}" deploy/systemd/ "${REMOTE##* }:${utmp}/"
 ${REMOTE} "sudo install -m644 ${utmp}/binhost-*.service ${utmp}/binhost-*.timer \
     /etc/systemd/system/
 rm -rf '${utmp}'
-sudo sed -i -e 's|^Environment=SIGNING_KEY=.*|Environment=SIGNING_KEY=${SIGNING_KEY}|' \
-    /etc/systemd/system/binhost-build.service
-grep -q \"^Environment=SIGNING_KEY=${SIGNING_KEY}\$\" \
-    /etc/systemd/system/binhost-build.service ||
-    { echo '    !! SIGNING_KEY 没有写进 unit'; exit 1; }
+for unit in binhost-build.service binhost-build-unstable.service; do
+    sudo sed -i -e 's|^Environment=SIGNING_KEY=.*|Environment=SIGNING_KEY=${SIGNING_KEY}|' \
+        \"/etc/systemd/system/\${unit}\"
+    grep -q \"^Environment=SIGNING_KEY=${SIGNING_KEY}\$\" \
+        \"/etc/systemd/system/\${unit}\" ||
+        { echo \"    !! SIGNING_KEY 没有写进 \${unit}\"; exit 1; }
+done
 sudo sed -i -e 's|^User=.*|User=${BUILD_USER}|' -e 's|^Group=.*|Group=${BUILD_USER}|' \
     /etc/systemd/system/binhost-*.service
 sudo systemctl daemon-reload
-sudo systemctl enable --now binhost-build.timer binhost-status.timer
+sudo systemctl enable --now \
+    binhost-build.timer binhost-build-unstable.timer binhost-status.timer
 systemctl list-timers --all --no-pager | grep binhost || true"
 
 say "完成"

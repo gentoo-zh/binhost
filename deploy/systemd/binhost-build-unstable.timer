@@ -1,0 +1,10 @@
+[Unit]
+Description=每日构建并发布 binhost 测试频道
+
+[Timer]
+OnCalendar=*-*-* 04:00:00 Asia/Shanghai
+Persistent=true
+RandomizedDelaySec=15m
+
+[Install]
+WantedBy=timers.target
