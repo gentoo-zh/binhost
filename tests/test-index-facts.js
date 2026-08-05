@@ -19,9 +19,10 @@ function check(name, condition, detail) {
   failed++;
 }
 
-async function render(build) {
+async function render(build, channel) {
   const facts = { innerHTML: "" };
   const listeners = {};
+  const calls = [];
   global.document = {
     documentElement: { lang: "zh-tw" },
     getElementById(id) { return id === "facts" ? facts : null; },
@@ -42,17 +43,24 @@ async function render(build) {
   global.esc = (value) => String(value)
     .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
   const now = Math.floor(Date.now() / 1000);
-  global.fetch = (url) => Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve(
-      url.includes("build-status") ? build :
-      url.includes("distfiles-status") ? { files: 1158, generated: now } :
-      { packages: 466, overlay: 213, deps: 253, generated: now }
-    ),
-  });
+  global.fetch = (url) => {
+    calls.push(url);
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(
+        url.includes("build-status") ? build :
+        url.includes("distfiles-status") ? { files: 1158, generated: now } :
+        { packages: 466, overlay: 213, deps: 253, generated: now }
+      ),
+    });
+  };
   (0, eval)(script);
   await new Promise((resolve) => setImmediate(resolve));
-  return facts.innerHTML;
+  if (channel) {
+    listeners.channelchange({ detail: channel });
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  return { html: facts.innerHTML, calls: calls };
 }
 
 (async function () {
@@ -63,20 +71,31 @@ async function render(build) {
     state: "done", started: 100, finished: 5733, duration: 5633, generated: 5733,
   });
   check("完成的构建显示实际结束时间与用时",
-        done.includes("最近建置") && done.includes("1 小時 33 分") && done.includes("完成於 "),
-        done);
+        done.html.includes("最近建置") && done.html.includes("1 小時 33 分") &&
+        done.html.includes("完成於 "), done.html);
+  check("默认读取 stable 的索引和构建状态",
+        done.calls.includes("/binpkgs/x86-64/status.json") &&
+        done.calls.includes("/build-status.json"), JSON.stringify(done.calls));
 
   const running = await render({
     state: "running", kind: "source", done: 7, total: 9,
     now: "app-misc/<unsafe>", generated: Math.floor(Date.now() / 1000),
+  }, {
+    path: "/unstable/binpkgs/x86-64",
+    status: "/build-status-unstable.json",
   });
   check("进行中的构建仍显示进度且转义包名",
-        running.includes("7/9") && running.includes("正在建置") &&
-        running.includes("app-misc/&lt;unsafe&gt;") && !running.includes("最近建置"),
-        running);
+        running.html.includes("7/9") && running.html.includes("正在建置") &&
+        running.html.includes("app-misc/&lt;unsafe&gt;") &&
+        !running.html.includes("最近建置"), running.html);
+  check("切换频道后读取 unstable 的索引和构建状态",
+        running.calls.includes("/unstable/binpkgs/x86-64/status.json") &&
+        running.calls.includes("/build-status-unstable.json"),
+        JSON.stringify(running.calls));
 
   const legacy = await render({ state: "done", generated: 5733 });
-  check("旧状态数据不会伪造构建用时", !legacy.includes("最近建置"), legacy);
+  check("旧状态数据不会伪造构建用时",
+        !legacy.html.includes("最近建置"), legacy.html);
 
   console.log(failed ? `\n  ${failed} 项不通过` : "\n  首页构建状态：全部通过");
   process.exit(failed ? 1 : 0);

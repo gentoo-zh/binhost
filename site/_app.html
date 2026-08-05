@@ -140,8 +140,21 @@ try {
 const ROOT = "/files/";
 
 const ROOT_DESC = {
-  'binpkgs': { 'zh-cn': '二进制包', 'zh-tw': '二進位套件', 'en': 'Binary packages' },
-  'distfiles': { 'zh-cn': 'Distfiles 镜像文件', 'zh-tw': 'Distfiles 鏡像檔案', 'en': 'Mirrored distfiles' }
+  'binpkgs': {
+    'zh-cn': '稳定频道二进制包（默认）',
+    'zh-tw': '穩定頻道二進位套件（預設）',
+    'en': 'Stable binary packages (default)'
+  },
+  'distfiles': {
+    'zh-cn': 'Distfiles 镜像文件',
+    'zh-tw': 'Distfiles 鏡像檔案',
+    'en': 'Mirrored distfiles'
+  },
+  'unstable': {
+    'zh-cn': '测试频道二进制包',
+    'zh-tw': '測試頻道二進位套件',
+    'en': 'Testing binary packages'
+  }
 };
 const atRoot = path === ROOT;
 const lsPath = atRoot ? "/" : path;

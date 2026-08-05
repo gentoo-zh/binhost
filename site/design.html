@@ -199,6 +199,18 @@
 
   <h2 data-i18n="hComp">组件</h2>
 
+  <h3 data-i18n="hChoice">选项切换</h3>
+  <div class="demo">
+    <div class="src-pick" role="group" aria-label="频道">
+      <span class="src-label" data-i18n="choiceLabel">频道</span>
+      <button type="button" class="src-opt on" aria-pressed="true">stable</button>
+      <button type="button" class="src-opt" aria-pressed="false">unstable</button>
+    </div>
+  </div>
+  <p class="note" data-i18n="choice1">
+    互斥选项沿用镜像选择器的紧凑按钮。当前项同时写入 aria-pressed，切换后立即更新相关地址、配置和状态，不保留已失效的混合内容。
+  </p>
+
   <h3 data-i18n="hTable">数据表</h3>
   <div class="demo" style="padding: 0;">
     <table class="listing pkgs" style="margin: 0;">
@@ -419,6 +431,9 @@ window.MIRROR_I18N = {
     r7v: '桌面 1.25rem。更小的值會讓正文緊貼視窗邊緣',
     mobile3: '修改後逐一驗證 320 至 1280 的每個寬度：可見欄位、指紋換行、標題字級、頂欄折行、表頭吸頂、<code>documentElement.scrollWidth</code> 不大於 <code>clientWidth</code>。使用指定寬度的 iframe 測量；修改 <code>html.style.width</code> 不會觸發媒體查詢。',
     hComp: '元件',
+    hChoice: '選項切換',
+    choiceLabel: '頻道',
+    choice1: '互斥選項沿用鏡像選擇器的緊湊按鈕。目前項目同時寫入 aria-pressed，切換後立即更新相關網址、設定和狀態，不保留已失效的混合內容。',
     hTable: '資料表',
     thPkg: '套件',
     thBin: '二進位套件',
@@ -542,6 +557,9 @@ window.MIRROR_I18N = {
     r7v: '1.25rem on the desktop. Any less and the text touches the edge',
     mobile3: 'Measure every width from 320 to 1280 after a change: which columns are visible, how the fingerprint wraps, the title size, the header wrap, the sticky header, and that <code>documentElement.scrollWidth</code> is no larger than <code>clientWidth</code>. Measure inside an iframe of that width; setting <code>html.style.width</code> does not trigger media queries.',
     hComp: 'Components',
+    hChoice: 'Option switchers',
+    choiceLabel: 'Channel',
+    choice1: 'Mutually exclusive options use the same compact controls as the mirror picker. The current option also sets aria-pressed. Switching immediately updates the related addresses, configuration and status instead of leaving a mixture of stale values.',
     hTable: 'Data tables',
     thPkg: 'Package',
     thBin: 'Binary',

@@ -132,6 +132,28 @@
 
   <h2 data-i18n="h2bin">二进制包</h2>
 
+  <div class="src-pick channel-pick" data-channel-switch role="group" aria-label="频道">
+    <span class="src-label" data-i18n="channelLabel">频道</span>
+    <button type="button" class="src-opt on" data-channel="stable"
+            data-path="/binpkgs/x86-64" data-status="/build-status.json"
+            data-i18n="channelStable">stable（推荐）</button>
+    <button type="button" class="src-opt" data-channel="unstable"
+            data-path="/unstable/binpkgs/x86-64"
+            data-status="/build-status-unstable.json"
+            data-i18n="channelUnstable">unstable</button>
+  </div>
+
+  <p class="note" data-channel-panel="stable" data-i18n-html="channelStableNote">
+    stable 使用 Gentoo 主树稳定软件包，只对 <code>::gentoo-zh</code> 接受
+    <code>~amd64</code>，适合主树保持稳定的系统。频道区别见
+    <a href="/faq#binpkg-channel">FAQ</a>。
+  </p>
+  <p class="note" data-channel-panel="unstable" data-i18n-html="channelUnstableNote" hidden>
+    unstable 全局使用 <code>~amd64</code>，只适合已设置
+    <code>ACCEPT_KEYWORDS="~amd64"</code> 的系统。频道区别见
+    <a href="/faq#binpkg-channel">FAQ</a>。
+  </p>
+
   <div class="mode-pick" role="group" aria-label="配置方式">
     <button type="button" class="mode on" data-pane="manual" data-i18n="modeManual">手动配置</button>
     <button type="button" class="mode" data-pane="quick" data-i18n="modeQuick">快速配置</button>
@@ -153,13 +175,14 @@
 
   <div class="uri">
     <span class="k">sync-uri</span>
-    <code data-src-slot="top" data-src-suffix="/binpkgs/x86-64">https://mirrors.cernet.edu.cn/gentoo-zh/binpkgs/x86-64</code>
-    <button class="copy-chip" data-src-copy="top" data-src-suffix="/binpkgs/x86-64" data-i18n="copy">复制</button>
+    <code data-src-slot="top" data-channel-suffix data-src-suffix="/binpkgs/x86-64">https://mirrors.cernet.edu.cn/gentoo-zh/binpkgs/x86-64</code>
+    <button class="copy-chip" data-src-copy="top" data-channel-suffix
+            data-src-suffix="/binpkgs/x86-64" data-i18n="copy">复制</button>
   </div>
 
   <div data-pane="quick" hidden>
     <p class="note" data-i18n="quickNote">
-      快速配置会执行全部三个设置步骤；手动配置会分别显示每一步的内容。
+      快速配置会执行全部四个设置步骤；手动配置会分别显示每一步的内容。
     </p>
 
     <div class="code">
@@ -175,10 +198,18 @@
     --passphrase-file /etc/portage/gnupg/pass --lsign-key 6A0726AF1476A2F382C6AC6638A0234EC16AD42E
 <span class="prompt"></span><span class="sudo" hidden></span>gpg --homedir /etc/portage/gnupg --check-trustdb
 
+<span data-channel-panel="stable"><span class="prompt"></span><span class="sudo" hidden></span>mkdir -p /etc/portage/package.accept_keywords
+<span class="prompt"></span><span class="sudo" hidden></span>tee /etc/portage/package.accept_keywords/gentoo-zh &gt; /dev/null &lt;&lt;<span class="val">'EOF'</span>
+<span class="key">*&#47;*::gentoo-zh</span> <span class="val">~amd64</span>
+<span class="val">EOF</span>
+</span><span data-channel-panel="unstable" hidden><span class="prompt"></span><span class="sudo" hidden></span>tee -a /etc/portage/make.conf &gt; /dev/null &lt;&lt;<span class="val">'EOF'</span>
+<span class="key">ACCEPT_KEYWORDS</span>=<span class="val">"~amd64"</span>
+<span class="val">EOF</span>
+</span>
 <span class="prompt"></span><span class="sudo" hidden></span>mkdir -p /etc/portage/binrepos.conf
 <span class="prompt"></span><span class="sudo" hidden></span>tee /etc/portage/binrepos.conf/gentoo-zh.conf &gt; /dev/null &lt;&lt;<span class="val">'EOF'</span>
 <span class="sec">[gentoo-zh]</span>
-<span class="key">sync-uri</span> = <span class="val" data-src-slot="top" data-src-suffix="/binpkgs/x86-64">https://mirrors.cernet.edu.cn/gentoo-zh/binpkgs/x86-64</span>
+<span class="key">sync-uri</span> = <span class="val" data-src-slot="top" data-channel-suffix data-src-suffix="/binpkgs/x86-64">https://mirrors.cernet.edu.cn/gentoo-zh/binpkgs/x86-64</span>
 <span class="key">priority</span> = <span class="val">10</span>
 <span class="key">verify-signature</span> = <span class="val">true</span>
 <span class="key">location</span> = <span class="val">/var/cache/binhost/gentoo-zh</span>
@@ -227,7 +258,25 @@
   </p>
 
   <div class="step">
-    <p class="step-title"><span class="n">2</span><span data-i18n="step2">添加仓库</span></p>
+    <p class="step-title"><span class="n">2</span><span data-i18n="step2">设置频道关键字</span></p>
+    <div class="code" data-channel-panel="stable">
+      <div class="code-head">
+        <span class="path">/etc/portage/package.accept_keywords/gentoo-zh</span>
+        <button class="copy-chip" data-i18n="copy">复制</button>
+      </div>
+<pre><span class="key">*&#47;*::gentoo-zh</span> <span class="val">~amd64</span></pre>
+    </div>
+    <div class="code" data-channel-panel="unstable" hidden>
+      <div class="code-head">
+        <span class="path">/etc/portage/make.conf</span>
+        <button class="copy-chip" data-i18n="copy">复制</button>
+      </div>
+<pre><span class="key">ACCEPT_KEYWORDS</span>=<span class="val">"~amd64"</span></pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <p class="step-title"><span class="n">3</span><span data-i18n="step3">添加仓库</span></p>
 
     <div class="src-pick" data-src-switch="repo" role="group" aria-label="镜像">
       <span class="src-label" data-i18n="srcLabel">镜像</span>
@@ -249,7 +298,7 @@
         <button class="copy-chip" data-i18n="copy">复制</button>
       </div>
 <pre><span class="sec">[gentoo-zh]</span>
-<span class="key">sync-uri</span> = <span class="val" data-src-slot="repo" data-src-suffix="/binpkgs/x86-64">https://mirrors.cernet.edu.cn/gentoo-zh/binpkgs/x86-64</span>
+<span class="key">sync-uri</span> = <span class="val" data-src-slot="repo" data-channel-suffix data-src-suffix="/binpkgs/x86-64">https://mirrors.cernet.edu.cn/gentoo-zh/binpkgs/x86-64</span>
 <span class="key">priority</span> = <span class="val">10</span>
 <span class="key">verify-signature</span> = <span class="val">true</span>
 <span class="key">location</span> = <span class="val">/var/cache/binhost/gentoo-zh</span></pre>
@@ -262,7 +311,7 @@
   </p>
 
   <div class="step">
-    <p class="step-title"><span class="n">3</span><span data-i18n="step3">启用 getbinpkg（追加）</span></p>
+    <p class="step-title"><span class="n">4</span><span data-i18n="step4">启用 getbinpkg（追加）</span></p>
     <div class="code">
       <div class="code-head">
         <span class="path">/etc/portage/make.conf</span>
@@ -273,7 +322,7 @@
   </div>
 
   <p class="note" data-i18n-html="sigNote">
-    验签由第 2 步的 <code>verify-signature = true</code> 提供，只作用于本源。
+    验签由第 3 步的 <code>verify-signature = true</code> 提供，只作用于本源。
     <code>FEATURES=binpkg-request-signature</code> 是全局的，会覆盖它，也会要求通过
     <code>FEATURES=buildpkg</code> 构建的包带签名。那些包默认没有签名；启用该功能时必须同时配置
     <code>binpkg-signing</code> 与本机签名密钥。
@@ -332,16 +381,20 @@ window.MIRROR_I18N = {
     factFetching: ' 正在取二進位套件',
     modeManual: '手動設定',
     modeQuick: '快速設定',
-    quickNote: '快速設定會執行全部三個設定步驟；手動設定會分別顯示每一步的內容。',
+    quickNote: '快速設定會執行全部四個設定步驟；手動設定會分別顯示每一步的內容。',
     title: '設定',
     lead: 'gentoo-zh overlay 的二進位套件與 distfiles 鏡像。兩者相互獨立，按需分別設定。二進位套件裡另附帶這些套件執行期依賴所需的部分 ::gentoo 套件，不取代 Gentoo 官方 binhost；distfiles 的 ::gentoo 部分用 <a href="https://gentoozh.org/zh-tw/mirrorlist/">社群鏡像列表</a>裡的節點。',
     h2bin: '二進位套件', h2dist: 'Distfiles',
-    sigNote: '驗簽由第 2 步的 <code>verify-signature = true</code> 提供，只作用於本站。<code>FEATURES=binpkg-request-signature</code> 是全域設定，會覆蓋它，也會要求透過 <code>FEATURES=buildpkg</code> 建置的套件帶簽章。那些套件預設沒有簽章；啟用該功能時必須同時設定 <code>binpkg-signing</code> 與本機簽章金鑰。',
+    sigNote: '驗簽由第 3 步的 <code>verify-signature = true</code> 提供，只作用於本站。<code>FEATURES=binpkg-request-signature</code> 是全域設定，會覆蓋它，也會要求透過 <code>FEATURES=buildpkg</code> 建置的套件帶簽章。那些套件預設沒有簽章；啟用該功能時必須同時設定 <code>binpkg-signing</code> 與本機簽章金鑰。',
     srcLabel: '鏡像', srcLabelFirst: '優先', srcCernet: '教育網聯合鏡像站', srcNju: '南京大學', srcNyist: '南陽理工', srcHernet: '河南教育網', srcOrigin: '來源站',
+    channelLabel: '頻道', channelStable: 'stable（建議）', channelUnstable: 'unstable',
+    channelStableNote: 'stable 使用 Gentoo 主倉庫穩定套件，只對 <code>::gentoo-zh</code> 接受 <code>~amd64</code>，適合主倉庫保持穩定的系統。頻道差異見 <a href="/faq#binpkg-channel">FAQ</a>。',
+    channelUnstableNote: 'unstable 全域使用 <code>~amd64</code>，只適合已設定 <code>ACCEPT_KEYWORDS="~amd64"</code> 的系統。頻道差異見 <a href="/faq#binpkg-channel">FAQ</a>。',
     repoNote: '繁體中文頁面預設選擇來源站，可依網路情況切換。鏡像同步本站已簽章的產物；切換不改變簽章驗證要求。',
     distNote: '本站只鏡像 overlay ebuild 宣告的 distfiles，不取代 Gentoo 主倉庫的 distfiles 鏡像。位址末尾無須加入 <code>distfiles/</code>，Portage 會自動附加。<code>GENTOO_MIRRORS</code> 依序嘗試列出的位址；優先位址缺少檔案時，Portage 會繼續嘗試後續位址。',
     distOptOut: '不希望自動鏡像某個套件的 distfile 時，在 ebuild 的既有 <code>RESTRICT</code> 值中加入 <code>mirror</code>；沒有該變數時可設定 <code>RESTRICT="mirror"</code>。<code>RESTRICT</code> 中含 <code>fetch</code> 時，也會阻止同步流程自動取得和鏡像檔案。',
-    step1: '匯入簽章公鑰', step2: '加入倉庫', step3: '啟用 getbinpkg（附加）',
+    step1: '匯入簽章公鑰', step2: '設定頻道關鍵字', step3: '加入倉庫',
+    step4: '啟用 getbinpkg（附加）',
     keyAlt: '也可不安裝該套件，直接下載公鑰檔案，見 <a href="/faq#key-download">FAQ</a>。',
     keyNote: '<code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。缺少該目錄時，上述三條 <code>gpg</code> 命令會回報 <code>no writable keyring found</code>。<code>gpg</code> 不會自動建立該目錄，而 Portage 直到首次取得二進位套件才會呼叫 <code>getuto</code>，此時設定步驟已經完成。簽章使用 <code>getuto</code> 建立的 Portage Local Trust Key，密碼位於 <code>/etc/portage/gnupg/pass</code>，應透過 <code>--passphrase-file</code> 讀取。驗簽以 <code>portage</code> 使用者執行；該使用者無權寫入 trustdb，因此必須預先產生。',
     factBinRow: '二進位套件', factDistRow: 'distfiles', factBuildRow: '最近建置',
@@ -357,16 +410,20 @@ window.MIRROR_I18N = {
     factFetching: ' fetching binaries',
     modeManual: 'Step by step',
     modeQuick: 'Quick setup',
-    quickNote: 'Quick setup performs all three configuration steps; step-by-step setup shows each step separately.',
+    quickNote: 'Quick setup performs all four configuration steps; step-by-step setup shows each step separately.',
     title: 'Setup',
     lead: 'Binary package and distfiles mirror for the gentoo-zh overlay. The two are independent and configured separately. The binary packages also carry the ::gentoo runtime dependencies those packages need, which is not a replacement for the official Gentoo binhost. For ::gentoo distfiles, use a node from the <a href="https://gentoozh.org/en/mirrorlist/">community mirror list</a>.',
     h2bin: 'Binary packages', h2dist: 'Distfiles',
-    sigNote: 'Verification comes from <code>verify-signature = true</code> in step 2 and applies to this repository only. <code>FEATURES=binpkg-request-signature</code> is global, overrides that, and also requires signatures on packages built through <code>FEATURES=buildpkg</code>. Those packages are unsigned by default; enabling this feature therefore requires <code>binpkg-signing</code> and a local signing key.',
+    sigNote: 'Verification comes from <code>verify-signature = true</code> in step 3 and applies to this repository only. <code>FEATURES=binpkg-request-signature</code> is global, overrides that, and also requires signatures on packages built through <code>FEATURES=buildpkg</code>. Those packages are unsigned by default; enabling this feature therefore requires <code>binpkg-signing</code> and a local signing key.',
     srcLabel: 'Mirror', srcLabelFirst: 'First', srcCernet: 'CERNET', srcNju: 'Nanjing University', srcNyist: 'NYIST', srcHernet: 'HERNET', srcOrigin: 'Origin',
+    channelLabel: 'Channel', channelStable: 'stable (recommended)', channelUnstable: 'unstable',
+    channelStableNote: 'stable uses stable packages from the Gentoo repository and accepts <code>~amd64</code> only for <code>::gentoo-zh</code>. Use it when the main repository remains stable. See the <a href="/faq#binpkg-channel">FAQ</a> for a channel comparison.',
+    channelUnstableNote: 'unstable uses <code>~amd64</code> globally. Use it only on systems with <code>ACCEPT_KEYWORDS="~amd64"</code>. See the <a href="/faq#binpkg-channel">FAQ</a> for a channel comparison.',
     repoNote: 'The English page defaults to the origin. Choose another mirror if it works better for your network. Mirrors synchronize the signed artifacts from this host; switching does not change the verification requirement.',
     distNote: 'This host mirrors only the distfiles declared by overlay ebuilds; it does not replace a Gentoo repository distfiles mirror. Omit <code>distfiles/</code> from the end of the address because Portage appends it. <code>GENTOO_MIRRORS</code> tries the listed addresses in order and continues when the preferred address lacks a file.',
     distOptOut: 'To exclude a package\'s distfiles from automatic mirroring, add <code>mirror</code> to the ebuild\'s existing <code>RESTRICT</code> value; use <code>RESTRICT="mirror"</code> when the variable is absent. A <code>RESTRICT</code> value containing <code>fetch</code> also prevents the sync process from fetching and mirroring the files automatically.',
-    step1: 'Import the signing key', step2: 'Add the repository', step3: 'Enable getbinpkg (append)',
+    step1: 'Import the signing key', step2: 'Set channel keywords', step3: 'Add the repository',
+    step4: 'Enable getbinpkg (append)',
     keyAlt: 'You can fetch the key file directly instead of installing the package; see the <a href="/faq#key-download">FAQ</a>.',
     keyNote: '<code>getuto</code> creates <code>/etc/portage/gnupg</code>. Without that directory, the three <code>gpg</code> commands above report <code>no writable keyring found</code>. <code>gpg</code> does not create the directory itself, and Portage invokes <code>getuto</code> only when it first fetches a binary package, after setup is complete. The signature uses the Portage Local Trust Key created by <code>getuto</code>. Read its passphrase from <code>/etc/portage/gnupg/pass</code> with <code>--passphrase-file</code>. Verification runs as the <code>portage</code> user, which cannot write the trustdb, so the trustdb must be prepared first.',
     factBinRow: 'Binary packages', factDistRow: 'distfiles', factBuildRow: 'Latest build',
@@ -380,7 +437,8 @@ window.MIRROR_I18N = {
 <script src="/assets/i18n.js?v=7deb9357"></script>
 <script src="/assets/mode-switch.js?v=08d5c31f"></script>
 <script src="/assets/sudo-switch.js?v=1ebc6dc8"></script>
-<script src="/assets/source-switch.js?v=65dbd639"></script>
+<script src="/assets/source-switch.js?v=b97d27c6"></script>
+<script src="/assets/channel-switch.js?v=302c0d53"></script>
 
 <script>
 (function () {
@@ -429,6 +487,7 @@ window.MIRROR_I18N = {
 
   var el = document.getElementById('facts');
   var data = null;
+  var requestId = 0;
 
   function render() {
     if (!data) return;
@@ -465,14 +524,23 @@ window.MIRROR_I18N = {
 
   document.addEventListener('langchange', function (e) { curLang = e.detail; render(); });
 
-  Promise.allSettled([
-    fetch('/binpkgs/x86-64/status.json').then(function (r) { return r.ok ? r.json() : null; }),
-    fetch('/distfiles-status.json').then(function (r) { return r.ok ? r.json() : null; }),
-    fetch('/build-status.json').then(function (r) { return r.ok ? r.json() : null; })
-  ]).then(function (rs) {
-    data = [rs[0].value, rs[1].value, rs[2].value];
-    render();
+  function loadChannel(path, status) {
+    var current = ++requestId;
+    Promise.allSettled([
+      fetch(path + '/status.json').then(function (r) { return r.ok ? r.json() : null; }),
+      fetch('/distfiles-status.json').then(function (r) { return r.ok ? r.json() : null; }),
+      fetch(status).then(function (r) { return r.ok ? r.json() : null; })
+    ]).then(function (rs) {
+      if (current !== requestId) return;
+      data = [rs[0].value, rs[1].value, rs[2].value];
+      render();
+    });
+  }
+
+  document.addEventListener('channelchange', function (event) {
+    loadChannel(event.detail.path, event.detail.status);
   });
+  loadChannel('/binpkgs/x86-64', '/build-status.json');
 })();
 </script>
 </body>

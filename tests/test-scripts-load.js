@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 const DIR = process.argv[2] || "site/assets";
-const ORDER = ["early.js", "strings.js", "util.js", "i18n.js", "mode-switch.js", "sudo-switch.js", "source-switch.js"];
+const ORDER = ["early.js", "strings.js", "util.js", "i18n.js", "mode-switch.js", "sudo-switch.js", "source-switch.js", "channel-switch.js"];
 
 const store = {};
 
