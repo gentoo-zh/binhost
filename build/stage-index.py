@@ -3,10 +3,11 @@
 stage-index.py <pkgdir> <stage> [overlay]
 """
 
+import argparse
+import hashlib
 import os
 import pathlib
 import re
-import hashlib
 import stat
 import sys
 import time
@@ -15,7 +16,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from ebuilds import (                                       # noqa: E402
     BINARY_LICENSES, Masks, MetadataUnavailable, candidate_key,
     effective_license, index_db, pinned_portdbapi, read_mask, runtime_atoms,
-    source_only, split_cpv, vercmp,
+    read_list, source_only, split_cpv, vercmp,
 )
 from portage.dep import paren_enclose                       # noqa: E402
 
@@ -32,8 +33,9 @@ def parse(text):
     return stanzas[0], out
 
 
-def read_excluded():
-    f = pathlib.Path(__file__).with_name("excluded.txt")
+def read_excluded(path=None):
+    f = (pathlib.Path(path) if path is not None
+         else pathlib.Path(__file__).with_name("excluded.txt"))
     if not f.exists():
         return set()
     return {l.split()[0] for l in f.read_text().splitlines()
@@ -222,7 +224,7 @@ def runtime_closure(candidates, seeds):
 
 
 def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None,
-           license_lookup=None):
+           license_lookup=None, seed_packages=None):
     excluded = read_excluded() if excluded is None else excluded
     masked = read_mask(overlay) if overlay is not None else Masks()
     if lookup is None:
@@ -316,6 +318,8 @@ def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None,
         if overlay is not None and not has_ebuild(overlay, cpv):
             return False
         cp, ver = split_cpv(cpv)
+        if seed_packages is not None and cp not in seed_packages:
+            return False
         if cp in excluded:
             return False
         return not (ver is not None and masked.masks(cp, ver))
@@ -384,12 +388,19 @@ def rewrite_header(header, count, rev):
     return header
 
 
-def main(pkgdir, stage, overlay=None, rev="", lookup=None):
+def main(pkgdir, stage, overlay=None, rev="", lookup=None, seed_file=None,
+         excluded_files=()):
     pkgdir, stage = pathlib.Path(pkgdir), pathlib.Path(stage)
     overlay = pathlib.Path(overlay) if overlay else None
 
     header, entries = parse((pkgdir / "Packages").read_text())
-    kept, skipped, error, refused, unresolved = select(entries, overlay, lookup=lookup)
+    excluded = read_excluded()
+    for path in excluded_files:
+        excluded.update(read_excluded(path))
+    seed_packages = set(read_list(seed_file)) if seed_file is not None else None
+    kept, skipped, error, refused, unresolved = select(
+        entries, overlay, excluded=excluded, lookup=lookup,
+        seed_packages=seed_packages)
     if error:
         sys.exit(error)
     reported = set()
@@ -409,7 +420,7 @@ def main(pkgdir, stage, overlay=None, rev="", lookup=None):
         elif state == "masked":
             print(f"!! 不发布 {cpv}：该版本已被 overlay 屏蔽", file=sys.stderr)
         elif state == "excluded":
-            print(f"!! 不发布 {cpv}：该包列在 excluded.txt", file=sys.stderr)
+            print(f"!! 不发布 {cpv}：该包列在排除清单", file=sys.stderr)
         elif state == "removed":
             print(f"!! 不发布 {cpv}：该版本已从源仓库移除", file=sys.stderr)
         else:
@@ -487,8 +498,13 @@ def main(pkgdir, stage, overlay=None, rev="", lookup=None):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        sys.exit(__doc__)
-    sys.exit(main(sys.argv[1], sys.argv[2],
-                  sys.argv[3] if len(sys.argv) > 3 else None,
-                  os.environ.get("OVERLAY_REV", "")))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("pkgdir")
+    parser.add_argument("stage")
+    parser.add_argument("overlay", nargs="?")
+    parser.add_argument("--seeds")
+    parser.add_argument("--exclude-file", action="append", default=[])
+    args = parser.parse_args()
+    sys.exit(main(args.pkgdir, args.stage, args.overlay,
+                  os.environ.get("OVERLAY_REV", ""),
+                  seed_file=args.seeds, excluded_files=args.exclude_file))

@@ -18,6 +18,8 @@ GENTOO_BINPKGS="${GENTOO_BINPKGS:-/var/cache/binhost/gentoo}"
 STAGE="${STAGE:-/var/lib/binhost/stage/${CHANNEL_STORAGE}}"
 LOGDIR="${LOGDIR:-/var/lib/binhost/logs/${CHANNEL_STORAGE}}"
 LIST="${LIST:-$(dirname "$0")/packages.txt}"
+STABLE_EXCLUDED="${STABLE_EXCLUDED:-$(dirname "$0")/stable-excluded.txt}"
+STABLE_PACKAGE_USE="${STABLE_PACKAGE_USE:-$(dirname "$0")/package.use.stable}"
 SIGNING_KEY="${SIGNING_KEY:-}"
 SIGNING_GNUPGHOME="${SIGNING_GNUPGHOME:-/var/lib/binhost/gnupg}"
 SIGNING_TMP_ROOT="${SIGNING_TMP_ROOT:-/dev/shm}"
@@ -45,6 +47,18 @@ if [[ -z ${BINHOST_LOCKED:-} ]]; then
 fi
 
 [[ -s ${LIST} ]] || die "package list not found or empty: ${LIST}"
+channel_mounts=()
+if [[ ${CHANNEL} == stable ]]; then
+    [[ -s ${STABLE_EXCLUDED} ]] || die "stable exclusion list not found: ${STABLE_EXCLUDED}"
+    [[ -s ${STABLE_PACKAGE_USE} ]] || die "stable package.use not found: ${STABLE_PACKAGE_USE}"
+    EFFECTIVE_LIST="${EFFECTIVE_LIST:-${STAGE}.packages.txt}"
+    sudo install -dm755 -o "$(id -u)" -g "$(id -g)" \
+        "$(dirname "${EFFECTIVE_LIST}")"
+    python3 "$(dirname "$0")/channel_packages.py" \
+        "${LIST}" "${STABLE_EXCLUDED}" "${EFFECTIVE_LIST}"
+    LIST="${EFFECTIVE_LIST}"
+    channel_mounts=(-v "${STABLE_PACKAGE_USE}:/tmp/package.use.stable:ro")
+fi
 [[ -n ${SIGNING_KEY} ]] || die "SIGNING_KEY unset; unsigned packages are not publishable"
 [[ ${SIGNING_IMAGE} =~ @sha256:[0-9a-f]{64}$ ]] ||
     die "SIGNING_IMAGE must be pinned by sha256 digest"
@@ -85,11 +99,13 @@ ${DOCKER} run --rm -i --security-opt=no-new-privileges \
     -v "${PKGDIR}:/var/cache/binpkgs" \
     -v "${GENTOO_BINPKGS}:/var/cache/binhost/gentoo" \
     -v "${LIST}:/tmp/packages.txt:ro" \
+    "${channel_mounts[@]}" \
     -v "$(dirname "$0")/rebuild-preserved.sh:/usr/local/bin/rebuild-preserved:ro" \
     -v "$(dirname "$0")/snapshot-binrepo.py:/usr/local/bin/snapshot-binrepo:ro" \
     -v "$(dirname "$0")/snapshot-vdb.py:/usr/local/bin/snapshot-vdb:ro" \
     -v "${LOGDIR}:/var/log/binhost" \
     -e "OVERLAY_REV=$(git -C "${OVERLAY}" rev-parse HEAD 2>/dev/null || echo '')" \
+    -e "BINHOST_CHANNEL=${CHANNEL}" \
     "${BASE}" /bin/bash -euo pipefail -s <<'INNER'
 
 mkdir -p /run/lock
@@ -108,6 +124,10 @@ app-i18n/opencc        python
 media-video/pipewire   gstreamer
 app-shells/gitstatus   zsh-completion
 EOF
+
+if [[ ${BINHOST_CHANNEL} == stable ]]; then
+    cat /tmp/package.use.stable >> /etc/portage/package.use/binhost-deps
+fi
 
 mapfile -t atoms < <(grep -E '^[a-z0-9-]+/[A-Za-z0-9._+-]+$' /tmp/packages.txt)
 echo ">>> ${#atoms[@]} packages"
@@ -166,9 +186,14 @@ sudo chown -R "$(id -u):$(id -g)" "${PKGDIR}"
 rm -rf "${STAGE}.new"
 install -dm755 "${STAGE}.new"
 
+stage_policy=()
+if [[ ${CHANNEL} == stable ]]; then
+    stage_policy+=(--seeds "${LIST}" --exclude-file "${STABLE_EXCLUDED}")
+fi
 OVERLAY_REV="$(git -C "${OVERLAY}" rev-parse HEAD 2>/dev/null || echo '')" \
     GENTOO_TREE="${TREE}" \
-    python3 "$(dirname "$0")/stage-index.py" "${PKGDIR}" "${STAGE}.new" "${OVERLAY}"
+    python3 "$(dirname "$0")/stage-index.py" "${PKGDIR}" "${STAGE}.new" \
+        "${OVERLAY}" "${stage_policy[@]}"
 
 install -m644 "${LOGDIR}/installed.txt" "${STAGE}.new/installed.txt" 2>/dev/null ||
     die "容器没有写出 installed.txt，无法判定哪些依赖由基础系统提供"

@@ -10,11 +10,13 @@ from ebuilds import (                                       # noqa: E402
     accepts_amd64, inherits, keywords_of, newest_ebuild,
     bindist_state, read_mask, usable_ebuilds, version_of, vercmp,
 )
+from channel_packages import exclusions as channel_exclusions  # noqa: E402
 
 
 HERE = pathlib.Path(__file__).resolve().parent
 LIST = HERE / "packages.txt"
 EXCLUDED = HERE / "excluded.txt"
+STABLE_EXCLUDED = HERE / "stable-excluded.txt"
 
 
 
@@ -81,6 +83,17 @@ def main(overlay):
                 errors.append(
                     f"{LIST.name}: out of order: {names[i]} should come before {names[i - 1]}")
                 break
+
+    try:
+        stable_excluded = channel_exclusions(STABLE_EXCLUDED)
+    except (OSError, ValueError) as error:
+        errors.append(str(error))
+        stable_excluded = {}
+    unknown = sorted(set(stable_excluded) - {cp for _, cp in atoms})
+    if unknown:
+        errors.append(
+            f"{STABLE_EXCLUDED.name}: not present in {LIST.name}: "
+            f"{', '.join(unknown)}")
 
     masked = read_mask(overlay)
 

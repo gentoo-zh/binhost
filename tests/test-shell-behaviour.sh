@@ -400,6 +400,24 @@ ok "依赖验证使用频道的主树关键字" \
 ok "依赖验证可单独接受 overlay 测试关键字" \
    "$(grep -Fc "source_policy+=(--source-overlay-keywords \"\${CHANNEL_OVERLAY_KEYWORDS}\")" \
        <<< "${container}")" "1"
+ok "stable 构建生成频道有效清单" \
+   "$(grep -Fc "python3 \"\$(dirname \"\$0\")/channel_packages.py\"" \
+       <<< "${container}")" "1"
+ok "stable 发布只以有效清单中的包作为种子" \
+   "$(grep -Fc "stage_policy+=(--seeds \"\${LIST}\" --exclude-file \"\${STABLE_EXCLUDED}\")" \
+       <<< "${container}")" "1"
+ok "stable 专用 USE 设置只在 stable 条件中载入" \
+   "$(grep -Fc 'cat /tmp/package.use.stable >> /etc/portage/package.use/binhost-deps' \
+       <<< "${container}")" "1"
+ok "stable 专用 USE 设置有明确频道条件" \
+   "$(grep -Fc "if [[ \${BINHOST_CHANNEL} == stable ]]; then" \
+       <<< "${container}")" "1"
+ok "unstable 不无条件挂载 stable 专用 USE 设置" \
+   "$(grep -Ec '^[[:space:]]+-v "\$\{STABLE_PACKAGE_USE\}:/tmp/package.use.stable:ro"' \
+       <<< "${container}")" "0"
+ok "stable 专用 USE 设置通过频道挂载数组传入" \
+   "$(grep -Fc "channel_mounts=(-v \"\${STABLE_PACKAGE_USE}:/tmp/package.use.stable:ro\")" \
+       <<< "${container}")" "1"
 
 echo "== provision.sh 的主机密钥核对"
 

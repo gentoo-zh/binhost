@@ -33,6 +33,9 @@ jobs:
       - name: Check packages.txt
         run: python3 build/validate.py /tmp/overlay
 
+      - name: Stable exclusions produce a complete effective list
+        run: python3 tests/test-channel-packages.py
+
       - name: Version check handles every commit shape
         run: python3 tests/test-check-versions.py
 

@@ -1,0 +1,13 @@
+# Direct targets omitted from the stable channel.
+#
+# Entries remain in packages.txt because the unstable channel still builds
+# them. Recheck each dependency when its Gentoo package becomes stable.
+#
+# Format: category/package<TAB>reason
+
+app-emulation/winetricks-zh	requires a 32-bit Wine dependency graph outside the stable build profile
+dev-python/fuo-netease	runtime dependency dev-python/marshmallow-4.3.0 is ~amd64 only
+dev-python/fuo-qqmusic	runtime dependency dev-python/marshmallow-4.3.0 is ~amd64 only
+gui-apps/waywallen	build dependency dev-build/corrosion-0.6.1-r1 is ~amd64 only
+kde-misc/plasma-ions-china	runtime dependency >=kde-plasma/kdeplasma-addons-6.7 is ~amd64 only
+net-misc/eternalterminal	runtime dependency dev-cpp/simpleini is ~amd64 only
