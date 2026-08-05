@@ -216,7 +216,7 @@ check_channel_index() {
 }
 
 check_channel_index stable "/binpkgs/${TAG}"
-check_channel_index unstable "/binpkgs/unstable/${TAG}"
+check_channel_index unstable "/unstable/binpkgs/${TAG}"
 
 dist=$(curl -fsS --max-time 15 "${SITE}/distfiles-status.json" 2>/dev/null)
 if [[ -z ${dist} ]]; then

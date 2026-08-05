@@ -370,7 +370,7 @@ ok "unstable 继续使用原有基础镜像标签" "${image}" "x86-64"
 ok "unstable 继续接受全局测试关键字" "${keywords}" "~amd64"
 ok "unstable 不增加仓库级关键字覆盖" "${overlay_keywords}" ""
 ok "unstable 发布到明确的测试频道路径" \
-   "${remote_root}" "/srv/pub/binpkgs/unstable/x86-64"
+   "${remote_root}" "/srv/pub/unstable/binpkgs/x86-64"
 
 IFS='|' read -r channel storage image keywords overlay_keywords remote_root <<< \
     "$(channel_probe stable)"
