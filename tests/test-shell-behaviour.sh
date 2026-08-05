@@ -624,12 +624,15 @@ ok "取得构建锁后先记录开始时间再启动监控" \
    "$([ -n "${start_line}" ] && [ "${start_line}" -lt "${watch_line}" ] && echo yes || echo no)" "yes"
 
 build_status_probe() {
-    local json="$1" d out
+    local stable_json="$1" unstable_json="${2:-$1}" d out
     d=$(mktemp -d); mkdir -p "${d}/bin"
     cat > "${d}/bin/curl" <<EOF
 #!/bin/bash
 for a in "\$@"; do
-  case "\$a" in *build-status.json*) printf '%s' '${json}'; exit 0 ;; esac
+  case "\$a" in
+    *build-status-unstable.json*) printf '%s' '${unstable_json}'; exit 0 ;;
+    *build-status.json*) printf '%s' '${stable_json}'; exit 0 ;;
+  esac
 done
 exit 22
 EOF
@@ -646,15 +649,24 @@ EOF
 }
 
 NOW=$(date +%s); STALE=$(( NOW - 4 * 3600 ))
+FRESH_JSON="{\"state\":\"running\",\"phase\":\"per-package\",\"progress_at\":${NOW},\"generated\":${NOW}}"
+STALE_JSON="{\"state\":\"running\",\"phase\":\"per-package\",\"progress_at\":${STALE},\"generated\":${NOW}}"
 ok "监控持续刷新但构建无进展时判为故障" \
-   "$(build_status_probe "{\"state\":\"running\",\"phase\":\"per-package\",\"progress_at\":${STALE},\"generated\":${NOW}}")" \
+   "$(build_status_probe "${STALE_JSON}")" \
    "failed"
 ok "两者都新时正常" \
-   "$(build_status_probe "{\"state\":\"running\",\"phase\":\"per-package\",\"progress_at\":${NOW},\"generated\":${NOW}}")" \
+   "$(build_status_probe "${FRESH_JSON}")" \
    "passed"
 ok "旧格式没有 progress_at 时退回看 generated" \
    "$(build_status_probe "{\"state\":\"running\",\"generated\":${NOW}}")" \
    "passed"
+ok "unstable 构建无进展时同样判为故障" \
+   "$(build_status_probe "${FRESH_JSON}" "${STALE_JSON}")" \
+   "failed"
+ok "监控同时检查两个频道的索引" \
+   "$(grep -c '^check_channel_index \(stable\|unstable\) ' build/status.sh)" "2"
+ok "监控同时检查两个频道的构建状态" \
+   "$(grep -c '^check_build_status \(stable\|unstable\) ' build/status.sh)" "2"
 
 echo "== 逐包阶段确实公布进度"
 

@@ -177,41 +177,46 @@ else
     bad "TLS 证书" "无法读取"
 fi
 
-head=$(curl -fsS --max-time 15 -r 0-2047 "${SITE}/binpkgs/${TAG}/Packages" 2>/dev/null)
-if [[ -z ${head} ]]; then
-    bad "索引" "尚未发布"
-else
+check_channel_index() {
+    local label=$1 root=$2 head ts n age path code
+    head=$(curl -fsS --max-time 15 -r 0-2047 "${SITE}${root}/Packages" 2>/dev/null)
+    if [[ -z ${head} ]]; then
+        bad "${label} 索引" "尚未发布"
+        return
+    fi
+
     ts=$(grep -m1 '^TIMESTAMP: ' <<< "${head}" | awk '{print $2}')
     n=$(grep -m1 '^PACKAGES: ' <<< "${head}" | awk '{print $2}')
     if [[ ! ${ts} =~ ^[0-9]+$ ]]; then
-        bad "索引" "TIMESTAMP 无法解析"
+        bad "${label} 索引" "TIMESTAMP 无法解析"
     else
         age=$(( ( $(date +%s) - ts ) / 86400 ))
         if (( age >= INDEX_MAX_AGE_D )); then
-            bad "索引" "${age} 天未更新（超过 ${INDEX_MAX_AGE_D} 天）"
+            bad "${label} 索引" "${age} 天未更新（超过 ${INDEX_MAX_AGE_D} 天）"
         elif [[ ! ${n} =~ ^[0-9]+$ ]] || (( n == 0 )); then
-            bad "索引" "未包含任何软件包"
+            bad "${label} 索引" "未包含任何软件包"
         else
-            note "索引" "${n} 个包，${age} 天前"
+            note "${label} 索引" "${n} 个包，${age} 天前"
         fi
     fi
-fi
 
-if [[ -n ${head:-} ]]; then
-    path=$(curl -fsS --max-time 20 "${SITE}/binpkgs/${TAG}/Packages" 2>/dev/null |
+    path=$(curl -fsS --max-time 20 "${SITE}${root}/Packages" 2>/dev/null |
            awk '/^PATH: /{print $2; exit}')
-    if [[ -n ${path} ]]; then
-        code=$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' -L \
-               "${SITE}/binpkgs/${TAG}/${path}" 2>/dev/null)
-        if [[ ${code} == 200 ]]; then
-            note "取包" "正常"
-        else
-            bad "取包" "HTTP ${code}"
-        fi
-    else
-        bad "取包" "索引里无法获取一条 PATH"
+    if [[ -z ${path} ]]; then
+        bad "${label} 取包" "索引里无法获取一条 PATH"
+        return
     fi
-fi
+    code=$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' -L \
+           "${SITE}${root}/${path}" 2>/dev/null)
+    if [[ ${code} == 200 ]]; then
+        note "${label} 取包" "正常"
+    else
+        bad "${label} 取包" "HTTP ${code}"
+    fi
+}
+
+check_channel_index stable "/binpkgs/${TAG}"
+check_channel_index unstable "/binpkgs/unstable/${TAG}"
 
 dist=$(curl -fsS --max-time 15 "${SITE}/distfiles-status.json" 2>/dev/null)
 if [[ -z ${dist} ]]; then
@@ -263,10 +268,14 @@ else
 fi
 
 
-job=$(curl -fsS --max-time 15 "${SITE}/build-status.json" 2>/dev/null)
-if [[ -z ${job} ]]; then
-    bad "构建状态" "无法获取 build-status.json"
-else
+check_build_status() {
+    local label=$1 file=$2 job jstate jphase jts jprog jage page
+    job=$(curl -fsS --max-time 15 "${SITE}/${file}" 2>/dev/null)
+    if [[ -z ${job} ]]; then
+        bad "${label} 构建状态" "无法获取 ${file}"
+        return
+    fi
+
     jstate=$(grep -o '"state":"[a-z]*"' <<< "${job}" | cut -d'"' -f4)
     jphase=$(grep -o '"phase":"[a-z-]*"' <<< "${job}" | cut -d'"' -f4)
     jts=$(grep -o '"generated":[0-9]*' <<< "${job}" | cut -d: -f2)
@@ -275,23 +284,27 @@ else
     jprog=$(grep -o '"progress_at":[0-9]*' <<< "${job}" | cut -d: -f2)
     [[ ${jprog} =~ ^[0-9]+$ ]] || jprog="${jts}"
     if [[ ! ${jts} =~ ^[0-9]+$ ]]; then
-        bad "构建状态" "generated 无法解析"
-    else
-        jage=$(( ( $(date +%s) - jts ) / 3600 ))
-        page=$(( ( $(date +%s) - jprog ) / 3600 ))
-        if [[ ${jstate} == failed ]]; then
-            bad "构建状态" "上一轮构建失败（${jage} 小时前）"
-        elif [[ ${jstate} == running ]] && (( page >= BUILD_STALE_H )); then
-            bad "构建状态" "${jphase:-未知} 阶段已 ${page} 小时没有进展"
-        elif [[ ${jstate} == running ]] && (( jage >= BUILD_STALE_H )); then
-            bad "构建状态" "进度状态已 ${jage} 小时未更新"
-        elif (( jage >= HEARTBEAT_MAX_H )); then
-            bad "构建状态" "${jage} 小时未更新（阈值 ${HEARTBEAT_MAX_H}h）"
-        else
-            note "构建状态" "${jstate:-未知}，${jage} 小时前"
-        fi
+        bad "${label} 构建状态" "generated 无法解析"
+        return
     fi
-fi
+
+    jage=$(( ( $(date +%s) - jts ) / 3600 ))
+    page=$(( ( $(date +%s) - jprog ) / 3600 ))
+    if [[ ${jstate} == failed ]]; then
+        bad "${label} 构建状态" "上一轮构建失败（${jage} 小时前）"
+    elif [[ ${jstate} == running ]] && (( page >= BUILD_STALE_H )); then
+        bad "${label} 构建状态" "${jphase:-未知} 阶段已 ${page} 小时没有进展"
+    elif [[ ${jstate} == running ]] && (( jage >= BUILD_STALE_H )); then
+        bad "${label} 构建状态" "进度状态已 ${jage} 小时未更新"
+    elif (( jage >= HEARTBEAT_MAX_H )); then
+        bad "${label} 构建状态" "${jage} 小时未更新（阈值 ${HEARTBEAT_MAX_H}h）"
+    else
+        note "${label} 构建状态" "${jstate:-未知}，${jage} 小时前"
+    fi
+}
+
+check_build_status stable build-status.json
+check_build_status unstable build-status-unstable.json
 
 if [[ -w $(dirname "${HEARTBEAT}") ]] 2>/dev/null; then
     date +%s > "${HEARTBEAT}"

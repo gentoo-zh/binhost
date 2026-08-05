@@ -251,8 +251,12 @@ jobs:
       - name: Answer real requests
         run: |
           cp site/_app.html site/index.html site/faq.html /srv/mirrors/
-          mkdir -p /srv/pub/binpkgs/x86-64 /srv/pub/distfiles
+          mkdir -p /srv/pub/binpkgs/x86-64 /srv/pub/binpkgs/stable/x86-64 \
+            /srv/pub/binpkgs/unstable/x86-64 /srv/pub/distfiles
           printf 'PACKAGES: 1\n\nCPV: a/b-1\n' > /srv/pub/binpkgs/x86-64/Packages
+          echo '{}' > /srv/pub/binpkgs/x86-64/status.json
+          echo '{}' > /srv/pub/binpkgs/stable/x86-64/status.json
+          echo '{}' > /srv/pub/binpkgs/unstable/x86-64/status.json
           printf '[structure]\n0=filename-hash BLAKE2B 8\n' > /srv/pub/distfiles/layout.conf
           mkdir -p /srv/pub/distfiles/c6 && echo x > /srv/pub/distfiles/c6/t.tar.gz
           nginx
@@ -275,6 +279,14 @@ jobs:
           case "$(hdr /distfiles/c6/ content-security-policy)" in "default-src 'self'"*) ;; *) fail "distfiles 目录页未使用站点 CSP" ;; esac
           case "$(hdr /binpkgs/x86-64/ content-security-policy)" in "default-src 'self'"*) ;; *) fail "binpkgs 目录页未使用站点 CSP" ;; esac
           [ "$(hdr /binpkgs/x86-64/Packages x-content-type-options)" = nosniff ] || fail "索引没有 nosniff"
+          for channel_status in /binpkgs/x86-64/status.json \
+            /binpkgs/stable/x86-64/status.json \
+            /binpkgs/unstable/x86-64/status.json; do
+            case "$(hdr "${channel_status}" cache-control)" in
+              *no-cache*) ;;
+              *) fail "${channel_status} 可能返回缓存状态" ;;
+            esac
+          done
 
           printf 'User-agent: *\nDisallow: /distfiles/\n' > /srv/mirrors/robots.txt
           [ "$(code /robots.txt)" = 200 ] || fail "robots.txt 无法获取"

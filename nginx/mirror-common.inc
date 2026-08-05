@@ -61,7 +61,7 @@ location ^~ /binpkgs/ {
 		include /etc/nginx/conf.d/headers-files.inc;
 	}
 
-	location = /binpkgs/x86-64/status.json {
+	location ~ ^/binpkgs/(?:stable/|unstable/)?x86-64/status\.json$ {
 		root /srv/pub;
 		add_header Cache-Control "no-cache";
 		include /etc/nginx/conf.d/headers-files.inc;
