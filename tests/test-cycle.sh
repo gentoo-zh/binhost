@@ -21,6 +21,7 @@ cycle_probe() {
     d=$(mktemp -d)
     mkdir -p "${d}/build" "${d}/bin" "${d}/logs" "${d}/overlay"
     cp "${ROOT}/build/cycle.sh" "${d}/build/cycle.sh"
+    cp "${ROOT}/build/channel.sh" "${d}/build/channel.sh"
     cat > "${d}/build/alert.sh" <<'EOF'
 ALERT_SENT=0
 alert() { printf '%s\n' "$1" >> "${ALERT_LOG}"; }

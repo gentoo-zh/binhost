@@ -5,9 +5,14 @@ set -euo pipefail
 main() {
 cd "$(dirname "$0")/.."
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=build/channel.sh
+. "${SCRIPT_DIR}/channel.sh"
+
 OVERLAY="${OVERLAY:-/var/lib/binhost/overlay}"
-LOGDIR="${LOGDIR:-/var/lib/binhost/logs/x86-64}"
-STAGE="${STAGE:-/var/lib/binhost/stage/x86-64}"
+LOGDIR="${LOGDIR:-/var/lib/binhost/logs/${CHANNEL_STORAGE}}"
+STAGE="${STAGE:-/var/lib/binhost/stage/${CHANNEL_STORAGE}}"
+PROGRESS_OUT="${PROGRESS_OUT:-${CHANNEL_PROGRESS_OUT}}"
 ALERT_CONF="${ALERT_CONF:-/etc/binhost/alert.conf}"
 
 # shellcheck source=build/alert.sh
@@ -44,7 +49,7 @@ echo "overlay $(git -C "${OVERLAY}" rev-parse --short HEAD)"
 export BINHOST_LOCKED=1
 
 rm -f "${LOGDIR}/whole.log" "${LOGDIR}/progress"
-./build/build-progress.sh watch "${LOGDIR}/whole.log" &
+OUT="${PROGRESS_OUT}" ./build/build-progress.sh watch "${LOGDIR}/whole.log" &
 progress=$!
 on_exit() {
     local rc=$1 state
@@ -52,7 +57,7 @@ on_exit() {
     (( rc )) && state='failed'
     kill "${progress}" 2>/dev/null || true
     wait "${progress}" 2>/dev/null || true
-    ./build/build-progress.sh finish "${state}"
+    OUT="${PROGRESS_OUT}" ./build/build-progress.sh finish "${state}"
 }
 trap 'on_exit "$?"' EXIT
 

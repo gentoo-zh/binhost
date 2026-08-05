@@ -339,6 +339,68 @@ ok "交回属主排在持久化之前" "$(( owner_line < persist ))" "1"
 handback=$(grep -c 'chown -R "$(id -u):$(id -g)" "${PKGDIR}"' "${ROOT}/build/build-container.sh")
 ok "交回的是 PKGDIR 而不是别的目录" "${handback}" "1"
 
+echo "== 构建频道使用隔离路径"
+
+channel_probe() {
+    # shellcheck disable=SC2016  # The child shell expands the probe variables.
+    env -u CHANNEL TAG=x86-64 bash -c '
+        [ "$1" = default ] || export CHANNEL="$1"
+        . "$2"
+        printf "%s|%s|%s|%s|%s|%s\n" \
+            "$CHANNEL" "$CHANNEL_STORAGE" "$CHANNEL_IMAGE_TAG" \
+            "$CHANNEL_ACCEPT_KEYWORDS" "$CHANNEL_OVERLAY_KEYWORDS" \
+            "$CHANNEL_REMOTE_ROOT"
+    ' _ "$1" "${ROOT}/build/channel.sh"
+}
+
+IFS='|' read -r channel storage image keywords overlay_keywords remote_root <<< \
+    "$(channel_probe default)"
+ok "未指定频道时继续使用 unstable" "${channel}" "unstable"
+ok "unstable 继续使用原有缓存与暂存路径" "${storage}" "x86-64"
+ok "unstable 继续使用原有基础镜像标签" "${image}" "x86-64"
+ok "unstable 继续接受全局测试关键字" "${keywords}" "~amd64"
+ok "unstable 不增加仓库级关键字覆盖" "${overlay_keywords}" ""
+ok "unstable 继续发布到现有公开路径" \
+   "${remote_root}" "/srv/pub/binpkgs/x86-64"
+
+IFS='|' read -r channel storage image keywords overlay_keywords remote_root <<< \
+    "$(channel_probe stable)"
+ok "stable 使用独立缓存与暂存路径" "${storage}" "stable/x86-64"
+ok "stable 使用独立基础镜像标签" "${image}" "stable-x86-64"
+ok "stable 的 Gentoo 主树只接受稳定关键字" "${keywords}" "amd64"
+ok "stable 只对 gentoo-zh 接受测试关键字" "${overlay_keywords}" "~amd64"
+ok "stable 在迁移前只发布到非公开目录" \
+   "${remote_root}" "/srv/binhost-staging/stable/x86-64"
+
+CHANNEL=other bash -c '. "$1"' _ "${ROOT}/build/channel.sh" >/dev/null 2>&1
+channel_rc=$?
+ok "未知频道会立即失败" "${channel_rc}" "2"
+
+shared_lock=$(grep -c "LOCK=\"\${LOCK:-/var/lib/binhost/stage/build.lock}\"" \
+    "${ROOT}/build/build-container.sh")
+ok "两个频道共用全局构建锁" "${shared_lock}" "1"
+
+for script in base-image.sh build-container.sh cycle.sh run-full.sh publish.sh; do
+    sourced=$(grep -c 'source=build/channel.sh' "${ROOT}/build/${script}")
+    ok "${script} 读取统一频道配置" "${sourced}" "1"
+done
+
+base_image=$(<"${ROOT}/build/base-image.sh")
+ok "基础镜像把频道的全局关键字传入容器" \
+   "$(grep -Fc "BINHOST_ACCEPT_KEYWORDS=\${CHANNEL_ACCEPT_KEYWORDS}" <<< "${base_image}")" "1"
+ok "基础镜像把 overlay 关键字传入容器" \
+   "$(grep -Fc "BINHOST_OVERLAY_KEYWORDS=\${CHANNEL_OVERLAY_KEYWORDS}" <<< "${base_image}")" "1"
+ok "基础镜像只按频道要求写入 overlay 关键字" \
+   "$(grep -Fc "*/*::gentoo-zh \${BINHOST_OVERLAY_KEYWORDS}" <<< "${base_image}")" "1"
+
+container=$(<"${ROOT}/build/build-container.sh")
+ok "依赖验证使用频道的主树关键字" \
+   "$(grep -Fc "source_policy=(--source-keywords \"\${CHANNEL_ACCEPT_KEYWORDS}\")" \
+       <<< "${container}")" "1"
+ok "依赖验证可单独接受 overlay 测试关键字" \
+   "$(grep -Fc "source_policy+=(--source-overlay-keywords \"\${CHANNEL_OVERLAY_KEYWORDS}\")" \
+       <<< "${container}")" "1"
+
 echo "== provision.sh 的主机密钥核对"
 
 hostkey_probe() {

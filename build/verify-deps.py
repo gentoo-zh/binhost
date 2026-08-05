@@ -117,12 +117,13 @@ def write_available(path, source_text, source_fields, atoms):
     write_snapshot(path, header, selected)
 
 
-def source_resolver(tree, overlay=None):
+def source_resolver(tree, overlay=None, accept_keywords="~amd64",
+                    overlay_keywords=None):
     import os
     import portage
 
     env = dict(os.environ)
-    env["ACCEPT_KEYWORDS"] = "~amd64"
+    env["ACCEPT_KEYWORDS"] = accept_keywords
     # Source availability is independent of the user's accepted licenses.
     env["ACCEPT_LICENSE"] = "*"
     repositories = (
@@ -134,7 +135,11 @@ def source_resolver(tree, overlay=None):
             f"location = {pathlib.Path(overlay).resolve()}\n"
             "masters = gentoo\n")
     env["PORTAGE_REPOSITORIES"] = repositories
-    database = portage.portdbapi(mysettings=isolated_portage_config(env))
+    package_keywords = ()
+    if overlay is not None and overlay_keywords:
+        package_keywords = (f"*/*::gentoo-zh {overlay_keywords}",)
+    database = portage.portdbapi(mysettings=isolated_portage_config(
+        env, package_accept_keywords=package_keywords))
 
     def resolve(atom):
         fields = []
@@ -175,8 +180,11 @@ def repository_revision(tree):
         return ""
 
 
-def write_source(path, tree, atoms, overlay=None, resolve=None):
-    fields = select_source(atoms, resolve or source_resolver(tree, overlay))
+def write_source(path, tree, atoms, overlay=None, resolve=None,
+                 accept_keywords="~amd64", overlay_keywords=None):
+    fields = select_source(
+        atoms, resolve or source_resolver(
+            tree, overlay, accept_keywords, overlay_keywords))
     header = [f"PACKAGES: {len(fields)}", "SOURCE_REPOSITORY: gentoo"]
     revision = repository_revision(tree)
     if revision:
@@ -263,7 +271,8 @@ def check(fields, installed=None, available=None, source=None):
 
 def main(path, exceptions=None, installed=None, available=None,
          write_available_path=None, source=None, source_tree=None,
-         source_overlay=None, write_source_path=None, resolve_source=None):
+         source_overlay=None, write_source_path=None, resolve_source=None,
+         source_keywords="~amd64", source_overlay_keywords=None):
     fields = parse(pathlib.Path(path).read_text())
     if not fields:
         sys.exit(f"{path} 中没有任何 stanza")
@@ -301,7 +310,9 @@ def main(path, exceptions=None, installed=None, available=None,
             if not source_tree:
                 raise ValueError("未提供用于生成源码快照的 Gentoo 仓库")
             write_source(write_source_path, source_tree, unsatisfied,
-                         overlay=source_overlay, resolve=resolve_source)
+                         overlay=source_overlay, resolve=resolve_source,
+                         accept_keywords=source_keywords,
+                         overlay_keywords=source_overlay_keywords)
             _source_fields, source_db = read_snapshot(
                 write_source_path, "Gentoo 源码可用包快照")
         else:
@@ -348,6 +359,8 @@ if __name__ == "__main__":
     parser.add_argument("--source")
     parser.add_argument("--source-tree")
     parser.add_argument("--source-overlay")
+    parser.add_argument("--source-keywords", default="~amd64")
+    parser.add_argument("--source-overlay-keywords")
     parser.add_argument("--write-source")
     options = parser.parse_args()
     sys.exit(main(options.path, installed=options.installed,
@@ -355,4 +368,6 @@ if __name__ == "__main__":
                   write_available_path=options.write_available,
                   source=options.source, source_tree=options.source_tree,
                   source_overlay=options.source_overlay,
-                  write_source_path=options.write_source))
+                  write_source_path=options.write_source,
+                  source_keywords=options.source_keywords,
+                  source_overlay_keywords=options.source_overlay_keywords))
