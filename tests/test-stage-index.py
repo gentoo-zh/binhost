@@ -73,7 +73,7 @@ def fake_lookup(restricts=None):
 
 
 def run(stanzas, overlay_has=None, excluded=frozenset(), masked=(), with_deps=False,
-        restricts=None, licenses=None, gentoo_tree=None):
+        restricts=None, licenses=None, gentoo_tree=None, seed_packages=None):
     old_tree = stage_index.GENTOO_TREE
     stage_index.GENTOO_TREE = gentoo_tree or "/nonexistent/gentoo"
     try:
@@ -89,7 +89,8 @@ def run(stanzas, overlay_has=None, excluded=frozenset(), masked=(), with_deps=Fa
         if overlay_has is None:
             return stage_index.select(
                 entries, excluded=excluded, with_deps=with_deps,
-                lookup=lookup, license_lookup=license_lookup)
+                lookup=lookup, license_lookup=license_lookup,
+                seed_packages=seed_packages)
         with tempfile.TemporaryDirectory() as tmp:
             ov = pathlib.Path(tmp)
             for cpv in overlay_has:
@@ -104,7 +105,8 @@ def run(stanzas, overlay_has=None, excluded=frozenset(), masked=(), with_deps=Fa
                 "".join(f"# masked for removal\n{cp}\n" for cp in masked))
             return stage_index.select(
                 entries, ov, excluded=excluded, lookup=lookup,
-                license_lookup=license_lookup, with_deps=with_deps)
+                license_lookup=license_lookup, with_deps=with_deps,
+                seed_packages=seed_packages)
     finally:
         stage_index.GENTOO_TREE = old_tree
 
@@ -415,6 +417,59 @@ case("excluded.txt 的包不会作为依赖重新进入索引", lambda: (
              stanza("app-misc/b-1")],
             overlay_has=["app-misc/a-1", "app-misc/b-1"],
             excluded={"app-misc/b"}, with_deps=True))))
+
+case("显式种子不会发布缓存里的无关 overlay 包", lambda: (
+    cpvs(run([stanza("app-misc/a-1"), stanza("app-misc/b-1")],
+             seed_packages={"app-misc/a"})[0]) == ["app-misc/a-1"]))
+
+case("清单外的 overlay 运行期依赖仍会随种子发布", lambda: (
+    cpvs(run([stanza("app-misc/a-1", rdepend="app-misc/b"),
+              stanza("app-misc/b-1")], with_deps=True,
+             seed_packages={"app-misc/a"})[0])
+    == ["app-misc/a-1", "app-misc/b-1"]))
+
+case("频道排除项不会经运行期依赖重新进入索引", lambda: (
+    (lambda result: cpvs(result[0]) == ["app-misc/a-1"]
+     and ("app-misc/b-1", "app-misc/b/b-1.gpkg.tar", "excluded")
+     in result[3])(
+        run([stanza("app-misc/a-1", rdepend="app-misc/b"),
+             stanza("app-misc/b-1")], excluded={"app-misc/b"},
+            with_deps=True, seed_packages={"app-misc/a"}))))
+
+
+def main_channel_policy():
+    with tempfile.TemporaryDirectory() as temporary:
+        root = pathlib.Path(temporary)
+        pkgdir = root / "pkgdir"
+        stage = root / "stage"
+        stage.mkdir()
+        records = []
+        for cpv in ("app-misc/a-1", "app-misc/b-1", "app-misc/c-1"):
+            content = f"{cpv}\n".encode()
+            relative = pathlib.Path("app-misc") / f"{cpv.split('/')[-1]}.gpkg.tar"
+            package = pkgdir / relative
+            package.parent.mkdir(parents=True, exist_ok=True)
+            package.write_bytes(content)
+            records.append(stanza(
+                cpv, PATH=str(relative), sha1=digest_of(content),
+                rdepend="app-misc/b" if cpv == "app-misc/a-1" else None))
+        (pkgdir / "Packages").write_text(
+            HEADER + "\n\n" + "\n\n".join(records) + "\n")
+        seeds = root / "seeds.txt"
+        seeds.write_text("app-misc/a\n")
+        excluded = root / "excluded.txt"
+        excluded.write_text("app-misc/b\tnot in this channel\n")
+        rc = stage_index.main(
+            pkgdir, stage, lookup=fake_lookup(), seed_file=seeds,
+            excluded_files=(excluded,))
+        _, entries = stage_index.parse((stage / "Packages").read_text())
+        unresolved = (stage / "unresolved.txt").read_text()
+        return rc, sorted(fields["CPV"] for fields, _ in entries), unresolved
+
+
+case("main 读取频道种子与排除清单", lambda: (
+    (lambda result: result[0] == 0 and result[1] == ["app-misc/a-1"]
+     and "app-misc/b" in result[2])(main_channel_policy())))
 
 case("没 mask 时照旧收录", lambda: (
     cpvs(run([stanza("app-misc/a-1")], overlay_has=["app-misc/a-1"])[0])
