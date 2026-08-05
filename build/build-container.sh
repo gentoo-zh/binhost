@@ -3,17 +3,20 @@
 set -euo pipefail
 
 main() {
-TAG="${TAG:-x86-64}"
-BASE="${BASE:-gentoo-zh/binhost-base:${TAG}}"
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=build/channel.sh
+. "${SCRIPT_DIR}/channel.sh"
+
+BASE="${BASE:-gentoo-zh/binhost-base:${CHANNEL_IMAGE_TAG}}"
 SIGNING_IMAGE="${SIGNING_IMAGE:-gentoo/stage3@sha256:7f523210aa362e429cf47742c408400a0b8f8e4b618c39ab7dd691ef56f04d3a}"
 BASE_MAX_AGE_DAYS="${BASE_MAX_AGE_DAYS:-7}"
 OVERLAY="${OVERLAY:-/var/lib/binhost/overlay}"
 TREE="${TREE:-/var/db/repos/gentoo}"
 DISTDIR="${DISTDIR:-/var/cache/distfiles}"
-PKGDIR="${PKGDIR:-/var/cache/binhost/${TAG}}"
+PKGDIR="${PKGDIR:-/var/cache/binhost/${CHANNEL_STORAGE}}"
 GENTOO_BINPKGS="${GENTOO_BINPKGS:-/var/cache/binhost/gentoo}"
-STAGE="${STAGE:-/var/lib/binhost/stage/${TAG}}"
-LOGDIR="${LOGDIR:-/var/lib/binhost/logs/${TAG}}"
+STAGE="${STAGE:-/var/lib/binhost/stage/${CHANNEL_STORAGE}}"
+LOGDIR="${LOGDIR:-/var/lib/binhost/logs/${CHANNEL_STORAGE}}"
 LIST="${LIST:-$(dirname "$0")/packages.txt}"
 SIGNING_KEY="${SIGNING_KEY:-}"
 SIGNING_GNUPGHOME="${SIGNING_GNUPGHOME:-/var/lib/binhost/gnupg}"
@@ -35,7 +38,7 @@ cleanup_signing_input() {
 trap cleanup_signing_input EXIT
 
 if [[ -z ${BINHOST_LOCKED:-} ]]; then
-    LOCK="${LOCK:-$(dirname "${STAGE}")/build.lock}"
+    LOCK="${LOCK:-/var/lib/binhost/stage/build.lock}"
     mkdir -p "$(dirname "${LOCK}")"
     exec 9>"${LOCK}"
     flock -n 9 || die "另一轮构建正在进行（${LOCK}）"
@@ -59,7 +62,7 @@ if [[ -n ${created} ]]; then
 fi
 if (( stale )); then
     echo ">>> refreshing base image"
-    TAG="${TAG}" BASE="${BASE}" SIGNING_KEY="${SIGNING_KEY}" \
+    CHANNEL="${CHANNEL}" TAG="${TAG}" BASE="${BASE}" SIGNING_KEY="${SIGNING_KEY}" \
     TREE="${TREE}" OVERLAY="${OVERLAY}" DISTDIR="${DISTDIR}" PKGDIR="${PKGDIR}" \
     SIGNING_GNUPGHOME="${SIGNING_GNUPGHOME}" JOBS="${JOBS}" MAKEOPTS="${MAKEOPTS}" \
         "$(dirname "$0")/base-image.sh"
@@ -232,12 +235,17 @@ fi
 cleanup_signing_input
 rm -f "${STAGE}.new/.signed-packages"
 
+source_policy=(--source-keywords "${CHANNEL_ACCEPT_KEYWORDS}")
+if [[ -n ${CHANNEL_OVERLAY_KEYWORDS} ]]; then
+    source_policy+=(--source-overlay-keywords "${CHANNEL_OVERLAY_KEYWORDS}")
+fi
 if [[ ! -s ${STAGE}.new/publish-blocked.txt ]] &&
    ! python3 "$(dirname "$0")/verify-deps.py" "${STAGE}.new/Packages" \
         --installed "${STAGE}.new/installed.txt" \
         --available "${LOGDIR}/gentoo-Packages" \
         --write-available "${STAGE}.new/official.txt" \
         --source-tree "${TREE}" --source-overlay "${OVERLAY}" \
+        "${source_policy[@]}" \
         --write-source "${STAGE}.new/source.txt"; then
     echo "暂存索引未通过运行期依赖验证，本轮只执行隔离" \
         > "${STAGE}.new/publish-blocked.txt"

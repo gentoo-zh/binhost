@@ -2,13 +2,16 @@
 
 set -euo pipefail
 
-TAG="${TAG:-x86-64}"
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=build/channel.sh
+. "${SCRIPT_DIR}/channel.sh"
+
 STAGE3="${STAGE3:-gentoo/stage3@sha256:7f523210aa362e429cf47742c408400a0b8f8e4b618c39ab7dd691ef56f04d3a}"  # gentoo/stage3:amd64-desktop-openrc
-BASE="${BASE:-gentoo-zh/binhost-base:${TAG}}"
+BASE="${BASE:-gentoo-zh/binhost-base:${CHANNEL_IMAGE_TAG}}"
 TREE="${TREE:-/var/db/repos/gentoo}"
 OVERLAY="${OVERLAY:-/var/lib/binhost/overlay}"
 DISTDIR="${DISTDIR:-/var/cache/distfiles}"
-PKGDIR="${PKGDIR:-/var/cache/binhost/${TAG}}"
+PKGDIR="${PKGDIR:-/var/cache/binhost/${CHANNEL_STORAGE}}"
 SIGNING_KEY="${SIGNING_KEY:-}"
 SIGNING_GNUPGHOME="${SIGNING_GNUPGHOME:-/var/lib/binhost/gnupg}"
 MAKEOPTS="${MAKEOPTS:--j12}"
@@ -31,7 +34,7 @@ gpg --homedir "${SIGNING_GNUPGHOME}" --batch --armor --export "${SIGNING_KEY}" \
 
 sudo install -dm755 -o "$(id -u)" -g "$(id -g)" "${PKGDIR}"
 
-container="binhost-base-build-${TAG}"
+container="binhost-base-build-${CHANNEL_IMAGE_TAG}"
 ${DOCKER} rm -f "${container}" >/dev/null 2>&1 || true
 
 echo ">>> preparing ${BASE} from ${STAGE3}"
@@ -45,6 +48,8 @@ ${DOCKER} run -i --security-opt=no-new-privileges --name "${container}" \
     -v "${PUBLIC_KEY}:/tmp/binhost.asc:ro" \
     -v "$(dirname "$0")/rebuild-preserved.sh:/usr/local/bin/rebuild-preserved:ro" \
     -e "MAKEOPTS=${MAKEOPTS}" -e "JOBS=${JOBS}" -e "SIGNING_KEY=${SIGNING_KEY}" \
+    -e "BINHOST_ACCEPT_KEYWORDS=${CHANNEL_ACCEPT_KEYWORDS}" \
+    -e "BINHOST_OVERLAY_KEYWORDS=${CHANNEL_OVERLAY_KEYWORDS}" \
     "${STAGE3}" /bin/bash -euo pipefail -s <<'INNER'
 
 mkdir -p /run/lock /etc/portage/repos.conf
@@ -61,13 +66,20 @@ CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"
 CXXFLAGS="\${CFLAGS}"
 MAKEOPTS="${MAKEOPTS}"
 
-ACCEPT_KEYWORDS="~amd64"
+ACCEPT_KEYWORDS="${BINHOST_ACCEPT_KEYWORDS}"
 ACCEPT_LICENSE="-* @BINARY-REDISTRIBUTABLE"
 
 FEATURES="buildpkg getbinpkg binpkg-multi-instance parallel-fetch -news"
 
 EMERGE_DEFAULT_OPTS="--jobs=${JOBS} --load-average=$(nproc) --quiet-build"
 EOF
+
+if [[ -n ${BINHOST_OVERLAY_KEYWORDS} ]]; then
+    mkdir -p /etc/portage/package.accept_keywords
+    cat > /etc/portage/package.accept_keywords/gentoo-zh <<EOF
+*/*::gentoo-zh ${BINHOST_OVERLAY_KEYWORDS}
+EOF
+fi
 
 getuto
 
@@ -133,7 +145,7 @@ echo ">>> ${BASE} ready"
 
 
 if [[ -n ${PUBLISH:-} ]]; then
-    remote="${REGISTRY:-ghcr.io/gentoo-zh}/binhost-base:${TAG}"
+    remote="${REGISTRY:-ghcr.io/gentoo-zh}/binhost-base:${CHANNEL_IMAGE_TAG}"
     echo ">>> pushing ${remote}"
     ${DOCKER} tag "${BASE}" "${remote}"
     ${DOCKER} push "${remote}"

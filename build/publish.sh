@@ -3,10 +3,13 @@
 set -euo pipefail
 
 main() {
-TAG="${TAG:-x86-64}"
-STAGE="${STAGE:-/var/lib/binhost/stage/${TAG}}"
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=build/channel.sh
+. "${SCRIPT_DIR}/channel.sh"
+
+STAGE="${STAGE:-/var/lib/binhost/stage/${CHANNEL_STORAGE}}"
 REMOTE="${REMOTE:-mirror}"
-REMOTE_ROOT="${REMOTE_ROOT:-/srv/pub/binpkgs/${TAG}}"
+REMOTE_ROOT="${REMOTE_ROOT:-${CHANNEL_REMOTE_ROOT}}"
 
 MAX_RETIRE_SHARE="${MAX_RETIRE_SHARE:-20}"
 MAX_RETIRE_COUNT="${MAX_RETIRE_COUNT:-60}"
