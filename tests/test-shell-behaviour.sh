@@ -355,13 +355,22 @@ channel_probe() {
 
 IFS='|' read -r channel storage image keywords overlay_keywords remote_root <<< \
     "$(channel_probe default)"
-ok "未指定频道时继续使用 unstable" "${channel}" "unstable"
+ok "未指定频道时默认使用 stable" "${channel}" "stable"
+ok "stable 默认使用独立缓存与暂存路径" "${storage}" "stable/x86-64"
+ok "stable 默认使用独立基础镜像标签" "${image}" "stable-x86-64"
+ok "stable 默认只接受主树稳定关键字" "${keywords}" "amd64"
+ok "stable 默认只对 gentoo-zh 接受测试关键字" "${overlay_keywords}" "~amd64"
+ok "stable 默认发布到兼容路径" \
+   "${remote_root}" "/srv/pub/binpkgs/x86-64"
+
+IFS='|' read -r channel storage image keywords overlay_keywords remote_root <<< \
+    "$(channel_probe unstable)"
 ok "unstable 继续使用原有缓存与暂存路径" "${storage}" "x86-64"
 ok "unstable 继续使用原有基础镜像标签" "${image}" "x86-64"
 ok "unstable 继续接受全局测试关键字" "${keywords}" "~amd64"
 ok "unstable 不增加仓库级关键字覆盖" "${overlay_keywords}" ""
-ok "unstable 继续发布到现有公开路径" \
-   "${remote_root}" "/srv/pub/binpkgs/x86-64"
+ok "unstable 发布到明确的测试频道路径" \
+   "${remote_root}" "/srv/pub/binpkgs/unstable/x86-64"
 
 IFS='|' read -r channel storage image keywords overlay_keywords remote_root <<< \
     "$(channel_probe stable)"
@@ -369,12 +378,26 @@ ok "stable 使用独立缓存与暂存路径" "${storage}" "stable/x86-64"
 ok "stable 使用独立基础镜像标签" "${image}" "stable-x86-64"
 ok "stable 的 Gentoo 主树只接受稳定关键字" "${keywords}" "amd64"
 ok "stable 只对 gentoo-zh 接受测试关键字" "${overlay_keywords}" "~amd64"
-ok "stable 在迁移前只发布到非公开目录" \
-   "${remote_root}" "/srv/binhost-staging/stable/x86-64"
+ok "stable 发布到既有兼容路径" \
+   "${remote_root}" "/srv/pub/binpkgs/x86-64"
 
 CHANNEL=other bash -c '. "$1"' _ "${ROOT}/build/channel.sh" >/dev/null 2>&1
 channel_rc=$?
 ok "未知频道会立即失败" "${channel_rc}" "2"
+
+stable_unit=$(<"${ROOT}/deploy/systemd/binhost-build.service")
+unstable_unit=$(<"${ROOT}/deploy/systemd/binhost-build-unstable.service")
+stable_timer=$(<"${ROOT}/deploy/systemd/binhost-build.timer")
+unstable_timer=$(<"${ROOT}/deploy/systemd/binhost-build-unstable.timer")
+installer=$(<"${ROOT}/deploy/install-builder.sh")
+ok "默认构建服务明确选择 stable" \
+   "$(grep -c '^Environment=CHANNEL=stable$' <<< "${stable_unit}")" "1"
+ok "测试频道服务明确选择 unstable" \
+   "$(grep -c '^Environment=CHANNEL=unstable$' <<< "${unstable_unit}")" "1"
+ok "两个频道错开十二小时调度" \
+   "$(grep -c '16:00:00 Asia/Shanghai' <<< "${stable_timer}")-$(grep -c '04:00:00 Asia/Shanghai' <<< "${unstable_timer}")" "1-1"
+ok "安装脚本同时启用两个频道的定时器" \
+   "$(grep -c 'binhost-build-unstable.timer' <<< "${installer}")" "1"
 
 shared_lock=$(grep -c "LOCK=\"\${LOCK:-/var/lib/binhost/stage/build.lock}\"" \
     "${ROOT}/build/build-container.sh")

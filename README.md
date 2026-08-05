@@ -98,17 +98,26 @@ Docker socket、签名私钥或主机根文件系统，也不从主机挂载 `/d
 旧索引可能暂时返回 404；具体边界见
 [`docs/accepted-risks.md`](docs/accepted-risks.md)。
 
-`build/cycle.sh` 依次更新 overlay、执行完整构建并发布结果。本机锁只允许一个
-`cycle.sh` 或 `run-full.sh` 使用构建暂存区。镜像机没有远端发布锁，因此人工发布前必须
-确认定时构建不会同时发布。
+`build/cycle.sh` 依次更新 overlay、执行完整构建并发布结果。stable 频道使用 Gentoo 主树
+稳定关键字，只对 `::gentoo-zh` 接受 `~amd64`；unstable 频道全局接受 `~amd64`。两个频道
+使用独立的基础镜像、PKGDIR、暂存区与日志，共用一个构建锁，因此不会同时运行。
+
+| 频道 | 公开路径 | 每日构建时间（UTC+8） |
+| --- | --- | --- |
+| stable | `/binpkgs/x86-64`、`/binpkgs/stable/x86-64` | 16:00 后随机 0–15 分钟 |
+| unstable | `/binpkgs/unstable/x86-64` | 04:00 后随机 0–15 分钟 |
+
+镜像机没有远端发布锁，因此人工发布前必须确认定时构建不会同时发布。
 
 在确认没有自动构建运行后，可在构建机手动执行：
 
 ```bash
-SIGNING_KEY=<指纹> build/run-full.sh
-build/publish.sh
+CHANNEL=stable SIGNING_KEY=<指纹> build/run-full.sh
+CHANNEL=stable build/publish.sh
 build/status.sh
 ```
+
+将 `CHANNEL` 改为 `unstable` 可手动运行测试频道。不要省略人工操作中的频道名。
 
 设置 `PUBLISH=1` 时，基础镜像会推送到 `ghcr.io/gentoo-zh/binhost-base`。
 
@@ -126,8 +135,8 @@ SIGNING_KEY=<签名指纹> REMOTE="ssh build" \
 `deploy/install.sh` 在镜像机安装 nginx、rsync、distfiles 同步、站点同步、状态检查与相关
 定时任务。TLS 证书和 `/etc/binhost/alert.conf` 需要单独配置。
 
-`deploy/install-builder.sh` 在构建机安装 `build/`、systemd 服务与定时器，并建立 overlay
-副本。脚本检测到构建锁时会中止；运行中的构建不应使用 `FORCE=1` 覆盖。
+`deploy/install-builder.sh` 在构建机安装 `build/`、两个频道的 systemd 服务与定时器，并
+建立 overlay 副本。脚本检测到构建锁时会中止；运行中的构建不应使用 `FORCE=1` 覆盖。
 
 ## 镜像
 

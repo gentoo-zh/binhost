@@ -1,5 +1,5 @@
 [Unit]
-Description=gentoo-zh binhost 构建与发布
+Description=gentoo-zh binhost 测试频道构建与发布
 
 OnFailure=binhost-alert@%N.service
 
@@ -11,5 +11,5 @@ Nice=10
 IOSchedulingClass=idle
 ExecStart=/var/lib/binhost/build/cycle.sh
 Environment=SIGNING_KEY=6A0726AF1476A2F382C6AC6638A0234EC16AD42E
-Environment=CHANNEL=stable
+Environment=CHANNEL=unstable
 TimeoutStartSec=18h
