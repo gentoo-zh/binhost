@@ -142,9 +142,10 @@ check("手动选择会保存频道",
       String(channelStore["mirror-channel"]));
 check("频道切换会要求镜像选择器重算完整地址",
       events.filter(function (event) { return event.type === "sourcechange"; }).length === 2);
-check("两个频道分别提供所需的关键字设置",
-      html.includes("*&#47;*::gentoo-zh") &&
-      html.includes('ACCEPT_KEYWORDS</span>=<span class="val">"~amd64"'));
+check("设置页不写入 overlay 的关键字配置",
+      !html.includes("*&#47;*::gentoo-zh") &&
+      !html.includes('ACCEPT_KEYWORDS</span>=') &&
+      !html.includes("/etc/portage/package.accept_keywords/gentoo-zh"));
 check("包列表为两个频道声明独立的数据文件",
       packagesHtml.includes('data-packages="/packages.json"') &&
       packagesHtml.includes('data-packages="/packages-unstable.json"') &&
