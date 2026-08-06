@@ -134,7 +134,9 @@ SIGNING_KEY=<签名指纹> REMOTE="ssh build" \
 
 `deploy/install.sh` 在镜像机安装 nginx、rsync、distfiles 同步、站点同步、状态检查与相关
 定时任务。每日任务分别生成 stable 与 unstable 的网页数据和纯文本清单；一个频道生成失败
-不会覆写另一个频道上一份有效输出。TLS 证书和 `/etc/binhost/alert.conf` 需要单独配置。
+不会覆写另一个频道上一份有效输出。任务分别核验两个频道的同代清单与依赖闭包；distfiles
+同步失败时仍使用上一份索引刷新包列表，并保持本轮失败状态。TLS 证书和
+`/etc/binhost/alert.conf` 需要单独配置。
 
 `deploy/install-builder.sh` 在构建机安装 `build/`、两个频道的 systemd 服务与定时器，并
 建立 overlay 副本。脚本检测到构建锁时会中止；运行中的构建不应使用 `FORCE=1` 覆盖。

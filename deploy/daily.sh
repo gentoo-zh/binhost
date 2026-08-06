@@ -53,31 +53,38 @@ fi
 if step "distfiles 同步" /usr/local/bin/binhost-distfiles-sync; then
     step "distfiles 对账" python3 "${LIB}/audit-distfiles.py" "${OVERLAY}" "${DISTDIR}"
     step "distfiles 索引" /usr/local/bin/binhost-distfiles-index
-    step "包列表" env LIST="${LIB}/packages.txt" EXCLUDED="${LIB}/excluded.txt" \
-        CHANNEL_EXCLUDED="${LIB}/stable-excluded.txt" \
-        OUT=/srv/mirrors/packages.json PACKAGE_TEXT=/srv/mirrors/packages.txt \
-        DEPS_TEXT=/srv/mirrors/deps.txt INDEX=/srv/pub/binpkgs/x86-64/Packages \
-        python3 "${LIB}/gen-packages.py" "${OVERLAY}"
-    step "unstable 包列表" env LIST="${LIB}/packages.txt" EXCLUDED="${LIB}/excluded.txt" \
-        OUT=/srv/mirrors/packages-unstable.json \
-        PACKAGE_TEXT=/srv/mirrors/packages-unstable.txt \
-        DEPS_TEXT=/srv/mirrors/deps-unstable.txt \
-        INDEX=/srv/pub/unstable/binpkgs/x86-64/Packages \
-        python3 "${LIB}/gen-packages.py" "${OVERLAY}"
 fi
+
+step "stable 包列表" env LIST="${LIB}/packages.txt" EXCLUDED="${LIB}/excluded.txt" \
+    CHANNEL_EXCLUDED="${LIB}/stable-excluded.txt" \
+    OUT=/srv/mirrors/packages.json PACKAGE_TEXT=/srv/mirrors/packages.txt \
+    DEPS_TEXT=/srv/mirrors/deps.txt INDEX=/srv/pub/binpkgs/x86-64/Packages \
+    python3 "${LIB}/gen-packages.py" "${OVERLAY}"
+step "unstable 包列表" env LIST="${LIB}/packages.txt" EXCLUDED="${LIB}/excluded.txt" \
+    OUT=/srv/mirrors/packages-unstable.json \
+    PACKAGE_TEXT=/srv/mirrors/packages-unstable.txt \
+    DEPS_TEXT=/srv/mirrors/deps-unstable.txt \
+    INDEX=/srv/pub/unstable/binpkgs/x86-64/Packages \
+    python3 "${LIB}/gen-packages.py" "${OVERLAY}"
 
 # generation.json arrives with the first index created by the generation-aware
 # builder. Older public indexes predate this check and are skipped, while any
 # existing entry, including a broken symlink, must still pass verification.
-BINPKGS="${BINPKGS:-/srv/pub/binpkgs/x86-64}"
-GENERATION="${BINPKGS}/generation.json"
-if [[ ! -e ${GENERATION} && ! -L ${GENERATION} ]]; then
-    echo "跳过同代清单与依赖反向验证：${GENERATION} 尚未发布，下一轮构建会带上它"
-elif step "同代清单验证" python3 "${LIB}/generation.py" verify "${BINPKGS}"; then
-    step "依赖反向验证" python3 "${LIB}/verify-deps.py" \
-        "${BINPKGS}/Packages" --installed "${BINPKGS}/installed.txt" \
-        --available "${BINPKGS}/official.txt" --source "${BINPKGS}/source.txt"
-fi
+verify_channel() {
+    local label=$1 binpkgs=$2 generation
+    generation="${binpkgs}/generation.json"
+    if [[ ! -e ${generation} && ! -L ${generation} ]]; then
+        echo "跳过 ${label} 同代清单与依赖反向验证：${generation} 尚未发布"
+    elif step "${label} 同代清单验证" \
+              python3 "${LIB}/generation.py" verify "${binpkgs}"; then
+        step "${label} 依赖反向验证" python3 "${LIB}/verify-deps.py" \
+            "${binpkgs}/Packages" --installed "${binpkgs}/installed.txt" \
+            --available "${binpkgs}/official.txt" --source "${binpkgs}/source.txt"
+    fi
+}
+
+verify_channel stable "${STABLE_BINPKGS:-/srv/pub/binpkgs/x86-64}"
+verify_channel unstable "${UNSTABLE_BINPKGS:-/srv/pub/unstable/binpkgs/x86-64}"
 
 if [[ -s ${FAILURES} ]]; then
     n=$(wc -l < "${FAILURES}")
