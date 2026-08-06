@@ -132,7 +132,8 @@ def in_gentoo(cp, tree):
 
 
 def read_excluded(overlay):
-    f = pathlib.Path(__file__).with_name("excluded.txt")
+    f = pathlib.Path(os.environ.get(
+        "EXCLUDED", pathlib.Path(__file__).with_name("excluded.txt")))
     if not f.exists():
         return set()
     return {l.split()[0] for l in f.read_text().splitlines()

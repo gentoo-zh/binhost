@@ -42,7 +42,7 @@ def make_tree(root, packages, empty=()):
 
 
 def run(index_lines, list_lines, packages=None, masked=(), tree=(), body=None,
-        tree_empty=(), moves=()):
+        tree_empty=(), moves=(), excluded=None):
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
         overlay = make_overlay(d / "overlay", packages or {}, masked, body, moves)
@@ -50,10 +50,14 @@ def run(index_lines, list_lines, packages=None, masked=(), tree=(), body=None,
         (d / "Packages").write_text(
             "ACCEPT_KEYWORDS: ~amd64\nPACKAGES: 0\n\n" + "\n\n".join(index_lines) + "\n")
         (d / "list.txt").write_text("\n".join(list_lines) + "\n")
+        env = {**os.environ, "GENTOO_TREE": str(gentoo)}
+        if excluded is not None:
+            (d / "excluded.txt").write_text(
+                "".join(f"{cp}\treason\n" for cp in excluded))
+            env["EXCLUDED"] = str(d / "excluded.txt")
         p = subprocess.run([sys.executable, CHECK, str(overlay),
                             str(d / "Packages"), str(d / "list.txt")],
-                           capture_output=True, text=True,
-                           env={**os.environ, "GENTOO_TREE": str(gentoo)})
+                           capture_output=True, text=True, env=env)
         return p.returncode, p.stdout
 
 
@@ -148,6 +152,22 @@ def simultaneous_lifecycle_case():
 
 ok = simultaneous_lifecycle_case()
 print(f"  {'✓' if ok else '✗'} {'同轮 add/drop、删除、mask、move 与新增':<24}")
+if not ok:
+    bad += 1
+
+
+def excluded_env_case():
+    listed = "app-misc/listed"
+    dropped = "app-misc/dropped"
+    packages = {listed: "1.0", dropped: "1.0"}
+    index = [stanza(f"{listed}-1.0")]
+    without = run(index, [listed], packages)[1]
+    with_file = run(index, [listed], packages, excluded=[dropped])[1]
+    return f"新包   {dropped}" in without and f"新包   {dropped}" not in with_file
+
+
+ok = excluded_env_case()
+print(f"  {'✓' if ok else '✗'} {'EXCLUDED 指定的清单会被采用':<24}")
 if not ok:
     bad += 1
 
