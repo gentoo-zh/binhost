@@ -279,6 +279,37 @@ def quarantine_for(value):
 case("本地安装类别等待新索引成功后再清理", lambda: (
     quarantine_for(stanza("virtual/lib-0", repo="gentoo")) == []))
 
+
+def counts_for(entries):
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp)
+        pkgdir = root / "pkgdir"
+        pkgdir.mkdir()
+        content = b"x\n"
+        digest = md5_of(content)
+        for cpv, path in entries:
+            blob = pkgdir / path
+            blob.parent.mkdir(parents=True, exist_ok=True)
+            blob.write_bytes(content)
+        body = "\n\n".join(
+            f"CPV: {cpv}\nPATH: {path}\nREPO: gentoo-zh\nEAPI: 8\nSLOT: 0\n"
+            f"MD5: {digest}"
+            for cpv, path in entries)
+        (pkgdir / "Packages").write_text(HEADER + "\n\n" + body + "\n")
+        stage = root / "stage"
+        stage.mkdir()
+        stage_index.main(pkgdir, stage, lookup=lambda _cpv, _repo: "")
+        return (stage / "counts.txt").read_text().split()
+
+
+case("同一个包的两份产物只算一个 overlay 包", lambda: (
+    counts_for([("app-misc/a-1", "app-misc/a/a-1.gpkg.tar"),
+                ("app-misc/a-2", "app-misc/a/a-2.gpkg.tar")]) == ["1", "0"]))
+
+case("不同包分别计数", lambda: (
+    counts_for([("app-misc/a-1", "app-misc/a/a-1.gpkg.tar"),
+                ("app-misc/b-1", "app-misc/b/b-1.gpkg.tar")]) == ["2", "0"]))
+
 case("bindist 产物仍立即进入隔离清单", lambda: (
     quarantine_for(stanza("app-misc/restricted-1", restrict="bindist"))
     == ["app-misc/restricted/restricted-1.gpkg.tar"]))
