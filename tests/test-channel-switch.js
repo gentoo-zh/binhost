@@ -67,12 +67,17 @@ const panels = [...html.matchAll(/<[^>]+data-channel-panel="([^"]+)"[^>]*>/g)].m
   return element({ "data-channel-panel": match[1] }, "", /\shidden(?:\s|>)/.test(match[0]));
 });
 const events = [];
+const channelStore = {};
 
 global.CustomEvent = class {
   constructor(type, options) {
     this.type = type;
     this.detail = options && options.detail;
   }
+};
+global.localStorage = {
+  getItem(name) { return channelStore[name] || null; },
+  setItem(name, value) { channelStore[name] = String(value); },
 };
 global.document = {
   querySelectorAll(selector) {
@@ -132,6 +137,9 @@ check("切换 unstable 会请求独立状态文件",
           event.detail.path === "/unstable/binpkgs/x86-64" &&
           event.detail.status === "/build-status-unstable.json";
       }));
+check("手动选择会保存频道",
+      channelStore["mirror-channel"] === "unstable",
+      String(channelStore["mirror-channel"]));
 check("频道切换会要求镜像选择器重算完整地址",
       events.filter(function (event) { return event.type === "sourcechange"; }).length === 2);
 check("两个频道分别提供所需的关键字设置",
@@ -142,6 +150,66 @@ check("包列表为两个频道声明独立的数据文件",
       packagesHtml.includes('data-packages="/packages-unstable.json"') &&
       packagesHtml.includes('data-package-text="/packages-unstable.txt"') &&
       packagesHtml.includes('data-deps-text="/deps-unstable.txt"'));
+check("频道标签不宣称推荐关系",
+      !html.includes("stable（推荐）") && !html.includes("stable（建議）") &&
+      !html.includes("stable (recommended)") &&
+      !packagesHtml.includes("stable（推荐）") &&
+      !packagesHtml.includes("stable（建議）") &&
+      !packagesHtml.includes("stable (recommended)"));
+check("全局测试频道引用 Gentoo Wiki 的迁移说明",
+      html.includes('https://wiki.gentoo.org/wiki//etc/portage/package.accept_keywords#.7EARCH_system-wide'));
+
+function loadPageWithStorage(source, saved, unavailable) {
+  const match = /<div class="src-pick channel-pick"([^>]*)>([\s\S]*?)<\/div>/.exec(source);
+  const pageOptions = match ? [...match[2].matchAll(/<button\b([^>]*)>[\s\S]*?<\/button>/g)]
+    .map(function (button) {
+      const attrs = button[1];
+      return element({
+        "data-channel": attr(attrs, "data-channel"),
+        "data-path": attr(attrs, "data-path"),
+        "data-status": attr(attrs, "data-status"),
+      }, attr(attrs, "class"), false, button[0].includes("data-channel-total"));
+    }) : [];
+  const pageGroup = element({});
+  pageGroup.querySelectorAll = function (selector) {
+    return selector === "[data-channel]" ? pageOptions : [];
+  };
+  global.localStorage = unavailable ? {
+    getItem() { throw new Error("unavailable"); },
+    setItem() { throw new Error("unavailable"); },
+  } : {
+    getItem(name) { return name === "mirror-channel" ? saved : null; },
+    setItem() {},
+  };
+  global.document = {
+    querySelectorAll(selector) {
+      if (selector === "[data-channel-switch]") return match ? [pageGroup] : [];
+      return [];
+    },
+    dispatchEvent() {},
+  };
+  (0, eval)(fs.readFileSync(
+    path.join(ROOT, "site/assets/channel-switch.js"), "utf8"));
+  return pageOptions;
+}
+
+const restored = loadPageWithStorage(packagesHtml, "unstable", false);
+check("包列表会恢复首页保存的 unstable 频道",
+      restored.find(function (option) {
+        return option.getAttribute("data-channel") === "unstable";
+      }).getAttribute("aria-pressed") === "true");
+
+const invalid = loadPageWithStorage(packagesHtml, "future-channel", false);
+check("未知的保存值回退 stable",
+      invalid.find(function (option) {
+        return option.getAttribute("data-channel") === "stable";
+      }).getAttribute("aria-pressed") === "true");
+
+const unavailable = loadPageWithStorage(packagesHtml, null, true);
+check("浏览器存储不可用时仍回退 stable",
+      unavailable.find(function (option) {
+        return option.getAttribute("data-channel") === "stable";
+      }).getAttribute("aria-pressed") === "true");
 
 setImmediate(function () {
   check("首页分别显示两个频道的收录数",

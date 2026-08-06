@@ -1,8 +1,19 @@
 (function () {
   var groups = document.querySelectorAll('[data-channel-switch]');
   if (!groups.length) return;
+  var storageKey = 'mirror-channel';
 
   function each(list, f) { Array.prototype.forEach.call(list, f); }
+
+  function storedChannel() {
+    try { return localStorage.getItem(storageKey); }
+    catch (_) { return null; }
+  }
+
+  function rememberChannel(channel) {
+    try { localStorage.setItem(storageKey, channel); }
+    catch (_) {}
+  }
 
   each(groups, function (group) {
     var opts = group.querySelectorAll('[data-channel]');
@@ -42,7 +53,10 @@
     }
 
     each(opts, function (option) {
-      option.addEventListener('click', function () { render(option); });
+      option.addEventListener('click', function () {
+        rememberChannel(option.getAttribute('data-channel'));
+        render(option);
+      });
       var count = option.querySelector('[data-channel-total]');
       var path = option.getAttribute('data-path');
       if (!count || !path) return;
@@ -56,7 +70,10 @@
         .catch(function () {});
     });
 
+    var saved = storedChannel();
     var initial = Array.prototype.filter.call(opts, function (option) {
+      return option.getAttribute('data-channel') === saved;
+    })[0] || Array.prototype.filter.call(opts, function (option) {
       return option.classList.contains('on');
     })[0] || opts[0];
     render(initial);

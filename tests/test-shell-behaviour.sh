@@ -268,7 +268,7 @@ echo "== daily.sh 的旧代过渡"
 
 audit_line=$(grep -n 'step "distfiles 对账"' "${ROOT}/deploy/daily.sh" | cut -d: -f1)
 index_line=$(grep -n 'step "distfiles 索引"' "${ROOT}/deploy/daily.sh" | cut -d: -f1)
-packages_line=$(grep -n 'step "包列表"' "${ROOT}/deploy/daily.sh" | cut -d: -f1)
+packages_line=$(grep -n 'step "stable 包列表"' "${ROOT}/deploy/daily.sh" | cut -d: -f1)
 ok "distfiles 回收完成后才重建公开索引" "$((audit_line < index_line))" "1"
 ok "包列表使用回收后的 distfiles 索引" "$((index_line < packages_line))" "1"
 ok "每日任务分别生成两个频道的包列表" \
@@ -280,60 +280,106 @@ ok "每日任务为 stable 生成独立的依赖清单" \
 ok "unstable 网页数据使用独立输出" \
    "$(grep -c 'OUT=/srv/mirrors/packages-unstable.json' "${ROOT}/deploy/daily.sh")" "1"
 
+daily_list_probe() {
+    local mode=$1 d
+    d=$(mktemp -d)
+    sed -n '/^if step "distfiles 同步"/,/^# generation.json/p' "${ROOT}/deploy/daily.sh" |
+        sed '$d' > "${d}/block.sh"
+    (
+        # shellcheck disable=SC2317,SC2329  # The sourced block invokes this function.
+        step() {
+            printf '%s\n' "$1"
+            [[ $1 != "distfiles 同步" || ${mode} != failed ]]
+        }
+        # shellcheck disable=SC1091  # block.sh is generated above.
+        LIB="${d}" OVERLAY="${d}/overlay" DISTDIR="${d}/distfiles" \
+            . "${d}/block.sh"
+    )
+    rm -rf "${d}"
+}
+
+mapfile -t calls < <(daily_list_probe failed)
+ok "distfiles 同步失败时仍刷新两个频道的包列表" \
+   "${calls[*]}" "distfiles 同步 stable 包列表 unstable 包列表"
+
+mapfile -t calls < <(daily_list_probe success)
+ok "distfiles 同步成功时先对账并重建索引" \
+   "${calls[*]}" \
+   "distfiles 同步 distfiles 对账 distfiles 索引 stable 包列表 unstable 包列表"
+
 daily_generation_probe() {
     local mode="$1" d out calls
     d=$(mktemp -d)
-    mkdir -p "${d}/binpkgs" "${d}/lib"
+    mkdir -p "${d}/stable" "${d}/unstable" "${d}/lib"
     # shellcheck disable=SC2016  # Match ${FAILURES} literally in the source.
-    sed -n '/^BINPKGS=/,/^if \[\[ -s \${FAILURES}/p' "${ROOT}/deploy/daily.sh" |
+    sed -n '/^verify_channel()/,/^if \[\[ -s \${FAILURES}/p' "${ROOT}/deploy/daily.sh" |
         sed '$d' > "${d}/block.sh"
     cat > "${d}/lib/generation.py" <<'PY'
 import os
 import pathlib
 import sys
-pathlib.Path(os.environ["CALLS"]).open("a").write("generation\n")
-sys.exit(int(os.environ.get("GENERATION_RC", "0")))
+label = pathlib.Path(sys.argv[-1]).name
+pathlib.Path(os.environ["CALLS"]).open("a").write(f"generation:{label}\n")
+sys.exit(int(os.environ.get(f"{label.upper()}_GENERATION_RC", "0")))
 PY
     cat > "${d}/lib/verify-deps.py" <<'PY'
 import os
 import pathlib
-pathlib.Path(os.environ["CALLS"]).open("a").write("deps\n")
+import sys
+label = pathlib.Path(sys.argv[1]).parent.name
+pathlib.Path(os.environ["CALLS"]).open("a").write(f"deps:{label}\n")
 PY
     case ${mode} in
-        valid)   : > "${d}/binpkgs/generation.json" ;;
-        invalid) : > "${d}/binpkgs/generation.json" ;;
-        broken)  ln -s missing "${d}/binpkgs/generation.json" ;;
+        valid|stable-invalid|unstable-invalid)
+            : > "${d}/stable/generation.json"
+            : > "${d}/unstable/generation.json"
+            ;;
+        unstable-broken)
+            : > "${d}/stable/generation.json"
+            ln -s missing "${d}/unstable/generation.json"
+            ;;
     esac
     out=$(
         # shellcheck disable=SC2317,SC2329  # The sourced block invokes this function.
         step() { shift; "$@"; }
-        export CALLS="${d}/calls" GENERATION_RC=0
-        [[ ${mode} == invalid || ${mode} == broken ]] && GENERATION_RC=1
+        export CALLS="${d}/calls" STABLE_GENERATION_RC=0 UNSTABLE_GENERATION_RC=0
+        [[ ${mode} == stable-invalid ]] && STABLE_GENERATION_RC=1
+        [[ ${mode} == unstable-invalid || ${mode} == unstable-broken ]] && \
+            UNSTABLE_GENERATION_RC=1
         # shellcheck disable=SC1091  # block.sh is generated above.
-        LIB="${d}/lib" BINPKGS="${d}/binpkgs" . "${d}/block.sh"
+        LIB="${d}/lib" STABLE_BINPKGS="${d}/stable" \
+            UNSTABLE_BINPKGS="${d}/unstable" . "${d}/block.sh"
     )
     if [[ -f ${d}/calls ]]; then
         calls=$(tr '\n' ' ' < "${d}/calls")
     else
         calls=""
     fi
+    out=${out//$'\n'/;}
     printf '%s|%s\n' "${out}" "${calls% }"
     rm -rf "${d}"
 }
 
 IFS='|' read -r out calls <<< "$(daily_generation_probe missing)"
-ok "旧代缺少 generation.json 时不执行验证" "${calls}" ""
-ok "旧代缺少清单时说明略过原因" "$([[ ${out} == *尚未发布* ]] && echo yes)" "yes"
+ok "两个频道缺少 generation.json 时不执行验证" "${calls}" ""
+ok "旧代缺少清单时分别说明略过原因" \
+   "$([[ ${out} == *stable*尚未发布* && ${out} == *unstable*尚未发布* ]] && echo yes)" "yes"
 
 IFS='|' read -r out calls <<< "$(daily_generation_probe valid)"
-ok "同代清单存在且有效时继续反向验证" "${calls}" "generation deps"
+ok "两个频道的同代清单有效时都执行反向验证" "${calls}" \
+   "generation:stable deps:stable generation:unstable deps:unstable"
 
-IFS='|' read -r out calls <<< "$(daily_generation_probe invalid)"
-ok "同代清单存在但损坏时不执行反向验证" "${calls}" "generation"
-ok "损坏的同代清单不会按旧代跳过" "$([[ ${out} != *尚未发布* ]] && echo yes)" "yes"
+IFS='|' read -r out calls <<< "$(daily_generation_probe stable-invalid)"
+ok "stable 清单损坏不妨碍 unstable 完成验证" "${calls}" \
+   "generation:stable generation:unstable deps:unstable"
 
-IFS='|' read -r out calls <<< "$(daily_generation_probe broken)"
-ok "断开的 generation.json 符号链接仍进入验证" "${calls}" "generation"
+IFS='|' read -r out calls <<< "$(daily_generation_probe unstable-invalid)"
+ok "unstable 清单损坏时不执行它的反向验证" "${calls}" \
+   "generation:stable deps:stable generation:unstable"
+
+IFS='|' read -r out calls <<< "$(daily_generation_probe unstable-broken)"
+ok "unstable 的断开符号链接仍进入验证" "${calls}" \
+   "generation:stable deps:stable generation:unstable"
 
 echo "== build-container.sh 交回 PKGDIR 属主"
 

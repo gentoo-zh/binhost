@@ -130,8 +130,10 @@
     <p data-i18n-html="a13b">
       stable 系统只需在 <code>package.accept_keywords</code> 中对
       <code>*&#47;*::gentoo-zh</code> 接受 <code>~amd64</code>；unstable 适用于全局设置
-      <code>ACCEPT_KEYWORDS="~amd64"</code> 的系统。Portage 会拒绝依赖、USE 或 ABI
-      不适用的 binpkg 并改为从源码构建。选择匹配的频道可以提高 binpkg 的适用率。
+      <code>ACCEPT_KEYWORDS="~amd64"</code> 的系统。切换前请阅读 Gentoo Wiki 的
+      <a href="https://wiki.gentoo.org/wiki//etc/portage/package.accept_keywords#.7EARCH_system-wide">~ARCH system-wide</a>
+      说明。Portage 会拒绝依赖、USE 或 ABI 不适用的 binpkg 并改为从源码构建。选择匹配的
+      频道可以提高 binpkg 的适用率。
     </p>
 
     <h2 data-i18n="q2">为什么要用 binrepos.conf，不能直接设 PORTAGE_BINHOST？</h2>
@@ -309,7 +311,7 @@ window.MIRROR_I18N = {
     a13: '請選擇與系統 Gentoo 主倉庫關鍵字相同的頻道。兩個頻道都接受 gentoo-zh overlay 的 <code>~amd64</code> 套件，差別是建置執行期依賴時採用穩定或測試關鍵字。',
     chName: '頻道', chMain: 'Gentoo 主倉庫', chOverlay: 'gentoo-zh overlay', chUri: 'sync-uri 路徑',
     chStable: 'stable（預設）',
-    a13b: 'stable 系統只需在 <code>package.accept_keywords</code> 中對 <code>*&#47;*::gentoo-zh</code> 接受 <code>~amd64</code>；unstable 適用於全域設定 <code>ACCEPT_KEYWORDS="~amd64"</code> 的系統。Portage 會拒絕相依性、USE 或 ABI 不適用的 binpkg，並改為從原始碼建置。選擇相符的頻道可以提高 binpkg 的適用率。',
+    a13b: 'stable 系統只需在 <code>package.accept_keywords</code> 中對 <code>*&#47;*::gentoo-zh</code> 接受 <code>~amd64</code>；unstable 適用於全域設定 <code>ACCEPT_KEYWORDS="~amd64"</code> 的系統。切換前請閱讀 Gentoo Wiki 的 <a href="https://wiki.gentoo.org/wiki//etc/portage/package.accept_keywords#.7EARCH_system-wide">~ARCH system-wide</a> 說明。Portage 會拒絕相依性、USE 或 ABI 不適用的 binpkg，並改為從原始碼建置。選擇相符的頻道可以提高 binpkg 的適用率。',
     q2: '為什麼要用 binrepos.conf，不能直接設 PORTAGE_BINHOST？',
     a2: '因為 <code>PORTAGE_BINHOST</code> 產生的是隱含儲存庫，無法單獨設定 <code>verify-signature</code>。若為使用本站的套件而關閉驗簽，官方 binhost 的驗簽會一併關閉。',
     q3: 'OpenRC 和 systemd 都能使用嗎？',
@@ -363,7 +365,7 @@ window.MIRROR_I18N = {
     a13: 'Choose the channel that matches the keywords used by your system for the Gentoo repository. Both channels accept <code>~amd64</code> packages from the gentoo-zh overlay. They differ in whether runtime dependencies are built with stable or testing keywords.',
     chName: 'Channel', chMain: 'Gentoo repository', chOverlay: 'gentoo-zh overlay', chUri: 'sync-uri path',
     chStable: 'stable (default)',
-    a13b: 'A stable system only needs <code>*&#47;*::gentoo-zh ~amd64</code> in <code>package.accept_keywords</code>. unstable is for systems with global <code>ACCEPT_KEYWORDS="~amd64"</code>. Portage rejects a binpkg when its dependencies, USE flags or ABI do not apply and builds from source instead. Matching the channel to the system makes more binpkgs applicable.',
+    a13b: 'A stable system only needs <code>*&#47;*::gentoo-zh ~amd64</code> in <code>package.accept_keywords</code>. unstable is for systems with global <code>ACCEPT_KEYWORDS="~amd64"</code>. Read Gentoo Wiki\'s <a href="https://wiki.gentoo.org/wiki//etc/portage/package.accept_keywords#.7EARCH_system-wide">~ARCH system-wide</a> guidance before switching. Portage rejects a binpkg when its dependencies, USE flags or ABI do not apply and builds from source instead. Matching the channel to the system makes more binpkgs applicable.',
     q2: 'Why binrepos.conf rather than PORTAGE_BINHOST?',
     a2: 'Because <code>PORTAGE_BINHOST</code> creates an implicit repository that cannot carry its own <code>verify-signature</code>. If you turn verification off to install from here, you turn it off for the official Gentoo binhost as well.',
     q3: 'Does it work on both OpenRC and systemd?',
