@@ -15,6 +15,14 @@
 <!-- /chrome:head -->
 <title>404 — distfiles.gentoozh.org</title>
 <meta name="robots" content="noindex">
+<style>
+@media (max-width: 34rem) {
+  .resource-list tr { display: block; padding: 0.35rem 0; border-bottom: 1px solid var(--border); }
+  .resource-list td, .resource-list td.name, .resource-list td.desc {
+    display: block; width: auto; padding: 0.2rem 0.55rem; border: 0; white-space: normal;
+  }
+}
+</style>
 </head>
 <body>
 
@@ -66,11 +74,15 @@
     未找到请求的资源。
   </p>
 
-  <table class="listing wrap" style="margin-top: 1.5rem;">
+  <table class="listing wrap resource-list" style="margin-top: 1.5rem;">
     <tbody>
       <tr>
         <td class="name"><a href="/binpkgs/x86-64/">/binpkgs/x86-64/</a></td>
-        <td class="desc" data-i18n="rBin">二进制包</td>
+        <td class="desc" data-i18n="rBinStable">stable 二进制包（默认）</td>
+      </tr>
+      <tr>
+        <td class="name"><a href="/unstable/binpkgs/x86-64/">/unstable/binpkgs/x86-64/</a></td>
+        <td class="desc" data-i18n="rBinUnstable">unstable 二进制包</td>
       </tr>
       <tr>
         <td class="name"><a href="/distfiles/">/distfiles/</a></td>
@@ -114,12 +126,14 @@
 window.MIRROR_I18N = {
   'zh-tw': {
     title: '404', lead: '找不到請求的資源。',
-    rBin: '二進位套件', rDist: 'Distfiles 鏡像檔案', rPkgs: '收錄了哪些套件', rSetup: '設定方法',
+    rBinStable: 'stable 二進位套件（預設）',
+    rBinUnstable: 'unstable 二進位套件', rDist: 'Distfiles 鏡像檔案', rPkgs: '收錄了哪些套件', rSetup: '設定方法',
     report: '若站內連結指向此頁，請在 <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issues</a> 回報。'
   },
   'en': {
     title: '404', lead: 'The requested resource was not found.',
-    rBin: 'Binary packages', rDist: 'Mirrored distfiles', rPkgs: 'Which packages are covered', rSetup: 'How to set it up',
+    rBinStable: 'stable binary packages (default)',
+    rBinUnstable: 'unstable binary packages', rDist: 'Mirrored distfiles', rPkgs: 'Which packages are covered', rSetup: 'How to set it up',
     report: 'If a link on this site led here, report it in <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issues</a>.'
   }
 };

@@ -45,7 +45,8 @@ function crumbsFor(urlPath) {
 
   const blocks = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
     .map((m) => m[1]);
-  (0, eval)(blocks.sort((a, b) => b.length - a.length)[0]);
+  (0, eval)(blocks.sort((a, b) => b.length - a.length)[0] +
+    "\nglobal.__rootDescriptions = ROOT_DESC;");
   const c = nodes.crumbs || el("crumbs");
   return { html: c.innerHTML, hidden: c.hidden,
            title: (nodes.where || el("where")).textContent };
@@ -57,6 +58,15 @@ function parse(s) {
 
 const root = crumbsFor("/files/");
 check("根层不显示面包屑（标题已经写明位置）", root.hidden === true);
+check("根层说明区分默认 stable 与 unstable 频道",
+      global.__rootDescriptions.binpkgs["zh-cn"] === "稳定频道二进制包（默认）" &&
+      global.__rootDescriptions.unstable["zh-cn"] === "测试频道二进制包",
+      JSON.stringify(global.__rootDescriptions));
+check("频道说明提供三种语言",
+      ["binpkgs", "unstable"].every((name) =>
+        ["zh-cn", "zh-tw", "en"].every((locale) =>
+          Boolean(global.__rootDescriptions[name][locale]))),
+      JSON.stringify(global.__rootDescriptions));
 
 for (const [dir, label] of [["binpkgs", "binpkgs"], ["distfiles", "distfiles"]]) {
   const r = crumbsFor(`/${dir}/`);

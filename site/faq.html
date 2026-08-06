@@ -24,9 +24,30 @@
 .status-guide th:first-child, .status-guide td:first-child { width: 8.5rem; }
 .status-guide td:first-child { color: var(--accent); font-size: 0.82rem; white-space: nowrap; }
 .status-guide td:last-child { color: var(--fg-soft); font-size: 0.85rem; line-height: 1.7; }
+.channel-guide { table-layout: fixed; }
+.channel-guide th:first-child, .channel-guide td:first-child { width: 7rem; }
+.channel-guide th:nth-child(2), .channel-guide td:nth-child(2) { width: 7.5rem; }
+.channel-guide th:nth-child(3), .channel-guide td:nth-child(3) { width: 9rem; }
+.channel-field { display: none; }
 @media (max-width: 34rem) {
   .status-guide th, .status-guide td { padding: 0.5rem 0.35rem; }
   .status-guide th:first-child, .status-guide td:first-child { width: 6.8rem; }
+  .channel-guide thead {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+  .channel-guide, .channel-guide tbody, .channel-guide tr, .channel-guide td {
+    display: block; width: auto;
+  }
+  .channel-guide tr { padding: 0.45rem 0; border-bottom: 1px solid var(--border); }
+  .channel-guide td, .channel-guide td:first-child, .channel-guide td:nth-child(2),
+  .channel-guide td:nth-child(3), .channel-guide td:last-child {
+    display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: 0.5rem;
+    width: 100%; padding: 0.25rem 0.35rem; border: 0; white-space: normal;
+  }
+  .channel-field {
+    display: block; color: var(--fg-soft); font-size: 0.74rem; font-weight: 500;
+  }
 }
 </style>
 </head>
@@ -82,6 +103,35 @@
     <p data-i18n-html="a1">
       Portage 不会直接比较 profile 名称，而是根据当前配置检查二进制包元数据。profile 变更可能改变 USE 与依赖选择，使现有二进制包不再适用；此时 Portage 会改为编译源码。
       用 <code>emerge -pv</code> 检查，前缀为 <code>[binary]</code> 才表示采用了二进制包。
+    </p>
+
+    <h2 id="binpkg-channel" data-i18n="q13">stable 与 unstable 有什么区别？</h2>
+    <p data-i18n-html="a13">
+      请选择与系统 Gentoo 主树关键字相同的频道。两个频道都接受 gentoo-zh overlay 的
+      <code>~amd64</code> 软件包，区别是构建运行期依赖时采用稳定还是测试关键字。
+    </p>
+    <table class="status-guide channel-guide">
+      <thead><tr><th data-i18n="chName">频道</th><th data-i18n="chMain">Gentoo 主树</th><th data-i18n="chOverlay">gentoo-zh overlay</th><th data-i18n="chUri">sync-uri 路径</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="channel-field" data-i18n="chName">频道</span><span data-i18n="chStable">stable（默认）</span></td>
+          <td><span class="channel-field" data-i18n="chMain">Gentoo 主树</span><code>amd64</code></td>
+          <td><span class="channel-field" data-i18n="chOverlay">gentoo-zh overlay</span><code>~amd64</code></td>
+          <td><span class="channel-field" data-i18n="chUri">sync-uri 路径</span><code>/binpkgs/x86-64</code></td>
+        </tr>
+        <tr>
+          <td><span class="channel-field" data-i18n="chName">频道</span><span>unstable</span></td>
+          <td><span class="channel-field" data-i18n="chMain">Gentoo 主树</span><code>~amd64</code></td>
+          <td><span class="channel-field" data-i18n="chOverlay">gentoo-zh overlay</span><code>~amd64</code></td>
+          <td><span class="channel-field" data-i18n="chUri">sync-uri 路径</span><code>/unstable/binpkgs/x86-64</code></td>
+        </tr>
+      </tbody>
+    </table>
+    <p data-i18n-html="a13b">
+      stable 系统只需在 <code>package.accept_keywords</code> 中对
+      <code>*&#47;*::gentoo-zh</code> 接受 <code>~amd64</code>；unstable 适用于全局设置
+      <code>ACCEPT_KEYWORDS="~amd64"</code> 的系统。Portage 会拒绝依赖、USE 或 ABI
+      不适用的 binpkg 并改为从源码构建。选择匹配的频道可以提高 binpkg 的适用率。
     </p>
 
     <h2 data-i18n="q2">为什么要用 binrepos.conf，不能直接设 PORTAGE_BINHOST？</h2>
@@ -183,7 +233,7 @@
       再分发的那部分 <code>::gentoo</code> 运行期依赖，两者在同一份索引里，用
       <code>REPO</code> 字段区分。二进制包的许可证必须属于
       <code>@BINARY-REDISTRIBUTABLE</code>，且 <code>RESTRICT</code> 不得包含 <code>bindist</code>。
-      <code>acct-group/*</code>、<code>acct-user/*</code> 与 <code>virtual/*</code> 在使用者
+      <code>acct-group/&#42;</code>、<code>acct-user/&#42;</code> 与 <code>virtual/&#42;</code> 在使用者
       系统本地安装。<code>RESTRICT</code> 中的 <code>bindist</code> 只限制二进制包；
       distfiles 是否镜像由 <code>mirror</code>、<code>fetch</code> 与每项
       <code>SRC_URI</code> 独立决定。附带内容仅包含
@@ -251,6 +301,11 @@ window.MIRROR_I18N = {
     a11: '下載簽章公鑰檔案，再將設定第 1 步中 <code>--import</code> 的路徑指向該檔案。下載不需要 root。',title: 'FAQ',
     q1: '設定好之後為何 emerge 不使用二進位套件，仍然編譯？',
     a1: 'Portage 不會直接比較 profile 名稱，而是依照目前設定檢查二進位套件 metadata。profile 變更可能改變 USE 與依賴選擇，使現有二進位套件不再適用；此時 Portage 會改為編譯原始碼。用 <code>emerge -pv</code> 檢查，前綴為 <code>[binary]</code> 才表示採用了二進位套件。',
+    q13: 'stable 與 unstable 有什麼差別？',
+    a13: '請選擇與系統 Gentoo 主倉庫關鍵字相同的頻道。兩個頻道都接受 gentoo-zh overlay 的 <code>~amd64</code> 套件，差別是建置執行期依賴時採用穩定或測試關鍵字。',
+    chName: '頻道', chMain: 'Gentoo 主倉庫', chOverlay: 'gentoo-zh overlay', chUri: 'sync-uri 路徑',
+    chStable: 'stable（預設）',
+    a13b: 'stable 系統只需在 <code>package.accept_keywords</code> 中對 <code>*&#47;*::gentoo-zh</code> 接受 <code>~amd64</code>；unstable 適用於全域設定 <code>ACCEPT_KEYWORDS="~amd64"</code> 的系統。Portage 會拒絕相依性、USE 或 ABI 不適用的 binpkg，並改為從原始碼建置。選擇相符的頻道可以提高 binpkg 的適用率。',
     q2: '為什麼要用 binrepos.conf，不能直接設 PORTAGE_BINHOST？',
     a2: '因為 <code>PORTAGE_BINHOST</code> 產生的是隱含儲存庫，無法單獨設定 <code>verify-signature</code>。若為使用本站的套件而關閉驗簽，官方 binhost 的驗簽會一併關閉。',
     q3: 'OpenRC 和 systemd 都能使用嗎？',
@@ -270,7 +325,7 @@ window.MIRROR_I18N = {
     q7: '都收錄了哪些套件？',
     q10: '如何在 w3m、lynx 或 curl 中瀏覽？',
     a10: '套件資料表與互動式檔案瀏覽需要指令碼；頁面標題、說明與連結仍可讀。純文字的套件清單在 <a href="/packages.txt">/packages.txt</a>，一行一個套件。第二欄 <code>bin+src</code> 表示兩者都有、<code>bin</code> 表示只有二進位套件、<code>src</code> 表示只有 distfiles。目錄瀏覽用 <a href="/_raw/">/_raw/</a>，那是由 nginx 生成的清單，不需要指令碼。其餘各頁的正文都寫在 HTML 裡，文字瀏覽器直接可讀。',
-    a7: '主體是 gentoo-zh/overlay 的收錄清單。除此之外，本站也發布這些套件所需、允許再散布的那部分 <code>::gentoo</code> 執行期依賴，兩者在同一份索引裡，用 <code>REPO</code> 欄位區分。二進位套件的授權條款必須屬於 <code>@BINARY-REDISTRIBUTABLE</code>，且 <code>RESTRICT</code> 不得包含 <code>bindist</code>。<code>acct-group/*</code>、<code>acct-user/*</code> 與 <code>virtual/*</code> 在使用者系統本機安裝。<code>RESTRICT</code> 中的 <code>bindist</code> 只限制二進位套件；distfiles 是否鏡像由 <code>mirror</code>、<code>fetch</code> 與每個 <code>SRC_URI</code> 項目另行判定。附帶內容僅包含這些套件的執行期依賴，不取代 <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">Gentoo 官方 binhost</a>。清單見 <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>。',
+    a7: '主體是 gentoo-zh/overlay 的收錄清單。除此之外，本站也發布這些套件所需、允許再散布的那部分 <code>::gentoo</code> 執行期依賴，兩者在同一份索引裡，用 <code>REPO</code> 欄位區分。二進位套件的授權條款必須屬於 <code>@BINARY-REDISTRIBUTABLE</code>，且 <code>RESTRICT</code> 不得包含 <code>bindist</code>。<code>acct-group/&#42;</code>、<code>acct-user/&#42;</code> 與 <code>virtual/&#42;</code> 在使用者系統本機安裝。<code>RESTRICT</code> 中的 <code>bindist</code> 只限制二進位套件；distfiles 是否鏡像由 <code>mirror</code>、<code>fetch</code> 與每個 <code>SRC_URI</code> 項目另行判定。附帶內容僅包含這些套件的執行期依賴，不取代 <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">Gentoo 官方 binhost</a>。清單見 <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>。',
     q12: '如何閱讀套件頁狀態？',
     a12: '套件頁分開顯示公開索引、直接建置清單、目前發布政策與 distfiles 鏡像狀態。同一列可以同時出現多個狀態，因為它們說明不同事實。',
     stStatus: '狀態', stMeaning: '觸發條件與常見原因',
@@ -298,6 +353,11 @@ window.MIRROR_I18N = {
     a11: 'Download the signing-key file, then point the <code>--import</code> path in step 1 to that file. Downloading it does not require root.',title: 'FAQ',
     q1: 'Why does emerge still compile after I have configured it?',
     a1: 'Portage does not compare profile names directly; it checks binary package metadata against the current configuration. A profile change can alter USE and dependency choices and make an existing binary package unsuitable, in which case Portage builds from source. Run <code>emerge -pv</code> to check: only a <code>[binary]</code> prefix means the package came from here.',
+    q13: 'What is the difference between stable and unstable?',
+    a13: 'Choose the channel that matches the keywords used by your system for the Gentoo repository. Both channels accept <code>~amd64</code> packages from the gentoo-zh overlay. They differ in whether runtime dependencies are built with stable or testing keywords.',
+    chName: 'Channel', chMain: 'Gentoo repository', chOverlay: 'gentoo-zh overlay', chUri: 'sync-uri path',
+    chStable: 'stable (default)',
+    a13b: 'A stable system only needs <code>*&#47;*::gentoo-zh ~amd64</code> in <code>package.accept_keywords</code>. unstable is for systems with global <code>ACCEPT_KEYWORDS="~amd64"</code>. Portage rejects a binpkg when its dependencies, USE flags or ABI do not apply and builds from source instead. Matching the channel to the system makes more binpkgs applicable.',
     q2: 'Why binrepos.conf rather than PORTAGE_BINHOST?',
     a2: 'Because <code>PORTAGE_BINHOST</code> creates an implicit repository that cannot carry its own <code>verify-signature</code>. If you turn verification off to install from here, you turn it off for the official Gentoo binhost as well.',
     q3: 'Does it work on both OpenRC and systemd?',
@@ -317,7 +377,7 @@ window.MIRROR_I18N = {
     q7: 'Which packages are included?',
     q10: 'How do I browse this in w3m, lynx or curl?',
     a10: 'The package data table and interactive file browser require scripts; their headings, descriptions and links remain readable without scripts. A plain text package list is at <a href="/packages.txt">/packages.txt</a>, one package per line. Its second column uses <code>bin+src</code> for both, <code>bin</code> for a binary package only, and <code>src</code> for distfiles only. For directory browsing use <a href="/_raw/">/_raw/</a>, which nginx generates and needs no script. Every other page has its text in the HTML and reads fine in a text browser.',
-    a7: 'Mainly the gentoo-zh/overlay build list. This host also publishes the redistributable part of the <code>::gentoo</code> runtime dependencies those packages need; both live in one index and are told apart by the <code>REPO</code> field. A binary package must use licences in <code>@BINARY-REDISTRIBUTABLE</code>, and its <code>RESTRICT</code> must not include <code>bindist</code>. <code>acct-group/*</code>, <code>acct-user/*</code> and <code>virtual/*</code> are installed locally on the user system. The <code>bindist</code> value in <code>RESTRICT</code> applies only to binary packages; distfile mirroring is governed separately by <code>mirror</code>, <code>fetch</code> and each <code>SRC_URI</code> entry. The scope of the bundled dependencies stops at those runtime dependencies; this is not a replacement for the <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">official Gentoo binhost</a>. The list is in <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>.',
+    a7: 'Mainly the gentoo-zh/overlay build list. This host also publishes the redistributable part of the <code>::gentoo</code> runtime dependencies those packages need; both live in one index and are told apart by the <code>REPO</code> field. A binary package must use licences in <code>@BINARY-REDISTRIBUTABLE</code>, and its <code>RESTRICT</code> must not include <code>bindist</code>. <code>acct-group/&#42;</code>, <code>acct-user/&#42;</code> and <code>virtual/&#42;</code> are installed locally on the user system. The <code>bindist</code> value in <code>RESTRICT</code> applies only to binary packages; distfile mirroring is governed separately by <code>mirror</code>, <code>fetch</code> and each <code>SRC_URI</code> entry. The scope of the bundled dependencies stops at those runtime dependencies; this is not a replacement for the <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">official Gentoo binhost</a>. The list is in <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>.',
     q12: 'How do I read the package statuses?',
     a12: 'The packages page shows the public index, direct build list, current publication policy and distfile mirror state separately. Several statuses can appear on one row because they describe different facts.',
     stStatus: 'Status', stMeaning: 'Trigger and common causes',
@@ -343,6 +403,6 @@ window.MIRROR_I18N = {
 };
 </script>
 <script src="/assets/i18n.js?v=7deb9357"></script>
-<script src="/assets/source-switch.js?v=65dbd639"></script>
+<script src="/assets/source-switch.js?v=b97d27c6"></script>
 </body>
 </html>

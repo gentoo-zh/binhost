@@ -197,6 +197,8 @@ jobs:
         run: node tests/test-i18n-engine.js
       - name: Mirror defaults follow the selected language
         run: node tests/test-source-switch.js
+      - name: Binary package channels switch as one configuration
+        run: node tests/test-channel-switch.js
       - name: Mirror pickers agree
         run: python3 build/check-pickers.py
       - name: Both setup modes say the same thing

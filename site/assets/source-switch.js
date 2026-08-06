@@ -80,6 +80,15 @@
 
   renderDefaults();
 
+  document.addEventListener('sourcechange', function () {
+    each(pickers, function (p) {
+      var chosen = Array.prototype.filter.call(p.opts, function (o) {
+        return o.classList.contains('on');
+      })[0];
+      if (chosen) p.render(chosen);
+    });
+  });
+
   document.addEventListener('langchange', function () {
     if (!picked) renderDefaults();
   });
