@@ -242,7 +242,9 @@
   </div>
 
   <p class="note" data-i18n-html="keyAlt">
-    也可不安装该软件包，直接下载公钥文件，见
+    <code>sec-keys/openpgp-keys-gentoozh</code> 在
+    <a href="https://github.com/gentoo-zh/overlay">gentoo-zh overlay</a> 里，
+    需要先按镜像说明配置该 overlay。也可不安装它，直接下载公钥文件，见
     <a href="/faq#key-download">FAQ</a>。
   </p>
 
@@ -375,7 +377,7 @@ window.MIRROR_I18N = {
     distOptOut: '不希望自動鏡像某個套件的 distfile 時，在 ebuild 的既有 <code>RESTRICT</code> 值中加入 <code>mirror</code>；沒有該變數時可設定 <code>RESTRICT="mirror"</code>。<code>RESTRICT</code> 中含 <code>fetch</code> 時，也會阻止同步流程自動取得和鏡像檔案。',
     step1: '匯入簽章公鑰', step2: '加入倉庫',
     step3: '啟用 getbinpkg（附加）',
-    keyAlt: '也可不安裝該套件，直接下載公鑰檔案，見 <a href="/faq#key-download">FAQ</a>。',
+    keyAlt: '<code>sec-keys/openpgp-keys-gentoozh</code> 在 <a href="https://github.com/gentoo-zh/overlay">gentoo-zh overlay</a> 裡，需要先依鏡像說明設定該 overlay。也可不安裝它，直接下載公鑰檔案，見 <a href="/faq#key-download">FAQ</a>。',
     keyNote: '<code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。缺少該目錄時，上述三條 <code>gpg</code> 命令會回報 <code>no writable keyring found</code>。<code>gpg</code> 不會自動建立該目錄，而 Portage 直到首次取得二進位套件才會呼叫 <code>getuto</code>，此時設定步驟已經完成。簽章使用 <code>getuto</code> 建立的 Portage Local Trust Key，密碼位於 <code>/etc/portage/gnupg/pass</code>，應透過 <code>--passphrase-file</code> 讀取。驗簽以 <code>portage</code> 使用者執行；該使用者無權寫入 trustdb，因此必須預先產生。',
     factStableBinRow: 'stable 二進位套件', factUnstableBinRow: 'unstable 二進位套件',
     factDistRow: 'distfiles', factBuildRow: '最近建置',
@@ -405,7 +407,7 @@ window.MIRROR_I18N = {
     distOptOut: 'To exclude a package\'s distfiles from automatic mirroring, add <code>mirror</code> to the ebuild\'s existing <code>RESTRICT</code> value; use <code>RESTRICT="mirror"</code> when the variable is absent. A <code>RESTRICT</code> value containing <code>fetch</code> also prevents the sync process from fetching and mirroring the files automatically.',
     step1: 'Import the signing key', step2: 'Add the repository',
     step3: 'Enable getbinpkg (append)',
-    keyAlt: 'You can fetch the key file directly instead of installing the package; see the <a href="/faq#key-download">FAQ</a>.',
+    keyAlt: '<code>sec-keys/openpgp-keys-gentoozh</code> comes from the <a href="https://github.com/gentoo-zh/overlay">gentoo-zh overlay</a>, so configure that overlay first following its mirror guide. You can also fetch the key file directly instead of installing the package; see the <a href="/faq#key-download">FAQ</a>.',
     keyNote: '<code>getuto</code> creates <code>/etc/portage/gnupg</code>. Without that directory, the three <code>gpg</code> commands above report <code>no writable keyring found</code>. <code>gpg</code> does not create the directory itself, and Portage invokes <code>getuto</code> only when it first fetches a binary package, after setup is complete. The signature uses the Portage Local Trust Key created by <code>getuto</code>. Read its passphrase from <code>/etc/portage/gnupg/pass</code> with <code>--passphrase-file</code>. Verification runs as the <code>portage</code> user, which cannot write the trustdb, so the trustdb must be prepared first.',
     factStableBinRow: 'stable binary packages', factUnstableBinRow: 'unstable binary packages',
     factDistRow: 'distfiles', factBuildRow: 'Latest build',
