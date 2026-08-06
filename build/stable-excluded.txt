@@ -8,9 +8,6 @@
 app-emulation/winetricks-zh	requires a 32-bit Wine dependency graph outside the stable build profile
 dev-python/fuo-netease	runtime dependency dev-python/marshmallow-4.3.0 is ~amd64 only
 dev-python/fuo-qqmusic	runtime dependency dev-python/marshmallow-4.3.0 is ~amd64 only
-gui-apps/waywallen	build dependency dev-build/corrosion-0.6.1-r1 is ~amd64 only
 kde-misc/plasma-ions-china	runtime dependency >=kde-plasma/kdeplasma-addons-6.7 is ~amd64 only
-media-gfx/open-wallpaper-engine	Clang 22 crashes while compiling version 0.2.1 in the stable image
 media-plugins/waylyrics	runtime dependency gui-libs/gtk4-layer-shell is ~amd64 only
 net-misc/eternalterminal	runtime dependency dev-cpp/simpleini is ~amd64 only
-sys-boot/zfsbootmenu	requires sys-fs/zfs with kernel sources unavailable in the generic builder

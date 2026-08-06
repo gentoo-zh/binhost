@@ -104,10 +104,8 @@ games-emulation/onscripter-yuri
 gnome-extra/resources
 gui-apps/crystal-dock
 gui-apps/tux-manager
-gui-apps/waywallen
 kde-misc/plasma-applet-netspeed-widget
 kde-misc/plasma-ions-china
-media-gfx/open-wallpaper-engine
 media-libs/libdicom
 media-libs/openslide
 media-plugins/waylyrics
@@ -175,7 +173,6 @@ sci-ml/llama-cpp
 sys-apps/aptly
 sys-apps/pacman
 sys-apps/pnpm
-sys-boot/zfsbootmenu
 sys-fs/ssdfs-tools
 sys-libs/libsolv
 sys-power/tlpui
