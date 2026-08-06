@@ -271,6 +271,10 @@ index_line=$(grep -n 'step "distfiles 索引"' "${ROOT}/deploy/daily.sh" | cut -
 packages_line=$(grep -n 'step "包列表"' "${ROOT}/deploy/daily.sh" | cut -d: -f1)
 ok "distfiles 回收完成后才重建公开索引" "$((audit_line < index_line))" "1"
 ok "包列表使用回收后的 distfiles 索引" "$((index_line < packages_line))" "1"
+ok "每日任务分别生成两个频道的包列表" \
+   "$(grep -c 'gen-packages.py' "${ROOT}/deploy/daily.sh")" "2"
+ok "unstable 网页数据使用独立输出" \
+   "$(grep -c 'OUT=/srv/mirrors/packages-unstable.json' "${ROOT}/deploy/daily.sh")" "1"
 
 daily_generation_probe() {
     local mode="$1" d out calls

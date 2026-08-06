@@ -25,7 +25,10 @@ from ebuilds import (                                       # noqa: E402
 HERE = pathlib.Path(__file__).resolve().parent
 LIST = pathlib.Path(os.environ.get("LIST", HERE / "packages.txt"))
 EXCLUDED = pathlib.Path(os.environ.get("EXCLUDED", HERE / "excluded.txt"))
+CHANNEL_EXCLUDED = os.environ.get("CHANNEL_EXCLUDED", "")
 OUT = pathlib.Path(os.environ.get("OUT", HERE.parent / "site" / "packages.json"))
+PACKAGE_TEXT = pathlib.Path(os.environ.get("PACKAGE_TEXT", OUT.with_name("packages.txt")))
+DEPS_TEXT = pathlib.Path(os.environ.get("DEPS_TEXT", OUT.with_name("deps.txt")))
 INDEX = os.environ.get("INDEX", "")
 DIST_INDEX = pathlib.Path(os.environ.get("DIST_INDEX", OUT.parent / "distfiles-index.json"))
 GENTOO_TREE = os.environ.get("GENTOO_TREE", "/var/db/repos/gentoo")
@@ -76,11 +79,12 @@ def publication_policy(overlay, tree=GENTOO_TREE):
     return lookup
 
 
-def read_excluded():
+def read_excluded(path=EXCLUDED):
+    path = pathlib.Path(path)
     out = {}
-    if not EXCLUDED.exists():
+    if not path.exists():
         return out
-    for raw in EXCLUDED.read_text().splitlines():
+    for raw in path.read_text().splitlines():
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
@@ -186,6 +190,7 @@ def main(overlay, policy_lookup=None):
         print(f"!! 无法获取 {DIST_INDEX}，源码一列无法确定", file=sys.stderr)
 
     excluded = read_excluded()
+    channel_excluded = read_excluded(CHANNEL_EXCLUDED) if CHANNEL_EXCLUDED else {}
     built = read_built()
     try:
         deps = read_deps()
@@ -226,13 +231,15 @@ def main(overlay, policy_lookup=None):
         version = version_of(eb, pkgdir.name)
         row = {
             "cp": cp,
-            "binhost": cp in wanted,
+            "binhost": cp in wanted and cp not in channel_excluded,
             "dist": sorted(set(dist)),
         }
+        if cp in channel_excluded:
+            row["channelExcluded"] = True
         policy = policy_lookup(f"{cp}-{version}")
         if policy:
             row["policy"] = policy
-        if cp not in wanted and cp not in excluded:
+        if cp not in wanted and cp not in excluded and cp not in channel_excluded:
             row["why"] = why_not_listed(cp, version, text, masked)
         if cp in excluded:
             row["excluded"] = excluded[cp]
@@ -258,7 +265,7 @@ def main(overlay, policy_lookup=None):
         ensure_ascii=False, separators=(",", ":")))
     os.replace(tmp, OUT)
 
-    txt = OUT.with_name("packages.txt")
+    txt = PACKAGE_TEXT
     lines = [f"# gentoo-zh overlay 与仍在公开索引中的旧产物，{len(out)} 个包",
              f"# 生成于 {time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime())}",
              "# 第二列：bin+src 两者都有，bin 只有二进制包，src 只有 distfiles，"
@@ -290,7 +297,7 @@ def main(overlay, policy_lookup=None):
     # A separate file rather than a second section: the second column in
     # packages.txt is a status, and reusing it for a version would break
     # anything reading the file line by line.
-    dep_txt = OUT.with_name("deps.txt")
+    dep_txt = DEPS_TEXT
     dep_lines = [f"# 随 gentoo-zh 的包一并发布的 ::gentoo 运行期依赖，{len(deps)} 个",
                  f"# 生成于 {time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime())}",
                  "# 第二列 slot，第三列版本；不替代 Gentoo 官方 binhost",

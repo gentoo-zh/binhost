@@ -64,7 +64,7 @@ def classify(cp, body=None):
 
 
 def run_main(index_text, overlay=None, index_path=None, list_lines=(), distfiles=None,
-             policies=None):
+             policies=None, channel_excluded=()):
     """The whole generator, so the json and the two text files are covered."""
     import contextlib, io
     with tempfile.TemporaryDirectory() as tmp:
@@ -75,6 +75,13 @@ def run_main(index_text, overlay=None, index_path=None, list_lines=(), distfiles
             (ov / "profiles" / "repo_name").write_text("gentoo-zh\n")
         old = dict(os.environ)
         try:
+            if channel_excluded:
+                channel_file = d / "channel-excluded.txt"
+                channel_file.write_text("\n".join(
+                    f"{cp}\ttest boundary" for cp in channel_excluded) + "\n")
+                os.environ["CHANNEL_EXCLUDED"] = str(channel_file)
+            else:
+                os.environ.pop("CHANNEL_EXCLUDED", None)
             m = fresh(d, index_text, index_path, list_lines, distfiles)
             policies = policies or {}
 
@@ -157,6 +164,19 @@ def policy_matrix():
             "", overlay=overlay, policies={"app-misc/example": "license"})
         return next(row for row in result[1]["packages"]
                     if row["cp"] == "app-misc/example")
+
+
+def channel_exclusion_matrix():
+    with tempfile.TemporaryDirectory() as tmp:
+        overlay = make_overlay(pathlib.Path(tmp) / "overlay", {
+            "app-misc/example": {},
+        })
+        stable = run_main(
+            "", overlay=overlay, list_lines=("app-misc/example",))
+        unstable = run_main(
+            "", overlay=overlay, list_lines=("app-misc/example",),
+            channel_excluded=("app-misc/example",))
+        return stable[1]["packages"][0], unstable[1]["packages"][0]
 
 
 def missing_policy_tree():
@@ -247,6 +267,13 @@ case("virtual 不因 keyword 或 bindist 改变本地安装分类", lambda: (
 case("发布政策与构建清单分类分别写入", lambda: (
     (lambda r: r["binhost"] is False and r["policy"] == "license"
      and r["why"] == "prebuilt")(policy_matrix())))
+
+case("频道排除只影响指定频道的构建状态", lambda: (
+    (lambda stable, unstable:
+     stable["binhost"] is True and "channelExcluded" not in stable
+     and unstable["binhost"] is False
+     and unstable["channelExcluded"] is True
+     and "why" not in unstable)(*channel_exclusion_matrix())))
 
 
 def resolved_policy(restrict="", missing=(), iuse="", cpv="app-misc/example-1"):

@@ -191,6 +191,8 @@ jobs:
         run: node tests/test-index-facts.js
       - name: Packages page failure state
         run: node tests/test-packages-error.js
+      - name: Package lists follow the selected channel
+        run: node tests/test-package-channels.js
       - name: File browser breadcrumbs
         run: node tests/test-app-crumbs.js
       - name: Links that differ per language

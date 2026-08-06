@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=099dbb69">
+<link rel="stylesheet" href="/assets/site.css?v=28e780f0">
 <script src="/assets/early.js?v=0888406a"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -254,6 +254,7 @@
         <tr><td data-i18n-html="stBuilt"><code>✓</code></td><td data-i18n-html="sdBuilt">公开 binpkg 索引已有该包，可以从本站下载。它不表示该包仍在直接构建清单；同时出现 <code>待移除</code> 时，勾号只表示旧产物暂时仍可用。</td></tr>
         <tr><td data-i18n-html="stPending"><code>待构建</code></td><td data-i18n-html="sdPending">该包是直接构建目标，但公开索引尚无 binpkg。它可能尚未完成首次构建，也可能最近一轮未成功发布；该状态只表示目前没有公开产物。</td></tr>
         <tr><td data-i18n-html="stExcluded"><code>不构建</code></td><td data-i18n-html="sdExcluded">维护清单明确排除该包。常见原因包括无法构建、缺少支持或需要进一步核对再分发条件；标签提示中会显示记录的具体原因。</td></tr>
+        <tr><td data-i18n-html="stChannelExcluded"><code>本频道不构建</code></td><td data-i18n-html="sdChannelExcluded">该包仍在共用收录清单中，但不符合当前频道的依赖或构建条件，因此本频道不直接构建。另一个频道仍可能发布该包；当前频道尚有旧产物时会同时显示 <code>待移除</code>。</td></tr>
         <tr><td data-i18n-html="stOffList"><code>清单外</code></td><td data-i18n-html="sdOffList">该包不是直接构建目标。上游已经提供预编译内容或构建收益较低时通常不会直接收录，但运行期依赖闭包仍可能将它作为依赖发布；包名含 <code>-bin</code> 不会自动决定该状态。</td></tr>
         <tr><td data-i18n-html="stBindist"><code>不提供 binpkg</code></td><td data-i18n-html="sdBindist">当前 ebuild 的 <code>RESTRICT</code> 包含 <code>bindist</code>，因此本站不发布该包的 binpkg。源码包和上游预编译包都可能设置这项限制，常见原因是许可证、上游发布条款或预编译内容的再分发条件不允许本站分发二进制产物；包名含 <code>-bin</code> 本身不是判定依据。distfiles 是否镜像仍按 <code>RESTRICT</code> 中的 <code>mirror</code>、<code>fetch</code> 与每项 <code>SRC_URI</code> 单独判断。</td></tr>
         <tr><td data-i18n-html="stLicense"><code>许可证限制</code></td><td data-i18n-html="sdLicense">当前 ebuild 的 <code>LICENSE</code> 表达式不属于本站固定的 <code>@BINARY-REDISTRIBUTABLE</code>。许可证可能允许附带条件的再分发，但本站不会据此发布 binpkg；该状态与 <code>RESTRICT=bindist</code> 分开判定。</td></tr>
@@ -335,6 +336,8 @@ window.MIRROR_I18N = {
     sdPending: '該套件是直接建置目標，但公開索引尚無 binpkg。它可能尚未完成首次建置，也可能沒有在最近一輪成功發布；該狀態只表示目前沒有公開產物。',
     stExcluded: '<code>不建置</code>',
     sdExcluded: '維護清單明確排除該套件。常見原因包括無法建置、缺少支援或需要進一步核對再散布條件；標籤提示中會顯示記錄的具體原因。',
+    stChannelExcluded: '<code>本頻道不建置</code>',
+    sdChannelExcluded: '該套件仍在共用收錄清單中，但不符合目前頻道的相依套件或建置條件，因此本頻道不直接建置。另一個頻道仍可能發布該套件；目前頻道仍有舊產物時會同時顯示 <code>待移除</code>。',
     stOffList: '<code>清單外</code>',
     sdOffList: '該套件不是直接建置目標。上游已提供預先編譯內容或建置收益較低時通常不會直接收錄，但執行期依賴閉包仍可能將它作為依賴發布；套件名含 <code>-bin</code> 不會自動決定該狀態。',
     stBindist: '<code>不提供 binpkg</code>',
@@ -387,6 +390,8 @@ window.MIRROR_I18N = {
     sdPending: 'The package is a direct build target, but the public index has no binpkg. Its first build may not have completed, or the latest cycle may not have published it; this status only says that no public artifact is currently available.',
     stExcluded: '<code>excluded</code>',
     sdExcluded: 'The maintenance list explicitly excludes the package. Common reasons include build failure, missing support or a redistribution condition that needs review; the label tooltip shows the recorded reason.',
+    stChannelExcluded: '<code>not in this channel</code>',
+    sdChannelExcluded: 'The package remains on the shared build list, but this channel cannot satisfy its dependency or build conditions, so this channel does not build it directly. Another channel may still publish it. If this channel retains an older artifact, <code>pending removal</code> appears too.',
     stOffList: '<code>off-list</code>',
     sdOffList: 'The package is not a direct build target. Packages with upstream prebuilt content or little build benefit are often left off the list, but the runtime dependency closure may still publish them as dependencies. A <code>-bin</code> name does not determine this status.',
     stBindist: '<code>no binpkg</code>',

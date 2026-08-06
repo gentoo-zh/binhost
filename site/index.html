@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=099dbb69">
+<link rel="stylesheet" href="/assets/site.css?v=28e780f0">
 <script src="/assets/early.js?v=0888406a"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -132,15 +132,18 @@
 
   <h2 data-i18n="h2bin">二进制包</h2>
 
-  <div class="src-pick channel-pick" data-channel-switch role="group" aria-label="频道">
-    <span class="src-label" data-i18n="channelLabel">频道</span>
+  <div class="src-pick channel-pick" data-channel-switch role="group"
+       aria-labelledby="home-channel-label">
+    <span class="src-label" id="home-channel-label" data-i18n="channelLabel">频道</span>
     <button type="button" class="src-opt on" data-channel="stable"
-            data-path="/binpkgs/x86-64" data-status="/build-status.json"
-            data-i18n="channelStable">stable（推荐）</button>
+            data-path="/binpkgs/x86-64" data-status="/build-status.json"><span
+            data-i18n="channelStable">stable（推荐）</span><span
+            class="channel-total" data-channel-total></span></button>
     <button type="button" class="src-opt" data-channel="unstable"
             data-path="/unstable/binpkgs/x86-64"
-            data-status="/build-status-unstable.json"
-            data-i18n="channelUnstable">unstable</button>
+            data-status="/build-status-unstable.json"><span
+            data-i18n="channelUnstable">unstable</span><span
+            class="channel-total" data-channel-total></span></button>
   </div>
 
   <p class="note" data-channel-panel="stable" data-i18n-html="channelStableNote">
@@ -438,7 +441,7 @@ window.MIRROR_I18N = {
 <script src="/assets/mode-switch.js?v=08d5c31f"></script>
 <script src="/assets/sudo-switch.js?v=1ebc6dc8"></script>
 <script src="/assets/source-switch.js?v=b97d27c6"></script>
-<script src="/assets/channel-switch.js?v=302c0d53"></script>
+<script src="/assets/channel-switch.js?v=5ac0f885"></script>
 
 <script>
 (function () {

@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=099dbb69">
+<link rel="stylesheet" href="/assets/site.css?v=28e780f0">
 <script src="/assets/early.js?v=0888406a"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -66,8 +66,26 @@
   <h1 class="title" data-i18n="title">包列表</h1>
   <p class="lead" data-i18n-html="lead">
     overlay 包与 ::gentoo 运行期依赖分开显示。纯文本查阅
-    <a href="/packages.txt">/packages.txt</a> 与 <a href="/deps.txt">/deps.txt</a>。
+    <a id="packagesText" href="/packages.txt">/packages.txt</a> 与
+    <a id="depsText" href="/deps.txt">/deps.txt</a>。
   </p>
+
+  <div class="src-pick channel-pick" data-channel-switch role="group"
+       aria-labelledby="packages-channel-label">
+    <span class="src-label" id="packages-channel-label" data-i18n="channelLabel">频道</span>
+    <button type="button" class="src-opt on" data-channel="stable"
+            data-path="/binpkgs/x86-64" data-status="/build-status.json"
+            data-packages="/packages.json" data-package-text="/packages.txt"
+            data-deps-text="/deps.txt"><span data-i18n="channelStable">stable（推荐）</span><span
+            class="channel-total" data-channel-total></span></button>
+    <button type="button" class="src-opt" data-channel="unstable"
+            data-path="/unstable/binpkgs/x86-64" data-status="/build-status-unstable.json"
+            data-packages="/packages-unstable.json"
+            data-package-text="/packages-unstable.txt"
+            data-deps-text="/deps-unstable.txt"><span
+            data-i18n="channelUnstable">unstable</span><span
+            class="channel-total" data-channel-total></span></button>
+  </div>
 
   <p class="jump" hidden><a href="#deps" id="depsJump"></a></p>
 
@@ -89,6 +107,8 @@
     <dd data-i18n="lgPending">已在构建清单，尚无 binpkg</dd>
     <dt><span class="pend" data-i18n="excluded">不构建</span></dt>
     <dd data-i18n="lgExcluded">排除清单指定不构建</dd>
+    <dt><span class="pend why-tag" data-i18n="why_channelExcluded">本频道不构建</span></dt>
+    <dd data-i18n="lgChannelExcluded">该包不符合当前频道的依赖或构建边界</dd>
     <dt><span class="pend why-tag" data-i18n="why_candidate">清单外</span></dt>
     <dd data-i18n="lgDashBin">不在直接构建清单；运行期依赖仍可能随包发布</dd>
     <dt><span class="pend why-tag" data-i18n="why_bindist">不提供 binpkg</span></dt>
@@ -120,6 +140,8 @@
       <tbody id="rows"></tbody>
     </table>
     <p class="msg" id="msg"></p>
+    <button type="button" class="filter msg-retry" id="retry" hidden
+            data-i18n="retry">重试</button>
     <noscript><p class="msg" data-i18n-html="noJs">此表需要脚本。
       纯文本列表见 <a href="/packages.txt">/packages.txt</a>。</p></noscript>
   </div>
@@ -129,7 +151,7 @@
     <p class="lead" data-i18n-html="depsLead">
       收录清单里的 overlay 包在运行时需要这些 gentoo 主仓库的包，本站因此一并构建
       发布。附带内容仅包含这些包的运行期依赖，不替代 Gentoo 官方 binhost。纯文本查阅
-      <a href="/deps.txt">/deps.txt</a>。
+      <a id="depsTextDetail" href="/deps.txt">/deps.txt</a>。
     </p>
     <p class="count" id="depsCount"></p>
     <table class="listing deps-table">
@@ -175,7 +197,7 @@ window.MIRROR_I18N = {
     thBin: '二进制包',
     thDist: 'Distfiles',
     h2deps: '::gentoo 依赖',
-    depsLead: '收录清单里的 overlay 包在运行时需要这些 gentoo 主仓库的包，本站因此一并构建发布。附带内容仅包含这些包的运行期依赖，不替代 Gentoo 官方 binhost。纯文本查阅 <a href="/deps.txt">/deps.txt</a>。',
+    depsLead: '收录清单里的 overlay 包在运行时需要这些 gentoo 主仓库的包，本站因此一并构建发布。附带内容仅包含这些包的运行期依赖，不替代 Gentoo 官方 binhost。纯文本查阅 <a id="depsTextDetail" href="/deps.txt">/deps.txt</a>。',
     depsCount: ' 个 ::gentoo 包',
     depsJump: '跳到 ::gentoo 依赖（{n} 个）↓',
     h2overlay: 'overlay 包',
@@ -194,6 +216,7 @@ window.MIRROR_I18N = {
     why_bindist: '不提供 binpkg',
     why_license: '许可证限制',
     why_unknown: '政策不明',
+    why_channelExcluded: '本频道不构建',
     why_retiring: '待移除',
     why_nokeyword: '无 amd64',
     why_masked: '已屏蔽',
@@ -206,6 +229,7 @@ window.MIRROR_I18N = {
     whyLong_bindist: 'RESTRICT=bindist，本站不发布 binpkg；distfiles 按 mirror、fetch 与 SRC_URI 分别判定',
     whyLong_license: '当前 ebuild 的 LICENSE 表达式不属于 @BINARY-REDISTRIBUTABLE，本站不发布 binpkg',
     whyLong_unknown: '无法确定当前 ebuild 是否符合二进制包发布政策',
+    whyLong_channelExcluded: '该包不符合当前频道的依赖或构建边界，仍可能由另一个频道发布',
     whyLong_retiring: '公开索引仍包含旧产物；新一代索引成功切换后移除',
     whyLong_nokeyword: '没有 amd64 keyword',
     whyLong_masked: '被 profiles/package.mask 屏蔽',
@@ -216,6 +240,7 @@ window.MIRROR_I18N = {
     lgBuilt: '公开索引已有 binpkg',
     lgPending: '已在构建清单，尚无 binpkg',
     lgExcluded: '排除清单指定不构建',
+    lgChannelExcluded: '该包不符合当前频道的依赖或构建边界',
     lgDashBin: '不在直接构建清单；运行期依赖仍可能随包发布',
     lgBindist: '<code>RESTRICT=bindist</code> 禁止发布 binpkg',
     lgLicense: '<code>LICENSE</code> 表达式不属于 <code>@BINARY-REDISTRIBUTABLE</code>',
@@ -228,15 +253,16 @@ window.MIRROR_I18N = {
     distUnknown: '无法获取 distfiles 索引',
     none: '没有匹配的包。',
     ph: '搜索包名',
-    noJs: '此表需要脚本。纯文本列表见 <a href="/packages.txt">/packages.txt</a>。'
+    noJs: '此表需要脚本。纯文本列表见 <a href="/packages.txt">/packages.txt</a>。',
+    retry: '重试'
   },
   'zh-tw': {
 
     unknown: '無法取得',    pending: '待建置', excluded: '不建置', updBin: '二進位套件更新於 ', updDist: 'distfiles 更新於 ', fltAll: '全部', fltBin: '僅二進位套件', fltDist: '僅 distfiles', title: '套件列表',
-    lead: 'overlay 套件與 ::gentoo 執行期依賴分開顯示。純文字查閱 <a href="/packages.txt">/packages.txt</a> 與 <a href="/deps.txt">/deps.txt</a>。',
+    lead: 'overlay 套件與 ::gentoo 執行期依賴分開顯示。純文字查閱 <a id="packagesText" href="/packages.txt">/packages.txt</a> 與 <a id="depsText" href="/deps.txt">/deps.txt</a>。',
     loading: '載入中…', failed: '無法載入套件資料：', thPkg: '套件', thVer: '版本', thSize: '體積', thBin: '二進位套件', thDist: 'Distfiles',
     h2deps: '::gentoo 依賴',
-    depsLead: '收錄清單裡的 overlay 套件在執行時需要這些 gentoo 主倉庫的套件，本站因此一併建置發布。附帶內容僅包含這些套件的執行期依賴，不取代 Gentoo 官方 binhost。純文字查閱 <a href="/deps.txt">/deps.txt</a>。',
+    depsLead: '收錄清單裡的 overlay 套件在執行時需要這些 gentoo 主倉庫的套件，本站因此一併建置發布。附帶內容僅包含這些套件的執行期依賴，不取代 Gentoo 官方 binhost。純文字查閱 <a id="depsTextDetail" href="/deps.txt">/deps.txt</a>。',
     depsCount: ' 個 ::gentoo 套件',
     depsJump: '跳到 ::gentoo 依賴（{n} 個）↓',
     h2overlay: 'overlay 套件',
@@ -248,12 +274,14 @@ window.MIRROR_I18N = {
     lgDashBin: '不在直接建置清單；執行期依賴仍可能隨套件發布',
     why_prebuilt: '清單外', why_nobuild: '清單外', why_bindist: '不提供 binpkg',
     why_license: '授權限制', why_unknown: '政策不明', why_retiring: '待移除',
+    why_channelExcluded: '本頻道不建置',
     why_nokeyword: '無 amd64', why_masked: '已遮蔽', why_live: '僅 9999', why_meta: '本機安裝', why_removed: '已移除', why_candidate: '清單外',
     whyLong_prebuilt: '上游提供預先編譯的內容；這不是發布限制，該套件目前不在建置清單中',
     whyLong_nobuild: '未偵測到常見建置 eclass；這不是發布限制，該套件目前不在建置清單中',
     whyLong_bindist: 'RESTRICT=bindist，本站不發布 binpkg；distfiles 依 mirror、fetch 與 SRC_URI 分別判定',
     whyLong_license: '目前 ebuild 的 LICENSE 表達式不屬於 @BINARY-REDISTRIBUTABLE，本站不發布 binpkg',
     whyLong_unknown: '無法確定目前 ebuild 是否符合二進位套件發布政策',
+    whyLong_channelExcluded: '該套件不符合目前頻道的相依套件或建置邊界，仍可能由另一個頻道發布',
     whyLong_retiring: '公開索引仍包含舊產物；新一代索引成功切換後移除',
     whyLong_nokeyword: '沒有 amd64 keyword',
     whyLong_masked: '被 profiles/package.mask 遮蔽',
@@ -262,6 +290,7 @@ window.MIRROR_I18N = {
     whyLong_removed: 'overlay 已移除該套件；該列來自仍在公開索引中的產物',
     whyLong_candidate: '偵測到建置流程，但該套件目前不在建置清單中',
     lgBindist: '<code>RESTRICT=bindist</code> 禁止發布 binpkg',
+    lgChannelExcluded: '該套件不符合目前頻道的相依套件或建置邊界',
     lgLicense: '授權條款不屬於 <code>@BINARY-REDISTRIBUTABLE</code>',
     lgMeta: '<code>acct-group</code>、<code>acct-user</code> 與 <code>virtual</code> 由 Portage 本機安裝',
     lgRetiring: '公開索引仍有舊 binpkg，下一代發布成功後移除',
@@ -271,19 +300,21 @@ window.MIRROR_I18N = {
     distUnavailable: 'distfile 不允許鏡像，或尚未全部出現在鏡像索引中',
     distUnknown: '無法取得 distfiles 索引',
     ph: '搜尋套件名稱',
-    noJs: '此表需要指令碼。純文字列表見 <a href="/packages.txt">/packages.txt</a>。'
+    noJs: '此表需要指令碼。純文字列表見 <a href="/packages.txt">/packages.txt</a>。',
+    channelLabel: '頻道', channelStable: 'stable（建議）', channelUnstable: 'unstable',
+    retry: '重試'
   },
   'en': {
 
     unknown: 'unknown',    pending: 'pending', excluded: 'excluded', updBin: 'binaries updated ', updDist: 'distfiles updated ', fltAll: 'All', fltBin: 'Binaries', fltDist: 'Distfiles', title: 'Packages',
     h2deps: '::gentoo dependencies',
-    depsLead: 'The overlay packages on the build list need these packages from the gentoo repository at runtime, so this host builds and publishes them too. The bundled set includes only those runtime dependencies; this is not a replacement for the official Gentoo binhost. Plain text at <a href="/deps.txt">/deps.txt</a>.',
+    depsLead: 'The overlay packages on the build list need these packages from the gentoo repository at runtime, so this host builds and publishes them too. The bundled set includes only those runtime dependencies; this is not a replacement for the official Gentoo binhost. Plain text at <a id="depsTextDetail" href="/deps.txt">/deps.txt</a>.',
     depsCount: ' ::gentoo packages',
     depsJump: 'Jump to the {n} ::gentoo dependencies ↓',
     h2overlay: 'Overlay packages',
     depsStale: 'This host has not yet been updated to the data version that carries this list.',
     thSlot: 'Slot',
-    lead: 'Overlay packages and ::gentoo runtime dependencies are shown separately. Plain text at <a href="/packages.txt">/packages.txt</a> and <a href="/deps.txt">/deps.txt</a>.',
+    lead: 'Overlay packages and ::gentoo runtime dependencies are shown separately. Plain text at <a id="packagesText" href="/packages.txt">/packages.txt</a> and <a id="depsText" href="/deps.txt">/deps.txt</a>.',
     loading: 'Loading…', failed: 'Could not load package data: ', thPkg: 'Package', thVer: 'Version', thSize: 'Size', thBin: 'Binary', thDist: 'Distfiles',
     countFmt: 'overlay {n} packages\n{b} with a binary package\n{d} with distfiles', none: 'No matching packages.',
     lgBuilt: 'A binpkg is present in the public index.',
@@ -292,12 +323,14 @@ window.MIRROR_I18N = {
     lgDashBin: 'Not a direct build target; runtime dependencies may still be published.',
     why_prebuilt: 'off-list', why_nobuild: 'off-list', why_bindist: 'no binpkg',
     why_license: 'licence restricted', why_unknown: 'policy unknown', why_retiring: 'pending removal',
+    why_channelExcluded: 'not in this channel',
     why_nokeyword: 'no amd64', why_masked: 'masked', why_live: '9999 only', why_meta: 'local install', why_removed: 'removed', why_candidate: 'off-list',
     whyLong_prebuilt: 'Upstream provides prebuilt content. This is not a publication restriction; the package is not currently on the build list.',
     whyLong_nobuild: 'No common build eclass was detected. This is not a publication restriction; the package is not currently on the build list.',
     whyLong_bindist: 'RESTRICT=bindist; this host does not publish a binpkg. Distfiles follow mirror, fetch and SRC_URI rules separately.',
     whyLong_license: 'The current ebuild LICENSE expression is outside @BINARY-REDISTRIBUTABLE, so this host does not publish a binpkg.',
     whyLong_unknown: 'The current ebuild could not be evaluated against the binary-package publication policy.',
+    whyLong_channelExcluded: 'The package is outside this channel\'s dependency or build boundary. Another channel may still publish it.',
     whyLong_retiring: 'The public index still contains an old artifact. It is removed after a new index generation switches successfully.',
     whyLong_nokeyword: 'No amd64 keyword.',
     whyLong_masked: 'Masked in profiles/package.mask.',
@@ -306,6 +339,7 @@ window.MIRROR_I18N = {
     whyLong_removed: 'The package left the overlay; this row remains because its artifact is still in the public index.',
     whyLong_candidate: 'A build process was detected, but the package is not currently on the build list.',
     lgBindist: '<code>RESTRICT=bindist</code> prohibits binpkg publication.',
+    lgChannelExcluded: 'The package is outside this channel\'s dependency or build boundary.',
     lgLicense: 'The <code>LICENSE</code> expression is outside <code>@BINARY-REDISTRIBUTABLE</code>.',
     lgMeta: 'Portage installs <code>acct-group</code>, <code>acct-user</code> and <code>virtual</code> locally.',
     lgRetiring: 'An old binpkg remains public until the next generation publishes successfully.',
@@ -315,7 +349,9 @@ window.MIRROR_I18N = {
     distUnavailable: 'A distfile is restricted from mirroring or is not yet present in the mirror index.',
     distUnknown: 'The distfiles index is unavailable.',
     ph: 'Search package name',
-    noJs: 'This table requires scripts. The plain-text list is at <a href="/packages.txt">/packages.txt</a>.'
+    noJs: 'This table requires scripts. The plain-text list is at <a href="/packages.txt">/packages.txt</a>.',
+    channelLabel: 'Channel', channelStable: 'stable (recommended)', channelUnstable: 'unstable',
+    retry: 'Retry'
   }
 };
 </script>
@@ -401,10 +437,16 @@ function parsePackages(text, repository) {
 }
 
 let rows = [];
+let deps = [];
+let depData = null;
 let filter = "all";
 let distGenerated = 0, binGenerated = 0;
 let binFailed = false;
 let distFailed = false;
+let loadError = null;
+let activeConfig = null;
+let loadingKey = "";
+let requestId = 0;
 
 function fmtTime(unix) {
   const n = Number(unix);
@@ -416,6 +458,7 @@ function fmtTime(unix) {
 function reasonDetail(r) {
   const details = [];
   if (r.policy) details.push(t("whyLong_" + r.policy));
+  if (r.channelExcluded) details.push(t("whyLong_channelExcluded"));
   if (r.excluded) details.push(r.excluded);
   else if (!r.binhost && r.why && r.why !== r.policy) {
     details.push(t("whyLong_" + r.why));
@@ -456,7 +499,7 @@ function render() {
         ? ' ' + reasonTag(r.policy)
         : '';
       const retiring = r.ver &&
-        (r.present === false || r.policy || r.excluded);
+        (r.present === false || r.policy || r.excluded || r.channelExcluded);
       const retirementDetail = [reasonDetail(r), t("whyLong_retiring")]
         .filter(Boolean).join(" ");
       const retiringTag = retiring
@@ -474,6 +517,7 @@ function render() {
           (r.ver ? '\u2713'
                  : r.policy ? reasonTag(r.policy, reasonDetail(r))
                  : r.excluded ? '<span class="pend">' + t("excluded") + '</span>'
+                 : r.channelExcluded ? reasonTag("channelExcluded")
                  : r.binhost ? '<span class="pend">' + t("pending") + '</span>'
                  : r.why ? reasonTag(r.why)
                  : '\u2014') + '</td>' +
@@ -511,54 +555,109 @@ function markFilter() {
   });
 }
 
-Promise.all([
-  fetch("/packages.json").then(function (r) {
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    return r.json();
-  }),
-  fetch("/binpkgs/x86-64/Packages")
-    .then(function (r) { return r.ok ? r.text() : null; })
-    .catch(function () { return null; }),
-  fetch("/distfiles-index.json")
-    .then(function (r) { return r.ok ? r.json() : null; })
-    .catch(function () { return null; })
-]).then(function (res) {
-  binFailed = res[1] === null;
-  distFailed = res[2] === null;
-  const built = parsePackages(res[1] || "", "gentoo-zh");
-  const have = new Set((res[2] || {}).files || []);
-  distGenerated = (res[2] || {}).generated || 0;
-  binGenerated = (/^TIMESTAMP: (\d+)/m.exec(res[1] || "") || [])[1] || 0;
-  rows = res[0].packages.map(function (p) {
-    const b = built[p.cp] || {};
-    const dist = p.dist && p.dist.length > 0 && p.dist.every(function (f) { return have.has(f); });
-    return { cp: p.cp, binhost: p.binhost, excluded: p.excluded || "",
-             present: p.present !== false,
-             policy: p.policy || "", why: p.why || "",
-             ver: b.ver || "", size: b.size || 0,
-             declaresDist: !!(p.dist && p.dist.length), dist: dist };
+function setTextLinks() {
+  if (!activeConfig) return;
+  ["packagesText"].forEach(function (id) {
+    const link = document.getElementById(id);
+    if (link) {
+      link.href = activeConfig.packageText;
+      link.textContent = activeConfig.packageText;
+    }
   });
-  renderDeps(res[0]);
-  counts();
-  render();
-}).catch(function (e) {
-  loadError = e;
-  renderLoadError();
-});
+  ["depsText", "depsTextDetail"].forEach(function (id) {
+    const link = document.getElementById(id);
+    if (link) {
+      link.href = activeConfig.depsText;
+      link.textContent = activeConfig.depsText;
+    }
+  });
+}
 
-let deps = [];
-let depData = null;
-let loadError = null;
+function renderLoading() {
+  rows = [];
+  deps = [];
+  depData = null;
+  loadError = null;
+  document.getElementById("rows").innerHTML = "";
+  document.getElementById("depRows").innerHTML = "";
+  document.querySelector(".pkgs").hidden = true;
+  document.querySelector(".deps-table").hidden = true;
+  document.getElementById("msg").hidden = false;
+  document.getElementById("msg").textContent = t("loading");
+  document.getElementById("count").textContent = "";
+  document.getElementById("updated").textContent = "";
+  document.getElementById("depsCount").textContent = t("loading");
+  document.getElementById("depsJump").parentElement.hidden = true;
+  document.getElementById("retry").hidden = true;
+}
+
+function loadChannel(config, force) {
+  if (!config || !config.path || !config.packages) return;
+  const key = config.channel + "\n" + config.packages + "\n" + config.path;
+  if (!force && loadingKey === key) return;
+  activeConfig = config;
+  loadingKey = key;
+  const current = ++requestId;
+  setTextLinks();
+  renderLoading();
+
+  Promise.all([
+    fetch(config.packages).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }),
+    fetch(config.path + "/Packages")
+      .then(function (r) { return r.ok ? r.text() : null; })
+      .catch(function () { return null; }),
+    fetch("/distfiles-index.json")
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; })
+  ]).then(function (res) {
+    if (current !== requestId) return;
+    loadingKey = "";
+    binFailed = res[1] === null;
+    distFailed = res[2] === null;
+    const built = parsePackages(res[1] || "", "gentoo-zh");
+    const have = new Set((res[2] || {}).files || []);
+    distGenerated = (res[2] || {}).generated || 0;
+    binGenerated = (/^TIMESTAMP: (\d+)/m.exec(res[1] || "") || [])[1] || 0;
+    rows = res[0].packages.map(function (p) {
+      const b = built[p.cp] || {};
+      const dist = p.dist && p.dist.length > 0 && p.dist.every(function (f) {
+        return have.has(f);
+      });
+      return { cp: p.cp, binhost: p.binhost, excluded: p.excluded || "",
+               channelExcluded: p.channelExcluded === true,
+               present: p.present !== false,
+               policy: p.policy || "", why: p.why || "",
+               ver: b.ver || "", size: b.size || 0,
+               declaresDist: !!(p.dist && p.dist.length), dist: dist };
+    });
+    document.getElementById("retry").hidden = true;
+    renderDeps(res[0]);
+    counts();
+    render();
+  }).catch(function (e) {
+    if (current !== requestId) return;
+    loadingKey = "";
+    loadError = e;
+    renderLoadError();
+  });
+}
 
 function renderLoadError() {
   const message = t("failed") + loadError;
   document.getElementById("rows").innerHTML = "";
+  document.querySelector(".pkgs").hidden = true;
   document.getElementById("msg").textContent = message;
+  document.getElementById("msg").hidden = false;
   document.getElementById("count").textContent = "";
   document.getElementById("updated").textContent = "";
   document.getElementById("depRows").innerHTML = "";
+  document.querySelector(".deps-table").hidden = true;
   document.getElementById("depsCount").textContent = message;
   document.getElementById("depsJump").parentElement.hidden = true;
+  document.getElementById("retry").hidden = false;
 }
 
 function renderDeps(data) {
@@ -572,8 +671,10 @@ function renderDeps(data) {
   if ((data.schema || 1) < 2) {
     count.textContent = t("depsStale");
     rows.innerHTML = "";
+    document.querySelector(".deps-table").hidden = true;
     return;
   }
+  document.querySelector(".deps-table").hidden = !deps.length;
   count.textContent = deps.length + t("depsCount");
   const jump = document.getElementById("depsJump");
   jump.textContent = t("depsJump").replace("{n}", deps.length);
@@ -588,7 +689,6 @@ function renderDeps(data) {
 }
 
 document.getElementById("q").addEventListener("input", render);
-document.getElementById("msg").textContent = t("loading");
 document.getElementById("filters").addEventListener("click", function (e) {
   const b = e.target.closest("button[data-f]");
   if (!b) return;
@@ -596,12 +696,30 @@ document.getElementById("filters").addEventListener("click", function (e) {
   markFilter();
   counts(); render();
 });
+document.getElementById("retry").addEventListener("click", function () {
+  loadChannel(activeConfig, true);
+});
+
+document.addEventListener("channelchange", function (event) {
+  loadChannel(event.detail);
+});
 
 document.addEventListener('langchange', function () {
+  setTextLinks();
   if (loadError) { renderLoadError(); return; }
+  if (loadingKey) { renderLoading(); return; }
   if (depData) { renderDeps(depData); }
-  if (rows.length) { counts(); render(); }
+  counts(); render();
+});
+
+loadChannel({
+  channel: "stable",
+  path: "/binpkgs/x86-64",
+  packages: "/packages.json",
+  packageText: "/packages.txt",
+  depsText: "/deps.txt"
 });
 </script>
+<script src="/assets/channel-switch.js?v=5ac0f885"></script>
 </body>
 </html>

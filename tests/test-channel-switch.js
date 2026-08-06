@@ -5,6 +5,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const html = fs.readFileSync(path.join(ROOT, "site/index.html"), "utf8");
+const packagesHtml = fs.readFileSync(path.join(ROOT, "site/packages.html"), "utf8");
 
 let failed = 0;
 function check(name, condition, detail) {
@@ -18,12 +19,14 @@ function attr(text, name) {
   return match ? match[1] : null;
 }
 
-function element(attributes, className, hidden) {
+function element(attributes, className, hidden, total) {
   const attrs = Object.assign({}, attributes);
   const classes = new Set((className || "").split(/\s+/).filter(Boolean));
   const listeners = {};
+  const count = total ? { textContent: "" } : null;
   return {
     hidden: Boolean(hidden),
+    textContent: "",
     classList: {
       contains(name) { return classes.has(name); },
       toggle(name, enabled) {
@@ -35,6 +38,10 @@ function element(attributes, className, hidden) {
     setAttribute(name, value) { attrs[name] = String(value); },
     addEventListener(name, listener) { listeners[name] = listener; },
     click() { listeners.click(); },
+    querySelector(selector) {
+      return selector === "[data-channel-total]" ? count : null;
+    },
+    count,
   };
 }
 
@@ -46,7 +53,7 @@ const options = groupMatch ? [...groupMatch[2].matchAll(/<button\b([^>]*)>[\s\S]
       "data-channel": attr(attrs, "data-channel"),
       "data-path": attr(attrs, "data-path"),
       "data-status": attr(attrs, "data-status"),
-    }, attr(attrs, "class"));
+    }, attr(attrs, "class"), false, match[0].includes("data-channel-total"));
   }) : [];
 const group = element({});
 group.querySelectorAll = function (selector) {
@@ -75,6 +82,14 @@ global.document = {
     return [];
   },
   dispatchEvent(event) { events.push(event); },
+};
+global.fetch = function (url) {
+  const total = url === "/binpkgs/x86-64/status.json" ? 188 :
+    url === "/unstable/binpkgs/x86-64/status.json" ? 196 : null;
+  return Promise.resolve({
+    ok: total !== null,
+    json() { return Promise.resolve({ overlay: total }); },
+  });
 };
 
 (0, eval)(fs.readFileSync(
@@ -122,6 +137,16 @@ check("频道切换会要求镜像选择器重算完整地址",
 check("两个频道分别提供所需的关键字设置",
       html.includes("*&#47;*::gentoo-zh") &&
       html.includes('ACCEPT_KEYWORDS</span>=<span class="val">"~amd64"'));
+check("包列表为两个频道声明独立的数据文件",
+      packagesHtml.includes('data-packages="/packages.json"') &&
+      packagesHtml.includes('data-packages="/packages-unstable.json"') &&
+      packagesHtml.includes('data-package-text="/packages-unstable.txt"') &&
+      packagesHtml.includes('data-deps-text="/deps-unstable.txt"'));
 
-console.log(failed ? `\n  ${failed} 项不通过` : "\n  频道切换：全部通过");
-process.exit(failed ? 1 : 0);
+setImmediate(function () {
+  check("首页分别显示两个频道的收录数",
+        stable.count.textContent === "(188)" && unstable.count.textContent === "(196)",
+        stable.count.textContent + " / " + unstable.count.textContent);
+  console.log(failed ? `\n  ${failed} 项不通过` : "\n  频道切换：全部通过");
+  process.exit(failed ? 1 : 0);
+});
