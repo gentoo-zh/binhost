@@ -408,6 +408,40 @@ for script in base-image.sh build-container.sh cycle.sh run-full.sh publish.sh; 
     ok "${script} 读取统一频道配置" "${sourced}" "1"
 done
 
+run_full_probe() {
+    local cores="$1" override="${2:-}" d out
+    d=$(mktemp -d)
+    mkdir -p "${d}/build" "${d}/bin"
+    cp "${ROOT}/build/run-full.sh" "${ROOT}/build/channel.sh" "${d}/build/"
+    cat > "${d}/bin/nproc" <<EOF
+#!/bin/bash
+echo ${cores}
+EOF
+    cat > "${d}/build/build-container.sh" <<'EOF'
+#!/bin/bash
+printf '%s|%s\n' "${JOBS}" "${MAKEOPTS}"
+EOF
+    chmod +x "${d}/bin/nproc" "${d}/build/build-container.sh"
+    if [[ -n ${override} ]]; then
+        out=$(cd "${d}" && PATH="${d}/bin:${PATH}" SIGNING_KEY=test \
+            MAKEOPTS="${override}" bash build/run-full.sh)
+    else
+        out=$(cd "${d}" && env -u MAKEOPTS PATH="${d}/bin:${PATH}" \
+            SIGNING_KEY=test bash build/run-full.sh)
+    fi
+    rm -rf "${d}"
+    printf '%s\n' "${out}"
+}
+
+echo "== run-full.sh 按主机资源设置编译并发"
+
+ok "76 核主机默认使用 32 个编译任务" \
+   "$(run_full_probe 76)" "24|-j32 -l76"
+ok "少于 32 核时不超过主机核数" \
+   "$(run_full_probe 6)" "24|-j6 -l6"
+ok "显式 MAKEOPTS 不被默认值覆盖" \
+   "$(run_full_probe 76 '-j12 -l20')" "24|-j12 -l20"
+
 base_image=$(<"${ROOT}/build/base-image.sh")
 ok "基础镜像把频道的全局关键字传入容器" \
    "$(grep -Fc "BINHOST_ACCEPT_KEYWORDS=\${CHANNEL_ACCEPT_KEYWORDS}" <<< "${base_image}")" "1"
