@@ -55,7 +55,7 @@ async function render(build, channel, locale = "zh-tw") {
     MIRROR_I18N: {
       "zh-tw": {
         factStableBinRow: "stable 二進位套件",
-        factUnstableBinRow: "全域 ~amd64 二進位套件",
+        factUnstableBinRow: "unstable 二進位套件",
         factDistRow: "distfiles", factBuildRow: "最近建置",
         factPkgs: " 個 gentoo-zh", factDeps: " 個 ::gentoo 依賴",
         factDist: " 個檔案", factTime: "更新於 ", factFinished: "完成於 ",
@@ -108,7 +108,7 @@ async function render(build, channel, locale = "zh-tw") {
         done.calls.includes("/build-status.json"), JSON.stringify(done.calls));
   check("默认同时显示两个频道的二进制包统计",
         done.html.includes("stable 二進位套件") &&
-        done.html.includes("全域 ~amd64 二進位套件") &&
+        done.html.includes("unstable 二進位套件") &&
         done.html.includes("188") && done.html.includes("67") &&
         done.html.includes("196") && done.html.includes("236"), done.html);
 
@@ -129,7 +129,7 @@ async function render(build, channel, locale = "zh-tw") {
         JSON.stringify(running.calls));
   check("切换频道后仍保留两个频道的统计",
         running.html.includes("stable 二進位套件") &&
-        running.html.includes("全域 ~amd64 二進位套件") &&
+        running.html.includes("unstable 二進位套件") &&
         running.html.includes("188") && running.html.includes("196"), running.html);
 
   const legacy = await render({ state: "done", generated: 5733 });
@@ -139,7 +139,7 @@ async function render(build, channel, locale = "zh-tw") {
   const simplified = await render({ state: "done", generated: 5733 }, null, "zh-cn");
   check("简体中文显示两个频道的明确标签",
         simplified.html.includes("stable 二进制包") &&
-        simplified.html.includes("全局 ~amd64 二进制包"), simplified.html);
+        simplified.html.includes("unstable 二进制包"), simplified.html);
 
   console.log(failed ? `\n  ${failed} 项不通过` : "\n  首页构建状态：全部通过");
   process.exit(failed ? 1 : 0);
