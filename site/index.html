@@ -304,10 +304,28 @@
   </div>
 
   <p class="note" data-i18n-html="sigNote">
-    验签由第 3 步的 <code>verify-signature = true</code> 提供，只作用于本源。
+    验签由第 2 步的 <code>verify-signature = true</code> 提供，只作用于本源。
     <code>FEATURES=binpkg-request-signature</code> 是全局的，会覆盖它，也会要求通过
     <code>FEATURES=buildpkg</code> 构建的包带签名。那些包默认没有签名；启用该功能时必须同时配置
     <code>binpkg-signing</code> 与本机签名密钥。
+  </p>
+
+  <p class="note" data-i18n-html="onceNote">
+    不改 <code>make.conf</code> 时，可以只在这一次安装中取用二进制包：
+  </p>
+
+  <div class="code">
+    <div class="code-head">
+      <span class="path">shell</span>
+      <button type="button" class="head-btn sudo-btn" aria-pressed="false">sudo</button>
+      <button class="copy-chip" data-i18n="copy">复制</button>
+    </div>
+<pre><span class="prompt"></span><span class="sudo" hidden></span><span class="key">emerge</span> <span class="flag">--ask --getbinpkg</span> <span class="val">&lt;package&gt;</span></pre>
+  </div>
+
+  <p class="note" data-i18n-html="guideNote">
+    没有合适的二进制包时，Portage 照常从源码构建。更多用法见 Gentoo Wiki 的
+    <a href="https://wiki.gentoo.org/wiki/Binary_package_guide">Binary package guide</a>。
   </p>
   </div>
 
@@ -367,7 +385,9 @@ window.MIRROR_I18N = {
     title: '設定',
     lead: 'gentoo-zh overlay 的二進位套件與 distfiles 鏡像。兩者相互獨立，按需分別設定。二進位套件裡另附帶這些套件執行期依賴所需的部分 ::gentoo 套件，不取代 Gentoo 官方 binhost；distfiles 的 ::gentoo 部分用 <a href="https://gentoozh.org/zh-tw/mirrorlist/">社群鏡像列表</a>裡的節點。',
     h2bin: '二進位套件', h2dist: 'Distfiles',
-    sigNote: '驗簽由第 3 步的 <code>verify-signature = true</code> 提供，只作用於本站。<code>FEATURES=binpkg-request-signature</code> 是全域設定，會覆蓋它，也會要求透過 <code>FEATURES=buildpkg</code> 建置的套件帶簽章。那些套件預設沒有簽章；啟用該功能時必須同時設定 <code>binpkg-signing</code> 與本機簽章金鑰。',
+    onceNote: '不修改 <code>make.conf</code> 時，可以只在這一次安裝中取用二進位套件：',
+    guideNote: '沒有合適的二進位套件時，Portage 照常從原始碼建置。更多用法見 Gentoo Wiki 的 <a href="https://wiki.gentoo.org/wiki/Binary_package_guide">Binary package guide</a>。',
+    sigNote: '驗簽由第 2 步的 <code>verify-signature = true</code> 提供，只作用於本站。<code>FEATURES=binpkg-request-signature</code> 是全域設定，會覆蓋它，也會要求透過 <code>FEATURES=buildpkg</code> 建置的套件帶簽章。那些套件預設沒有簽章；啟用該功能時必須同時設定 <code>binpkg-signing</code> 與本機簽章金鑰。',
     srcLabel: '鏡像', srcLabelFirst: '優先', srcCernet: '教育網聯合鏡像站', srcNju: '南京大學', srcNyist: '南陽理工', srcHernet: '河南教育網', srcOrigin: '來源站',
     channelLabel: '頻道', channelStable: 'stable', channelUnstable: 'unstable',
     channelStableNote: 'stable 使用 Gentoo 主倉庫穩定套件，只對 <code>::gentoo-zh</code> 接受 <code>~amd64</code>，適合主倉庫保持穩定的系統。頻道差異見 <a href="/faq#binpkg-channel">FAQ</a>。',
@@ -397,7 +417,9 @@ window.MIRROR_I18N = {
     title: 'Setup',
     lead: 'Binary package and distfiles mirror for the gentoo-zh overlay. The two are independent and configured separately. The binary packages also carry the ::gentoo runtime dependencies those packages need, which is not a replacement for the official Gentoo binhost. For ::gentoo distfiles, use a node from the <a href="https://gentoozh.org/en/mirrorlist/">community mirror list</a>.',
     h2bin: 'Binary packages', h2dist: 'Distfiles',
-    sigNote: 'Verification comes from <code>verify-signature = true</code> in step 3 and applies to this repository only. <code>FEATURES=binpkg-request-signature</code> is global, overrides that, and also requires signatures on packages built through <code>FEATURES=buildpkg</code>. Those packages are unsigned by default; enabling this feature therefore requires <code>binpkg-signing</code> and a local signing key.',
+    onceNote: 'To use binary packages for a single install without editing <code>make.conf</code>:',
+    guideNote: 'Portage builds from source as usual when no suitable binary package exists. See Gentoo Wiki\'s <a href="https://wiki.gentoo.org/wiki/Binary_package_guide">Binary package guide</a> for further usage.',
+    sigNote: 'Verification comes from <code>verify-signature = true</code> in step 2 and applies to this repository only. <code>FEATURES=binpkg-request-signature</code> is global, overrides that, and also requires signatures on packages built through <code>FEATURES=buildpkg</code>. Those packages are unsigned by default; enabling this feature therefore requires <code>binpkg-signing</code> and a local signing key.',
     srcLabel: 'Mirror', srcLabelFirst: 'First', srcCernet: 'CERNET', srcNju: 'Nanjing University', srcNyist: 'NYIST', srcHernet: 'HERNET', srcOrigin: 'Origin',
     channelLabel: 'Channel', channelStable: 'stable', channelUnstable: 'unstable',
     channelStableNote: 'stable uses stable packages from the Gentoo repository and accepts <code>~amd64</code> only for <code>::gentoo-zh</code>. Use it when the main repository remains stable. See the <a href="/faq#binpkg-channel">FAQ</a> for a channel comparison.',
