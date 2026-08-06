@@ -15,15 +15,24 @@ function element(id) {
   return {
     id, innerHTML: "", textContent: "", hidden: false, value: "",
     dataset: {}, style: {}, parentElement: { hidden: false },
+    classList: { toggle() {} },
     addEventListener() {},
+    setAttribute() {},
     querySelectorAll() { return list([]); },
   };
 }
 
+const tables = { pkgs: element("pkgs-table"), deps: element("deps-table") };
+tables.pkgs.querySelector = function () { return null; };
+
 global.document = {
   documentElement: { lang: "zh-cn" },
   getElementById(id) { return (nodes[id] = nodes[id] || element(id)); },
-  querySelector() { return null; },
+  querySelector(selector) {
+    if (selector === ".pkgs") return tables.pkgs;
+    if (selector === ".deps-table") return tables.deps;
+    return null;
+  },
   querySelectorAll() { return list([]); },
   addEventListener() {},
 };
@@ -41,7 +50,8 @@ setImmediate(() => {
   const overlay = document.getElementById("msg").textContent;
   const dependencies = document.getElementById("depsCount").textContent;
   const okay = overlay.includes("offline") && dependencies === overlay &&
-    document.getElementById("depRows").innerHTML === "";
+    document.getElementById("depRows").innerHTML === "" &&
+    document.getElementById("retry").hidden === false;
   console.log(`  ${okay ? "✓" : "✗"} packages.json 失败时两张表显示同一错误状态`);
   process.exit(okay ? 0 : 1);
 });

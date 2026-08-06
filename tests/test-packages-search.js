@@ -17,21 +17,28 @@ function check(name, cond, detail) {
 function el(id) {
   const e = {
     id, innerHTML: "", textContent: "", className: "", hidden: false,
-    dataset: {}, style: {},
+    dataset: {}, style: {}, value: "", parentElement: { hidden: false },
+    classList: { toggle() {} },
     addEventListener() {},
+    setAttribute() {},
     querySelectorAll() { return nodeList([]); },
   };
-  e.querySelector = (sel) => (id === "out" && /listing/.test(sel) ? el("table") : null);
+  e.querySelector = (sel) => (id === "out" && /listing/.test(sel) ? tables.pkgs : null);
   return e;
 }
 function nodeList(items) {
   return { length: items.length, forEach(f) { items.forEach(f); } };
 }
+const tables = { pkgs: el("pkgs-table"), deps: el("deps-table") };
 const nodes = {};
 global.document = {
   documentElement: { lang: "zh-cn" },
   getElementById(id) { return (nodes[id] = nodes[id] || el(id)); },
-  querySelector() { return null; },
+  querySelector(sel) {
+    if (sel === ".pkgs") return tables.pkgs;
+    if (sel === ".deps-table") return tables.deps;
+    return null;
+  },
   querySelectorAll() { return nodeList([]); },
   addEventListener() {},
 };
@@ -119,13 +126,17 @@ setRows([
     ver: "1", size: 1, declaresDist: false, dist: false, policy: "", why: "candidate" },
   { cp: "app-misc/removed", binhost: false, excluded: "", present: false,
     ver: "1", size: 1, declaresDist: false, dist: false, policy: "", why: "removed" },
+  { cp: "app-misc/channel-only", binhost: false, excluded: "", present: true,
+    ver: "1", size: 1, declaresDist: false, dist: false, policy: "", why: "",
+    channelExcluded: true },
 ]);
 const matrix = renderWith("");
 check("发布状态、当前政策与删除过渡同时渲染",
-      (matrix.match(/class="mark yes"/g) || []).length === 9 &&
-      (matrix.match(/class="mark no"/g) || []).length === 9 &&
-      (matrix.match(/>why_retiring<\/span>/g) || []).length === 4 &&
+      (matrix.match(/class="mark yes"/g) || []).length === 10 &&
+      (matrix.match(/class="mark no"/g) || []).length === 10 &&
+      (matrix.match(/>why_retiring<\/span>/g) || []).length === 5 &&
       matrix.includes("whyLong_license") && matrix.includes("whyLong_removed") &&
+      matrix.includes("whyLong_channelExcluded") &&
       !matrix.includes('href="https://github.com/gentoo-zh/overlay/tree/master/app-misc/removed"'),
       matrix.slice(0, 1800));
 
@@ -150,7 +161,8 @@ check("未发布的本地安装类别只显示一个状态标签",
       localOnly.slice(0, 600));
 
 check("图例分别说明发布、清单、政策与退役状态",
-      ["lgBuilt", "lgPending", "lgExcluded", "lgDashBin", "lgRetiring", "lgDashDist"]
+      ["lgBuilt", "lgPending", "lgExcluded", "lgChannelExcluded", "lgDashBin",
+       "lgRetiring", "lgDashDist"]
         .every((key) => html.includes(`data-i18n="${key}"`)) &&
       ["lgBindist", "lgLicense", "lgMeta"]
         .every((key) => html.includes(`data-i18n-html="${key}"`)));
@@ -167,6 +179,11 @@ check("FAQ 说明 bindist 的常见原因与判定边界",
       faq.includes("源码包和上游预编译包都可能设置这项限制") &&
       faq.includes('包名含 <code>-bin</code> 本身不是判定依据') &&
       faq.includes('distfiles 是否镜像仍按 <code>RESTRICT</code>'));
+
+check("FAQ 说明频道排除与待移除的关系",
+      faq.includes('data-i18n-html="stChannelExcluded"') &&
+      faq.includes('data-i18n-html="sdChannelExcluded"') &&
+      faq.includes('另一个频道仍可能发布该包'));
 
 check("distfiles 破折号区分无文件与未完整镜像",
       matrix.includes('title="distNone"') &&

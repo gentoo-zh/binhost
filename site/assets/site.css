@@ -362,6 +362,7 @@ a { color: var(--primary); text-decoration: none; }
 .listing td.size, .listing td.date, .listing th.size, .listing th.date { text-align: right; color: var(--fg-soft); }
 .listing a.dir::after { content: "/"; color: var(--fg-soft); }
 .msg { color: var(--fg-soft); padding: 2rem 0; }
+.msg-retry { margin: -1.3rem 0 1.4rem; }
 
 
 #copy-toast {
@@ -449,6 +450,11 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 .count {
   font-size: 0.82rem; color: var(--fg-soft); margin: 0 0 0.7rem;
   white-space: pre-line; line-height: 1.65;
+}
+.channel-total {
+  display: inline-block; min-width: 5ch; margin-inline-start: 0.35rem;
+  color: var(--fg-soft); font-family: var(--mono); font-size: 0.76rem;
+  text-align: start;
 }
 #count { min-height: calc(3 * 1.65 * 0.82rem); }
 .jump { font-size: 0.82rem; margin: -0.5rem 0 1.4rem; }

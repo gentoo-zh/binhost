@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=099dbb69">
+<link rel="stylesheet" href="/assets/site.css?v=28e780f0">
 <script src="/assets/early.js?v=0888406a"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -224,8 +224,9 @@
   </div>
 
   <p class="note" data-i18n-html="table1">
-    包列表搜索只匹配包名。状态列保留到最窄布局，用于直接比较发布结果。没有公开 binpkg
-    时，发布政策显示在二进制包列；公开索引仍有待移除产物时，政策改为显示在包名旁。
+    包列表搜索只匹配包名。切换频道时，overlay 列表、主仓库依赖、统计与纯文本链接使用
+    同一频道的数据。状态列保留到最窄布局，用于直接比较发布结果。没有公开 binpkg 时，
+    发布政策显示在二进制包列；公开索引仍有待移除产物时，政策改为显示在包名旁。
   </p>
 
   <h3 data-i18n="hCode">代码块</h3>
@@ -440,7 +441,7 @@ window.MIRROR_I18N = {
     thVer: '版本',
     excluded: '不建置',
     pending: '待建置',
-    table1: '套件列表搜尋只比對套件名。狀態欄保留到最窄版面，用於直接比較發布結果。沒有公開 binpkg 時，發布政策顯示在二進位套件欄；公開索引仍有待移除產物時，政策改為顯示在套件名旁。',
+    table1: '套件列表搜尋只比對套件名。切換頻道時，overlay 列表、主倉庫依賴、統計與純文字連結使用同一頻道的資料。狀態欄保留到最窄版面，用於直接比較發布結果。沒有公開 binpkg 時，發布政策顯示在二進位套件欄；公開索引仍有待移除產物時，政策改為顯示在套件名旁。',
     hCode: '程式碼區塊',
     code1: '路徑位於標題列，命令與設定位於下方。值使用強調色，鍵使用內文色，註解與提示符使用次要色。複製按鈕會選取整個程式碼區塊。',
     code2: '超寬內容在程式碼區塊內橫向捲動，並保留捲軸作為可捲動提示。捲軸寬度為 6px，滑桿使用 <code>--border</code>，停留時使用 <code>--fg-soft</code>，避免系統預設樣式在深色主題下顯示淺灰色粗條。',
@@ -566,7 +567,7 @@ window.MIRROR_I18N = {
     thVer: 'Version',
     excluded: 'excluded',
     pending: 'pending',
-    table1: 'Package search matches the package name. Status columns remain visible until the narrowest layout because they carry the page\'s primary comparison. Publication policy appears in the binary column when no public binpkg exists, and beside the package name when it explains an artifact pending removal.',
+    table1: 'Package search matches the package name. Switching channels updates the overlay list, main-repository dependencies, counts, and plain-text links from the same channel data. Status columns remain visible until the narrowest layout because they carry the page\'s primary comparison. Publication policy appears in the binary column when no public binpkg exists, and beside the package name when it explains an artifact pending removal.',
     hCode: 'Code blocks',
     code1: 'The path goes in the title bar, the command or configuration below it. Values take the accent, keys the body colour, comments and prompts the secondary colour. Every block copies whole, so nobody has to select it by hand.',
     code2: 'Content wider than the block scrolls sideways, and the scrollbar is kept rather than hidden: it is the only sign that there is more to the right. It is thinned to 6px, with the thumb on <code>--border</code> and <code>--fg-soft</code> on hover. The system default is a thick pale grey bar under the dark theme, the one element on the site that would not follow the theme.',
