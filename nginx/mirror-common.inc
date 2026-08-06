@@ -61,7 +61,7 @@ location ^~ /binpkgs/ {
 		include /etc/nginx/conf.d/headers-files.inc;
 	}
 
-	location ~ ^/binpkgs/(?:stable/|unstable/)?x86-64/status\.json$ {
+	location ~ ^/binpkgs/x86-64/status\.json$ {
 		root /srv/pub;
 		add_header Cache-Control "no-cache";
 		include /etc/nginx/conf.d/headers-files.inc;
@@ -122,6 +122,8 @@ location = /.health {
 
 location = /distfiles { return 301 /distfiles/; }
 location = /binpkgs { return 301 /binpkgs/; }
+location = /unstable { return 301 /unstable/; }
+location = /unstable/binpkgs { return 301 /unstable/binpkgs/; }
 location = /files { return 301 /files/; }
 location = /files/ {
 	add_header Cache-Control "no-cache";
