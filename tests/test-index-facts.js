@@ -5,6 +5,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const html = fs.readFileSync(path.join(ROOT, "site/index.html"), "utf8");
+const css = fs.readFileSync(path.join(ROOT, "site/assets/site.css"), "utf8");
 const script = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
   .map((match) => match[1])
   .find((body) => body.includes("Promise.allSettled"));
@@ -91,6 +92,9 @@ async function render(build, channel, locale = "zh-tw") {
 (async function () {
   check("首页包含状态渲染脚本", Boolean(script));
   if (!script) process.exit(1);
+  check("事实区为四行频道与状态数据预留高度",
+        css.includes("min-height: calc(4 * 1.75 * 0.95rem + 0.7rem)") &&
+        css.includes("min-height: calc(8 * 1.75 * 0.95rem + 0.5rem)"));
 
   const done = await render({
     state: "done", started: 100, finished: 5733, duration: 5633, generated: 5733,
