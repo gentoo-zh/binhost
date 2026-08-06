@@ -485,7 +485,12 @@ def main(pkgdir, stage, overlay=None, rev="", lookup=None, seed_file=None,
                 for atom, who in sorted(unresolved.items())))
 
     ours = sum(1 for _, f, _ in kept if f.get("REPO") == "gentoo-zh")
-    (stage / "counts.txt").write_text(f"{ours}\n{len(stanzas) - ours}\n")
+    # The site reports how many overlay packages have a binary package, so the
+    # published count is per package. One package can have several stanzas.
+    ours_packages = len({split_cpv(f["CPV"])[0] for _, f, _ in kept
+                         if f.get("REPO") == "gentoo-zh"})
+    (stage / "counts.txt").write_text(
+        f"{ours_packages}\n{len(stanzas) - ours}\n")
     print(f">>> staged {len(stanzas)}（overlay {ours}，运行期依赖 {len(stanzas) - ours}），"
           f"skipped {skipped} not ours to publish")
     if refused:
