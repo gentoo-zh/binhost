@@ -451,6 +451,10 @@ ok "基础镜像只按频道要求写入 overlay 关键字" \
    "$(grep -Fc "*/*::gentoo-zh \${BINHOST_OVERLAY_KEYWORDS}" <<< "${base_image}")" "1"
 
 container=$(<"${ROOT}/build/build-container.sh")
+ok "MAKEOPTS 传入实际构建容器" \
+   "$(grep -Fc -- "-e \"MAKEOPTS=\${MAKEOPTS}\"" <<< "${container}")" "1"
+ok "JOBS 传入实际构建容器" \
+   "$(grep -Fc -- "-e \"JOBS=\${JOBS}\"" <<< "${container}")" "1"
 ok "依赖验证使用频道的主树关键字" \
    "$(grep -Fc "source_policy=(--source-keywords \"\${CHANNEL_ACCEPT_KEYWORDS}\")" \
        <<< "${container}")" "1"

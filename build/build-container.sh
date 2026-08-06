@@ -106,6 +106,8 @@ ${DOCKER} run --rm -i --security-opt=no-new-privileges \
     -v "${LOGDIR}:/var/log/binhost" \
     -e "OVERLAY_REV=$(git -C "${OVERLAY}" rev-parse HEAD 2>/dev/null || echo '')" \
     -e "BINHOST_CHANNEL=${CHANNEL}" \
+    -e "MAKEOPTS=${MAKEOPTS}" \
+    -e "JOBS=${JOBS}" \
     "${BASE}" /bin/bash -euo pipefail -s <<'INNER'
 
 mkdir -p /run/lock
