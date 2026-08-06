@@ -76,7 +76,7 @@
     <button type="button" class="src-opt on" data-channel="stable"
             data-path="/binpkgs/x86-64" data-status="/build-status.json"
             data-packages="/packages.json" data-package-text="/packages.txt"
-            data-deps-text="/deps.txt"><span data-i18n="channelStable">stable（推荐）</span><span
+            data-deps-text="/deps.txt"><span data-i18n="channelStable">stable</span><span
             class="channel-total" data-channel-total></span></button>
     <button type="button" class="src-opt" data-channel="unstable"
             data-path="/unstable/binpkgs/x86-64" data-status="/build-status-unstable.json"
@@ -301,7 +301,7 @@ window.MIRROR_I18N = {
     distUnknown: '無法取得 distfiles 索引',
     ph: '搜尋套件名稱',
     noJs: '此表需要指令碼。純文字列表見 <a href="/packages.txt">/packages.txt</a>。',
-    channelLabel: '頻道', channelStable: 'stable（建議）', channelUnstable: 'unstable',
+    channelLabel: '頻道', channelStable: 'stable', channelUnstable: 'unstable',
     retry: '重試'
   },
   'en': {
@@ -350,7 +350,7 @@ window.MIRROR_I18N = {
     distUnknown: 'The distfiles index is unavailable.',
     ph: 'Search package name',
     noJs: 'This table requires scripts. The plain-text list is at <a href="/packages.txt">/packages.txt</a>.',
-    channelLabel: 'Channel', channelStable: 'stable (recommended)', channelUnstable: 'unstable',
+    channelLabel: 'Channel', channelStable: 'stable', channelUnstable: 'unstable',
     retry: 'Retry'
   }
 };
@@ -720,6 +720,6 @@ loadChannel({
   depsText: "/deps.txt"
 });
 </script>
-<script src="/assets/channel-switch.js?v=5ac0f885"></script>
+<script src="/assets/channel-switch.js?v=633c5016"></script>
 </body>
 </html>
