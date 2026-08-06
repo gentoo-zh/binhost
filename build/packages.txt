@@ -121,6 +121,7 @@ media-video/implay
 media-video/mpv-handler
 media-video/tsukimi
 media-video/wiliwili
+net-analyzer/dstp
 net-analyzer/nali
 net-analyzer/pwru
 net-analyzer/realitlscanner
