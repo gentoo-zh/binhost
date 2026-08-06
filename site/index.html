@@ -136,12 +136,14 @@
        aria-labelledby="home-channel-label">
     <span class="src-label" id="home-channel-label" data-i18n="channelLabel">频道</span>
     <button type="button" class="src-opt on" data-channel="stable"
-            data-path="/binpkgs/x86-64" data-status="/build-status.json"><span
+            data-path="/binpkgs/x86-64" data-status="/build-status.json"
+            data-fact-label="factStableBinRow"><span
             data-i18n="channelStable">stable（推荐）</span><span
             class="channel-total" data-channel-total></span></button>
     <button type="button" class="src-opt" data-channel="unstable"
             data-path="/unstable/binpkgs/x86-64"
-            data-status="/build-status-unstable.json"><span
+            data-status="/build-status-unstable.json"
+            data-fact-label="factUnstableBinRow"><span
             data-i18n="channelUnstable">unstable</span><span
             class="channel-total" data-channel-total></span></button>
   </div>
@@ -400,7 +402,8 @@ window.MIRROR_I18N = {
     step4: '啟用 getbinpkg（附加）',
     keyAlt: '也可不安裝該套件，直接下載公鑰檔案，見 <a href="/faq#key-download">FAQ</a>。',
     keyNote: '<code>getuto</code> 建立 <code>/etc/portage/gnupg</code>。缺少該目錄時，上述三條 <code>gpg</code> 命令會回報 <code>no writable keyring found</code>。<code>gpg</code> 不會自動建立該目錄，而 Portage 直到首次取得二進位套件才會呼叫 <code>getuto</code>，此時設定步驟已經完成。簽章使用 <code>getuto</code> 建立的 Portage Local Trust Key，密碼位於 <code>/etc/portage/gnupg/pass</code>，應透過 <code>--passphrase-file</code> 讀取。驗簽以 <code>portage</code> 使用者執行；該使用者無權寫入 trustdb，因此必須預先產生。',
-    factBinRow: '二進位套件', factDistRow: 'distfiles', factBuildRow: '最近建置',
+    factStableBinRow: 'stable 二進位套件', factUnstableBinRow: '全域 ~amd64 二進位套件',
+    factDistRow: 'distfiles', factBuildRow: '最近建置',
     factPkgs: ' 個 gentoo-zh', factDeps: ' 個 ::gentoo 依賴',
     factDist: ' 個檔案', factTime: '更新於 ', factFinished: '完成於 ',
     hour: ' 小時', minute: ' 分', second: ' 秒',
@@ -429,7 +432,8 @@ window.MIRROR_I18N = {
     step4: 'Enable getbinpkg (append)',
     keyAlt: 'You can fetch the key file directly instead of installing the package; see the <a href="/faq#key-download">FAQ</a>.',
     keyNote: '<code>getuto</code> creates <code>/etc/portage/gnupg</code>. Without that directory, the three <code>gpg</code> commands above report <code>no writable keyring found</code>. <code>gpg</code> does not create the directory itself, and Portage invokes <code>getuto</code> only when it first fetches a binary package, after setup is complete. The signature uses the Portage Local Trust Key created by <code>getuto</code>. Read its passphrase from <code>/etc/portage/gnupg/pass</code> with <code>--passphrase-file</code>. Verification runs as the <code>portage</code> user, which cannot write the trustdb, so the trustdb must be prepared first.',
-    factBinRow: 'Binary packages', factDistRow: 'distfiles', factBuildRow: 'Latest build',
+    factStableBinRow: 'stable binary packages', factUnstableBinRow: 'Global ~amd64 binary packages',
+    factDistRow: 'distfiles', factBuildRow: 'Latest build',
     factPkgs: ' from gentoo-zh', factDeps: ' ::gentoo dependencies',
     factDist: ' files', factTime: 'updated ', factFinished: 'finished ',
     hour: ' h', minute: ' min', second: ' s',
@@ -489,19 +493,41 @@ window.MIRROR_I18N = {
   }
 
   var el = document.getElementById('facts');
+  var channels = {};
+  Array.prototype.forEach.call(document.querySelectorAll('[data-channel]'), function (option) {
+    var channel = option.getAttribute('data-channel');
+    if (!channel) return;
+    channels[channel] = {
+      path: option.getAttribute('data-path'),
+      status: option.getAttribute('data-status'),
+      label: option.getAttribute('data-fact-label'),
+    };
+  });
   var data = null;
+  var factFallbacks = {
+    factStableBinRow: 'stable 二进制包',
+    factUnstableBinRow: '全局 ~amd64 二进制包',
+  };
+  var activeChannel = Object.keys(channels).filter(function (channel) {
+    return channels[channel].path === '/binpkgs/x86-64';
+  })[0] || Object.keys(channels)[0];
   var requestId = 0;
 
   function render() {
     if (!data) return;
-    var bin = data[0], dist = data[1], job = data[2], html = '';
-    var own = bin && (typeof bin.overlay === 'number' ? bin.overlay : bin.packages);
-    var binParts = [];
-    if (own) binParts.push([own, s('factPkgs', ' 个 gentoo-zh')]);
-    if (bin && bin.deps) binParts.push([bin.deps, s('factDeps', ' 个 ::gentoo 依赖')]);
-    if (binParts.length) {
-      html += fact(s('factBinRow', '二进制包'), binParts, bin.generated);
-    }
+    var dist = data.dist, job = data.job, html = '';
+    Object.keys(channels).forEach(function (channel) {
+      var bin = data.channels[channel];
+      if (!bin) return;
+      var own = typeof bin.overlay === 'number' ? bin.overlay : bin.packages;
+      var binParts = [];
+      if (typeof own === 'number') binParts.push([own, s('factPkgs', ' 个 gentoo-zh')]);
+      if (typeof bin.deps === 'number') binParts.push([bin.deps, s('factDeps', ' 个 ::gentoo 依赖')]);
+      if (binParts.length) {
+        var fallback = factFallbacks[channels[channel].label] || '二进制包';
+        html += fact(s(channels[channel].label, fallback), binParts, bin.generated);
+      }
+    });
     if (dist && dist.files) {
       html += fact(s('factDistRow', 'distfiles'),
                    [[dist.files, s('factDist', ' 个文件')]], dist.generated);
@@ -527,23 +553,35 @@ window.MIRROR_I18N = {
 
   document.addEventListener('langchange', function (e) { curLang = e.detail; render(); });
 
-  function loadChannel(path, status) {
+  function loadChannel(channel, path, status) {
+    activeChannel = channel || activeChannel;
     var current = ++requestId;
+    var names = Object.keys(channels);
+    function read(url) {
+      return fetch(url).then(function (r) { return r.ok ? r.json() : null; })
+        .catch(function () { return null; });
+    }
     Promise.allSettled([
-      fetch(path + '/status.json').then(function (r) { return r.ok ? r.json() : null; }),
-      fetch('/distfiles-status.json').then(function (r) { return r.ok ? r.json() : null; }),
-      fetch(status).then(function (r) { return r.ok ? r.json() : null; })
+      Promise.all(names.map(function (name) {
+        return read(channels[name].path + '/status.json');
+      })),
+      read('/distfiles-status.json'),
+      read(status)
     ]).then(function (rs) {
       if (current !== requestId) return;
-      data = [rs[0].value, rs[1].value, rs[2].value];
+      var channelData = {};
+      names.forEach(function (name, index) {
+        channelData[name] = rs[0].value[index];
+      });
+      data = { channels: channelData, dist: rs[1].value, job: rs[2].value };
       render();
     });
   }
 
   document.addEventListener('channelchange', function (event) {
-    loadChannel(event.detail.path, event.detail.status);
+    loadChannel(event.detail.channel, event.detail.path, event.detail.status);
   });
-  loadChannel('/binpkgs/x86-64', '/build-status.json');
+  loadChannel(activeChannel, channels[activeChannel].path, channels[activeChannel].status);
 })();
 </script>
 </body>

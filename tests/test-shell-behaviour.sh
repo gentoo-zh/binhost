@@ -273,6 +273,10 @@ ok "distfiles 回收完成后才重建公开索引" "$((audit_line < index_line)
 ok "包列表使用回收后的 distfiles 索引" "$((index_line < packages_line))" "1"
 ok "每日任务分别生成两个频道的包列表" \
    "$(grep -c 'gen-packages.py' "${ROOT}/deploy/daily.sh")" "2"
+ok "每日任务为 stable 生成独立的纯文本清单" \
+   "$(grep -c 'PACKAGE_TEXT=/srv/mirrors/packages.txt' "${ROOT}/deploy/daily.sh")" "1"
+ok "每日任务为 stable 生成独立的依赖清单" \
+   "$(grep -c 'DEPS_TEXT=/srv/mirrors/deps.txt' "${ROOT}/deploy/daily.sh")" "1"
 ok "unstable 网页数据使用独立输出" \
    "$(grep -c 'OUT=/srv/mirrors/packages-unstable.json' "${ROOT}/deploy/daily.sh")" "1"
 

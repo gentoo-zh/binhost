@@ -19,19 +19,43 @@ function check(name, condition, detail) {
   failed++;
 }
 
-async function render(build, channel) {
+async function render(build, channel, locale = "zh-tw") {
   const facts = { innerHTML: "" };
   const listeners = {};
   const calls = [];
   global.document = {
-    documentElement: { lang: "zh-tw" },
+    documentElement: { lang: locale },
     getElementById(id) { return id === "facts" ? facts : null; },
+    querySelectorAll(selector) {
+      if (selector !== "[data-channel]") return [];
+      return [
+        {
+          getAttribute(name) {
+            return {
+              "data-channel": "stable", "data-path": "/binpkgs/x86-64",
+              "data-status": "/build-status.json", "data-fact-label": "factStableBinRow",
+            }[name] || null;
+          },
+        },
+        {
+          getAttribute(name) {
+            return {
+              "data-channel": "unstable", "data-path": "/unstable/binpkgs/x86-64",
+              "data-status": "/build-status-unstable.json",
+              "data-fact-label": "factUnstableBinRow",
+            }[name] || null;
+          },
+        },
+      ];
+    },
     addEventListener(name, callback) { listeners[name] = callback; },
   };
   global.window = {
     MIRROR_I18N: {
       "zh-tw": {
-        factBinRow: "二進位套件", factDistRow: "distfiles", factBuildRow: "最近建置",
+        factStableBinRow: "stable 二進位套件",
+        factUnstableBinRow: "全域 ~amd64 二進位套件",
+        factDistRow: "distfiles", factBuildRow: "最近建置",
         factPkgs: " 個 gentoo-zh", factDeps: " 個 ::gentoo 依賴",
         factDist: " 個檔案", factTime: "更新於 ", factFinished: "完成於 ",
         hour: " 小時", minute: " 分", second: " 秒",
@@ -50,14 +74,15 @@ async function render(build, channel) {
       json: () => Promise.resolve(
         url.includes("build-status") ? build :
         url.includes("distfiles-status") ? { files: 1158, generated: now } :
-        { packages: 466, overlay: 213, deps: 253, generated: now }
+        url.includes("unstable") ? { packages: 432, overlay: 196, deps: 236, generated: now } :
+        { packages: 255, overlay: 188, deps: 67, generated: now }
       ),
     });
   };
   (0, eval)(script);
   await new Promise((resolve) => setImmediate(resolve));
   if (channel) {
-    listeners.channelchange({ detail: channel });
+    listeners.channelchange({ detail: Object.assign({ channel: "unstable" }, channel) });
     await new Promise((resolve) => setImmediate(resolve));
   }
   return { html: facts.innerHTML, calls: calls };
@@ -75,7 +100,13 @@ async function render(build, channel) {
         done.html.includes("完成於 "), done.html);
   check("默认读取 stable 的索引和构建状态",
         done.calls.includes("/binpkgs/x86-64/status.json") &&
+        done.calls.includes("/unstable/binpkgs/x86-64/status.json") &&
         done.calls.includes("/build-status.json"), JSON.stringify(done.calls));
+  check("默认同时显示两个频道的二进制包统计",
+        done.html.includes("stable 二進位套件") &&
+        done.html.includes("全域 ~amd64 二進位套件") &&
+        done.html.includes("188") && done.html.includes("67") &&
+        done.html.includes("196") && done.html.includes("236"), done.html);
 
   const running = await render({
     state: "running", kind: "source", done: 7, total: 9,
@@ -92,10 +123,19 @@ async function render(build, channel) {
         running.calls.includes("/unstable/binpkgs/x86-64/status.json") &&
         running.calls.includes("/build-status-unstable.json"),
         JSON.stringify(running.calls));
+  check("切换频道后仍保留两个频道的统计",
+        running.html.includes("stable 二進位套件") &&
+        running.html.includes("全域 ~amd64 二進位套件") &&
+        running.html.includes("188") && running.html.includes("196"), running.html);
 
   const legacy = await render({ state: "done", generated: 5733 });
   check("旧状态数据不会伪造构建用时",
         !legacy.html.includes("最近建置"), legacy.html);
+
+  const simplified = await render({ state: "done", generated: 5733 }, null, "zh-cn");
+  check("简体中文显示两个频道的明确标签",
+        simplified.html.includes("stable 二进制包") &&
+        simplified.html.includes("全局 ~amd64 二进制包"), simplified.html);
 
   console.log(failed ? `\n  ${failed} 项不通过` : "\n  首页构建状态：全部通过");
   process.exit(failed ? 1 : 0);

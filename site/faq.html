@@ -267,9 +267,12 @@
     <h2 data-i18n="q10">如何在 w3m、lynx 或 curl 中浏览？</h2>
     <p data-i18n-html="a10">
       包数据表与交互式文件浏览需要脚本；页面标题、说明与链接仍可读取。
-      纯文本的包清单在 <a href="/packages.txt">/packages.txt</a>，一行一个包，
-      第二列 <code>bin+src</code> 表示两者都有、<code>bin</code> 表示只有二进制包、
-      <code>src</code> 表示只有 distfiles。
+      纯文本清单供脚本和终端界面查阅：stable 使用
+      <a href="/packages.txt">/packages.txt</a> 与 <a href="/deps.txt">/deps.txt</a>，
+      unstable 使用 <a href="/packages-unstable.txt">/packages-unstable.txt</a> 与
+      <a href="/deps-unstable.txt">/deps-unstable.txt</a>。Portage 不读取这些清单，频道应通过
+      配置中的 <code>sync-uri</code> 选择。包清单第二列 <code>bin+src</code> 表示两者都有、
+      <code>bin</code> 表示只有二进制包、<code>src</code> 表示只有 distfiles。
       目录浏览用 <a href="/_raw/">/_raw/</a>，那是由 nginx 生成的列表，不需要脚本。
       其余各页的正文都写在 HTML 里，文字浏览器直接可读。
     </p>
@@ -325,7 +328,7 @@ window.MIRROR_I18N = {
     a9b: '建議每日同步一次。rsync 會略過其判定為未變更的檔案；同一路徑的檔案仍可能因重新簽章或重新產生而需要傳輸。<code>--delay-updates</code> 會把已傳輸的變更檔案延後到傳輸末段逐一取代，但不會將索引與套件樹作為一個整體進行原子切換。鏡像建成後在 <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issues</a> 提出，以便加入鏡像清單。',
     q7: '都收錄了哪些套件？',
     q10: '如何在 w3m、lynx 或 curl 中瀏覽？',
-    a10: '套件資料表與互動式檔案瀏覽需要指令碼；頁面標題、說明與連結仍可讀。純文字的套件清單在 <a href="/packages.txt">/packages.txt</a>，一行一個套件。第二欄 <code>bin+src</code> 表示兩者都有、<code>bin</code> 表示只有二進位套件、<code>src</code> 表示只有 distfiles。目錄瀏覽用 <a href="/_raw/">/_raw/</a>，那是由 nginx 生成的清單，不需要指令碼。其餘各頁的正文都寫在 HTML 裡，文字瀏覽器直接可讀。',
+    a10: '套件資料表與互動式檔案瀏覽需要指令碼；頁面標題、說明與連結仍可讀。純文字清單供腳本與終端介面查閱：stable 使用 <a href="/packages.txt">/packages.txt</a> 與 <a href="/deps.txt">/deps.txt</a>，unstable 使用 <a href="/packages-unstable.txt">/packages-unstable.txt</a> 與 <a href="/deps-unstable.txt">/deps-unstable.txt</a>。Portage 不讀取這些清單，頻道應透過設定中的 <code>sync-uri</code> 選擇。套件清單第二欄 <code>bin+src</code> 表示兩者都有、<code>bin</code> 表示只有二進位套件、<code>src</code> 表示只有 distfiles。目錄瀏覽用 <a href="/_raw/">/_raw/</a>，那是由 nginx 生成的清單，不需要指令碼。其餘各頁的正文都寫在 HTML 裡，文字瀏覽器直接可讀。',
     a7: '主體是 gentoo-zh/overlay 的收錄清單。除此之外，本站也發布這些套件所需、允許再散布的那部分 <code>::gentoo</code> 執行期依賴，兩者在同一份索引裡，用 <code>REPO</code> 欄位區分。二進位套件的授權條款必須屬於 <code>@BINARY-REDISTRIBUTABLE</code>，且 <code>RESTRICT</code> 不得包含 <code>bindist</code>。<code>acct-group/&#42;</code>、<code>acct-user/&#42;</code> 與 <code>virtual/&#42;</code> 在使用者系統本機安裝。<code>RESTRICT</code> 中的 <code>bindist</code> 只限制二進位套件；distfiles 是否鏡像由 <code>mirror</code>、<code>fetch</code> 與每個 <code>SRC_URI</code> 項目另行判定。附帶內容僅包含這些套件的執行期依賴，不取代 <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">Gentoo 官方 binhost</a>。清單見 <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>。',
     q12: '如何閱讀套件頁狀態？',
     a12: '套件頁分開顯示公開索引、直接建置清單、目前發布政策與 distfiles 鏡像狀態。同一列可以同時出現多個狀態，因為它們說明不同事實。',
@@ -379,7 +382,7 @@ window.MIRROR_I18N = {
     a9b: 'Sync once a day. rsync skips files it determines are unchanged; a file at the same path can still require transfer after it is regenerated or signed again. <code>--delay-updates</code> postpones replacement of transferred files until the final stage of the transfer, one file at a time. It does not atomically switch the index and package tree as one generation. Once the mirror is running, open a <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issue</a> so it can be added to the mirror list.',
     q7: 'Which packages are included?',
     q10: 'How do I browse this in w3m, lynx or curl?',
-    a10: 'The package data table and interactive file browser require scripts; their headings, descriptions and links remain readable without scripts. A plain text package list is at <a href="/packages.txt">/packages.txt</a>, one package per line. Its second column uses <code>bin+src</code> for both, <code>bin</code> for a binary package only, and <code>src</code> for distfiles only. For directory browsing use <a href="/_raw/">/_raw/</a>, which nginx generates and needs no script. Every other page has its text in the HTML and reads fine in a text browser.',
+    a10: 'The package data table and interactive file browser require scripts; their headings, descriptions and links remain readable without scripts. The plain-text lists are for scripts and terminal interfaces: stable uses <a href="/packages.txt">/packages.txt</a> and <a href="/deps.txt">/deps.txt</a>, while unstable uses <a href="/packages-unstable.txt">/packages-unstable.txt</a> and <a href="/deps-unstable.txt">/deps-unstable.txt</a>. Portage does not read these lists; select a channel with <code>sync-uri</code> in its configuration. The package list uses <code>bin+src</code> for both, <code>bin</code> for a binary package only, and <code>src</code> for distfiles only. For directory browsing use <a href="/_raw/">/_raw/</a>, which nginx generates and needs no script. Every other page has its text in the HTML and reads fine in a text browser.',
     a7: 'Mainly the gentoo-zh/overlay build list. This host also publishes the redistributable part of the <code>::gentoo</code> runtime dependencies those packages need; both live in one index and are told apart by the <code>REPO</code> field. A binary package must use licences in <code>@BINARY-REDISTRIBUTABLE</code>, and its <code>RESTRICT</code> must not include <code>bindist</code>. <code>acct-group/&#42;</code>, <code>acct-user/&#42;</code> and <code>virtual/&#42;</code> are installed locally on the user system. The <code>bindist</code> value in <code>RESTRICT</code> applies only to binary packages; distfile mirroring is governed separately by <code>mirror</code>, <code>fetch</code> and each <code>SRC_URI</code> entry. The scope of the bundled dependencies stops at those runtime dependencies; this is not a replacement for the <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">official Gentoo binhost</a>. The list is in <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>.',
     q12: 'How do I read the package statuses?',
     a12: 'The packages page shows the public index, direct build list, current publication policy and distfile mirror state separately. Several statuses can appear on one row because they describe different facts.',

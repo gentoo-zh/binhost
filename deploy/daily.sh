@@ -55,7 +55,8 @@ if step "distfiles 同步" /usr/local/bin/binhost-distfiles-sync; then
     step "distfiles 索引" /usr/local/bin/binhost-distfiles-index
     step "包列表" env LIST="${LIB}/packages.txt" EXCLUDED="${LIB}/excluded.txt" \
         CHANNEL_EXCLUDED="${LIB}/stable-excluded.txt" \
-        OUT=/srv/mirrors/packages.json INDEX=/srv/pub/binpkgs/x86-64/Packages \
+        OUT=/srv/mirrors/packages.json PACKAGE_TEXT=/srv/mirrors/packages.txt \
+        DEPS_TEXT=/srv/mirrors/deps.txt INDEX=/srv/pub/binpkgs/x86-64/Packages \
         python3 "${LIB}/gen-packages.py" "${OVERLAY}"
     step "unstable 包列表" env LIST="${LIB}/packages.txt" EXCLUDED="${LIB}/excluded.txt" \
         OUT=/srv/mirrors/packages-unstable.json \
