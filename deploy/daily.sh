@@ -67,6 +67,8 @@ step "unstable 包列表" env LIST="${LIB}/packages.txt" EXCLUDED="${LIB}/exclud
     INDEX=/srv/pub/unstable/binpkgs/x86-64/Packages \
     python3 "${LIB}/gen-packages.py" "${OVERLAY}"
 
+step "服务器状态" /usr/local/bin/binhost-server-status
+
 # generation.json arrives with the first index created by the generation-aware
 # builder. Older public indexes predate this check and are skipped, while any
 # existing entry, including a broken symlink, must still pass verification.

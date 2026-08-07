@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=88132e54">
+<link rel="stylesheet" href="/assets/site.css?v=28e780f0">
 <script src="/assets/early.js?v=0888406a"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -79,6 +79,10 @@
   </p>
 
   <p class="facts" id="facts"></p>
+
+  <h2 data-i18n="h2status">状态</h2>
+
+  <p class="facts" id="server-facts"></p>
 
   <h2 data-i18n="h2dist">Distfiles</h2>
 
@@ -408,7 +412,9 @@ window.MIRROR_I18N = {
     factDistRow: 'distfiles', factBuildRow: '最近建置',
     factPkgs: ' 個 gentoo-zh', factDeps: ' 個 ::gentoo 依賴',
     factDist: ' 個檔案', factTime: '更新於 ', factFinished: '完成於 ',
-    hour: ' 小時', minute: ' 分', second: ' 秒',
+    day: ' 天', hour: ' 小時', minute: ' 分', second: ' 秒',
+    h2status: '狀態', factUptimeRow: '運行時間', factTrafficRow: '出站流量',
+    factSinceBoot: '（開機以來）',
     h2contact: '聯絡', ctForum: '論壇'
   },
   'en': {
@@ -441,7 +447,9 @@ window.MIRROR_I18N = {
     factDistRow: 'distfiles', factBuildRow: 'Latest build',
     factPkgs: ' from gentoo-zh', factDeps: ' ::gentoo dependencies',
     factDist: ' files', factTime: 'updated ', factFinished: 'finished ',
-    hour: ' h', minute: ' min', second: ' s',
+    day: ' d', hour: ' h', minute: ' min', second: ' s',
+    h2status: 'Status', factUptimeRow: 'Uptime', factTrafficRow: 'Egress',
+    factSinceBoot: ' since boot',
     h2contact: 'Contact', ctForum: 'Forum'
   }
 };
@@ -470,9 +478,14 @@ window.MIRROR_I18N = {
 
   function duration(seconds) {
     var value = Math.max(0, Number(seconds) || 0);
-    var hours = Math.floor(value / 3600);
+    var days = Math.floor(value / 86400);
+    var hours = Math.floor(value % 86400 / 3600);
     var minutes = Math.floor(value % 3600 / 60);
     var rest = Math.floor(value % 60);
+    if (days) {
+      return days + s('day', ' 天') +
+             (hours ? ' ' + hours + s('hour', ' 小时') : '');
+    }
     if (hours) {
       return hours + s('hour', ' 小时') +
              (minutes ? ' ' + minutes + s('minute', ' 分') : '');
@@ -537,11 +550,6 @@ window.MIRROR_I18N = {
       html += fact(s('factDistRow', 'distfiles'),
                    [[dist.files, s('factDist', ' 个文件')]], dist.generated);
     }
-    if (job && job.state === 'done' && Number(job.finished) > 0 &&
-        Number.isFinite(job.duration) && job.duration >= 0) {
-      html += fact(s('factBuildRow', '最近构建'), [[duration(job.duration), '']],
-                   job.finished, s('factFinished', '完成于 '));
-    }
     var fresh = job && job.generated &&
                 (Date.now() / 1000 - job.generated) < 3 * 3600;
     if (job && job.state === 'running' && fresh) {
@@ -554,6 +562,34 @@ window.MIRROR_I18N = {
               (job.now ? ' <code>' + esc(job.now) + '</code>' : '') + '</span>';
     }
     el.innerHTML = html;
+    renderServer();
+  }
+
+  function bytes(value) {
+    var n = Number(value) || 0, units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'], i = 0;
+    while (n >= 1024 && i < units.length - 1) { n /= 1024; i += 1; }
+    return (i === 0 ? n : n.toFixed(n < 10 ? 1 : 0)) + ' ' + units[i];
+  }
+
+  function renderServer() {
+    var box = document.getElementById('server-facts');
+    if (!box) return;
+    var server = data && data.server, job = data && data.job, html = '';
+    if (server && Number(server.uptime) > 0) {
+      html += fact(s('factUptimeRow', '运行时间'),
+                   [[duration(server.uptime), '']], server.generated);
+    }
+    if (server && Number(server.tx) > 0) {
+      html += fact(s('factTrafficRow', '出站流量'),
+                   [[bytes(server.tx), s('factSinceBoot', '（开机以来）')]],
+                   server.generated);
+    }
+    if (job && job.state === 'done' && Number(job.finished) > 0 &&
+        Number.isFinite(job.duration) && job.duration >= 0) {
+      html += fact(s('factBuildRow', '最近构建'), [[duration(job.duration), '']],
+                   job.finished, s('factFinished', '完成于 '));
+    }
+    box.innerHTML = html;
   }
 
   document.addEventListener('langchange', function (e) { curLang = e.detail; render(); });
@@ -571,14 +607,16 @@ window.MIRROR_I18N = {
         return read(channels[name].path + '/status.json');
       })),
       read('/distfiles-status.json'),
-      read(status)
+      read(status),
+      read('/server-status.json')
     ]).then(function (rs) {
       if (current !== requestId) return;
       var channelData = {};
       names.forEach(function (name, index) {
         channelData[name] = rs[0].value[index];
       });
-      data = { channels: channelData, dist: rs[1].value, job: rs[2].value };
+      data = { channels: channelData, dist: rs[1].value, job: rs[2].value,
+               server: rs[3].value };
       render();
     });
   }
