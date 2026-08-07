@@ -386,7 +386,7 @@ window.MIRROR_I18N = {
 
     factPreparing: ' 建置準備中',
     factBuilding: ' 正在建置',
-    factFetching: ' 正在取二進位套件',
+    factFetching: ' 正在安裝二進位套件',
     modeManual: '手動設定',
     modeQuick: '快速設定',
     quickNote: '快速設定會執行全部四個設定步驟；手動設定會分別顯示每一步的內容。',
@@ -420,7 +420,7 @@ window.MIRROR_I18N = {
 
     factPreparing: ' preparing',
     factBuilding: ' building',
-    factFetching: ' fetching binaries',
+    factFetching: ' installing binaries',
     modeManual: 'Step by step',
     modeQuick: 'Quick setup',
     quickNote: 'Quick setup performs all four configuration steps; step-by-step setup shows each step separately.',
@@ -559,7 +559,7 @@ window.MIRROR_I18N = {
     if (job && job.state === 'running' && fresh) {
       var what = job.kind === 'prepare' ? ['factPreparing', ' 构建准备中']
                : job.kind === 'source' ? ['factBuilding', ' 正在构建']
-               : ['factFetching', ' 正在取二进制包'];
+               : ['factFetching', ' 正在安装二进制包'];
       html += '<span class="job">' +
               (job.total ? '<b class="num">' + job.done + '/' + job.total + '</b>' : '') +
               s(what[0], what[1]) +
