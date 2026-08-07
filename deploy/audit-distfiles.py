@@ -35,7 +35,7 @@ def locked(path):
         lock.parent.mkdir(parents=True, exist_ok=True)
         fd = os.open(lock, os.O_WRONLY | os.O_CREAT, 0o644)
     except OSError as e:
-        raise LedgerError(f"无法建立 {lock}，本轮不做任何清理：{e}") from e
+        raise LedgerError(f"无法建立 {lock}，本次不做任何清理：{e}") from e
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
         yield
@@ -297,7 +297,7 @@ def _reap_locked(orphan, paths, grace, budget, state):
         else:
             failed.append(f)
     if held:
-        print(f"!! 达到额度上限，本轮保留 {held} 个未清理", file=sys.stderr)
+        print(f"!! 达到额度上限，本次保留 {held} 个未清理", file=sys.stderr)
     for f in deleted:
         seen.pop(f, None)
 
@@ -337,7 +337,7 @@ def main(overlay, dest, aux=None):
     if not users:
         refused = f"overlay 一个 Manifest 都没有读到，{overlay} 不完整"
     elif have and len(orphan) > len(have) * MAX_REAP_SHARE:
-        refused = (f"本轮 {len(orphan)}/{len(have)} 个文件无人引用，"
+        refused = (f"本次 {len(orphan)}/{len(have)} 个文件无人引用，"
                    f"超过 {MAX_REAP_SHARE:.0%}")
 
     spent, budget, reserved = 0, 0, 0
@@ -345,7 +345,7 @@ def main(overlay, dest, aux=None):
         try:
             spent = recent_deletions(0)
         except LedgerError as e:
-            refused = f"{e}，跨轮预算无依据"
+            refused = f"{e}，无法按历史清理量算预算"
         else:
             budget = max(0, max(MIN_REAP_BUDGET,
                                 int(len(have) * MAX_REAP_SHARE)) - spent)
@@ -354,7 +354,7 @@ def main(overlay, dest, aux=None):
     too_many = (len(extra) > MIN_RESTRICTED_TO_DOUBT
                 and len(extra) > len(have) * MAX_REAP_SHARE)
     if too_many:
-        print(f"!! 本轮 {len(extra)}/{len(have)} 个文件被标为禁止镜像，"
+        print(f"!! 本次 {len(extra)}/{len(have)} 个文件被标为禁止镜像，"
               f"超过 {MAX_REAP_SHARE:.0%}，没有清理", file=sys.stderr)
 
     want = len(orphan) + (0 if too_many else len(extra))
@@ -370,7 +370,7 @@ def main(overlay, dest, aux=None):
         for f in extra:
             if len(restricted) >= reserved:
                 print(f"!! 达到额度上限，{len(extra) - len(restricted)} 个禁止镜像的"
-                      f"文件本轮未清理", file=sys.stderr)
+                      f"文件本次未清理", file=sys.stderr)
                 break
             path = paths.get(f)
             if path is None:
@@ -390,7 +390,7 @@ def main(overlay, dest, aux=None):
             failed = failed + deleted
     if not refused and budget == 0 and orphan:
         refused = (f"最近 {WINDOW_HOURS} 小时累计清理 {spent} 个，"
-                   f"已达镜像的 {MAX_REAP_SHARE:.0%}，本轮未清理")
+                   f"已达镜像的 {MAX_REAP_SHARE:.0%}，本次未清理")
 
     print(f"overlay 引用 {len(users)}，其中可镜像 {len(mirrorable)}，"
           f"不可镜像 {len(never)}，无法取得 {len(unfetchable)}，"
@@ -398,17 +398,17 @@ def main(overlay, dest, aux=None):
     if unsure:
         print(f"!! {len(unsure)} 个文件无法判定可否公开：Portage metadata 读取失败、"
               f"RESTRICT 解析失败，或 Manifest 里的条目不属于任何一个版本；"
-              f"本轮既不清理也不当作可公开", file=sys.stderr)
+              f"本次既不清理也不当作可公开", file=sys.stderr)
         for f in sorted(unsure)[:10]:
             print(f"   无法判定 {f}  <- {[p for p, _ in users.get(f, [])]}", file=sys.stderr)
     print(f"镜像上 {len(have)}，缺 {len(missing)}，禁止镜像 {len(extra)}，"
-          f"已无人引用 {len(orphan)}，本轮清理 {len(deleted) + len(restricted)}"
+          f"已无人引用 {len(orphan)}，本次清理 {len(deleted) + len(restricted)}"
           f"（其中禁止镜像 {len(restricted)}）")
     if restricted_failed:
         print(f"!! {len(restricted_failed)} 个禁止镜像的文件回收失败，仍可公开存取",
               file=sys.stderr)
     if failed:
-        print(f"!! {len(failed)} 个回收失败，本轮清理未完成", file=sys.stderr)
+        print(f"!! {len(failed)} 个回收失败，本次清理未完成", file=sys.stderr)
     if refused:
         print(f"!! 拒绝清理：{refused}", file=sys.stderr)
 

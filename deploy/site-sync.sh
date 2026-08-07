@@ -39,7 +39,7 @@ if [[ -z ${PUBLISH} ]]; then
     done
 fi
 if [[ ! -x ${PUBLISH} ]]; then
-    echo "!! 未找到 publish-site.sh，本轮不发布任何内容" >&2
+    echo "!! 未找到 publish-site.sh，本次不发布任何内容" >&2
     rm -f "${DONE}"
     exit 1
 fi

@@ -104,7 +104,7 @@ elif [[ -d ${SITE_WORK}/.git ]]; then
     elif (( age_h >= SITE_STALE_H )); then
         bad "站点同步" "上次拉取在 ${age_h} 小时前，五分钟一次的同步已停止"
     elif [[ ${marked} != "${here_site}" ]]; then
-        bad "站点同步" "仓库副本在 ${here_site:0:8}，上次完成的是 ${marked:0:8}，最近一轮未完成"
+        bad "站点同步" "仓库副本在 ${here_site:0:8}，上次完成的是 ${marked:0:8}，最近一次未完成"
     elif (( drift )); then
         bad "站点同步" "assets 有 ${drift} 处与仓库副本不一致，rsync 未完成"
     elif (( pages )); then
@@ -291,7 +291,7 @@ check_build_status() {
     jage=$(( ( $(date +%s) - jts ) / 3600 ))
     page=$(( ( $(date +%s) - jprog ) / 3600 ))
     if [[ ${jstate} == failed ]]; then
-        bad "${label} 构建状态" "上一轮构建失败（${jage} 小时前）"
+        bad "${label} 构建状态" "上次构建失败（${jage} 小时前）"
     elif [[ ${jstate} == running ]] && (( page >= BUILD_STALE_H )); then
         bad "${label} 构建状态" "${jphase:-未知} 阶段已 ${page} 小时没有进展"
     elif [[ ${jstate} == running ]] && (( jage >= BUILD_STALE_H )); then

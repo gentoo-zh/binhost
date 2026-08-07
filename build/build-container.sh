@@ -43,7 +43,7 @@ if [[ -z ${BINHOST_LOCKED:-} ]]; then
     LOCK="${LOCK:-/var/lib/binhost/stage/build.lock}"
     mkdir -p "$(dirname "${LOCK}")"
     exec 9>"${LOCK}"
-    flock -n 9 || die "另一轮构建正在进行（${LOCK}）"
+    flock -n 9 || die "另一次构建正在执行（${LOCK}）"
 fi
 
 [[ -s ${LIST} ]] || die "package list not found or empty: ${LIST}"
@@ -173,7 +173,7 @@ emaint binhost --fix
 if ! python3 /usr/local/bin/snapshot-binrepo \
         /etc/portage/binrepos.conf/gentoo.conf /var/cache/edb/binhost \
         /var/log/binhost/gentoo-Packages; then
-    echo "!! 无法记录 Gentoo binhost 索引，本轮发布闸门将阻断" >&2
+    echo "!! 无法记录 Gentoo binhost 索引，本次发布闸门将阻断" >&2
 fi
 
 if (( ${#failed[@]} )); then
@@ -250,15 +250,15 @@ if ! ${DOCKER} run --rm --network none --read-only \
                 --fingerprint "${SIGNING_KEY}" \
                 --changed-list /var/cache/binpkgs/.signed-packages
         '; then
-    echo "签名失败，本轮只执行隔离，不发布新索引" \
+    echo "签名失败，本次只执行隔离，不发布新索引" \
         > "${STAGE}.new/publish-blocked.txt"
 elif ! python3 "$(dirname "$0")/verify-signatures.py" "${STAGE}.new" \
         "${SIGNING_INPUT}/public.asc" "${SIGNING_KEY}"; then
-    echo "宿主机独立验签失败，本轮只执行隔离，不发布新索引" \
+    echo "宿主机独立验签失败，本次只执行隔离，不发布新索引" \
         > "${STAGE}.new/publish-blocked.txt"
 elif ! python3 "$(dirname "$0")/persist-packages.py" "${STAGE}.new" \
         "${PKGDIR}" "${STAGE}.new/.signed-packages"; then
-    echo "无法持久化已验签的软件包，本轮只执行隔离，不发布新索引" \
+    echo "无法持久化已验签的软件包，本次只执行隔离，不发布新索引" \
         > "${STAGE}.new/publish-blocked.txt"
 fi
 cleanup_signing_input
@@ -276,7 +276,7 @@ if [[ ! -s ${STAGE}.new/publish-blocked.txt ]] &&
         --source-tree "${TREE}" --source-overlay "${OVERLAY}" \
         "${source_policy[@]}" \
         --write-source "${STAGE}.new/source.txt"; then
-    echo "暂存索引未通过运行期依赖验证，本轮只执行隔离" \
+    echo "暂存索引未通过运行期依赖验证，本次只执行隔离" \
         > "${STAGE}.new/publish-blocked.txt"
 fi
 
@@ -284,7 +284,7 @@ if [[ ! -s ${STAGE}.new/publish-blocked.txt ]] &&
    ! GENTOO_TREE="${TREE}" CHANNEL_EXCLUDED="${channel_excluded_list}" \
         python3 "$(dirname "$0")/check-versions.py" \
         "${OVERLAY}" "${STAGE}.new/Packages" "${LIST}"; then
-    echo "暂存索引未覆盖清单中的当前可用版本，本轮只执行隔离" \
+    echo "暂存索引未覆盖清单中的当前可用版本，本次只执行隔离" \
         > "${STAGE}.new/publish-blocked.txt"
 fi
 

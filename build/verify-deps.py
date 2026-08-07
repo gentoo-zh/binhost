@@ -279,7 +279,7 @@ def main(path, exceptions=None, installed=None, available=None,
     try:
         _installed_fields, have = read_snapshot(installed, "基础系统快照")
     except (FileNotFoundError, ValueError) as e:
-        sys.exit(f"无法读取基础系统清单 {e}，无法判定缺失的依赖，本轮不通过")
+        sys.exit(f"无法读取基础系统清单 {e}，无法判定缺失的依赖，本次不通过")
     try:
         if write_available_path:
             if not available:
@@ -290,7 +290,7 @@ def main(path, exceptions=None, installed=None, available=None,
             available_fields, available_db = read_snapshot(
                 available, "Gentoo binhost 可用包快照")
     except (FileNotFoundError, ValueError) as e:
-        sys.exit(f"无法读取 Gentoo binhost 清单 {e}，本轮不通过")
+        sys.exit(f"无法读取 Gentoo binhost 清单 {e}，本次不通过")
 
     unsatisfied, base, external, source_matches, seen = check(
         fields, have, available_db)
@@ -301,7 +301,7 @@ def main(path, exceptions=None, installed=None, available=None,
             _selected, selected_db = read_snapshot(
                 write_available_path, "Gentoo binhost 可用包快照")
         except (FileNotFoundError, OSError, ValueError) as e:
-            sys.exit(f"无法生成 Gentoo binhost 可用包快照 {e}，本轮不通过")
+            sys.exit(f"无法生成 Gentoo binhost 可用包快照 {e}，本次不通过")
         available_db = selected_db
         unsatisfied, base, external, source_matches, seen = check(
             fields, have, available_db)
@@ -319,7 +319,7 @@ def main(path, exceptions=None, installed=None, available=None,
             _source_fields, source_db = read_snapshot(
                 source, "Gentoo 源码可用包快照")
     except (FileNotFoundError, OSError, ValueError) as e:
-        sys.exit(f"无法读取或生成 Gentoo 源码清单 {e}，本轮不通过")
+        sys.exit(f"无法读取或生成 Gentoo 源码清单 {e}，本次不通过")
     if source_db is not None:
         unsatisfied, base, external, source_matches, seen = check(
             fields, have, available_db, source_db)
@@ -336,7 +336,7 @@ def main(path, exceptions=None, installed=None, available=None,
           f"{len(source_matches)} 个由源码仓库提供，"
           f"{len(accepted)} 个是已列出的例外")
     for atom in stale:
-        print(f"!! 例外 {atom} 本轮已能满足，应从 dep-exceptions.txt 删除",
+        print(f"!! 例外 {atom} 本次已能满足，应从 dep-exceptions.txt 删除",
               file=sys.stderr)
     if unsatisfied:
         print(f"!! {len(unsatisfied)} 个运行期依赖没有一个已发布版本满足，"

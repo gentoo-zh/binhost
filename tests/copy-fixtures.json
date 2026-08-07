@@ -250,7 +250,7 @@
  "clean": {
   "assets/util.js": "const x = '已复制';\n",
   "gen.py": "print(\"索引无法读取\")\n",
-  "run.sh": "echo \"本轮终止\"\n",
+  "run.sh": "echo \"本次终止\"\n",
   "wf.yml": "run: echo \"已发布\"\n",
   "page.html": "<!-- chrome:head -->\n<p>未找到请求的资源。</p>\n",
   "assets/site.css": "body{}\n",

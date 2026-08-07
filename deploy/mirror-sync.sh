@@ -111,7 +111,7 @@ base=${before}
 (( ${#retire[@]} > 0 && base > 0 && ${#retire[@]} * 100 >= base * MAX_REMOVE_SHARE )) && over=1
 (( ${#retire[@]} >= MAX_REMOVE_COUNT )) && over=1
 if (( over )) && [[ ${FORCE_REMOVE:-0} != 1 ]]; then
-    echo "!! 本轮要清理 ${#retire[@]} 个，本轮之前有 ${base} 个，达到 ${MAX_REMOVE_SHARE}% 或 ${MAX_REMOVE_COUNT} 个的上限，未清理" >&2
+    echo "!! 本次要清理 ${#retire[@]} 个，本次之前有 ${base} 个，达到 ${MAX_REMOVE_SHARE}% 或 ${MAX_REMOVE_COUNT} 个的上限，未清理" >&2
     echo "   索引与已下载的包都已就位，确认无误后以 FORCE_REMOVE=1 重新执行" >&2
     exit 3
 fi

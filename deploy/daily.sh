@@ -8,11 +8,11 @@ if ! exec 9>"${LOCK}"; then
     exit 1
 fi
 if ! command -v flock >/dev/null; then
-    echo "!! 没有 flock，无法保证一轮只执行一次" >&2
+    echo "!! 没有 flock，无法保证同时只有一次在执行" >&2
     exit 1
 fi
 if ! flock -n 9; then
-    echo "上一轮尚未结束（${LOCK}），本轮跳过" >&2
+    echo "上一次尚未结束（${LOCK}），本次跳过" >&2
     exit 0
 fi
 
@@ -44,7 +44,7 @@ ${out}"
 
 if ! step "overlay 更新" git -C "${OVERLAY}" fetch --quiet origin master ||
    ! step "overlay 切换" git -C "${OVERLAY}" reset --quiet --hard origin/master; then
-    echo "!! overlay 更新失败，本轮终止" >&2
+    echo "!! overlay 更新失败，本次终止" >&2
     exit 1
 fi
 

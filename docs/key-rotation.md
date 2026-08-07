@@ -35,7 +35,7 @@ gpg --homedir /var/lib/binhost/gnupg --output revoke-<新指纹>.asc \
 ### 二、把新指纹写入镜像机的记录
 
 `site-sync.sh` 要求 `.asc` 中的每个主公钥指纹都列在 `/etc/binhost/signing-key.fpr`
-中，否则本轮不发布。该文件由 `install.sh` 的 `SIGNING_FPR` 写入，不在版本库中。
+中，否则本次不发布。该文件由 `install.sh` 的 `SIGNING_FPR` 写入，不在版本库中。
 因此必须先更新指纹清单，再提交包含新旧公钥的 `.asc`。顺序颠倒会阻止公钥同步；
 错误只写入 `stderr`，镜像机的 `cron` 没有邮件出口。
 

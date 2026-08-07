@@ -671,7 +671,7 @@ s=$(snap "42 173 app-misc/foo" "")
 ok "逐包阶段报出真实完成数" "$(field_of "${s}" "done")" "42"
 ok "逐包阶段报出总数" "$(field_of "${s}" total)" "173"
 ok "逐包阶段标出 phase" "$(phase_of "${s}")" "per-package"
-ok "逐包阶段保留本轮开始时间" "$(field_of "${s}" started)" "100"
+ok "逐包阶段保留本次开始时间" "$(field_of "${s}" started)" "100"
 case "${s}" in *'"now":"app-misc/foo"'*) ok "逐包阶段报出当前套件" yes yes ;;
                *) ok "逐包阶段报出当前套件" no yes ;; esac
 
@@ -708,7 +708,7 @@ finished=$(field_of "${s}" finished)
 duration=$(field_of "${s}" duration)
 ok "完成状态保留开始与结束时间" \
    "$([ -n "${started}" ] && [ -n "${finished}" ] && echo both || echo missing)" "both"
-ok "完成状态的用时由同一轮起止时间计算" "$(( finished - started ))" "${duration}"
+ok "完成状态的用时由同一次起止时间计算" "$(( finished - started ))" "${duration}"
 
 start_line=$(grep -n '^BUILD_STARTED=' build/cycle.sh | head -1 | cut -d: -f1)
 watch_line=$(grep -n 'build-progress.sh watch' build/cycle.sh | cut -d: -f1)
@@ -962,7 +962,7 @@ for ((i = 0; i < 10; i++)); do echo x > "${d}/remote/app-misc/p${i}-1.0-1.gpkg.t
 echo x > "${d}/remote/app-misc/gone-1.0-1.gpkg.tar"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
-ok "正常一轮退役少量包时正常执行" "$?" "0"
+ok "正常一次退役少量包时正常执行" "$?" "0"
 ok "退役的那一个已删除" "$(test -e "${d}/remote/app-misc/gone-1.0-1.gpkg.tar" && echo 在 || echo 无)" "无"
 ok "索引里的仍然存在" "$(find "${d}/remote" -name 'p*.gpkg.tar' | wc -l)" "10"
 rm -rf "${d}"
@@ -1251,9 +1251,9 @@ echo AAAA0000000000000000000000000000000000AA > "${d}/fpr"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" WORK="${d}/work" DEST="${d}/dest" \
       FPR_FILE="${d}/fpr" LOCK="${d}/lock" bash deploy/site-sync.sh 2>&1)
 ok "指纹不符时以非零结束" "$?" "1"
-ok "并且不写 DONE，下一轮会重试" "$(test -e "${d}/work/.synced" && echo 有 || echo 无)" "无"
+ok "并且不写 DONE，下次会重试" "$(test -e "${d}/work/.synced" && echo 有 || echo 无)" "无"
 ok "公钥没有发布" "$(test -e "${d}/dest/gentoo-zh-binhost.asc" && echo 有 || echo 无)" "无"
-ok "页面也没有发布，本轮不切换任何内容" "$(test -e "${d}/dest/index.html" && echo 有 || echo 无)" "无"
+ok "页面也没有发布，本次不切换任何内容" "$(test -e "${d}/dest/index.html" && echo 有 || echo 无)" "无"
 ok "assets 也没有发布" "$(test -d "${d}/dest/assets" && echo 有 || echo 无)" "无"
 contains "输出分开列出两侧指纹" "${out}" "本机记录的指纹"
 rm -rf "${d}"
