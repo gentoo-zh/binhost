@@ -43,16 +43,17 @@ ssh "${REMOTE}" "set -euo pipefail
 cd '${tmp}'
 
 echo '--- 依赖'
-for cmd in git rsync logrotate; do
+for cmd in git rsync logrotate certbot; do
     command -v \${cmd} >/dev/null && continue
     case \${cmd} in
         git)       sudo emerge -q dev-vcs/git ;;
         rsync)     sudo emerge -q net-misc/rsync ;;
         logrotate) sudo emerge -q app-admin/logrotate ;;
+        certbot)   sudo emerge -q app-crypt/certbot ;;
     esac
 done
 missing=''
-for cmd in git rsync logrotate; do command -v \${cmd} >/dev/null || missing=\"\${missing} \${cmd}\"; done
+for cmd in git rsync logrotate certbot; do command -v \${cmd} >/dev/null || missing=\"\${missing} \${cmd}\"; done
 [ -z \"\${missing}\" ] || { echo \"!! 缺少命令：\${missing}\" >&2; exit 1; }
 
 echo '--- 脚本'
@@ -141,6 +142,9 @@ if ! nginx -V 2>&1 | grep -q http_v3; then
 fi
 sudo install -dm755 /srv/pub
 sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/pub/binpkgs /srv/pub/distfiles
+# mirror-common.inc serves the ACME challenge from here, and certbot renews
+# through that path.
+sudo install -dm755 /var/www/acme/.well-known/acme-challenge
 sudo install -dm755 /etc/nginx/conf.d
 sudo install -m644 nginx.conf         /etc/nginx/nginx.conf
 sudo install -m644 mirror-common.inc  /etc/nginx/conf.d/mirror-common.inc
