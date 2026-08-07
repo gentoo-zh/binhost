@@ -66,7 +66,7 @@ async function render(build, channel, locale = "zh-tw") {
         factDist: " 個檔案", factTime: "更新於 ", factFinished: "完成於 ",
         hour: " 小時", minute: " 分", second: " 秒",
         factPreparing: " 建置準備中", factBuilding: " 正在建置",
-        factFetching: " 正在取二進位套件",
+        factFetching: " 正在安裝二進位套件",
         factUptimeRow: "運行時間", factTrafficRow: "出站流量", day: " 天",
       },
     },
@@ -155,6 +155,22 @@ async function render(build, channel, locale = "zh-tw") {
         running.html.includes("stable 二進位套件") &&
         running.html.includes("unstable 二進位套件") &&
         running.html.includes("188") && running.html.includes("196"), running.html);
+
+  const merging = await render({
+    state: "running", kind: "binary", done: 33, total: 720,
+    now: "sys-libs/zlib-1.3.2-r1", generated: Math.floor(Date.now() / 1000),
+  });
+  check("取用现成二进制包时报的是这个状态而不是构建中",
+        merging.html.includes("33/720") && !merging.html.includes("正在建置"),
+        merging.html);
+  // The rendered string comes from the mock, so the wording itself is checked
+  // against the page's own table.
+  const fetching = [...html.matchAll(/factFetching['",: \[]+ ?'([^']*)'/g)]
+    .map((m) => m[1]);
+  check("三种语言都说安装现成的二进制包，不说取",
+        fetching.length === 3 &&
+        fetching.every((v) => /安裝|安装|installing/.test(v)) &&
+        !fetching.some((v) => /正在取|fetching/.test(v)), fetching.join(" | "));
 
   const legacy = await render({ state: "done", generated: 5733 });
   check("旧状态数据不会伪造构建用时",
