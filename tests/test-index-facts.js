@@ -97,9 +97,11 @@ async function render(build, channel, locale = "zh-tw") {
 (async function () {
   check("首页包含状态渲染脚本", Boolean(script));
   if (!script) process.exit(1);
-  check("两个事实区各为三行预留高度",
+  check("库存区留三行、状态区留四行",
         css.includes("min-height: calc(3 * 1.75 * 0.95rem + 0.7rem)") &&
-        css.includes("min-height: calc(6 * 1.75 * 0.95rem + 0.5rem)"));
+        css.includes("min-height: calc(4 * 1.75 * 0.95rem + 0.7rem)") &&
+        css.includes("min-height: calc(6 * 1.75 * 0.95rem + 0.5rem)") &&
+        css.includes("min-height: calc(8 * 1.75 * 0.95rem + 0.5rem)"));
 
   const done = await render({
     state: "done", started: 100, finished: 5733, duration: 5633, generated: 5733,
