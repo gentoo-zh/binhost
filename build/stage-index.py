@@ -15,8 +15,8 @@ import time
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from ebuilds import (                                       # noqa: E402
     BINARY_LICENSES, Masks, MetadataUnavailable, candidate_key,
-    effective_license, index_db, pinned_portdbapi, read_mask, runtime_atoms,
-    read_list, source_only, split_cpv, vercmp,
+    effective_license, index_db, kernel_module, pinned_portdbapi, read_mask,
+    runtime_atoms, read_list, source_only, split_cpv, vercmp,
 )
 from portage.dep import paren_enclose                       # noqa: E402
 
@@ -84,13 +84,14 @@ def safe_path(value):
 
 
 GENTOO_TREE = os.environ.get("GENTOO_TREE", "/var/db/repos/gentoo")
-IMMEDIATE_QUARANTINE_STATES = frozenset({"yes", "license", "unknown"})
+IMMEDIATE_QUARANTINE_STATES = frozenset(
+    {"yes", "license", "unknown", "kernel-module"})
 
 RUNTIME_FIELDS = ("RDEPEND", "PDEPEND", "IDEPEND")
 
 
 def portage_policy(overlay):
-    """Return current RESTRICT and binary-license policy readers.
+    """Return current RESTRICT, binary-license and eclass readers.
 
     The repository is selected per stanza because the same CPV can exist in
     both trees with different metadata. The license reader evaluates the
@@ -113,7 +114,13 @@ def portage_policy(overlay):
             return "unknown"
         return effective_license(cpv, f, current, current_slot, db.settings)
 
-    return get_restrict, get_license
+    def get_inherited(cpv, repo):
+        try:
+            return db.aux_get(cpv, ["INHERITED"], myrepo=repo or None)[0]
+        except Exception:                                  # noqa: BLE001
+            return ""
+
+    return get_restrict, get_license, get_inherited
 
 
 def portage_restrict(overlay):
@@ -224,18 +231,20 @@ def runtime_closure(candidates, seeds):
 
 
 def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None,
-           license_lookup=None, seed_packages=None):
+           license_lookup=None, seed_packages=None, inherit_lookup=None):
     excluded = read_excluded() if excluded is None else excluded
     masked = read_mask(overlay) if overlay is not None else Masks()
     if lookup is None:
         try:
             if overlay is None:
                 raise MetadataUnavailable("no overlay to resolve gentoo-zh against")
-            lookup, license_lookup = portage_policy(overlay)
+            lookup, license_lookup, inherit_lookup = portage_policy(overlay)
         except MetadataUnavailable as e:
             return [], 0, f"Portage metadata unavailable, nothing published: {e}", [], {}
     elif license_lookup is None:
         license_lookup = lambda _cpv, _fields: "yes"
+    if inherit_lookup is None:
+        inherit_lookup = lambda _cpv, _repo: ""
     if with_deps is None:
         with_deps = os.environ.get("PUBLISH_DEPS", "1") == "1"
     skipped = 0
@@ -285,6 +294,8 @@ def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None,
             lifecycle_state = "masked"
         elif source_only(key[0]):
             lifecycle_state = "source"
+        elif kernel_module(inherit_lookup(key[0], repo)):
+            lifecycle_state = "kernel-module"
         elif current_exists is False:
             lifecycle_state = "removed"
 
@@ -417,6 +428,8 @@ def main(pkgdir, stage, overlay=None, rev="", lookup=None, seed_file=None,
         elif state == "source":
             print(f"!! 不发布 {cpv}：该类别应在使用者系统本地安装",
                   file=sys.stderr)
+        elif state == "kernel-module":
+            print(f"!! 不发布 {cpv}：内核模块只对编它的内核有效", file=sys.stderr)
         elif state == "masked":
             print(f"!! 不发布 {cpv}：该版本已被 overlay 屏蔽", file=sys.stderr)
         elif state == "excluded":
