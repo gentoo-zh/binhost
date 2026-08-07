@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=fae32467">
+<link rel="stylesheet" href="/assets/site.css?v=6f9d9188">
 <script src="/assets/early.js?v=0888406a"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -64,7 +64,7 @@
 
 <main id="main" class="wrap">
 
-  <h2 data-i18n="h2status">状态</h2>
+  <h2 class="title" data-i18n="h2status">状态</h2>
 
   <p class="facts" id="server-facts"></p>
 
@@ -414,7 +414,6 @@ window.MIRROR_I18N = {
     factDist: ' 個檔案', factTime: '更新於 ', factFinished: '完成於 ',
     day: ' 天', hour: ' 小時', minute: ' 分', second: ' 秒',
     h2status: '狀態', factUptimeRow: '運行時間', factTrafficRow: '出站流量',
-    factSinceBoot: '（開機以來）',
     h2contact: '聯絡', ctForum: '論壇'
   },
   'en': {
@@ -449,7 +448,6 @@ window.MIRROR_I18N = {
     factDist: ' files', factTime: 'updated ', factFinished: 'finished ',
     day: ' d', hour: ' h', minute: ' min', second: ' s',
     h2status: 'Status', factUptimeRow: 'Uptime', factTrafficRow: 'Egress',
-    factSinceBoot: ' since boot',
     h2contact: 'Contact', ctForum: 'Forum'
   }
 };
@@ -469,11 +467,14 @@ window.MIRROR_I18N = {
     return (t && key in t) ? t[key] : fallback;
   }
 
+  // The year and the zone are wrapped so a narrow screen can drop them and
+  // keep the timestamp beside its figure instead of on a line of its own.
   function stamp(unix) {
     var n = Number(unix);
     if (!n) return '';
-    return new Date((n + 8 * 3600) * 1000)
-      .toISOString().slice(0, 16).replace('T', ' ') + ' UTC+8';
+    var t = new Date((n + 8 * 3600) * 1000).toISOString().slice(0, 16).replace('T', ' ');
+    return '<span class="wide-only">' + t.slice(0, 5) + '</span>' + t.slice(5) +
+           '<span class="wide-only"> UTC+8</span>';
   }
 
   function duration(seconds) {
@@ -499,15 +500,18 @@ window.MIRROR_I18N = {
 
   // One row per source, labelled, so figures that share a generation share
   // its time and a bare number never stands on its own.
+  // A part may carry its own label when the row holds more than one measure.
   function fact(label, parts, generated, timeLabel) {
     var body = parts.map(function (p) {
-      return '<span class="part"><b class="num">' + p[0] + '</b>' + p[1] + '</span>';
+      return '<span class="part">' + (p[2] ? '<span class="who">' + p[2] + '</span>' : '') +
+             '<b class="num">' + p[0] + '</b>' + p[1] + '</span>';
     }).join('<span class="sep">·</span>');
-    return '<span><span class="who">' + label + '</span>' + body + '</span>' +
+    return '<span class="row">' +
+           '<span><span class="who">' + label + '</span>' + body + '</span>' +
            '<span class="when">' +
            (generated ? (timeLabel || s('factTime', '更新于 ')) +
                         '<b>' + stamp(generated) + '</b>' : '') +
-           '</span>';
+           '</span></span>';
   }
 
   var el = document.getElementById('facts');
@@ -575,13 +579,17 @@ window.MIRROR_I18N = {
     var box = document.getElementById('server-facts');
     if (!box) return;
     var server = data && data.server, job = data && data.job, html = '';
+    // Both counters reset at boot and carry the same generation, so they share
+    // one row and one timestamp. The first one present labels the row.
+    var vitals = [];
     if (server && Number(server.uptime) > 0) {
-      html += fact(s('factUptimeRow', '运行时间'),
-                   [[duration(server.uptime), '']], server.generated);
+      vitals.push([duration(server.uptime), '', s('factUptimeRow', '运行时间')]);
     }
     if (server && Number(server.tx) > 0) {
-      html += fact(s('factTrafficRow', '出站流量'),
-                   [[bytes(server.tx), s('factSinceBoot', '（开机以来）')]],
+      vitals.push([bytes(server.tx), '', s('factTrafficRow', '出站流量')]);
+    }
+    if (vitals.length) {
+      html += fact(vitals[0][2], [[vitals[0][0], vitals[0][1]]].concat(vitals.slice(1)),
                    server.generated);
     }
     if (job && job.state === 'done' && Number(job.finished) > 0 &&

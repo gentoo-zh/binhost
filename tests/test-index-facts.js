@@ -67,6 +67,7 @@ async function render(build, channel, locale = "zh-tw") {
         hour: " 小時", minute: " 分", second: " 秒",
         factPreparing: " 建置準備中", factBuilding: " 正在建置",
         factFetching: " 正在取二進位套件",
+        factUptimeRow: "運行時間", factTrafficRow: "出站流量", day: " 天",
       },
     },
   };
@@ -79,6 +80,7 @@ async function render(build, channel, locale = "zh-tw") {
       ok: true,
       json: () => Promise.resolve(
         url.includes("build-status") ? build :
+        url.includes("server-status") ? { uptime: 93784, tx: 5138022, generated: now } :
         url.includes("distfiles-status") ? { files: 1158, generated: now } :
         url.includes("unstable") ? { packages: 432, overlay: 196, deps: 236, generated: now } :
         { packages: 255, overlay: 188, deps: 67, generated: now }
@@ -97,18 +99,21 @@ async function render(build, channel, locale = "zh-tw") {
 (async function () {
   check("首页包含状态渲染脚本", Boolean(script));
   if (!script) process.exit(1);
-  check("库存区留三行、状态区留四行",
+  check("库存区与状态区都预留了行高",
         css.includes("min-height: calc(3 * 1.75 * 0.95rem + 0.7rem)") &&
-        css.includes("min-height: calc(4 * 1.75 * 0.95rem + 0.7rem)") &&
-        css.includes("min-height: calc(6 * 1.75 * 0.95rem + 0.5rem)") &&
-        css.includes("min-height: calc(8 * 1.75 * 0.95rem + 0.5rem)"));
+        css.includes("min-height: calc(2 * 1.75 * 0.95rem + 0.7rem)") &&
+        css.includes("min-height: calc(4 * 1.75 * 0.95rem + 0.5rem)") &&
+        css.includes("min-height: calc(3 * 1.75 * 0.95rem + 0.5rem)"));
   const status = html.indexOf('data-i18n="h2status"');
   const facts = html.indexOf('id="facts"');
-  const title = html.indexOf('class="title"');
+  const title = html.indexOf('<h1 class="title"');
   const lead = html.indexOf('class="lead"');
   check("状态分组排在标题与配置说明之前",
         status > 0 && status < facts && facts < title && title < lead,
         [status, facts, title, lead].join(" "));
+  check("状态和配置是同一级标题",
+        /<h2 class="title" data-i18n="h2status">/.test(html),
+        html.slice(status - 40, status + 30));
 
   const done = await render({
     state: "done", started: 100, finished: 5733, duration: 5633, generated: 5733,
@@ -117,6 +122,10 @@ async function render(build, channel, locale = "zh-tw") {
         done.server.includes("最近建置") && done.server.includes("1 小時 33 分") &&
         done.server.includes("完成於 ") && !done.html.includes("最近建置"),
         done.server + " | " + done.html);
+  check("运行时间和出站流量合并成一行，共用一个时间戳",
+        (done.server.match(/class="row"/g) || []).length === 2 &&
+        done.server.includes("運行時間") && done.server.includes("出站流量") &&
+        (done.server.match(/更新於 /g) || []).length === 1, done.server);
   check("默认读取 stable 的索引和构建状态",
         done.calls.includes("/binpkgs/x86-64/status.json") &&
         done.calls.includes("/unstable/binpkgs/x86-64/status.json") &&
