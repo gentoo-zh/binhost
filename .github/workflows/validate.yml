@@ -45,6 +45,9 @@ jobs:
       - name: Staging filter keeps only what is ours
         run: python3 tests/test-stage-index.py
 
+      - name: Quarantine carries only what cannot wait
+        run: python3 tests/test-quarantine-immediacy.py
+
       - name: Published index satisfies its own runtime dependencies
         run: python3 tests/test-verify-deps.py
 
@@ -95,6 +98,9 @@ jobs:
 
       - name: install.sh prepares what nginx and cron need
         run: python3 tests/test-install-provides-prereqs.py
+
+      - name: status.sh tracks the scripts the mirror runs
+        run: python3 tests/test-tracked-covers-mirror.py
 
       - name: The signing fingerprint agrees everywhere
         run: python3 tests/test-fingerprint-consistent.py
