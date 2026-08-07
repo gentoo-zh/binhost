@@ -20,6 +20,9 @@ BUILD_ECLASS = {
 }
 PREBUILT_ECLASS = {"unpacker", "rpm", "java-pkg-simple"}
 SOURCE_ONLY_CATEGORIES = frozenset({"acct-group", "acct-user", "virtual"})
+# A kernel module only loads on the kernel it was built against, and a
+# consumer of this binhost runs whatever kernel they chose.
+KERNEL_MODULE_ECLASSES = frozenset({"linux-mod", "linux-mod-r1"})
 
 COMPILE_PHASE = re.compile(r"^(src_configure|src_compile)\s*\(\)", re.M)
 
@@ -96,6 +99,10 @@ def split_cpv(cpv):
 def source_only(cpv):
     cp, _version = split_cpv(cpv)
     return cp.partition("/")[0] in SOURCE_ONLY_CATEGORIES
+
+
+def kernel_module(inherited):
+    return bool(KERNEL_MODULE_ECLASSES & set((inherited or "").split()))
 
 
 CP_ONLY = re.compile(r"^[a-z][a-z0-9+._-]*/[A-Za-z0-9][A-Za-z0-9+._-]*$")

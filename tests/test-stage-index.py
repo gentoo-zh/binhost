@@ -73,7 +73,8 @@ def fake_lookup(restricts=None):
 
 
 def run(stanzas, overlay_has=None, excluded=frozenset(), masked=(), with_deps=False,
-        restricts=None, licenses=None, gentoo_tree=None, seed_packages=None):
+        restricts=None, licenses=None, gentoo_tree=None, seed_packages=None,
+        inherited=None):
     old_tree = stage_index.GENTOO_TREE
     stage_index.GENTOO_TREE = gentoo_tree or "/nonexistent/gentoo"
     try:
@@ -86,11 +87,16 @@ def run(stanzas, overlay_has=None, excluded=frozenset(), masked=(), with_deps=Fa
             key = (cpv, fields.get("REPO", ""))
             return licenses.get(key, licenses.get(cpv, "yes"))
 
+        inherit_map = inherited or {}
+
+        def inherit_lookup(cpv, repo):
+            return inherit_map.get(cpv, "")
+
         if overlay_has is None:
             return stage_index.select(
                 entries, excluded=excluded, with_deps=with_deps,
                 lookup=lookup, license_lookup=license_lookup,
-                seed_packages=seed_packages)
+                seed_packages=seed_packages, inherit_lookup=inherit_lookup)
         with tempfile.TemporaryDirectory() as tmp:
             ov = pathlib.Path(tmp)
             for cpv in overlay_has:
@@ -106,7 +112,7 @@ def run(stanzas, overlay_has=None, excluded=frozenset(), masked=(), with_deps=Fa
             return stage_index.select(
                 entries, ov, excluded=excluded, lookup=lookup,
                 license_lookup=license_lookup, with_deps=with_deps,
-                seed_packages=seed_packages)
+                seed_packages=seed_packages, inherit_lookup=inherit_lookup)
     finally:
         stage_index.GENTOO_TREE = old_tree
 
@@ -262,6 +268,30 @@ case("virtual 只在使用者系统本地安装", lambda: (
 case("本地安装类别从候选索引排除", lambda: (
     run([stanza("virtual/lib-0", repo="gentoo")])[3]
     == [("virtual/lib-0", "virtual/lib/lib-0.gpkg.tar", "source")]))
+
+KMOD = {"sys-fs/zfs-2.4.3": "toolchain-funcs linux-mod-r1 dist-kernel-utils"}
+
+case("同一个包不带 linux-mod 时照常发布", lambda: (
+    cpvs(run([stanza("sys-fs/zfs-2.4.3")])[0]) == ["sys-fs/zfs-2.4.3"]))
+
+case("继承 linux-mod-r1 的包不发布", lambda: (
+    cpvs(run([stanza("sys-fs/zfs-2.4.3")], inherited=KMOD)[0]) == []))
+
+case("继承 linux-mod 的包不发布", lambda: (
+    cpvs(run([stanza("app-emulation/vbox-mod-7.2")],
+             inherited={"app-emulation/vbox-mod-7.2": "linux-mod"})[0]) == []))
+
+case("内核模块包按 kernel-module 记入拒发", lambda: (
+    run([stanza("sys-fs/zfs-2.4.3")], inherited=KMOD)[3]
+    == [("sys-fs/zfs-2.4.3", "sys-fs/zfs/zfs-2.4.3.gpkg.tar", "kernel-module")]))
+
+case("内核模块包立即从公开路径移除", lambda: (
+    "kernel-module" in stage_index.IMMEDIATE_QUARANTINE_STATES))
+
+case("eclass 名字相近但不建模块的包照常发布", lambda: (
+    cpvs(run([stanza("app-misc/a-1")],
+             inherited={"app-misc/a-1": "linux-info linux-mod-nonesuch"})[0])
+    == ["app-misc/a-1"]))
 
 
 def quarantine_for(value):

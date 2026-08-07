@@ -72,7 +72,8 @@ def quarantine(restrict=None, license_state="yes", restrict_now="",
         # real code path while supplying verdicts a fixture cannot produce.
         stage_index.portage_policy = lambda _overlay: (
             lambda cpv, repo: restrict_now,
-            lambda cpv, fields: license_state)
+            lambda cpv, fields: license_state,
+            lambda cpv, repo: "")
         try:
             stage_index.main(str(pkg), str(stage), overlay=str(overlay),
                              excluded_files=(str(exclude_file),))
