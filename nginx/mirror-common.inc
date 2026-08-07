@@ -47,8 +47,8 @@ location ^~ /gigos/ {
 	include /etc/nginx/conf.d/headers-files.inc;
 
 	gzip off;
-	# 同一天重跑或重传会沿用同一个文件名，缓存住的大小会让上传方的对外核对
-	# 看到上一份的尺寸。
+	# A rebuild on the same day reuses the file name, and a cached size would
+	# let the uploader's own check see the previous one.
 	open_file_cache off;
 
 	location ~ /$ {
