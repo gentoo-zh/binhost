@@ -418,9 +418,12 @@ button:active, .copy-chip:active { transform: translateY(1px); }
 
 #server-facts {
   margin-bottom: 0.35rem;
-  min-height: calc(4 * 1.75 * 0.95rem + 0.7rem);
+  min-height: calc(2 * 1.75 * 0.95rem + 0.7rem);
 }
-.facts > span { display: inline-flex; align-items: baseline; gap: 0.3em; flex-wrap: wrap; }
+/* The row exists for narrow screens; here it hands its two cells to the grid
+   so the timestamps stay aligned down the page. */
+.facts .row { display: contents; }
+.facts .row > span { display: inline-flex; align-items: baseline; gap: 0.3em; flex-wrap: wrap; }
 .facts .part, .facts .when { display: inline-flex; align-items: baseline; gap: 0.3em;
   white-space: nowrap; }
 .facts .sep { color: var(--fg-soft); opacity: 0.5; margin: 0 0.15em; }
@@ -559,14 +562,17 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
   .deps-table td.slot, .deps-table th.slot { width: 3.4rem; }
   .deps-table td.ver, .deps-table th.ver { width: 6.4rem; }
 
-  /* two columns leave the timestamp too little room and it breaks mid-value */
-  .facts {
-    grid-template-columns: auto; gap: 0.1rem;
-    min-height: calc(6 * 1.75 * 0.95rem + 0.5rem);
-  }
+  /* A fixed second column is too narrow for the timestamp, and giving it a
+     line of its own doubles the block. Let each row run as text so the time
+     trails the figures and only wraps when there is genuinely no room. */
+  .facts { display: block; min-height: calc(4 * 1.75 * 0.95rem + 0.5rem); }
+  .facts .row { display: block; }
+  .facts .row > span { display: inline; }
+  .facts .when { margin-left: 0.6em; }
+  .wide-only { display: none; }
 
   #server-facts {
-    min-height: calc(8 * 1.75 * 0.95rem + 0.5rem);
+    min-height: calc(3 * 1.75 * 0.95rem + 0.5rem);
   }
   .facts .job { margin-top: 0.35rem; }
 
