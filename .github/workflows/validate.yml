@@ -42,6 +42,9 @@ jobs:
       - name: bindist detection handles every RESTRICT shape
         run: python3 tests/test-validate.py /tmp/overlay
 
+      - name: Container builds for the x86-64 baseline
+        run: python3 tests/test-baseline-cpu.py
+
       - name: Staging filter keeps only what is ours
         run: python3 tests/test-stage-index.py
 

@@ -64,6 +64,7 @@ cat >> /etc/portage/make.conf <<EOF
 
 CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"
 CXXFLAGS="\${CFLAGS}"
+CPU_FLAGS_X86="mmx sse sse2"
 MAKEOPTS="${MAKEOPTS}"
 
 ACCEPT_KEYWORDS="${BINHOST_ACCEPT_KEYWORDS}"
