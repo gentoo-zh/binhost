@@ -93,6 +93,9 @@ jobs:
       - name: install.sh covers what the scripts reach for
         run: python3 tests/test-install-covers-refs.py
 
+      - name: install.sh prepares what nginx and cron need
+        run: python3 tests/test-install-provides-prereqs.py
+
       - name: The signing fingerprint agrees everywhere
         run: python3 tests/test-fingerprint-consistent.py
 
