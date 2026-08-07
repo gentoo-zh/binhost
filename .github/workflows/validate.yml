@@ -102,6 +102,9 @@ jobs:
       - name: install.sh prepares what nginx and cron need
         run: python3 tests/test-install-provides-prereqs.py
 
+      - name: Distfiles staging shares the filesystem it writes into
+        run: python3 tests/test-distfiles-temp-device.py
+
       - name: status.sh tracks the scripts the mirror runs
         run: python3 tests/test-tracked-covers-mirror.py
 
