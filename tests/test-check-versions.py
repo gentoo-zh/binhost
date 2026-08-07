@@ -42,7 +42,7 @@ def make_tree(root, packages, empty=()):
 
 
 def run(index_lines, list_lines, packages=None, masked=(), tree=(), body=None,
-        tree_empty=(), moves=(), excluded=None):
+        tree_empty=(), moves=(), excluded=None, channel_excluded=None):
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
         overlay = make_overlay(d / "overlay", packages or {}, masked, body, moves)
@@ -55,6 +55,10 @@ def run(index_lines, list_lines, packages=None, masked=(), tree=(), body=None,
             (d / "excluded.txt").write_text(
                 "".join(f"{cp}\treason\n" for cp in excluded))
             env["EXCLUDED"] = str(d / "excluded.txt")
+        if channel_excluded is not None:
+            (d / "channel-excluded.txt").write_text(
+                "".join(f"{cp}\treason\n" for cp in channel_excluded))
+            env["CHANNEL_EXCLUDED"] = str(d / "channel-excluded.txt")
         p = subprocess.run([sys.executable, CHECK, str(overlay),
                             str(d / "Packages"), str(d / "list.txt")],
                            capture_output=True, text=True, env=env)
@@ -168,6 +172,23 @@ def excluded_env_case():
 
 ok = excluded_env_case()
 print(f"  {'✓' if ok else '✗'} {'EXCLUDED 指定的清单会被采用':<24}")
+if not ok:
+    bad += 1
+
+
+def channel_excluded_case():
+    """A channel builds from a filtered list; its own skips are not newcomers."""
+    listed = "app-misc/listed"
+    skipped = "app-misc/skipped"
+    packages = {listed: "1.0", skipped: "1.0"}
+    index = [stanza(f"{listed}-1.0")]
+    without = run(index, [listed], packages)[1]
+    with_file = run(index, [listed], packages, channel_excluded=[skipped])[1]
+    return f"新包   {skipped}" in without and f"新包   {skipped}" not in with_file
+
+
+ok = channel_excluded_case()
+print(f"  {'✓' if ok else '✗'} {'频道排除的包不算未收录的新包':<24}")
 if not ok:
     bad += 1
 

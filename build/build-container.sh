@@ -48,6 +48,7 @@ fi
 
 [[ -s ${LIST} ]] || die "package list not found or empty: ${LIST}"
 channel_mounts=()
+channel_excluded_list=""
 if [[ ${CHANNEL} == stable ]]; then
     [[ -s ${STABLE_EXCLUDED} ]] || die "stable exclusion list not found: ${STABLE_EXCLUDED}"
     [[ -s ${STABLE_PACKAGE_USE} ]] || die "stable package.use not found: ${STABLE_PACKAGE_USE}"
@@ -57,6 +58,7 @@ if [[ ${CHANNEL} == stable ]]; then
     python3 "$(dirname "$0")/channel_packages.py" \
         "${LIST}" "${STABLE_EXCLUDED}" "${EFFECTIVE_LIST}"
     LIST="${EFFECTIVE_LIST}"
+    channel_excluded_list="${STABLE_EXCLUDED}"
     channel_mounts=(-v "${STABLE_PACKAGE_USE}:/tmp/package.use.stable:ro")
 fi
 [[ -n ${SIGNING_KEY} ]] || die "SIGNING_KEY unset; unsigned packages are not publishable"
@@ -279,7 +281,8 @@ if [[ ! -s ${STAGE}.new/publish-blocked.txt ]] &&
 fi
 
 if [[ ! -s ${STAGE}.new/publish-blocked.txt ]] &&
-   ! GENTOO_TREE="${TREE}" python3 "$(dirname "$0")/check-versions.py" \
+   ! GENTOO_TREE="${TREE}" CHANNEL_EXCLUDED="${channel_excluded_list}" \
+        python3 "$(dirname "$0")/check-versions.py" \
         "${OVERLAY}" "${STAGE}.new/Packages" "${LIST}"; then
     echo "暂存索引未覆盖清单中的当前可用版本，本轮只执行隔离" \
         > "${STAGE}.new/publish-blocked.txt"

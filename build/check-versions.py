@@ -131,13 +131,24 @@ def in_gentoo(cp, tree):
     return d.is_dir() and any(d.glob("*.ebuild"))
 
 
-def read_excluded(overlay):
-    f = pathlib.Path(os.environ.get(
-        "EXCLUDED", pathlib.Path(__file__).with_name("excluded.txt")))
+def _atoms_in(path):
+    f = pathlib.Path(path)
     if not f.exists():
         return set()
     return {l.split()[0] for l in f.read_text().splitlines()
             if l.strip() and not l.startswith("#")}
+
+
+def read_excluded(overlay):
+    """Packages that are not newcomers however the caller narrowed the list.
+
+    A channel builds from a filtered list, so without CHANNEL_EXCLUDED every
+    package that channel skips would be reported as an unrecorded newcomer.
+    """
+    out = _atoms_in(os.environ.get(
+        "EXCLUDED", pathlib.Path(__file__).with_name("excluded.txt")))
+    channel = os.environ.get("CHANNEL_EXCLUDED", "")
+    return out | _atoms_in(channel) if channel else out
 
 
 def published(index):
