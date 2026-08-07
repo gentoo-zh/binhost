@@ -228,7 +228,7 @@ retired=$(printf '%s\n' "${paths[@]}" | ssh "${REMOTE}" "
         [ \$(( n * 100 )) -ge \$(( base * ${MAX_RETIRE_SHARE} )) ] && over=1
     [ \"\${n}\" -ge ${MAX_RETIRE_COUNT} ] && over=1
     if [ \"\${over}\" -eq 1 ] && [ '${FORCE_RETIRE:-0}' != 1 ]; then
-        echo \"本轮要清理 \${n} 个，本轮之前有 \${base} 个，达到 ${MAX_RETIRE_SHARE}% 或 ${MAX_RETIRE_COUNT} 个的上限，未清理\" >&2
+        echo \"本次要清理 \${n} 个，本次之前有 \${base} 个，达到 ${MAX_RETIRE_SHARE}% 或 ${MAX_RETIRE_COUNT} 个的上限，未清理\" >&2
         echo \"确认无误后以 FORCE_RETIRE=1 重新执行\" >&2
         exit 3
     fi

@@ -249,7 +249,7 @@ case("列进例外之后不再失败", lambda: (
               stanza("dev-libs/lib-1", repo="gentoo")],
              exceptions=">=dev-libs/lib-2\t知道，暂时如此\n")[0] == 0))
 
-case("例外本轮已能满足时报出应删除", lambda: (
+case("例外本次已能满足时报出应删除", lambda: (
     "应从 dep-exceptions.txt 删除" in run_main(
         [stanza("app-misc/a-1", rdepend=">=dev-libs/lib-1"),
          stanza("dev-libs/lib-2", repo="gentoo")],

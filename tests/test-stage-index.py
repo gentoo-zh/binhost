@@ -506,19 +506,19 @@ case("没 mask 时照旧收录", lambda: (
     cpvs(run([stanza("app-misc/a-1")], overlay_has=["app-misc/a-1"])[0])
     == ["app-misc/a-1"]))
 
-case("PATH 是绝对路径时整轮拒绝", lambda: (
+case("PATH 是绝对路径时全部拒绝", lambda: (
     run([stanza("app-misc/a-1", PATH="/etc/passwd")])[2] is not None))
 
-case("PATH 里有 .. 时整轮拒绝", lambda: (
+case("PATH 里有 .. 时全部拒绝", lambda: (
     run([stanza("app-misc/a-1", PATH="../../etc/passwd")])[2] is not None))
 
-case("PATH 中段有 .. 时整轮拒绝", lambda: (
+case("PATH 中段有 .. 时全部拒绝", lambda: (
     run([stanza("app-misc/a-1", PATH="app-misc/../../x.gpkg.tar")])[2] is not None))
 
-case("PATH 为空时整轮拒绝", lambda: (
+case("PATH 为空时全部拒绝", lambda: (
     run([stanza("app-misc/a-1", PATH="")])[2] is not None))
 
-case("PATH 带前后空白时整轮拒绝", lambda: (
+case("PATH 带前后空白时全部拒绝", lambda: (
     run([stanza("app-misc/a-1", PATH=" app-misc/a-1.gpkg.tar")])[2] is not None))
 
 case("正常的相对路径照常通过", lambda: (
@@ -751,7 +751,7 @@ case("仓库路径解析不到指定位置时不返回可用的查询函数", la
 case("路径不符时报出期望的位置", lambda: (
     "/nonexistent/overlay" in (portage_lookup_error("/nonexistent/overlay") or "")))
 
-case("没有 overlay 就无法确认来源，整轮不发布", lambda: (
+case("没有 overlay 就无法确认来源，本次不发布", lambda: (
     (lambda r: r[0] == [] and "no overlay to resolve gentoo-zh against" in (r[2] or ""))(
         stage_index.select(
             stage_index.parse(HEADER + "\n\n" + stanza("app-misc/example-1") + "\n")[1],

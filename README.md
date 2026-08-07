@@ -30,7 +30,7 @@ nginx 配置，以及构建、签名和发布 [gentoo-zh overlay](https://github
 - 当前 ebuild 的 `LICENSE` 表达式属于固定的 `@BINARY-REDISTRIBUTABLE`。
 - 当前 ebuild 与缓存 binpkg 的 `RESTRICT` 均不包含 `bindist`。
 - 套件没有列入 [`build/excluded.txt`](build/excluded.txt)。
-- 暂存索引中的运行期依赖可由本轮发布、基础系统、Gentoo binhost 或源码快照满足。
+- 暂存索引中的运行期依赖可由本次发布、基础系统、Gentoo binhost 或源码快照满足。
 
 `acct-group/*`、`acct-user/*` 与 `virtual/*` 由使用者系统的 Portage 本地安装，本站不发布
 这些类别的 binpkg。`RESTRICT` 中的 `bindist` 只限制 binpkg；distfiles 是否镜像由
@@ -59,14 +59,14 @@ CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"
 Docker socket、签名私钥或主机根文件系统，也不从主机挂载 `/dev`。部署验收确认运行中的
 构建容器为 `Privileged=false`，且看不到主机根设备 `/dev/sda3`。
 
-基础镜像更新和每轮完整构建都会执行 `@preserved-rebuild`，再确认 Portage 没有留下保留库。
-重建失败、检查失败或仍有保留库时，本轮不会提交新基础镜像，也不会进入暂存、签名或发布
+基础镜像更新和每次完整构建都会执行 `@preserved-rebuild`，再确认 Portage 没有留下保留库。
+重建失败、检查失败或仍有保留库时，本次不会提交新基础镜像，也不会进入暂存、签名或发布
 阶段。
 
 ### 依赖与暂存
 
 构建容器在 emerge 前记录基础系统的 CPV、SLOT、USE、IUSE、EAPI 与 repository，并在
-构建后记录本轮实际使用的 Gentoo binhost 索引。暂存阶段按完整 Portage Atom 匹配这些
+构建后记录本次实际使用的 Gentoo binhost 索引。暂存阶段按完整 Portage Atom 匹配这些
 快照，再从当前 Gentoo 与 gentoo-zh 源码仓库补充无 USE 约束的可见版本。
 
 一般源码依赖带 USE 约束时，不会因使用者配置未知而推定为可用。对于本地安装的
@@ -75,7 +75,7 @@ Docker socket、签名私钥或主机根文件系统，也不从主机挂载 `/d
 [`docs/accepted-risks.md`](docs/accepted-risks.md)。
 
 暂存索引必须覆盖直接构建清单中每个套件的当前可用版本，并通过运行期依赖检查。
-无法取得必要快照、依赖无法满足或索引不完整时，本轮不会发布新索引。
+无法取得必要快照、依赖无法满足或索引不完整时，本次不会发布新索引。
 
 ### 签名
 
@@ -135,7 +135,7 @@ SIGNING_KEY=<签名指纹> REMOTE="ssh build" \
 `deploy/install.sh` 在镜像机安装 nginx、rsync、distfiles 同步、站点同步、状态检查与相关
 定时任务。每日任务分别生成 stable 与 unstable 的网页数据和纯文本清单；一个频道生成失败
 不会覆写另一个频道上一份有效输出。任务分别核验两个频道的同代清单与依赖闭包；distfiles
-同步失败时仍使用上一份索引刷新包列表，并保持本轮失败状态。TLS 证书和
+同步失败时仍使用上一份索引刷新包列表，并保持本次失败状态。TLS 证书和
 `/etc/binhost/alert.conf` 需要单独配置。
 
 `deploy/install-builder.sh` 在构建机安装 `build/`、两个频道的 systemd 服务与定时器，并

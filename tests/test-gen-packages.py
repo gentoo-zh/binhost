@@ -244,7 +244,7 @@ case("按包名排序", lambda: (
 case("索引中不含 ::gentoo 的产物时给出空清单", lambda: (
     load(stanza("app-misc/a-1", "gentoo-zh")) == []))
 
-case("未知仓库的产物不静默归入 ::gentoo，整轮中止", lambda: (
+case("未知仓库的产物不静默归入 ::gentoo，全部中止", lambda: (
     (lambda r: r[0] == 1 and r[1] is None and "未知仓库" in r[4])(
         run_main(stanza("app-misc/a-1", "some-other-overlay")))))
 

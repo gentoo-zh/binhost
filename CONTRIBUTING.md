@@ -39,7 +39,7 @@ python3 build/validate.py /var/db/repos/gentoo-zh
 
 ## 合并之后
 
-合并不等于立即可用。包在下一轮构建时产出，构建由 binhost-build.timer 在每日 16:00（Asia/Shanghai）触发，另有最多 15 分钟的随机延迟，产物签名后发布。
+合并不等于立即可用。包在下次构建时产出，构建由 binhost-build.timer 在每日 16:00（Asia/Shanghai）触发，另有最多 15 分钟的随机延迟，产物签名后发布。
 
 清单决定直接构建目标。构建软件包时会同时构建其依赖；其中属于本 overlay 的依赖和
 `::gentoo` 运行期依赖会随之一并发布，因此实际发布数多于清单条数。仅用于构建的依赖

@@ -17,7 +17,7 @@ install -dm755 "${DEST}" "${STATE}" "${TEMP_DIR}" /var/log/emirrordist
 
 if [[ $(stat -c %d "${TEMP_DIR}") != $(stat -c %d "${DEST}") ]]; then
     echo "!! ${TEMP_DIR} 与 ${DEST} 不在同一个文件系统" >&2
-    echo "   emirrordist 会以 rename 落地，跨设备时 portage 的回退路径本身有缺陷，整轮会中断" >&2
+    echo "   emirrordist 会以 rename 落地，跨设备时 portage 的回退路径本身有缺陷，整个同步会中断" >&2
     exit 1
 fi
 

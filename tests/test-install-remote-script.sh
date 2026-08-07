@@ -75,7 +75,7 @@ echo "== 防火墙的自动回滚"
 
 has "先备份现有规则" "nft list ruleset > /run/binhost-firewall-rollback.rules" "${tmp}/remote.sh"
 has "回滚定时器已武装" "sleep 300" "${tmp}/remote.sh"
-has "本轮确认过就不回滚" '/run/binhost-firewall-confirmed 2>/dev/null)" = "' "${tmp}/remote.sh"
+has "同一世代确认过就不回滚" '/run/binhost-firewall-confirmed 2>/dev/null)" = "' "${tmp}/remote.sh"
 has "回滚会还原备份" "nft -f /run/binhost-firewall-rollback.rules" "${tmp}/remote.sh"
 has "回滚脚本与会话脱钩" "setsid" "${tmp}/remote.sh"
 has "日志里的中文没有被反斜线破坏" 'logger -t binhost "防火墙在 300 秒内未确认' "${tmp}/remote.sh"
@@ -110,21 +110,21 @@ timer() {
 
 td=$(mktemp -d)
 : > "${td}/out"; echo A > "${td}/gen"; rm -f "${td}/confirm"
-ok "本轮且未确认时回滚" "$(timer A "${td}/gen" "${td}/confirm" "${td}/out")" "rolled-back"
+ok "同一世代且未确认时回滚" "$(timer A "${td}/gen" "${td}/confirm" "${td}/out")" "rolled-back"
 
 : > "${td}/out"; echo A > "${td}/gen"; echo A > "${td}/confirm"
-ok "本轮且已确认时不动" "$(timer A "${td}/gen" "${td}/confirm" "${td}/out")" "left-alone"
+ok "同一世代且已确认时不动" "$(timer A "${td}/gen" "${td}/confirm" "${td}/out")" "left-alone"
 
 : > "${td}/out"; echo B > "${td}/gen"; rm -f "${td}/confirm"
-ok "已被新一轮取代时不动，哪怕没确认" \
+ok "已被新世代取代时不动，哪怕没确认" \
    "$(timer A "${td}/gen" "${td}/confirm" "${td}/out")" "left-alone"
 
 : > "${td}/out"; echo B > "${td}/gen"; echo A > "${td}/confirm"
-ok "上一轮的确认档不会让新一轮误判" \
+ok "上一世代的确认档不会让新世代误判" \
    "$(timer B "${td}/gen" "${td}/confirm" "${td}/out")" "rolled-back"
 rm -rf "${td}"
 
-has "武装时写下本轮世代" "sudo install -m644 /dev/stdin '/run/binhost-firewall-generation'" "${tmp}/remote.sh"
+has "武装时写下本次世代" "sudo install -m644 /dev/stdin '/run/binhost-firewall-generation'" "${tmp}/remote.sh"
 has "定时器先比对世代" '/run/binhost-firewall-generation 2>/dev/null)" = "' "${tmp}/remote.sh"
 
 echo

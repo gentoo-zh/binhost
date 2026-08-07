@@ -21,7 +21,7 @@ ALERT_CONF="${ALERT_CONF:-/etc/binhost/alert.conf}"
 on_error() {
     local rc=$1 line=$2 cmd=$3
     echo "!!! 第 ${line} 行失败（退出码 ${rc}）：${cmd}" >&2
-    alert "binhost 本轮失败（$(hostname)）
+    alert "binhost 本次失败（$(hostname)）
 第 ${line} 行，退出码 ${rc}
 ${cmd}"
     alert_exit "${rc}"
@@ -34,8 +34,8 @@ LOCK="${LOCK:-/var/lib/binhost/stage/build.lock}"
 mkdir -p "$(dirname "${LOCK}")"
 exec 9>"${LOCK}"
 if ! flock -n 9; then
-    echo "另一轮构建正在进行（${LOCK}），这一轮跳过" >&2
-    alert "binhost 这一轮被上一轮阻塞（$(hostname)）：上一轮已超过一个调度间隔"
+    echo "另一次构建正在执行（${LOCK}），这次跳过" >&2
+    alert "binhost 这次被上一次阻塞（$(hostname)）：上一次已超过一个调度间隔"
     alert_exit
 fi
 

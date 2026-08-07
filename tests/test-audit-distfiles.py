@@ -467,9 +467,9 @@ case("孤儿状态的锁建不出来时同样抛错", lambda: (
 
 
 case("无法取得账本锁时抛错并停止清理", lambda: (
-    (lambda m: m is not None and "本轮不做任何清理" in m)(_lock_unavailable())))
+    (lambda m: m is not None and "本次不做任何清理" in m)(_lock_unavailable())))
 
-case("拿不到帐本锁时整轮拒绝清理", lambda: (
+case("拿不到帐本锁时全部拒绝清理", lambda: (
     lambda r: r[0] == 1 and r[2] == [] and "拒绝清理" in r[3]
 )(run_main({f"app-misc/p{i}": {"1.0": [f"p{i}.tar.gz"]} for i in range(20)},
            [f"p{i}.tar.gz" for i in range(20)] + ["old.tar.gz"],

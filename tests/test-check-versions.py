@@ -155,7 +155,7 @@ def simultaneous_lifecycle_case():
 
 
 ok = simultaneous_lifecycle_case()
-print(f"  {'✓' if ok else '✗'} {'同轮 add/drop、删除、mask、move 与新增':<24}")
+print(f"  {'✓' if ok else '✗'} {'同一次 add/drop、删除、mask、move 与新增':<24}")
 if not ok:
     bad += 1
 

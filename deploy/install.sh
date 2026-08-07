@@ -111,7 +111,7 @@ sudo setsid sh -c 'sleep ${ROLLBACK_S}
         logger -t binhost \"防火墙回滚失败，当前规则可能不可用，需要带外介入\"
     fi' \\
     </dev/null >/dev/null 2>&1 &
-echo '    已备份现有规则，${ROLLBACK_S} 秒内未确认就自动回滚（本轮 ${GEN}）'
+echo '    已备份现有规则，${ROLLBACK_S} 秒内未确认就自动回滚（世代 ${GEN}）'
 sudo nft -f /etc/nftables.conf
 sudo rc-update add nftables default 2>/dev/null || true
 "
