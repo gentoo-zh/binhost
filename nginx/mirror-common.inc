@@ -42,6 +42,20 @@ location ^~ /distfiles/ {
 	}
 }
 
+location ^~ /gigos/ {
+	root /srv/pub;
+	include /etc/nginx/conf.d/headers-files.inc;
+
+	gzip off;
+
+	location ~ /$ {
+		root /srv/mirrors;
+		add_header Cache-Control "no-cache";
+		include /etc/nginx/conf.d/headers-site.inc;
+		try_files /_app.html =404;
+	}
+}
+
 location ^~ /binpkgs/ {
 	root /srv/pub;
 	include /etc/nginx/conf.d/headers-files.inc;

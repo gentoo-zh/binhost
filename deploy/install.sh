@@ -141,7 +141,7 @@ if ! nginx -V 2>&1 | grep -q http_v3; then
     sudo emerge --oneshot --quiet-build=y www-servers/nginx
 fi
 sudo install -dm755 /srv/pub
-sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/pub/binpkgs /srv/pub/distfiles
+sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/pub/binpkgs /srv/pub/distfiles /srv/pub/gigos
 # mirror-common.inc serves the ACME challenge from here, and certbot renews
 # through that path.
 sudo install -dm755 /var/www/acme/.well-known/acme-challenge
