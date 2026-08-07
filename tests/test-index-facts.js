@@ -22,11 +22,16 @@ function check(name, condition, detail) {
 
 async function render(build, channel, locale = "zh-tw") {
   const facts = { innerHTML: "" };
+  const serverFacts = { innerHTML: "" };
   const listeners = {};
   const calls = [];
   global.document = {
     documentElement: { lang: locale },
-    getElementById(id) { return id === "facts" ? facts : null; },
+    getElementById(id) {
+      if (id === "facts") return facts;
+      if (id === "server-facts") return serverFacts;
+      return null;
+    },
     querySelectorAll(selector) {
       if (selector !== "[data-channel]") return [];
       return [
@@ -86,22 +91,23 @@ async function render(build, channel, locale = "zh-tw") {
     listeners.channelchange({ detail: Object.assign({ channel: "unstable" }, channel) });
     await new Promise((resolve) => setImmediate(resolve));
   }
-  return { html: facts.innerHTML, calls: calls };
+  return { html: facts.innerHTML, server: serverFacts.innerHTML, calls: calls };
 }
 
 (async function () {
   check("首页包含状态渲染脚本", Boolean(script));
   if (!script) process.exit(1);
-  check("事实区为四行频道与状态数据预留高度",
-        css.includes("min-height: calc(4 * 1.75 * 0.95rem + 0.7rem)") &&
-        css.includes("min-height: calc(8 * 1.75 * 0.95rem + 0.5rem)"));
+  check("两个事实区各为三行预留高度",
+        css.includes("min-height: calc(3 * 1.75 * 0.95rem + 0.7rem)") &&
+        css.includes("min-height: calc(6 * 1.75 * 0.95rem + 0.5rem)"));
 
   const done = await render({
     state: "done", started: 100, finished: 5733, duration: 5633, generated: 5733,
   });
-  check("完成的构建显示实际结束时间与用时",
-        done.html.includes("最近建置") && done.html.includes("1 小時 33 分") &&
-        done.html.includes("完成於 "), done.html);
+  check("完成的构建显示在状态分组里",
+        done.server.includes("最近建置") && done.server.includes("1 小時 33 分") &&
+        done.server.includes("完成於 ") && !done.html.includes("最近建置"),
+        done.server + " | " + done.html);
   check("默认读取 stable 的索引和构建状态",
         done.calls.includes("/binpkgs/x86-64/status.json") &&
         done.calls.includes("/unstable/binpkgs/x86-64/status.json") &&
