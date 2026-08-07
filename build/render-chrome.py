@@ -22,7 +22,6 @@ def stamp(body):
 
 def render(name, flags, indent):
     body = (TPL / f"{name}.html").read_text()
-    body = body.replace("{{wide}}", " wide" if "wide" in flags else "")
     lines = [indent + l if l.strip() else l for l in body.splitlines(keepends=True)]
     head = f"{indent}<!-- chrome:{name}{flags} -->\n"
     return head + "".join(lines) + f"{indent}<!-- /chrome:{name} -->\n"
