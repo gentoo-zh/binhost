@@ -43,15 +43,16 @@ ssh "${REMOTE}" "set -euo pipefail
 cd '${tmp}'
 
 echo '--- 依赖'
-for cmd in git rsync; do
+for cmd in git rsync logrotate; do
     command -v \${cmd} >/dev/null && continue
     case \${cmd} in
-        git)   sudo emerge -q dev-vcs/git ;;
-        rsync) sudo emerge -q net-misc/rsync ;;
+        git)       sudo emerge -q dev-vcs/git ;;
+        rsync)     sudo emerge -q net-misc/rsync ;;
+        logrotate) sudo emerge -q app-admin/logrotate ;;
     esac
 done
 missing=''
-for cmd in git rsync; do command -v \${cmd} >/dev/null || missing=\"\${missing} \${cmd}\"; done
+for cmd in git rsync logrotate; do command -v \${cmd} >/dev/null || missing=\"\${missing} \${cmd}\"; done
 [ -z \"\${missing}\" ] || { echo \"!! 缺少命令：\${missing}\" >&2; exit 1; }
 
 echo '--- 脚本'
