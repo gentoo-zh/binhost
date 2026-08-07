@@ -42,6 +42,18 @@ rsync -a deploy/ build/gen-packages.py build/ebuilds.py build/verify-deps.py \
 ssh "${REMOTE}" "set -euo pipefail
 cd '${tmp}'
 
+echo '--- 依赖'
+for cmd in git rsync; do
+    command -v \${cmd} >/dev/null && continue
+    case \${cmd} in
+        git)   sudo emerge -q dev-vcs/git ;;
+        rsync) sudo emerge -q net-misc/rsync ;;
+    esac
+done
+missing=''
+for cmd in git rsync; do command -v \${cmd} >/dev/null || missing=\"\${missing} \${cmd}\"; done
+[ -z \"\${missing}\" ] || { echo \"!! 缺少命令：\${missing}\" >&2; exit 1; }
+
 echo '--- 脚本'
 sudo install -dm755 /usr/local/lib/binhost /var/log/emirrordist
 sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/mirrors /var/lib/binhost-site
