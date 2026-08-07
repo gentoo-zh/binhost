@@ -102,6 +102,13 @@ async function render(build, channel, locale = "zh-tw") {
         css.includes("min-height: calc(4 * 1.75 * 0.95rem + 0.7rem)") &&
         css.includes("min-height: calc(6 * 1.75 * 0.95rem + 0.5rem)") &&
         css.includes("min-height: calc(8 * 1.75 * 0.95rem + 0.5rem)"));
+  const status = html.indexOf('data-i18n="h2status"');
+  const facts = html.indexOf('id="facts"');
+  const title = html.indexOf('class="title"');
+  const lead = html.indexOf('class="lead"');
+  check("状态分组排在标题与配置说明之前",
+        status > 0 && status < facts && facts < title && title < lead,
+        [status, facts, title, lead].join(" "));
 
   const done = await render({
     state: "done", started: 100, finished: 5733, duration: 5633, generated: 5733,
