@@ -49,22 +49,31 @@ PKG = "sys-kernel/demo-kernel"
 
 
 def series(versions):
-    return ks.newest_per_series(FakeDb(PKG, versions), PKG)
+    return dict(ks.all_versions(FakeDb(PKG, versions), PKG))
+
+
+def pairs(versions):
+    return ks.all_versions(FakeDb(PKG, versions), PKG)
 
 
 check("按主次分组", ks.series_of("6.18.43") == "6.18" and ks.series_of("7.1.7") == "7.1",
       f'{ks.series_of("6.18.43")} {ks.series_of("7.1.7")}')
 check("只有一段版本号时原样返回", ks.series_of("7") == "7", ks.series_of("7"))
 
-check("两条线各报一个版本", series(["6.18.43", "7.1.7"]) == {"6.18": "6.18.43", "7.1": "7.1.7"},
-      str(series(["6.18.43", "7.1.7"])))
-check("同一条线里只报最新的", series(["6.18.41", "6.18.43", "7.1.7"])["6.18"] == "6.18.43",
-      str(series(["6.18.41", "6.18.43", "7.1.7"])))
-check("版本比较不是字串比较", series(["6.18.9", "6.18.10"])["6.18"] == "6.18.10",
-      "字串比较会选 6.18.9：" + str(series(["6.18.9", "6.18.10"])))
-check("修订号也算进比较", series(["6.18.43", "6.18.43-r1"])["6.18"] == "6.18.43-r1",
-      str(series(["6.18.43", "6.18.43-r1"])))
-check("一个版本都没有时不报任何线", series([]) == {}, str(series([])))
+check("两条线各归各的目录",
+      pairs(["6.18.43", "7.1.7"]) == [("6.18", "6.18.43"), ("7.1", "7.1.7")],
+      str(pairs(["6.18.43", "7.1.7"])))
+check("同一条线里每个版本都列出",
+      [v for s, v in pairs(["6.18.41", "6.18.43", "7.1.7"]) if s == "6.18"]
+      == ["6.18.41", "6.18.43"],
+      str(pairs(["6.18.41", "6.18.43", "7.1.7"])))
+check("版本排序不是字串排序",
+      [v for _, v in pairs(["6.18.10", "6.18.9"])] == ["6.18.9", "6.18.10"],
+      "字串排序会把 6.18.10 排在前：" + str(pairs(["6.18.10", "6.18.9"])))
+check("修订号排在无修订号之后",
+      [v for _, v in pairs(["6.18.43-r1", "6.18.43"])] == ["6.18.43", "6.18.43-r1"],
+      str(pairs(["6.18.43-r1", "6.18.43"])))
+check("一个版本都没有时什么都不列", pairs([]) == [], str(pairs([])))
 
 print()
 print("  内核线：全部通过" if not failed else f"  {failed} 项不通过")
