@@ -3,7 +3,7 @@ import pathlib
 import re
 import sys
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
+ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 PICK = re.compile(r'<div class="src-pick"([^>]*)data-src-switch="(\w+)"(.*?)</div>', re.S)
 GROUP = re.compile(r'data-src-group="(\w+)"')
 URI = re.compile(r'data-uri="([^"]+)"')
