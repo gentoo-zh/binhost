@@ -5,7 +5,7 @@ import pathlib
 import tempfile
 
 
-SCRIPT = pathlib.Path(__file__).resolve().parent.parent / "build" / "move-package.py"
+SCRIPT = pathlib.Path(__file__).resolve().parent.parent / "tools" / "move-package.py"
 spec = importlib.util.spec_from_file_location("move_package", SCRIPT)
 move = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(move)

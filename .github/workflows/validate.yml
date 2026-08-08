@@ -31,7 +31,7 @@ jobs:
             tar xz -C /tmp/overlay --strip-components=1
 
       - name: Check packages.txt
-        run: python3 build/validate.py /tmp/overlay
+        run: python3 tools/validate.py /tmp/overlay
 
       - name: Stable exclusions produce a complete effective list
         run: python3 tests/test-channel-packages.py
@@ -111,6 +111,9 @@ jobs:
       - name: status.sh tracks the scripts the mirror runs
         run: python3 tests/test-tracked-covers-mirror.py
 
+      - name: CI lints every script directory
+        run: python3 tests/test-ci-covers-scripts.py
+
       - name: The signing fingerprint agrees everywhere
         run: python3 tests/test-fingerprint-consistent.py
 
@@ -120,13 +123,13 @@ jobs:
           head -1 build/excluded.txt >/dev/null
           cp="$(grep -vE '^\s*(#|$)' build/excluded.txt | head -1 | awk '{print $1}')"
           echo "$cp" >> build/packages.txt
-          if python3 build/validate.py /tmp/overlay 2>&1 | grep -q "两份清单互斥"; then
+          if python3 tools/validate.py /tmp/overlay 2>&1 | grep -q "两份清单互斥"; then
             :
           else
             echo "!! 同时出现在两份清单里却没报出互斥"; exit 1
           fi
           cp /tmp/packages.txt.bak build/packages.txt
-          python3 build/validate.py /tmp/overlay
+          python3 tools/validate.py /tmp/overlay
 
       - name: The list generator rejects an incomplete repository set
         run: |
@@ -145,7 +148,7 @@ jobs:
         run: |
           target="${{ github.event_name == 'pull_request' && github.base_ref || 'master' }}"
           base=$(git merge-base "origin/${target}" HEAD)
-          python3 build/check-commits.py "${base}..HEAD"
+          python3 tools/check-commits.py "${base}..HEAD"
       - name: The checker itself still holds
         run: python3 tests/test-check-commits.py
 
@@ -154,7 +157,7 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Compile
-        run: python3 -m py_compile build/*.py deploy/*.py site/tools/*.py
+        run: python3 -m py_compile build/*.py tools/*.py deploy/*.py site/tools/*.py
       - name: Classifier against real log shapes
         run: |
           d=$(mktemp -d)

@@ -4,9 +4,9 @@ import subprocess
 import sys
 import tempfile
 
-BUILD = pathlib.Path(__file__).resolve().parent.parent / "build"
+TOOLS = pathlib.Path(__file__).resolve().parent.parent / "tools"
 
-SCRIPT = BUILD / "add-package.py"
+SCRIPT = TOOLS / "add-package.py"
 
 failed = 0
 
@@ -23,12 +23,15 @@ def check(name, cond, detail=""):
 def run(lines, atom):
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
-        script = d / "add-package.py"
+        (d / "tools").mkdir()
+        (d / "build").mkdir()
+        script = d / "tools" / "add-package.py"
         script.write_text(SCRIPT.read_text())
-        (d / "packages.txt").write_text("\n".join(lines) + "\n")
+        lst = d / "build" / "packages.txt"
+        lst.write_text("\n".join(lines) + "\n")
         p = subprocess.run([sys.executable, str(script), atom],
                            capture_output=True, text=True)
-        return p.returncode, (d / "packages.txt").read_text().split("\n"), p.stdout + p.stderr
+        return p.returncode, lst.read_text().split("\n"), p.stdout + p.stderr
 
 
 BASE = ["app-misc/aaa", "net-misc/geo", "net-proxy/bore", "net-proxy/Xray",

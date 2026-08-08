@@ -4,9 +4,9 @@ import subprocess
 import sys
 import tempfile
 
-BUILD = pathlib.Path(__file__).resolve().parent.parent / "build"
+TOOLS = pathlib.Path(__file__).resolve().parent.parent / "tools"
 
-SCRIPT = BUILD / "retire-package.py"
+SCRIPT = TOOLS / "retire-package.py"
 
 BASE = ["app-misc/aaa", "net-misc/geo", "net-proxy/bore", "sys-apps/pacman"]
 EXCL = "# 不收录的包和原因\napp-misc/old\t上游停更\n"
@@ -27,15 +27,17 @@ def check(name, cond, detail=""):
 def run(*args, excluded=EXCL, listed=BASE):
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
-        script = d / "retire-package.py"
+        (d / "tools").mkdir()
+        (d / "build").mkdir()
+        script = d / "tools" / "retire-package.py"
         script.write_text(SCRIPT.read_text())
-        (d / "packages.txt").write_text("\n".join(listed) + "\n")
-        (d / "excluded.txt").write_text(excluded)
+        lst = d / "build" / "packages.txt"
+        exc = d / "build" / "excluded.txt"
+        lst.write_text("\n".join(listed) + "\n")
+        exc.write_text(excluded)
         p = subprocess.run([sys.executable, str(script), *args],
                            capture_output=True, text=True)
-        return (p.returncode,
-                (d / "packages.txt").read_text(),
-                (d / "excluded.txt").read_text(),
+        return (p.returncode, lst.read_text(), exc.read_text(),
                 p.stdout + p.stderr)
 
 

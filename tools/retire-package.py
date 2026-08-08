@@ -6,9 +6,9 @@ import pathlib
 import re
 import sys
 
-HERE = pathlib.Path(__file__).resolve().parent
-LIST = HERE / "packages.txt"
-EXCLUDED = HERE / "excluded.txt"
+LISTS = pathlib.Path(__file__).resolve().parent.parent / "build"
+LIST = LISTS / "packages.txt"
+EXCLUDED = LISTS / "excluded.txt"
 ATOM = re.compile(r"^[a-z0-9][a-z0-9+._-]*/[A-Za-z0-9][A-Za-z0-9+._-]*$")
 
 GONE = "overlay 中已不存在该软件包"

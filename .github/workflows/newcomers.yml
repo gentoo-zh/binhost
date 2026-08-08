@@ -40,8 +40,8 @@ jobs:
           while read -r cp ver; do
             [ -n "${cp}" ] || continue
             cp /tmp/packages.orig build/packages.txt
-            python3 build/add-package.py "${cp}" > /dev/null
-            if python3 build/validate.py /tmp/overlay > /tmp/validate.log 2>&1; then
+            python3 tools/add-package.py "${cp}" > /dev/null
+            if python3 tools/validate.py /tmp/overlay > /tmp/validate.log 2>&1; then
               printf '%s %s\n' "${cp}" "${ver}" >> /tmp/ok.txt
             else
               echo "  ${cp} 加入后 validate 未通过，不提出："
@@ -92,7 +92,7 @@ jobs:
             fi
 
             git checkout -q -B "${branch}" "${base}"
-            python3 build/add-package.py "${cp}"
+            python3 tools/add-package.py "${cp}"
 
             if git diff --quiet -- build/packages.txt; then
               echo "  ${cp} 清单没有变化，跳过"

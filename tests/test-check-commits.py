@@ -4,9 +4,9 @@ import subprocess
 import sys
 import tempfile
 
-BUILD = pathlib.Path(__file__).resolve().parent.parent / "build"
+TOOLS = pathlib.Path(__file__).resolve().parent.parent / "tools"
 
-CHECK = str(BUILD / "check-commits.py")
+CHECK = str(TOOLS / "check-commits.py")
 
 
 def run(subject, body="", files=("build/stage-index.py",)):
