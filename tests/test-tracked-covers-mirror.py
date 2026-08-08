@@ -17,7 +17,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 INSTALL = ROOT / "deploy" / "install.sh"
-STATUS = ROOT / "build" / "status.sh"
+STATUS = ROOT / "ops" / "status.sh"
 
 UNTRACKED_ON_PURPOSE = {
     "build/packages.txt": "每个收录或退役 PR 都会改，追踪它会让镜像机长期报落后",
@@ -38,13 +38,18 @@ def check(name, condition, detail=""):
 
 
 def shipped_to_mirror():
-    """build/ paths install.sh copies to the mirror."""
+    """Repo file paths install.sh copies to the mirror.
+
+    Matching only one top-level directory would silently lose coverage the
+    moment a script moves elsewhere, so this takes any dir/file.ext operand.
+    """
     text = INSTALL.read_text()
     block = re.search(r"^rsync -a deploy/(.*?)\"\$\{REMOTE\}", text,
                       re.S | re.M)
     if not block:
         return []
-    return re.findall(r"build/[A-Za-z0-9._-]+", block.group(1))
+    return re.findall(r"[a-z][a-z0-9-]*/[A-Za-z0-9._-]+\.[A-Za-z0-9]+",
+                      block.group(1))
 
 
 def tracked_for(component):
@@ -55,7 +60,7 @@ def tracked_for(component):
 shipped = shipped_to_mirror()
 tracked = tracked_for("mirror")
 
-check("读到了 install.sh 送往镜像机的 build/ 档案", bool(shipped), str(shipped))
+check("读到了 install.sh 送往镜像机的档案", bool(shipped), str(shipped))
 check("读到了 status.sh 的 mirror 追踪清单", bool(tracked), str(tracked))
 if not (shipped and tracked):
     sys.exit(1)

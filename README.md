@@ -14,6 +14,7 @@ nginx 配置，以及构建、签名和发布 [gentoo-zh overlay](https://github
 | --- | --- |
 | `build/` | 构建、暂存、签名、发布与一致性检查 |
 | `deploy/` | 镜像机和构建机的安装、同步、定时任务与监控 |
+| `ops/` | 两台共用的健康检查与告警 |
 | `nginx/` | HTTP、HTTP/3 和文件服务配置 |
 | `site/` | 静态站点与公开签名密钥 |
 | `site/tools/` | 站点生成与检查，只在 CI 执行 |
@@ -115,7 +116,7 @@ Docker socket、签名私钥或主机根文件系统，也不从主机挂载 `/d
 ```bash
 CHANNEL=stable SIGNING_KEY=<指纹> build/run-full.sh
 CHANNEL=stable build/publish.sh
-build/status.sh
+ops/status.sh
 ```
 
 将 `CHANNEL` 改为 `unstable` 可手动运行测试频道。不要省略人工操作中的频道名。
@@ -172,7 +173,7 @@ distfiles。完整镜像应使用 rsync module。
 
 ## 监控
 
-`build/status.sh` 检查签名密钥与证书有效期、同代索引、实际取包、distfiles、exporter 与
+`ops/status.sh` 检查签名密钥与证书有效期、同代索引、实际取包、distfiles、exporter 与
 心跳。配置 `/etc/binhost/alert.conf` 后，故障会发送到 Telegram。
 
 镜像机每次检查都会更新时间戳。构建机检查该时间戳，避免镜像机宕机后无法自行报告。

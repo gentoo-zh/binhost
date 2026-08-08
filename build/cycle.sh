@@ -15,8 +15,8 @@ STAGE="${STAGE:-/var/lib/binhost/stage/${CHANNEL_STORAGE}}"
 PROGRESS_OUT="${PROGRESS_OUT:-${CHANNEL_PROGRESS_OUT}}"
 ALERT_CONF="${ALERT_CONF:-/etc/binhost/alert.conf}"
 
-# shellcheck source=build/alert.sh
-. "$(dirname "$0")/alert.sh"
+# shellcheck source=ops/alert.sh
+. "$(dirname "$0")/../ops/alert.sh"
 
 on_error() {
     local rc=$1 line=$2 cmd=$3
