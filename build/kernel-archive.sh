@@ -115,17 +115,22 @@ for entry in ${todo[@]+"${todo[@]}"}; do
                 > /etc/kernel/config.d/90-binpkg-localversion.config
             printf '%s %s\n' '${PACKAGE}' '${REQUIRED_USE_FLAG}' \
                 >> /etc/portage/package.use/binhost-deps
+            rm -f /var/cache/binpkgs/${PACKAGE}/${PACKAGE#*/}-${version}-[0-9]*.gpkg.tar
+            emaint binhost --fix >/dev/null
             emerge --quiet-build -1 --buildpkg --usepkg '${atom}'
         " || die "${series} ${version} 建置失败"
 
-    # Portage keeps older builds and increments the id, so the one just written
-    # is the highest, not -1. Taking -1 blindly would republish a stale file
-    # from an earlier build of the same version and report it as fresh.
-    built=$(find "${PKGDIR}/${PACKAGE}" -maxdepth 1 \
-                -name "${PACKAGE#*/}-${version}-[0-9]*.gpkg.tar" 2>/dev/null |
-                sort -V | tail -n1)
-    [[ -n ${built} && -f ${built} ]] ||
-        die "建置完成但没有产物：${PKGDIR}/${PACKAGE}/${PACKAGE#*/}-${version}-*"
+    # The build id has to be 1, which is why the old binpkgs of this version are
+    # cleared above. It is not only the file name: the directory inside the gpkg
+    # carries the id too, and the -bin ebuild resolves BINPKG=${P/-bin}-1 against
+    # exactly that name. Renaming the file does not rename what is inside it, so
+    # a -2 published as -1 unpacks to a directory the -bin install never finds.
+    built="${PKGDIR}/${PACKAGE}/${PACKAGE#*/}-${version}-1.gpkg.tar"
+    [[ -f ${built} ]] || die "建置完成但没有 -1 产物：${built}"
+
+    inner=$(tar -tf "${built}" | head -n1 | cut -d/ -f1)
+    [[ ${inner} == "${PACKAGE#*/}-${version}-1" ]] ||
+        die "${version} 包内目录是 ${inner}，不是 -1，${PACKAGE#*/}-bin 无法安装"
 
     # A USE flag that was asked for is not proof it was applied, so the built
     # package is read back before anything is published.
