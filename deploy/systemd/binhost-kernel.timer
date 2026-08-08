@@ -1,0 +1,13 @@
+[Unit]
+Description=每日检查发行版内核是否有新版本
+
+[Timer]
+# Away from both channel builds: stable at 16:00 and unstable at 04:00.
+# With no new version the script exits before starting a container, so
+# checking once a day costs almost nothing.
+OnCalendar=*-*-* 10:00:00 Asia/Shanghai
+Persistent=true
+RandomizedDelaySec=15m
+
+[Install]
+WantedBy=timers.target

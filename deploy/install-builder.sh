@@ -72,7 +72,8 @@ sudo sed -i -e 's|^User=.*|User=${BUILD_USER}|' -e 's|^Group=.*|Group=${BUILD_US
     /etc/systemd/system/binhost-*.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now \
-    binhost-build.timer binhost-build-unstable.timer binhost-status.timer
+    binhost-build.timer binhost-build-unstable.timer binhost-status.timer \
+    binhost-kernel.timer
 systemctl list-timers --all --no-pager | grep binhost || true"
 
 say "完成"
