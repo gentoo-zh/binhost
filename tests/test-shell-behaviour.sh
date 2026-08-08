@@ -643,6 +643,14 @@ site_lock_probe() {
 ok "同步进行中时不当作故障" "$(site_lock_probe hold)" "in-progress"
 ok "同步没在执行时不一致仍是故障" "$(site_lock_probe free)" "failed"
 
+echo "== kernel-archive 取产物的方式"
+ok "按 build id 取最新的一份，不写死 -1" \
+   "$(grep -c 'sort -V | tail -n1' "${ROOT}/build/kernel-archive.sh")" "1"
+# shellcheck disable=SC2016  # we grep for the literal ${VAR}, not its value
+ok "发布名固定是 -1" \
+   "$(grep -c 'name="\${PACKAGE#\*/}-\${version}-1\.\${ARCH}\.gpkg\.tar"' \
+      "${ROOT}/build/kernel-archive.sh")" "2"
+
 echo "== status.sh 对 node_exporter 抓取源的判定"
 
 exporter_probe() {
