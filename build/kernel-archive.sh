@@ -81,8 +81,10 @@ for entry in ${todo[@]+"${todo[@]}"}; do
     read -r series version <<< "${entry}"
     atom="=${PACKAGE}-${version}"
     echo "::: ${series} ${atom}"
-    # -B writes the binary package, -k then installs from it so anything built
-    # against this kernel afterwards sees the same one that was published.
+    # --buildpkg writes the binary package and installs it in the same run, so
+    # anything built against this kernel afterwards sees the one published. -B
+    # cannot do this: it refuses unless every dependency is already merged, and
+    # a fresh container has none of them.
     ${DOCKER} run --rm -i --security-opt=no-new-privileges \
         -v "${TREE}:/var/db/repos/gentoo:ro" \
         -v "${OVERLAY}:/var/db/repos/gentoo-zh:ro" \
@@ -90,8 +92,7 @@ for entry in ${todo[@]+"${todo[@]}"}; do
         -v "${PKGDIR}:/var/cache/binpkgs" \
         -e "MAKEOPTS=${MAKEOPTS}" -e "JOBS=${JOBS}" \
         "${IMAGE}" /bin/bash -euo pipefail -c "
-            emerge --quiet-build -1B '${atom}'
-            emerge --quiet-build -1k '${atom}'
+            emerge --quiet-build -1 --buildpkg --usepkg '${atom}'
         " || die "${series} ${version} 建置失败"
 
     built="${PKGDIR}/${PACKAGE}/${PACKAGE#*/}-${version}-1.gpkg.tar"
