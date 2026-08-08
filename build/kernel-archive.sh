@@ -99,8 +99,14 @@ for entry in ${todo[@]+"${todo[@]}"}; do
             emerge --quiet-build -1 --buildpkg --usepkg '${atom}'
         " || die "${series} ${version} 建置失败"
 
-    built="${PKGDIR}/${PACKAGE}/${PACKAGE#*/}-${version}-1.gpkg.tar"
-    [[ -f ${built} ]] || die "建置完成但没有产物：${built}"
+    # Portage keeps older builds and increments the id, so the one just written
+    # is the highest, not -1. Taking -1 blindly would republish a stale file
+    # from an earlier build of the same version and report it as fresh.
+    built=$(find "${PKGDIR}/${PACKAGE}" -maxdepth 1 \
+                -name "${PACKAGE#*/}-${version}-[0-9]*.gpkg.tar" 2>/dev/null |
+                sort -V | tail -n1)
+    [[ -n ${built} && -f ${built} ]] ||
+        die "建置完成但没有产物：${PKGDIR}/${PACKAGE}/${PACKAGE#*/}-${version}-*"
 
     name="${PACKAGE#*/}-${version}-1.${ARCH}.gpkg.tar"
     # shellcheck disable=SC2029  # as above
