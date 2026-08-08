@@ -652,6 +652,14 @@ ok "后缀带 -bin" \
    "$(grep -c 'LOCALVERSION="\${LOCALVERSION:--gentoo-cjk-dist-bin}"' \
       "${ROOT}/build/kernel-archive.sh")" "1"
 
+# shellcheck disable=SC2016  # we grep for the literal ${VAR}, not its value
+ok "清理被上限挡下时以非零结束" \
+   "$(grep -c '\[\[ -z ${blocked} \]\] || die' \
+      "${ROOT}/build/kernel-archive.sh")" "1"
+# shellcheck disable=SC2016  # we grep for the literal ${VAR}, not its value
+ok "两条上限都会记下被挡" \
+   "$(grep -cE '^ +blocked=' "${ROOT}/build/kernel-archive.sh")" "2"
+
 echo "== kernel-archive 的每轮上限与 USE 要求"
 ok "每轮有建置数量上限" \
    "$(grep -c 'MAX_BUILDS' "${ROOT}/build/kernel-archive.sh")" "4"

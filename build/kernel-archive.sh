@@ -47,6 +47,11 @@ LOCK="${LOCK:-/var/lib/binhost/stage/kernel-archive.lock}"
 
 die() { echo "!!! $*" >&2; exit 1; }
 
+# Set when the cap blocks a cleanup. Everything else still runs, but the run
+# ends non-zero so OnFailure reaches someone: refusing to delete is the safe
+# direction, and a warning nobody reads is how it stays wrong for weeks.
+blocked=""
+
 for path in "${OVERLAY}" "${TREE}"; do
     [[ -d ${path} ]] || die "missing: ${path}"
 done
@@ -174,6 +179,7 @@ if (( ${#stale[@]} )); then
     if (( ${#stale[@]} > MAX_RETIRE )); then
         echo "!! 要清理 ${#stale[@]} 个档案，超过上限 ${MAX_RETIRE}，一个都不动" >&2
         echo "   overlay 可能读取有误，确认之后再执行" >&2
+        blocked="要清理 ${#stale[@]} 个档案"
     else
         for f in "${stale[@]}"; do
             echo "    清理 ${f}（overlay 已不提供这个版本）"
@@ -205,6 +211,7 @@ if (( ${#retire[@]} )); then
     if (( ${#retire[@]} > MAX_RETIRE )); then
         echo "!! 要退役 ${#retire[@]} 条线，超过上限 ${MAX_RETIRE}，一条都不动" >&2
         echo "   overlay 可能读取有误，确认之后再执行" >&2
+        blocked="${blocked:+${blocked}，}要退役 ${#retire[@]} 条线"
     else
         for series in "${retire[@]}"; do
             echo "    退役 ${series}（overlay 已不提供）"
@@ -213,6 +220,8 @@ if (( ${#retire[@]} )); then
         done
     fi
 fi
+
+[[ -z ${blocked} ]] || die "${blocked}，都超过上限 ${MAX_RETIRE}，没有执行"
 
 echo ">>> 完成"
 }
