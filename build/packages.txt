@@ -174,7 +174,6 @@ sys-apps/aptly
 sys-apps/pacman
 sys-apps/pnpm
 sys-fs/ssdfs-tools
-sys-kernel/gentoo-cjk-kernel
 sys-libs/libsolv
 sys-power/tlpui
 www-servers/dufs
