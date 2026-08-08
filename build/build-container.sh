@@ -127,6 +127,7 @@ dev-util/mamba         python
 app-i18n/opencc        python
 media-video/pipewire   gstreamer
 app-shells/gitstatus   zsh-completion
+sys-kernel/installkernel dracut
 EOF
 
 if [[ ${BINHOST_CHANNEL} == stable ]]; then
