@@ -21,11 +21,22 @@ DISTDIR="${DISTDIR:-/var/cache/distfiles}"
 PKGDIR="${PKGDIR:-/var/cache/binhost/kernel/x86-64}"
 IMAGE="${IMAGE:-gentoo-zh/binhost-base:x86-64}"
 COMMON_PACKAGE_USE="${COMMON_PACKAGE_USE:-${SCRIPT_DIR}/package.use.common}"
+# The -bin ebuild reads paths inside the gpkg as lib/modules/${KV_FULL} and
+# usr/src/linux-${KV_FULL}, so what is packed here has to carry the same
+# suffix its KV_LOCALVERSION declares. Without it the archive holds the plain
+# variant, the two collide on disk and the -bin install finds no directory.
+LOCALVERSION="${LOCALVERSION:--gentoo-cjk-dist-bin}"
 ARCH="${ARCH:-amd64}"
 REMOTE="${REMOTE:-mirror}"
 REMOTE_ROOT="${REMOTE_ROOT:-/srv/pub/gentoo-cjk-kernel/${ARCH}}"
-KEEP="${KEEP:-2}"
-MAX_RETIRE="${MAX_RETIRE:-1}"
+MAX_RETIRE="${MAX_RETIRE:-2}"
+# One kernel takes about twenty five minutes, so a first run over a long
+# version list would hold the machine for most of a day. What is left over
+# is picked up by the next run.
+MAX_BUILDS="${MAX_BUILDS:-10}"
+# The whole point of this kernel. IUSE has it on by default, but an upstream
+# default is not a guarantee, so it is requested here and checked afterwards.
+REQUIRED_USE_FLAG="${REQUIRED_USE_FLAG:-cjk}"
 if [[ -z ${DOCKER:-} ]]; then
     DOCKER="docker"
     docker info >/dev/null 2>&1 || DOCKER="sudo docker"
@@ -72,9 +83,13 @@ done
 # Retention and retirement still run when nothing was built: a series can be
 # dropped from the overlay in a cycle where every remaining line is current.
 if (( ${#todo[@]} == 0 )); then
-    echo ">>> 每条线都已是最新，不起容器"
+    echo ">>> 每个版本都已发布，不起容器"
     todo=()
 else
+    if (( ${#todo[@]} > MAX_BUILDS )); then
+        echo ">>> 本轮只建前 ${MAX_BUILDS} 个，其余 $(( ${#todo[@]} - MAX_BUILDS )) 个留到下一轮"
+        todo=("${todo[@]:0:MAX_BUILDS}")
+    fi
     install -dm755 "${PKGDIR}"
 fi
 
@@ -94,8 +109,12 @@ for entry in ${todo[@]+"${todo[@]}"}; do
         -v "${COMMON_PACKAGE_USE}:/tmp/package.use.common:ro" \
         -e "MAKEOPTS=${MAKEOPTS}" -e "JOBS=${JOBS}" \
         "${IMAGE}" /bin/bash -euo pipefail -c "
-            mkdir -p /etc/portage/package.use
+            mkdir -p /etc/portage/package.use /etc/kernel/config.d
             cat /tmp/package.use.common > /etc/portage/package.use/binhost-deps
+            printf 'CONFIG_LOCALVERSION=\"%s\"\n' '${LOCALVERSION}' \
+                > /etc/kernel/config.d/90-binpkg-localversion.config
+            printf '%s %s\n' '${PACKAGE}' '${REQUIRED_USE_FLAG}' \
+                >> /etc/portage/package.use/binhost-deps
             emerge --quiet-build -1 --buildpkg --usepkg '${atom}'
         " || die "${series} ${version} 建置失败"
 
@@ -108,6 +127,14 @@ for entry in ${todo[@]+"${todo[@]}"}; do
     [[ -n ${built} && -f ${built} ]] ||
         die "建置完成但没有产物：${PKGDIR}/${PACKAGE}/${PACKAGE#*/}-${version}-*"
 
+    # A USE flag that was asked for is not proof it was applied, so the built
+    # package is read back before anything is published.
+    if ! tar -xOf "${built}" "$(basename "${built}" .gpkg.tar)/metadata.tar.zst" |
+            zstd -dc | tar -xO metadata/USE |
+            tr ' ' '\n' | grep -qx "${REQUIRED_USE_FLAG}"; then
+        die "${version} 建出来的包没有 ${REQUIRED_USE_FLAG}，不发布"
+    fi
+
     name="${PACKAGE#*/}-${version}-1.${ARCH}.gpkg.tar"
     # shellcheck disable=SC2029  # as above
     ssh "${REMOTE}" "install -dm755 ${REMOTE_ROOT}/${series}"
@@ -115,16 +142,41 @@ for entry in ${todo[@]+"${todo[@]}"}; do
     echo "    已发布 ${series}/${name}"
 done
 
-# Keep the newest few per series; a series with fewer files is left alone.
+# Every version the overlay carries has to stay: a -bin ebuild names its file
+# by URL, so removing one an ebuild still references leaves that version
+# unfetchable. A file goes only when its version leaves the overlay.
+wanted_names=()
 for entry in "${wanted[@]}"; do
-    read -r series _ <<< "${entry}"
-    # shellcheck disable=SC2029  # as above
-    ssh "${REMOTE}" "
-        cd ${REMOTE_ROOT}/${series} 2>/dev/null || exit 0
-        ls -1t *.gpkg.tar 2>/dev/null | tail -n +$((KEEP + 1)) |
-            while read -r old; do echo \"    清理 ${series}/\${old}\"; rm -f \"\${old}\"; done
-    "
+    read -r series version <<< "${entry}"
+    wanted_names+=("${series}/${PACKAGE#*/}-${version}-1.${ARCH}.gpkg.tar")
 done
+
+mapfile -t remote_files < <(
+    # shellcheck disable=SC2029  # as above
+    ssh "${REMOTE}" "cd ${REMOTE_ROOT} 2>/dev/null && ls -1 */*.gpkg.tar 2>/dev/null" || true
+)
+stale=()
+for f in ${remote_files[@]+"${remote_files[@]}"}; do
+    [[ -n ${f} ]] || continue
+    keep=no
+    for want in "${wanted_names[@]}"; do
+        [[ ${want} == "${f}" ]] && { keep=yes; break; }
+    done
+    [[ ${keep} == yes ]] || stale+=("${f}")
+done
+
+if (( ${#stale[@]} )); then
+    if (( ${#stale[@]} > MAX_RETIRE )); then
+        echo "!! 要清理 ${#stale[@]} 个档案，超过上限 ${MAX_RETIRE}，一个都不动" >&2
+        echo "   overlay 可能读取有误，确认之后再执行" >&2
+    else
+        for f in "${stale[@]}"; do
+            echo "    清理 ${f}（overlay 已不提供这个版本）"
+            # shellcheck disable=SC2029  # as above
+            ssh "${REMOTE}" "rm -f ${REMOTE_ROOT}/${f}"
+        done
+    fi
+fi
 
 # A series the overlay no longer offers is retired, the same way the package
 # lists treat a package that is gone. The cap is the guard: losing the overlay

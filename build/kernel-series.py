@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""The newest version of each major.minor series the overlay offers.
+"""Every version of the package the overlay offers, with its series.
 
-A distribution kernel puts every version in its own slot and the archive keeps
-one build per series, so the series list has to come from the overlay rather
-than from a written-down table: a bump inside a series then needs no edit and a
-new series appears on its own.
+The -bin ebuilds fetch these files by URL, so one has to exist for every
+version the overlay carries: dropping a file that an ebuild still names leaves
+that version unfetchable. The overlay is therefore the whole answer, both for
+what to build and for what to keep.
+
+The series is the major.minor pair and only decides which directory the file
+goes in, matching the layout Gentoo uses for its own dist-kernel archive.
 
 Reads PACKAGE, OVERLAY and TREE from the environment, prints "series version".
 """
 
+import functools
 import os
 import pathlib
 import sys
@@ -24,16 +28,14 @@ def series_of(version):
     return ".".join(parts[:2]) if len(parts) >= 2 else version
 
 
-def newest_per_series(db, package):
-    best = {}
-    for cpv in db.match(package):
-        version = split_cpv(str(cpv))[1]
-        if version is None:
-            continue
-        key = series_of(version)
-        if key not in best or (vercmp(version, best[key]) or 0) > 0:
-            best[key] = version
-    return best
+def all_versions(db, package):
+    """[(series, version)], ordered by series then by version."""
+    found = {(series_of(v), v) for v in
+             (split_cpv(str(cpv))[1] for cpv in db.match(package)) if v}
+    return sorted(found, key=lambda pair: (
+        [int(p) if p.isdigit() else p for p in pair[0].split(".")],
+        functools.cmp_to_key(vercmp)(pair[1]),
+    ))
 
 
 def main():
@@ -44,12 +46,11 @@ def main():
         db = pinned_portdbapi(overlay, tree)
     except MetadataUnavailable as e:
         sys.exit(f"cannot read the overlay: {e}")
-    best = newest_per_series(db, package)
-    if not best:
+    found = all_versions(db, package)
+    if not found:
         sys.exit(f"{package}: the overlay offers no version")
-    for key in sorted(best, key=lambda k: [int(p) if p.isdigit() else p
-                                           for p in k.split(".")]):
-        print(f"{key} {best[key]}")
+    for series, version in found:
+        print(f"{series} {version}")
 
 
 if __name__ == "__main__":

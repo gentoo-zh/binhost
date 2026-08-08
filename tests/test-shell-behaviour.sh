@@ -643,6 +643,27 @@ site_lock_probe() {
 ok "同步进行中时不当作故障" "$(site_lock_probe hold)" "in-progress"
 ok "同步没在执行时不一致仍是故障" "$(site_lock_probe free)" "failed"
 
+echo "== kernel-archive 的 localversion"
+ok "写出 config.d 片段" \
+   "$(grep -c 'kernel/config.d/90-binpkg-localversion.config' \
+      "${ROOT}/build/kernel-archive.sh")" "1"
+# shellcheck disable=SC2016  # a grep pattern, expansion is not wanted
+ok "后缀带 -bin" \
+   "$(grep -c 'LOCALVERSION="\${LOCALVERSION:--gentoo-cjk-dist-bin}"' \
+      "${ROOT}/build/kernel-archive.sh")" "1"
+
+echo "== kernel-archive 的每轮上限与 USE 要求"
+ok "每轮有建置数量上限" \
+   "$(grep -c 'MAX_BUILDS' "${ROOT}/build/kernel-archive.sh")" "4"
+ok "超过上限时说明留了几个" \
+   "$(grep -c '留到下一轮' "${ROOT}/build/kernel-archive.sh")" "1"
+ok "发布前回读产物的 USE" \
+   "$(grep -c 'tar -xO metadata/USE' "${ROOT}/build/kernel-archive.sh")" "1"
+
+echo "== kernel-archive 的保留策略"
+ok "按 overlay 保留，不按数量" \
+   "$(grep -c 'KEEP' "${ROOT}/build/kernel-archive.sh")" "0"
+
 echo "== kernel-archive 取产物的方式"
 ok "按 build id 取最新的一份，不写死 -1" \
    "$(grep -c 'sort -V | tail -n1' "${ROOT}/build/kernel-archive.sh")" "1"
