@@ -665,8 +665,19 @@ ok "按 overlay 保留，不按数量" \
    "$(grep -c 'KEEP' "${ROOT}/build/kernel-archive.sh")" "0"
 
 echo "== kernel-archive 取产物的方式"
-ok "按 build id 取最新的一份，不写死 -1" \
-   "$(grep -c 'sort -V | tail -n1' "${ROOT}/build/kernel-archive.sh")" "1"
+# shellcheck disable=SC2016  # we grep for the literal ${VAR}, not its value
+ok "建置前移除这个版本的旧产物" \
+   "$(grep -c 'rm -f /var/cache/binpkgs/${PACKAGE}/${PACKAGE#\*/}-${version}-' \
+      "${ROOT}/build/kernel-archive.sh")" "1"
+ok "移除之后重建索引" \
+   "$(grep -c 'emaint binhost --fix' "${ROOT}/build/kernel-archive.sh")" "1"
+# shellcheck disable=SC2016  # we grep for the literal ${VAR}, not its value
+ok "只认 build id 为 1 的产物" \
+   "$(grep -c '${version}-1.gpkg.tar"$' "${ROOT}/build/kernel-archive.sh")" "1"
+# shellcheck disable=SC2016  # we grep for the literal ${VAR}, not its value
+ok "核对包内目录名" \
+   "$(grep -c 'tar -tf "${built}" | head -n1' \
+      "${ROOT}/build/kernel-archive.sh")" "1"
 # shellcheck disable=SC2016  # we grep for the literal ${VAR}, not its value
 ok "发布名固定是 -1" \
    "$(grep -c 'name="\${PACKAGE#\*/}-\${version}-1\.\${ARCH}\.gpkg\.tar"' \
