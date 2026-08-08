@@ -11,3 +11,4 @@ dev-python/fuo-qqmusic	runtime dependency dev-python/marshmallow-4.3.0 is ~amd64
 kde-misc/plasma-ions-china	runtime dependency >=kde-plasma/kdeplasma-addons-6.7 is ~amd64 only
 media-plugins/waylyrics	runtime dependency gui-libs/gtk4-layer-shell is ~amd64 only
 net-misc/eternalterminal	runtime dependency dev-cpp/simpleini is ~amd64 only
+sys-kernel/gentoo-cjk-kernel	KEYWORDS is ~amd64 only, the stable channel cannot resolve it
