@@ -20,6 +20,7 @@ LOGDIR="${LOGDIR:-/var/lib/binhost/logs/${CHANNEL_STORAGE}}"
 LIST="${LIST:-$(dirname "$0")/packages.txt}"
 STABLE_EXCLUDED="${STABLE_EXCLUDED:-$(dirname "$0")/stable-excluded.txt}"
 STABLE_PACKAGE_USE="${STABLE_PACKAGE_USE:-$(dirname "$0")/package.use.stable}"
+COMMON_PACKAGE_USE="${COMMON_PACKAGE_USE:-$(dirname "$0")/package.use.common}"
 SIGNING_KEY="${SIGNING_KEY:-}"
 SIGNING_GNUPGHOME="${SIGNING_GNUPGHOME:-/var/lib/binhost/gnupg}"
 SIGNING_TMP_ROOT="${SIGNING_TMP_ROOT:-/dev/shm}"
@@ -101,6 +102,7 @@ ${DOCKER} run --rm -i --security-opt=no-new-privileges \
     -v "${PKGDIR}:/var/cache/binpkgs" \
     -v "${GENTOO_BINPKGS}:/var/cache/binhost/gentoo" \
     -v "${LIST}:/tmp/packages.txt:ro" \
+    -v "${COMMON_PACKAGE_USE}:/tmp/package.use.common:ro" \
     "${channel_mounts[@]}" \
     -v "$(dirname "$0")/rebuild-preserved.sh:/usr/local/bin/rebuild-preserved:ro" \
     -v "$(dirname "$0")/snapshot-binrepo.py:/usr/local/bin/snapshot-binrepo:ro" \
@@ -119,16 +121,7 @@ PORTAGE_BINHOST_TTL="3600"
 EOF
 
 mkdir -p /etc/portage/package.use
-cat > /etc/portage/package.use/binhost-deps <<'EOF'
-dev-libs/marisa        python
-sys-libs/minizip-ng    compat
-sys-libs/libsolv       conda
-dev-util/mamba         python
-app-i18n/opencc        python
-media-video/pipewire   gstreamer
-app-shells/gitstatus   zsh-completion
-sys-kernel/installkernel dracut
-EOF
+cat /tmp/package.use.common > /etc/portage/package.use/binhost-deps
 
 if [[ ${BINHOST_CHANNEL} == stable ]]; then
     cat /tmp/package.use.stable >> /etc/portage/package.use/binhost-deps

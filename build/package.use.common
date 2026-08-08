@@ -1,0 +1,10 @@
+# USE the build needs and both the regular cycle and the kernel archive
+# apply, kept in one file so the two containers cannot drift apart.
+dev-libs/marisa        python
+sys-libs/minizip-ng    compat
+sys-libs/libsolv       conda
+dev-util/mamba         python
+app-i18n/opencc        python
+media-video/pipewire   gstreamer
+app-shells/gitstatus   zsh-completion
+sys-kernel/installkernel dracut
