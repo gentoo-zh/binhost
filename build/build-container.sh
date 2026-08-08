@@ -20,6 +20,7 @@ LOGDIR="${LOGDIR:-/var/lib/binhost/logs/${CHANNEL_STORAGE}}"
 LIST="${LIST:-$(dirname "$0")/packages.txt}"
 STABLE_EXCLUDED="${STABLE_EXCLUDED:-$(dirname "$0")/stable-excluded.txt}"
 STABLE_PACKAGE_USE="${STABLE_PACKAGE_USE:-$(dirname "$0")/package.use.stable}"
+ALL_SLOTS="${ALL_SLOTS:-$(dirname "$0")/all-slots.txt}"
 SIGNING_KEY="${SIGNING_KEY:-}"
 SIGNING_GNUPGHOME="${SIGNING_GNUPGHOME:-/var/lib/binhost/gnupg}"
 SIGNING_TMP_ROOT="${SIGNING_TMP_ROOT:-/dev/shm}"
@@ -60,6 +61,14 @@ if [[ ${CHANNEL} == stable ]]; then
     LIST="${EFFECTIVE_LIST}"
     channel_excluded_list="${STABLE_EXCLUDED}"
     channel_mounts=(-v "${STABLE_PACKAGE_USE}:/tmp/package.use.stable:ro")
+fi
+
+if [[ -s ${ALL_SLOTS} ]]; then
+    EXPANDED_LIST="${EXPANDED_LIST:-${STAGE}.atoms.txt}"
+    sudo install -dm755 -o "$(id -u)" -g "$(id -g)" "$(dirname "${EXPANDED_LIST}")"
+    python3 "$(dirname "$0")/expand-slots.py" \
+        "${LIST}" "${ALL_SLOTS}" "${OVERLAY}" "${EXPANDED_LIST}"
+    LIST="${EXPANDED_LIST}"
 fi
 [[ -n ${SIGNING_KEY} ]] || die "SIGNING_KEY unset; unsigned packages are not publishable"
 [[ ${SIGNING_IMAGE} =~ @sha256:[0-9a-f]{64}$ ]] ||
@@ -134,7 +143,7 @@ if [[ ${BINHOST_CHANNEL} == stable ]]; then
     cat /tmp/package.use.stable >> /etc/portage/package.use/binhost-deps
 fi
 
-mapfile -t atoms < <(grep -E '^[a-z0-9-]+/[A-Za-z0-9._+-]+$' /tmp/packages.txt)
+mapfile -t atoms < <(grep -E '^[a-z0-9-]+/[A-Za-z0-9._+-]+(:[A-Za-z0-9._+-]+)?$' /tmp/packages.txt)
 echo ">>> ${#atoms[@]} packages"
 
 EMERGE=(emerge --usepkg --changed-use --with-bdeps=y --quiet-build)

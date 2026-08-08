@@ -1,0 +1,9 @@
+# Packages built in every slot they offer, with the reason.
+#
+# emerge resolves one slot per atom, so a bare atom builds only the newest.
+# Distribution kernels put each version in its own slot and we carry more
+# than one at a time.
+#
+# Format: category/package  <TAB>  reason
+
+sys-kernel/gentoo-cjk-kernel	long term support and current kernels ship together
