@@ -20,6 +20,7 @@ TREE="${TREE:-/var/db/repos/gentoo}"
 DISTDIR="${DISTDIR:-/var/cache/distfiles}"
 PKGDIR="${PKGDIR:-/var/cache/binhost/kernel/x86-64}"
 IMAGE="${IMAGE:-gentoo-zh/binhost-base:x86-64}"
+COMMON_PACKAGE_USE="${COMMON_PACKAGE_USE:-${SCRIPT_DIR}/package.use.common}"
 ARCH="${ARCH:-amd64}"
 REMOTE="${REMOTE:-mirror}"
 REMOTE_ROOT="${REMOTE_ROOT:-/srv/pub/gentoo-cjk-kernel/${ARCH}}"
@@ -90,8 +91,11 @@ for entry in ${todo[@]+"${todo[@]}"}; do
         -v "${OVERLAY}:/var/db/repos/gentoo-zh:ro" \
         -v "${DISTDIR}:/var/cache/distfiles" \
         -v "${PKGDIR}:/var/cache/binpkgs" \
+        -v "${COMMON_PACKAGE_USE}:/tmp/package.use.common:ro" \
         -e "MAKEOPTS=${MAKEOPTS}" -e "JOBS=${JOBS}" \
         "${IMAGE}" /bin/bash -euo pipefail -c "
+            mkdir -p /etc/portage/package.use
+            cat /tmp/package.use.common > /etc/portage/package.use/binhost-deps
             emerge --quiet-build -1 --buildpkg --usepkg '${atom}'
         " || die "${series} ${version} 建置失败"
 
