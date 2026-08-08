@@ -55,8 +55,8 @@ mkdir -p "$(dirname "${LOCK}")"
 exec 9>"${LOCK}"
 flock -n 9 || { echo "另一次内核归档正在执行（${LOCK}）"; exit 0; }
 
-# One newest version per major.minor series, straight from the overlay, so a
-# bump inside a series needs no edit here and a new series appears on its own.
+# Every version the overlay offers, so a bump needs no edit here and a new
+# series appears on its own. The series only decides which directory holds it.
 mapfile -t wanted < <(
     OVERLAY="${OVERLAY}" TREE="${TREE}" PACKAGE="${PACKAGE}" \
         python3 "${SCRIPT_DIR}/kernel-series.py"
