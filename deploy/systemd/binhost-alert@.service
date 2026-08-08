@@ -6,4 +6,4 @@ Description=转发 %i 的失败告警
 Type=oneshot
 User=adminc3b9c6
 Group=adminc3b9c6
-ExecStart=/var/lib/binhost/build/alert-failed.sh %i.service
+ExecStart=/var/lib/binhost/ops/alert-failed.sh %i.service

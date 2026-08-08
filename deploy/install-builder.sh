@@ -26,14 +26,15 @@ fi
 
 say "上传构建脚本"
 tmp=$(${REMOTE} 'mktemp -d')
-rsync -a -e "${REMOTE% *}" build/ "${REMOTE##* }:${tmp}/"
+rsync -a -e "${REMOTE% *}" build ops "${REMOTE##* }:${tmp}/"
 
 # shellcheck disable=SC2029  # the path is meant to expand locally
 ${REMOTE} "set -euo pipefail
 sudo install -dm755 '${ROOT}' '${ROOT}/logs' '${ROOT}/stage'
-sudo rsync -a --delete '${tmp}/' '${ROOT}/build/'
+sudo rsync -a --delete '${tmp}/build/' '${ROOT}/build/'
+sudo rsync -a --delete '${tmp}/ops/' '${ROOT}/ops/'
 rm -rf '${tmp}'
-sudo install -m755 '${ROOT}/build/status.sh' /usr/local/bin/binhost-status
+sudo install -m755 '${ROOT}/ops/status.sh' /usr/local/bin/binhost-status
 printf %s '${COMMIT}' | sudo install -m644 /dev/stdin '${ROOT}/build/VERSION'
 
 echo '--- overlay 副本'

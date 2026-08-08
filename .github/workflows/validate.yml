@@ -154,7 +154,7 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Compile
-        run: python3 -m py_compile build/*.py deploy/*.py
+        run: python3 -m py_compile build/*.py deploy/*.py site/tools/*.py
       - name: Classifier against real log shapes
         run: |
           d=$(mktemp -d)
@@ -235,7 +235,7 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: shellcheck
-        run: shellcheck build/*.sh deploy/*.sh tests/*.sh deploy-site.sh
+        run: shellcheck build/*.sh ops/*.sh deploy/*.sh tests/*.sh deploy-site.sh
 
       - name: Alerting survives a broken alert.conf
         run: bash tests/test-alert.sh

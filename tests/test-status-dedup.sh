@@ -55,7 +55,7 @@ run() {
         SIGNING_GNUPGHOME="${d}/nokey" DISK_PATH="${d}/nodisk" \
         HEARTBEAT="${d}/nowhere/.health" SITE_WORK="${d}/nowork" \
         SITE_DEST="${d}/nodest" MONITORS_FILE="${d}/nomon" \
-        bash build/status.sh >/dev/null 2>&1 )
+        bash ops/status.sh >/dev/null 2>&1 )
     rc=$?
 }
 
@@ -127,7 +127,7 @@ echo aaaaaaaa > "${d}/VERSION"
     VERSION_FILE="${d}/VERSION" SIGNING_GNUPGHOME="${d}/nokey" \
     DISK_PATH="${d}/nodisk" HEARTBEAT="${d}/nowhere/.health" \
     SITE_WORK="${d}/nowork" SITE_DEST="${d}/nodest" \
-    MONITORS_FILE="${d}/nomon" bash build/status.sh >/dev/null 2>&1 )
+    MONITORS_FILE="${d}/nomon" bash ops/status.sh >/dev/null 2>&1 )
 ok "没有 BINHOST_ALERT 时不写状态" "$(test -s "${d}/state" && echo 有 || echo 无)" "无"
 run "${d}"
 ok "随后的定时执行仍会正常发出" "$(sent_count "${d}")" "1"
@@ -144,7 +144,7 @@ EOF
     chmod +x "${d}/bin/systemctl"
     : > "${d}/sent.log"
     PATH="${d}/bin:${PATH}" ALERT_CONF="${d}/alert.conf" \
-        bash "${ROOT}/build/alert-failed.sh" binhost-status.service >/dev/null 2>&1
+        bash "${ROOT}/ops/alert-failed.sh" binhost-status.service >/dev/null 2>&1
     sent_count "${d}"
 }
 d=$(setup)

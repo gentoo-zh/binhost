@@ -597,7 +597,7 @@ EOF
         SIGNING_GNUPGHOME="${d}/nokey" DISK_PATH="${d}/nodisk" \
         HEARTBEAT="${d}/nowhere/.health" SITE_WORK="${d}/nowork" \
         SITE_DEST="${d}/nodest" MONITORS_FILE="${d}/nomon" COMPONENT=mirror \
-        bash build/status.sh 2>&1 | grep '部署版本' )
+        bash ops/status.sh 2>&1 | grep '部署版本' )
     rm -rf "${d}"
     case "${out}" in *'<--'*) echo failed ;; *) echo passed ;; esac
 }
@@ -630,7 +630,7 @@ site_lock_probe() {
     fi
     out=$( cd "${ROOT}" && ALERT_CONF=/nonexistent STATE_FILE="${d}/state" \
         SITE_WORK="${d}/work" SITE_DEST="${d}/dest" SITE_LOCK="${d}/lock" \
-        COMPONENT=mirror bash build/status.sh 2>&1 | grep '站点同步' )
+        COMPONENT=mirror bash ops/status.sh 2>&1 | grep '站点同步' )
     wait 2>/dev/null
     rm -rf "${d}"
     case "${out}" in
@@ -671,7 +671,7 @@ EOF
         STATE_FILE="${d}/s" VERSION_FILE="${d}/v" SIGNING_GNUPGHOME="${d}/nokey" \
         DISK_PATH="${d}/nodisk" HEARTBEAT="${d}/nowhere/.health" \
         SITE_WORK="${d}/nowork" SITE_DEST="${d}/nodest" MONITORS_FILE="${d}/nomon" \
-        bash build/status.sh 2>&1 | grep node_exporter )
+        bash ops/status.sh 2>&1 | grep node_exporter )
     rm -rf "${d}"
     case "${out}" in *'<--'*) echo failed ;; *) echo passed ;; esac
 }
@@ -765,7 +765,7 @@ EOF
         STATE_FILE="${d}/s" VERSION_FILE="${d}/v" SIGNING_GNUPGHOME="${d}/n" \
         DISK_PATH="${d}/n" HEARTBEAT="${d}/n/.h" SITE_WORK="${d}/n" \
         SITE_DEST="${d}/n" MONITORS_FILE="${d}/n" \
-        bash build/status.sh 2>&1 | grep 构建状态 )
+        bash ops/status.sh 2>&1 | grep 构建状态 )
     rm -rf "${d}"
     case "${out}" in *'<--'*) echo failed ;; *) echo passed ;; esac
 }
@@ -786,9 +786,9 @@ ok "unstable 构建无进展时同样判为故障" \
    "$(build_status_probe "${FRESH_JSON}" "${STALE_JSON}")" \
    "failed"
 ok "监控同时检查两个频道的索引" \
-   "$(grep -c '^check_channel_index \(stable\|unstable\) ' build/status.sh)" "2"
+   "$(grep -c '^check_channel_index \(stable\|unstable\) ' ops/status.sh)" "2"
 ok "监控同时检查两个频道的构建状态" \
-   "$(grep -c '^check_build_status \(stable\|unstable\) ' build/status.sh)" "2"
+   "$(grep -c '^check_build_status \(stable\|unstable\) ' ops/status.sh)" "2"
 
 echo "== 逐包阶段确实公布进度"
 

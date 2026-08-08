@@ -54,14 +54,38 @@ def staged_sources():
             for token in m.group(1).split():
                 if ":" in token or token.startswith("-") or token.startswith("$"):
                     continue
-                if "${" in token or not re.match(r"^[a-z][A-Za-z0-9._-]*/", token):
+                if "${" in token or not re.match(r"^[a-z][A-Za-z0-9._/-]*$", token):
                     continue
                 out.setdefault(name, set()).add(token.rstrip("/") if token.endswith("/") else token)
     return out
 
 
+def builder_dirs():
+    """(dirs rsynced to the builder, dirs it then installs from)."""
+    script = ROOT / "deploy" / "install-builder.sh"
+    if not script.exists():
+        return set(), set()
+    text = re.sub(r"\\\n\s*", " ", script.read_text())
+    sent = set()
+    for m in re.finditer(r"^\s*rsync\s+([^\n]*)$", text, re.M):
+        for token in m.group(1).split():
+            if ":" in token or token.startswith("-") or "${" in token:
+                continue
+            if re.match(r"^[a-z][A-Za-z0-9._-]*/?$", token):
+                sent.add(token.rstrip("/"))
+    used = set(re.findall(
+        r"install -m\d+ '?\$\{ROOT\}/([A-Za-z0-9._-]+)/", text))
+    return sent, used
+
+
 inst, refs = installed(), referenced()
 bad = 0
+sent, used = builder_dirs()
+if sent or used:
+    print(f"  install-builder.sh: rsync 送出 {sorted(sent)}，安装时读取 {sorted(used)}")
+    for d in sorted(used - sent):
+        print(f"    ✗ {d}/ 没有被 rsync 送到建置机，安装那步会失败")
+        bad += 1
 for script, sources in sorted(staged_sources().items()):
     print(f"  {script}: rsync 送出 {len(sources)} 个源码路径")
     for src in sorted(sources):

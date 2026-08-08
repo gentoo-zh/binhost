@@ -25,7 +25,7 @@ FAILURES="${FAILURES:-/var/log/emirrordist/failures.log}"
 
 rc=0
 
-# shellcheck source=build/alert.sh
+# shellcheck source=ops/alert.sh
 . "${LIB}/alert.sh"
 
 step() {

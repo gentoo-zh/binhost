@@ -35,7 +35,7 @@ tmp=$(ssh "${REMOTE}" 'mktemp -d')
 rsync -a deploy/ build/gen-packages.py build/ebuilds.py build/verify-deps.py \
     build/generation.py \
     build/dep-exceptions.txt build/packages.txt build/excluded.txt build/stable-excluded.txt \
-    build/status.sh build/alert.sh \
+    ops/status.sh ops/alert.sh \
     nginx/ site/ "${REMOTE}:${tmp}/"
 
 # shellcheck disable=SC2029  # as above

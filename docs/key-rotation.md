@@ -4,7 +4,7 @@
 私钥位于构建机 `/var/lib/binhost/gnupg`，另有一份离线备份。
 公钥发布在站点 `/gentoo-zh-binhost.asc`，仓库中的副本在 `site/` 下。
 
-`build/status.sh` 在到期前 180 天开始告警，为下述重叠期预留时间。
+`ops/status.sh` 在到期前 180 天开始告警，为下述重叠期预留时间。
 
 ## 目的
 
