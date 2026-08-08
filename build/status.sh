@@ -22,6 +22,7 @@ VERSION_FILE="${VERSION_FILE:-}"
 REPO_API="${REPO_API:-https://api.github.com/repos/gentoo-zh/binhost/commits/master}"
 MONITORS_FILE="${MONITORS_FILE:-/usr/local/lib/binhost/MONITORS}"
 SITE_WORK="${SITE_WORK:-/var/lib/binhost-site}"
+SITE_LOCK="${SITE_LOCK:-${SITE_WORK}.lock}"
 SITE_STALE_H="${SITE_STALE_H:-2}"
 SITE_DEST="${SITE_DEST:-/srv/mirrors}"
 BUILD_STALE_H="${BUILD_STALE_H:-3}"
@@ -103,6 +104,8 @@ elif [[ -d ${SITE_WORK}/.git ]]; then
         bad "站点同步" "${SITE_WORK}/.git/FETCH_HEAD 不存在，同步从未执行"
     elif (( age_h >= SITE_STALE_H )); then
         bad "站点同步" "上次拉取在 ${age_h} 小时前，五分钟一次的同步已停止"
+    elif [[ -e ${SITE_LOCK} ]] && ! flock -n "${SITE_LOCK}" true 2>/dev/null; then
+        note "站点同步" "同步正在执行，本次不比对仓库副本与已发布内容"
     elif [[ ${marked} != "${here_site}" ]]; then
         bad "站点同步" "仓库副本在 ${here_site:0:8}，上次完成的是 ${marked:0:8}，最近一次未完成"
     elif (( drift )); then

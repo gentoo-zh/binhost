@@ -613,6 +613,36 @@ ok "版本一致时才算通过" "$(version_probe "${SHA40}" "${SAME}")" "passed
 ok "只修改 generation.py 时镜像机仍判定部署落后" \
    "$(version_probe "${SHA40}" "${NEW}" "${GENERATION_CHANGED}")" "failed"
 
+site_lock_probe() {
+    local d hold out
+    hold="$1"
+    d=$(mktemp -d)
+    mkdir -p "${d}/work" "${d}/dest"
+    git -C "${d}/work" init -q
+    git -C "${d}/work" -c user.email=t@example.com -c user.name=t \
+        commit -q --allow-empty -m x
+    : > "${d}/work/.git/FETCH_HEAD"
+    printf '%s' 0000000000000000000000000000000000000000 > "${d}/work/.synced"
+    : > "${d}/lock"
+    if [ "${hold}" = hold ]; then
+        flock "${d}/lock" sleep 5 &
+        sleep 0.5
+    fi
+    out=$( cd "${ROOT}" && ALERT_CONF=/nonexistent STATE_FILE="${d}/state" \
+        SITE_WORK="${d}/work" SITE_DEST="${d}/dest" SITE_LOCK="${d}/lock" \
+        COMPONENT=mirror bash build/status.sh 2>&1 | grep '站点同步' )
+    wait 2>/dev/null
+    rm -rf "${d}"
+    case "${out}" in
+        *'同步正在执行'*) echo in-progress ;;
+        *'最近一次未完成'*) echo failed ;;
+        *) echo "other:${out}" ;;
+    esac
+}
+
+ok "同步进行中时不当作故障" "$(site_lock_probe hold)" "in-progress"
+ok "同步没在执行时不一致仍是故障" "$(site_lock_probe free)" "failed"
+
 echo "== status.sh 对 node_exporter 抓取源的判定"
 
 exporter_probe() {
