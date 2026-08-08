@@ -127,6 +127,21 @@ location ^~ /unstable/binpkgs/ {
 	}
 }
 
+location ^~ /gentoo-cjk-kernel/ {
+	root /srv/pub;
+	include /etc/nginx/conf.d/headers-files.inc;
+
+	gzip off;
+	access_log /var/log/nginx/mirror.log mirror;
+
+	location ~ /$ {
+		root /srv/mirrors;
+		add_header Cache-Control "no-cache";
+		include /etc/nginx/conf.d/headers-site.inc;
+		try_files /_app.html =404;
+	}
+}
+
 location ^~ /gentoo-zh/ {
 	rewrite ^/gentoo-zh/(.*)$ /$1 permanent;
 }
@@ -142,6 +157,7 @@ location = /binpkgs { return 301 /binpkgs/; }
 location = /unstable { return 301 /unstable/; }
 location = /unstable/binpkgs { return 301 /unstable/binpkgs/; }
 location = /gigos { return 301 /gigos/; }
+location = /gentoo-cjk-kernel { return 301 /gentoo-cjk-kernel/; }
 location = /files { return 301 /files/; }
 location = /files/ {
 	add_header Cache-Control "no-cache";
