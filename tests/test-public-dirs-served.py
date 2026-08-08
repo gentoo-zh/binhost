@@ -7,7 +7,9 @@ nothing reports a problem. The file browser reads the same tree from /_ls/, so
 an entry with no description shows up there unlabelled.
 
 The prefix location only matches with the trailing slash, so the bare name
-needs its own redirect or a shared link without the slash returns 404.
+needs its own redirect or a shared link without the slash returns 404. The 404
+page lists what is available, so a directory missing from it is invisible to
+anyone who lands there.
 """
 
 import pathlib
@@ -18,6 +20,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 INSTALL = ROOT / "deploy" / "install.sh"
 NGINX = ROOT / "nginx" / "mirror-common.inc"
 APP = ROOT / "site" / "_app.html"
+NOTFOUND = ROOT / "site" / "404.html"
 
 failed = 0
 
@@ -44,6 +47,8 @@ def public_dirs():
 
 nginx = NGINX.read_text()
 app = APP.read_text()
+notfound = NOTFOUND.read_text()
+listed = set(re.findall(r'href="(/[A-Za-z0-9._/-]*)"', notfound))
 served = set(re.findall(r"^location \^~ /([A-Za-z0-9._-]+)/ \{", nginx, re.M))
 redirected = set(re.findall(
     r"^location = /([A-Za-z0-9._-]+) \{ return 301 /\1/; \}", nginx, re.M))
@@ -61,6 +66,8 @@ for d in sorted(dirs):
           "已有说明：" + " ".join(sorted(described)))
     check(f"/{d} 不带斜杠时重定向到 /{d}/", d in redirected,
           "已有重定向：" + " ".join(sorted(redirected)))
+    check(f"404 页把 {d} 列进可用资源", any(f"/{d}/" in h for h in listed),
+          "已列出：" + " ".join(sorted(listed)))
 
 print()
 print("  公开目录：全部通过" if not failed else f"  {failed} 项不通过")
