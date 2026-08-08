@@ -141,6 +141,18 @@ EMERGE=(emerge --usepkg --changed-use --with-bdeps=y --quiet-build)
 
 python3 /usr/local/bin/snapshot-vdb /var/db/pkg /var/log/binhost/installed.txt
 
+# A distribution kernel takes twenty minutes and kernel-archive.sh builds it
+# separately into /gentoo-cjk-kernel/, outside this index. Match only
+# virtual/dist-kernel: every dist-kernel arrives through it, while
+# sys-kernel/installkernel, dracut and linux-headers belong in the container.
+echo "::: 检查清单没有拉进分发内核"
+if "${EMERGE[@]}" --pretend --quiet "${atoms[@]}" 2>/dev/null |
+        grep -E '^\[[^]]*\] +virtual/dist-kernel' > /tmp/kernel-pull.txt; then
+    echo "!!! 清单会拉进分发内核，停止构建："
+    sed 's/^/    /' /tmp/kernel-pull.txt
+    exit 1
+fi
+
 echo "::: 整体解析"
 failed=()
 if "${EMERGE[@]}" "${atoms[@]}" > /var/log/binhost/whole.log 2>&1; then
