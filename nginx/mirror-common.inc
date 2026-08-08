@@ -141,6 +141,7 @@ location = /distfiles { return 301 /distfiles/; }
 location = /binpkgs { return 301 /binpkgs/; }
 location = /unstable { return 301 /unstable/; }
 location = /unstable/binpkgs { return 301 /unstable/binpkgs/; }
+location = /gigos { return 301 /gigos/; }
 location = /files { return 301 /files/; }
 location = /files/ {
 	add_header Cache-Control "no-cache";

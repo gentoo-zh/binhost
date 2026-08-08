@@ -5,6 +5,9 @@ A directory under /srv/pub with no nginx location falls through to the site
 root, so a request for a file in it returns the home page with status 200 and
 nothing reports a problem. The file browser reads the same tree from /_ls/, so
 an entry with no description shows up there unlabelled.
+
+The prefix location only matches with the trailing slash, so the bare name
+needs its own redirect or a shared link without the slash returns 404.
 """
 
 import pathlib
@@ -42,6 +45,8 @@ def public_dirs():
 nginx = NGINX.read_text()
 app = APP.read_text()
 served = set(re.findall(r"^location \^~ /([A-Za-z0-9._-]+)/ \{", nginx, re.M))
+redirected = set(re.findall(
+    r"^location = /([A-Za-z0-9._-]+) \{ return 301 /\1/; \}", nginx, re.M))
 described = set(re.findall(r"^  '([A-Za-z0-9._-]+)': \{", app, re.M))
 
 dirs = public_dirs()
@@ -54,6 +59,8 @@ for d in sorted(dirs):
           "已有 location：" + " ".join(sorted(served)))
     check(f"文件浏览器为 {d} 写了说明", d in described,
           "已有说明：" + " ".join(sorted(described)))
+    check(f"/{d} 不带斜杠时重定向到 /{d}/", d in redirected,
+          "已有重定向：" + " ".join(sorted(redirected)))
 
 print()
 print("  公开目录：全部通过" if not failed else f"  {failed} 项不通过")
