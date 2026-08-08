@@ -8,8 +8,8 @@ import sys
 import tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent
-BUILD = HERE.parent / "build"
-TARGET = BUILD / "check-copy.py"
+TOOLS = HERE.parent / "site" / "tools"
+TARGET = TOOLS / "check-copy.py"
 spec = importlib.util.spec_from_file_location("check_copy", TARGET)
 cc = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cc)

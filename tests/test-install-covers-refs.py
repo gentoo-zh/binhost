@@ -40,8 +40,34 @@ def referenced():
     return out
 
 
+def staged_sources():
+    """Repo paths the installers hand to rsync, per script."""
+    out = {}
+    for name in ("deploy/install.sh", "deploy/install-builder.sh", "deploy-site.sh"):
+        script = ROOT / name
+        if not script.exists():
+            continue
+        text = script.read_text()
+        # Join continuation lines so a multi-line rsync is one command.
+        joined = re.sub(r"\\\n\s*", " ", text)
+        for m in re.finditer(r"^\s*(?:sudo\s+)?rsync\s+([^\n]*)$", joined, re.M):
+            for token in m.group(1).split():
+                if ":" in token or token.startswith("-") or token.startswith("$"):
+                    continue
+                if "${" in token or not re.match(r"^[a-z][A-Za-z0-9._-]*/", token):
+                    continue
+                out.setdefault(name, set()).add(token.rstrip("/") if token.endswith("/") else token)
+    return out
+
+
 inst, refs = installed(), referenced()
 bad = 0
+for script, sources in sorted(staged_sources().items()):
+    print(f"  {script}: rsync 送出 {len(sources)} 个源码路径")
+    for src in sorted(sources):
+        if not (ROOT / src).exists():
+            print(f"    ✗ {src} 不存在，{script} 的 rsync 会失败")
+            bad += 1
 for d in DIRS:
     missing = sorted(refs[d] - inst[d])
     print(f"  {d}: 引用 {len(refs[d])} 个，安装 {len(inst[d])} 个")

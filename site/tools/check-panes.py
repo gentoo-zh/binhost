@@ -4,7 +4,7 @@ import pathlib
 import re
 import sys
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
+ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 PRE = re.compile(r'<pre[^>]*>(.*?)</pre>', re.S)
 PANE = re.compile(r'<div[^>]*data-pane="(\w+)"(?![^>]*class="mode")')
 CONF = re.compile(r'^\[[\w-]+\]$|^[\w-]+\s*=')

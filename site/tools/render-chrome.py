@@ -4,8 +4,8 @@ import pathlib
 import re
 import sys
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
-TPL = ROOT / "build" / "chrome"
+ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+TPL = ROOT / "site" / "tools" / "chrome"
 BLOCK = re.compile(r"( *)<!-- chrome:(\w+)([^>]*?) -->\n.*?^ *<!-- /chrome:\2 -->\n",
                    re.S | re.M)
 
@@ -44,9 +44,9 @@ def main():
             print(f"  更新 {f.name}")
 
     if check and stale:
-        print("!!! 这些页面和 build/chrome/ 下的模板不一致：" + "，".join(stale),
+        print("!!! 这些页面和 site/tools/chrome/ 下的模板不一致：" + "，".join(stale),
               file=sys.stderr)
-        print("    执行 python3 build/render-chrome.py 重新生成", file=sys.stderr)
+        print("    执行 python3 site/tools/render-chrome.py 重新生成", file=sys.stderr)
         return 1
     if check:
         print("  共用部分： 各页与模板一致")

@@ -16,6 +16,7 @@ nginx 配置，以及构建、签名和发布 [gentoo-zh overlay](https://github
 | `deploy/` | 镜像机和构建机的安装、同步、定时任务与监控 |
 | `nginx/` | HTTP、HTTP/3 和文件服务配置 |
 | `site/` | 静态站点与公开签名密钥 |
+| `site/tools/` | 站点生成与检查，只在 CI 执行 |
 | `docs/` | 已知风险、延后事项与密钥轮替手册 |
 
 ## 发布范围
