@@ -114,6 +114,9 @@ jobs:
       - name: CI lints every script directory
         run: python3 tests/test-ci-covers-scripts.py
 
+      - name: Kernel series come from the overlay
+        run: python3 tests/test-kernel-series.py
+
       - name: The signing fingerprint agrees everywhere
         run: python3 tests/test-fingerprint-consistent.py
 

@@ -1,0 +1,13 @@
+[Unit]
+Description=gentoo-zh 发行版内核归档构建与发布
+
+OnFailure=binhost-alert@%N.service
+
+[Service]
+Type=oneshot
+User=adminc3b9c6
+Group=adminc3b9c6
+Nice=10
+IOSchedulingClass=idle
+ExecStart=/var/lib/binhost/build/kernel-archive.sh
+TimeoutStartSec=12h
