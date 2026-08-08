@@ -69,6 +69,8 @@ lacks "没有留下未展开的本地变量" '${REMOTE_ROOT}' "${tmp}/remote.sh"
 # shellcheck disable=SC2016  # we grep for a literal ${VAR}, not its value
 lacks "没有留下未展开的 SSH_PORT" '__SSH_PORT__/${SSH_PORT}' "${tmp}/remote.sh"
 has "端口已代换成实际值" "s/__SSH_PORT__/60001/g" "${tmp}/remote.sh"
+has "锁档已存在就不重建" \
+    "[ -e /var/lib/binhost-site.lock ] ||" "${tmp}/remote.sh"
 
 echo
 echo "== 防火墙的自动回滚"

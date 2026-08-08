@@ -59,7 +59,7 @@ for cmd in git rsync logrotate certbot; do command -v \${cmd} >/dev/null || miss
 echo '--- 脚本'
 sudo install -dm755 /usr/local/lib/binhost /var/log/emirrordist
 sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/mirrors /var/lib/binhost-site
-sudo install -m644 -o '${SITE_USER}' -g '${SITE_USER}' /dev/null /var/lib/binhost-site.lock
+[ -e /var/lib/binhost-site.lock ] || sudo install -m644 -o '${SITE_USER}' -g '${SITE_USER}' /dev/null /var/lib/binhost-site.lock
 sudo install -m755 daily.sh            /usr/local/bin/binhost-daily
 sudo install -m755 distfiles-sync.sh   /usr/local/bin/binhost-distfiles-sync
 sudo install -m755 distfiles-index.sh  /usr/local/bin/binhost-distfiles-index
