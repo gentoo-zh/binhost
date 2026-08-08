@@ -4,7 +4,7 @@ import pathlib
 import re
 import sys
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "build"))
 from ebuilds import (                                       # noqa: E402
     ATOM, BUILD_ECLASS, PREBUILT_ECLASS,
     accepts_amd64, inherits, keywords_of, newest_ebuild,
@@ -13,10 +13,10 @@ from ebuilds import (                                       # noqa: E402
 from channel_packages import exclusions as channel_exclusions  # noqa: E402
 
 
-HERE = pathlib.Path(__file__).resolve().parent
-LIST = HERE / "packages.txt"
-EXCLUDED = HERE / "excluded.txt"
-STABLE_EXCLUDED = HERE / "stable-excluded.txt"
+LISTS = pathlib.Path(__file__).resolve().parent.parent / "build"
+LIST = LISTS / "packages.txt"
+EXCLUDED = LISTS / "excluded.txt"
+STABLE_EXCLUDED = LISTS / "stable-excluded.txt"
 
 
 

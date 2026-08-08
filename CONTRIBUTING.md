@@ -11,7 +11,7 @@
 提交前本地执行一次校验，CI 执行的是同一个脚本：
 
 ```bash
-python3 build/validate.py /var/db/repos/gentoo-zh
+python3 tools/validate.py /var/db/repos/gentoo-zh
 ```
 
 只需提交 `build/packages.txt`。站点的包列表由镜像机每小时按 overlay 重新生成，
@@ -102,5 +102,5 @@ CI 只检查 PR 自己带来的提交，不检查历史——这套规矩是后�
 本地先执行一遍：
 
 ```bash
-python3 build/check-commits.py origin/master..HEAD
+python3 tools/check-commits.py origin/master..HEAD
 ```

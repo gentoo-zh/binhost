@@ -75,7 +75,7 @@ jobs:
             fi
 
             git checkout -q -B "${branch}" "${base}"
-            python3 build/retire-package.py "${cp}" "${why}"
+            python3 tools/retire-package.py "${cp}" "${why}"
 
             if git diff --quiet -- build/packages.txt build/excluded.txt; then
               echo "  ${cp} 清单没有变化，跳过"

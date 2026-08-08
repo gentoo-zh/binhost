@@ -5,7 +5,7 @@ import re
 import sys
 
 
-LIST = pathlib.Path(__file__).resolve().parent / "packages.txt"
+LIST = pathlib.Path(__file__).resolve().parent.parent / "build" / "packages.txt"
 ATOM = re.compile(r"^[a-z0-9][a-z0-9+._-]*/[A-Za-z0-9][A-Za-z0-9+._-]*$")
 
 
