@@ -26,15 +26,49 @@ RUN_ID="${RUN_ID:-$(hostname -s)-$$-$(date +%s)}"
 LOCK_DIR="${LOCK_DIR:-${REMOTE_ROOT}/.publish.lock}"
 LOCK_STALE_H="${LOCK_STALE_H:-6}"
 
-# One generation on the mirror: upload the six files into their own directory,
-# then repoint .gen at it. The six public names are links into .gen, so that
-# rename is the whole replacement.
-switch_generation() {
-    local gen="$1" src="$2"
+# Upload and validate a generation without making it public.
+prepare_generation() {
+    local gen="$1" src="$2" require_linked="${3:-0}"
     # shellcheck disable=SC2029  # REMOTE_ROOT and gen are meant to expand locally
-    ssh "${REMOTE}" "install -dm755 '${REMOTE_ROOT}/${gen}'" || return 1
+    ssh "${REMOTE}" "rm -rf '${REMOTE_ROOT}/${gen}' &&
+                     install -dm755 '${REMOTE_ROOT}/${gen}'" || return 1
     printf '%s\n' "${GEN_FILES[@]}" |
         rsync -a --files-from=- "${src}/" "${REMOTE}:${REMOTE_ROOT}/${gen}/" || return 1
+    # shellcheck disable=SC2029
+    if ! ssh "${REMOTE}" \
+        "sh -s '${REMOTE_ROOT}' '${gen}' '${require_linked}' ${GEN_FILES[*]}" <<'PREPARE'
+set -u
+cd "$1" || exit 1
+gen="$2"
+require_linked="$3"
+shift 3
+
+if [ -e .gen ] && [ ! -L .gen ]; then
+    echo "!! .gen 不是符号链接，无法准备代际" >&2
+    exit 1
+fi
+for name in "$@"; do
+    if [ "${require_linked}" = 1 ] &&
+       [ "$(readlink "${name}" 2>/dev/null)" != ".gen/${name}" ]; then
+        echo "!! ${name} 尚未连接到 .gen，无法安全隔离" >&2
+        exit 1
+    fi
+    if [ ! -s "${gen}/${name}" ]; then
+        echo "!! ${gen}/${name} 缺失或为空，代际未准备完成" >&2
+        exit 1
+    fi
+done
+PREPARE
+    then
+        echo "!! 代际未准备完成，公开的仍是上一代" >&2
+        return 1
+    fi
+}
+
+# Repoint .gen at a generation that is already complete on the mirror. The six
+# public names are links into .gen, so the final rename is the whole switch.
+activate_generation() {
+    local gen="$1"
     # shellcheck disable=SC2029  # as above
     if ! ssh "${REMOTE}" "sh -s '${REMOTE_ROOT}' '${gen}' ${GEN_FILES[*]}" <<'SWITCH'
 set -u
@@ -95,6 +129,11 @@ SWITCH
     fi
 }
 
+switch_generation() {
+    local gen="$1" src="$2"
+    prepare_generation "${gen}" "${src}" && activate_generation "${gen}"
+}
+
 # shellcheck disable=SC2029
 ssh "${REMOTE}" "install -dm755 ${REMOTE_ROOT}"
 
@@ -134,11 +173,20 @@ release_lock() {
 trap release_lock EXIT
 QUARANTINE="${STAGE}/quarantine.txt"
 
-# Removing the quarantined products leaves the live index naming files that are
-# gone. Rewriting it right after keeps both promises at once: the products are
-# down now, and no index sends a reader to a missing file. Failing this is not
-# fatal, the ordinary publication replaces the index anyway, but it is reported.
-prune_live_index() {
+# Prepare a generation that omits quarantined products while the live files are
+# still intact. Once this succeeds, deletion is followed only by one rename.
+PRUNE_GEN=""
+validate_quarantine() {
+    local rel
+    while IFS= read -r rel; do
+        [[ -n ${rel} ]] || continue
+        case ${rel} in
+            /*|*..*) echo "!! 隔离清单里的路径不合法：${rel}" >&2; return 1 ;;
+        esac
+    done < "${QUARANTINE}"
+}
+
+prepare_pruned_generation() {
     local work live dropped
     work=$(mktemp -d) || return 1
     live="${work}/live"
@@ -157,15 +205,24 @@ prune_live_index() {
         rm -rf "${work}"
         return 0
     fi
-    echo ">>> 公开的索引里有 ${dropped} 条指向刚移除的产物，改写后立即切换"
-    switch_generation ".gen-prune-${RUN_ID}" "${live}" || { rm -rf "${work}"; return 1; }
+    python3 "$(dirname "$0")/generation.py" verify "${live}" ||
+        { rm -rf "${work}"; return 1; }
+    PRUNE_GEN=".gen-prune-${RUN_ID}"
+    echo ">>> 公开索引有 ${dropped} 条不可继续散布的产物，先准备修剪后的代际"
+    prepare_generation "${PRUNE_GEN}" "${live}" 1 ||
+        { rm -rf "${work}"; return 1; }
     rm -rf "${work}"
 }
 
 
 if [[ -s ${QUARANTINE} ]]; then
     q=$(wc -l < "${QUARANTINE}")
-    echo ">>> ${q} 个产物不可继续散布，先从公开路径移除"
+    validate_quarantine || exit 1
+    if ! prepare_pruned_generation; then
+        echo "!! 修剪后的代际未能准备完成，隔离产物仍保留" >&2
+        exit 1
+    fi
+    echo ">>> ${q} 个产物不可继续散布，从公开路径移除"
     # shellcheck disable=SC2029
     gone=$(ssh "${REMOTE}" "
         set -eu
@@ -185,8 +242,9 @@ if [[ -s ${QUARANTINE} ]]; then
         exit 1
     }
     echo ">>> 实际移除 ${gone} 个"
-    if (( gone > 0 )) && ! prune_live_index; then
-        echo "!! 未能改写公开的索引，它仍然列出刚移除的产物" >&2
+    if [[ -n ${PRUNE_GEN} ]] && ! activate_generation "${PRUNE_GEN}"; then
+        echo "!! 隔离产物已经移除，但修剪后的索引未能切换；下一轮会再次修复" >&2
+        exit 1
     fi
 fi
 
