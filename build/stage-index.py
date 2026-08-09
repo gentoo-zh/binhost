@@ -5,6 +5,7 @@ stage-index.py <pkgdir> <stage> [overlay]
 
 import argparse
 import hashlib
+import json
 import os
 import pathlib
 import re
@@ -16,7 +17,8 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from ebuilds import (                                       # noqa: E402
     BINARY_LICENSES, Masks, MetadataUnavailable, candidate_key,
     effective_license, index_db, kernel_module, pinned_portdbapi, read_mask,
-    runtime_atoms, read_list, source_only, split_cpv, vercmp,
+    repository_revision, runtime_atoms, read_list, source_only, split_cpv,
+    vercmp,
 )
 from portage.dep import paren_enclose                       # noqa: E402
 
@@ -384,11 +386,16 @@ def digest_mismatch(f, digest):
     return "；".join(mismatches) or None
 
 
-def rewrite_header(header, count, rev):
+def rewrite_header(header, count, rev, gentoo_rev=""):
     header = re.sub(r"^PACKAGES: .*$", f"PACKAGES: {count}", header, flags=re.M)
     header = re.sub(r"^TIMESTAMP: .*$", f"TIMESTAMP: {int(time.time())}", header, flags=re.M)
+    revisions = {}
+    if gentoo_rev:
+        revisions["gentoo"] = gentoo_rev
     if rev:
-        line = 'REPO_REVISIONS: {"gentoo-zh": "%s"}' % rev
+        revisions["gentoo-zh"] = rev
+    if revisions:
+        line = f"REPO_REVISIONS: {json.dumps(revisions, sort_keys=True)}"
         if re.search(r"^REPO_REVISIONS: ", header, re.M):
             header = re.sub(r"^REPO_REVISIONS: .*$", line, header, flags=re.M)
         else:
@@ -399,7 +406,7 @@ def rewrite_header(header, count, rev):
     return header
 
 
-def main(pkgdir, stage, overlay=None, rev="", lookup=None, seed_file=None,
+def main(pkgdir, stage, overlay=None, rev="", gentoo_rev="", lookup=None, seed_file=None,
          excluded_files=()):
     pkgdir, stage = pathlib.Path(pkgdir), pathlib.Path(stage)
     overlay = pathlib.Path(overlay) if overlay else None
@@ -492,7 +499,8 @@ def main(pkgdir, stage, overlay=None, rev="", lookup=None, seed_file=None,
         os.close(dst_root)
 
     (stage / "Packages").write_text(
-        rewrite_header(header, len(stanzas), rev) + "\n\n" + "\n\n".join(stanzas) + "\n")
+        rewrite_header(header, len(stanzas), rev, gentoo_rev) +
+        "\n\n" + "\n\n".join(stanzas) + "\n")
     (stage / "unresolved.txt").write_text(
         "".join(f"{atom}\t{' '.join(sorted(who))}\n"
                 for atom, who in sorted(unresolved.items())))
@@ -525,4 +533,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     sys.exit(main(args.pkgdir, args.stage, args.overlay,
                   os.environ.get("OVERLAY_REV", ""),
+                  gentoo_rev=repository_revision(GENTOO_TREE),
                   seed_file=args.seeds, excluded_files=args.exclude_file))

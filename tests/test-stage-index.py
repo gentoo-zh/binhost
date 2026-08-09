@@ -441,6 +441,11 @@ case("头部 TIMESTAMP 重写为本代时间", lambda: (
 case("头部缺少该行时插入", lambda: (
     '"gentoo-zh": "abc123"' in stage_index.rewrite_header(HEADER, 7, "abc123")))
 
+case("头部同时记录 Gentoo 主树与 overlay", lambda: (
+    'REPO_REVISIONS: {"gentoo": "gentoo123", "gentoo-zh": "overlay123"}'
+    in stage_index.rewrite_header(
+        HEADER, 7, "overlay123", "gentoo123")))
+
 case("头部已有该行时覆盖", lambda: (
     '"gentoo-zh": "abc123"' in stage_index.rewrite_header(HEADER_WITH_REV, 7, "abc123")
     and "REPO_REVISIONS: {}" not in stage_index.rewrite_header(HEADER_WITH_REV, 7, "abc123")))
@@ -453,6 +458,14 @@ case("未提供 rev 时不新增该行", lambda: (
 
 case("未提供 rev 时保留原有该行", lambda: (
     "REPO_REVISIONS: {}" in stage_index.rewrite_header(HEADER_WITH_REV, 7, "")))
+
+
+def non_git_tree_has_no_revision():
+    with tempfile.TemporaryDirectory() as tmp:
+        return stage_index.repository_revision(tmp) == ""
+
+
+case("主树不是 git 仓库时省略修订而不失败", non_git_tree_has_no_revision)
 
 case("插入后头部保持字母序", lambda: (
     (lambda ls: ls == sorted(ls))(stage_index.rewrite_header(

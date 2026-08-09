@@ -29,7 +29,8 @@ with tempfile.TemporaryDirectory() as tmp:
         package.parent.mkdir(parents=True, exist_ok=True)
         package.write_bytes(b"package")
     (root / "Packages").write_text(
-        "PACKAGES: 2\nVERSION: 0\n\n" +
+        'PACKAGES: 2\nREPO_REVISIONS: {"gentoo": "gentoo123", '
+        '"gentoo-zh": "stale"}\nVERSION: 0\n\n' +
         stanza("app-misc/a-1", valid) + "\n\n" +
         stanza("app-misc/b-1", invalid) + "\n"
     )
@@ -58,9 +59,16 @@ with tempfile.TemporaryDirectory() as tmp:
         sign_packages.verify_signatures.import_key = lambda *args: None
         sign_packages.signature_valid = (
             lambda path, *_args: pathlib.Path(path).as_posix().endswith(valid))
-        sign_packages.subprocess.run = lambda *args, **kwargs: None
-        result = sign_packages.sign(root, "", root / "public.asc", "fingerprint",
-                                    changed)
+        def fake_emaint(*_args, **_kwargs):
+            index = root / "Packages"
+            index.write_text(index.read_text().replace(
+                'REPO_REVISIONS: {"gentoo": "gentoo123", '
+                '"gentoo-zh": "stale"}',
+                "REPO_REVISIONS: {}"))
+
+        sign_packages.subprocess.run = fake_emaint
+        result = sign_packages.sign(
+            root, "overlay123", root / "public.asc", "fingerprint", changed)
     finally:
         if original_module is None:
             del sys.modules["portage.gpkg"]
@@ -77,6 +85,10 @@ with tempfile.TemporaryDirectory() as tmp:
     assert result == (1, 2)
     assert updated == [str(root / invalid)]
     assert changed.read_text() == invalid + "\n"
+    index = (root / "Packages").read_text()
+    assert ('REPO_REVISIONS: {"gentoo": "gentoo123", '
+            '"gentoo-zh": "overlay123"}') in index
+    assert index.count("REPO_REVISIONS:") == 1
 
 assert sign_packages.signature_valid(
     pathlib.Path("package"), pathlib.Path("home"), "fingerprint",
