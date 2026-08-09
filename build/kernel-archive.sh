@@ -106,6 +106,11 @@ for entry in ${todo[@]+"${todo[@]}"}; do
     # anything built against this kernel afterwards sees the one published. -B
     # cannot do this: it refuses unless every dependency is already merged, and
     # a fresh container has none of them.
+    #
+    # The overlay masks virtual/dist-kernel, which every gentoo-cjk-kernel
+    # PDEPENDs on, so without the unmask below the resolve stops before it
+    # compiles anything. The container is thrown away and builds this one atom,
+    # which is the case the mask comment points at.
     ${DOCKER} run --rm -i --security-opt=no-new-privileges \
         -v "${TREE}:/var/db/repos/gentoo:ro" \
         -v "${OVERLAY}:/var/db/repos/gentoo-zh:ro" \
@@ -114,8 +119,11 @@ for entry in ${todo[@]+"${todo[@]}"}; do
         -v "${COMMON_PACKAGE_USE}:/tmp/package.use.common:ro" \
         -e "MAKEOPTS=${MAKEOPTS}" -e "JOBS=${JOBS}" \
         "${IMAGE}" /bin/bash -euo pipefail -c "
-            mkdir -p /etc/portage/package.use /etc/kernel/config.d
+            mkdir -p /etc/portage/package.use /etc/portage/package.unmask \
+                /etc/kernel/config.d
             cat /tmp/package.use.common > /etc/portage/package.use/binhost-deps
+            printf 'virtual/dist-kernel\n' \
+                > /etc/portage/package.unmask/binhost-dist-kernel
             printf 'CONFIG_LOCALVERSION=\"%s\"\n' '${LOCALVERSION}' \
                 > /etc/kernel/config.d/90-binpkg-localversion.config
             printf '%s %s\n' '${PACKAGE}' '${REQUIRED_USE_FLAG}' \

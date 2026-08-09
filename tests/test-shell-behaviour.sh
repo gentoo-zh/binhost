@@ -612,6 +612,21 @@ ok "清理被上限暂缓时以非零结束" \
 ok "两条上限都会记下被挡" \
    "$(grep -cE '^ +blocked=' "${ROOT}/build/kernel-archive.sh")" "2"
 
+echo "== kernel-archive 解开 overlay 对 virtual/dist-kernel 的 mask"
+# Every gentoo-cjk-kernel PDEPENDs on that virtual and the overlay masks it, so
+# without the unmask the resolve stops before anything is compiled.
+ok "容器里写出 unmask" \
+   "$(grep -c "package.unmask/binhost-dist-kernel" \
+      "${ROOT}/build/kernel-archive.sh")" "1"
+unmask_line=$(grep -n 'package.unmask/binhost-dist-kernel' \
+              "${ROOT}/build/kernel-archive.sh" | cut -d: -f1)
+emerge_line=$(grep -n 'emerge --quiet-build -1 --buildpkg --usepkg' \
+              "${ROOT}/build/kernel-archive.sh" | cut -d: -f1)
+ok "unmask 排在 emerge 之前" \
+   "$(( ${unmask_line:-0} > 0 && ${unmask_line:-0} < ${emerge_line:-0} ))" "1"
+ok "常规建置容器不解开它" \
+   "$(grep -c 'package.unmask' "${ROOT}/build/build-container.sh")" "0"
+
 echo "== kernel-archive 的每轮上限与 USE 要求"
 ok "每轮有建置数量上限" \
    "$(grep -c 'MAX_BUILDS' "${ROOT}/build/kernel-archive.sh")" "4"
