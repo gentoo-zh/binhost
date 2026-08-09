@@ -14,9 +14,50 @@ REMOTE_ROOT="${REMOTE_ROOT:-${CHANNEL_REMOTE_ROOT}}"
 MAX_RETIRE_SHARE="${MAX_RETIRE_SHARE:-20}"
 MAX_RETIRE_COUNT="${MAX_RETIRE_COUNT:-60}"
 
-# Quarantine is independent of whether the new generation can be published.
+# Every publisher writes the same staging names under REMOTE_ROOT, so two of
+# them at once would interleave into one mixed generation. One builder plus the
+# local lock is not the guarantee: a manual run and the timer are two.
+RUN_ID="${RUN_ID:-$(hostname -s)-$$-$(date +%s)}"
+LOCK_DIR="${LOCK_DIR:-${REMOTE_ROOT}/.publish.lock}"
+LOCK_STALE_H="${LOCK_STALE_H:-6}"
+
 # shellcheck disable=SC2029
 ssh "${REMOTE}" "install -dm755 ${REMOTE_ROOT}"
+
+# shellcheck disable=SC2029
+held=$(ssh "${REMOTE}" "
+    set -u
+    if mkdir '${LOCK_DIR}' 2>/dev/null; then
+        printf '%s\n' '${RUN_ID}' > '${LOCK_DIR}/owner'
+        echo taken
+        exit 0
+    fi
+    age=\$(( \$(date +%s) - \$(stat -c %Y '${LOCK_DIR}' 2>/dev/null || date +%s) ))
+    if [ \"\${age}\" -ge \$(( ${LOCK_STALE_H} * 3600 )) ]; then
+        rm -rf '${LOCK_DIR}'
+        if mkdir '${LOCK_DIR}' 2>/dev/null; then
+            printf '%s\n' '${RUN_ID}' > '${LOCK_DIR}/owner'
+            echo stale-taken
+            exit 0
+        fi
+    fi
+    printf 'busy %s\n' \"\$(cat '${LOCK_DIR}/owner' 2>/dev/null || echo 未知)\"
+") || { echo "!! 无法在镜像机上取得发布锁" >&2; exit 1; }
+
+case "${held}" in
+    taken) ;;
+    stale-taken) echo ">>> 接管了超过 ${LOCK_STALE_H} 小时的陈旧发布锁" ;;
+    *) echo "!! 镜像机上已有发布进行中（${held#busy }），本次不发布" >&2; exit 1 ;;
+esac
+
+release_lock() {
+    # shellcheck disable=SC2029
+    ssh "${REMOTE}" "
+        if [ \"\$(cat '${LOCK_DIR}/owner' 2>/dev/null)\" = '${RUN_ID}' ]; then
+            rm -rf '${LOCK_DIR}'
+        fi" 2>/dev/null || true
+}
+trap release_lock EXIT
 QUARANTINE="${STAGE}/quarantine.txt"
 if [[ -s ${QUARANTINE} ]]; then
     q=$(wc -l < "${QUARANTINE}")
@@ -146,45 +187,46 @@ printf '%s\n' "${paths[@]}" |
     rsync -a --info=stats2 --files-from=- "${STAGE}/" "${REMOTE}:${REMOTE_ROOT}/" |
     { grep -E "files transferred|Total transferred file size" || true; } | sed 's/^/    /'
 
-rsync -a "${STAGE}/installed.txt" "${REMOTE}:${REMOTE_ROOT}/.installed.txt.new"
-rsync -a "${STAGE}/official.txt" "${REMOTE}:${REMOTE_ROOT}/.official.txt.new"
-rsync -a "${STAGE}/source.txt" "${REMOTE}:${REMOTE_ROOT}/.source.txt.new"
-rsync -a "${STAGE}/generation.json" "${REMOTE}:${REMOTE_ROOT}/.generation.json.new"
-rsync -a "${STAGE}/Packages" "${REMOTE}:${REMOTE_ROOT}/.Packages.new"
-rsync -a "${STAGE}/Packages.gz" "${REMOTE}:${REMOTE_ROOT}/.Packages.gz.new"
+rsync -a "${STAGE}/installed.txt" "${REMOTE}:${REMOTE_ROOT}/.installed.txt.${RUN_ID}.new"
+rsync -a "${STAGE}/official.txt" "${REMOTE}:${REMOTE_ROOT}/.official.txt.${RUN_ID}.new"
+rsync -a "${STAGE}/source.txt" "${REMOTE}:${REMOTE_ROOT}/.source.txt.${RUN_ID}.new"
+rsync -a "${STAGE}/generation.json" "${REMOTE}:${REMOTE_ROOT}/.generation.json.${RUN_ID}.new"
+rsync -a "${STAGE}/Packages" "${REMOTE}:${REMOTE_ROOT}/.Packages.${RUN_ID}.new"
+rsync -a "${STAGE}/Packages.gz" "${REMOTE}:${REMOTE_ROOT}/.Packages.gz.${RUN_ID}.new"
 
 # These files identify one generation. Restore the complete previous set
 # if any rename fails.
 # shellcheck disable=SC2029  # REMOTE_ROOT is meant to expand locally
-ssh "${REMOTE}" "sh -s '${REMOTE_ROOT}'" <<'SWAP'
+ssh "${REMOTE}" "sh -s '${REMOTE_ROOT}' '${RUN_ID}'" <<'SWAP'
 set -u
 cd "$1" || exit 1
+run="$2"
 files='Packages Packages.gz installed.txt official.txt source.txt generation.json'
 for name in $files; do
     if [ -e "$name" ]; then
-        cp -p "$name" ".$name.prev" || exit 1
+        cp -p "$name" ".$name.$run.prev" || exit 1
     else
-        : > ".$name.absent" || exit 1
+        : > ".$name.$run.absent" || exit 1
     fi
 done
 for name in $files; do
-    if ! mv -f ".$name.new" "$name"; then
+    if ! mv -f ".$name.$run.new" "$name"; then
         for restore in $files; do
-            if [ -e ".$restore.prev" ]; then
-                mv -f ".$restore.prev" "$restore"
-            elif [ -e ".$restore.absent" ]; then
+            if [ -e ".$restore.$run.prev" ]; then
+                mv -f ".$restore.$run.prev" "$restore"
+            elif [ -e ".$restore.$run.absent" ]; then
                 rm -f "$restore"
             fi
         done
         for cleanup in $files; do
-            rm -f ".$cleanup.prev" ".$cleanup.absent" ".$cleanup.new"
+            rm -f ".$cleanup.$run.prev" ".$cleanup.$run.absent" ".$cleanup.$run.new"
         done
         echo "!! 同代文件未能全部替换，已还原上一代" >&2
         exit 1
     fi
 done
 for cleanup in $files; do
-    rm -f ".$cleanup.prev" ".$cleanup.absent"
+    rm -f ".$cleanup.$run.prev" ".$cleanup.$run.absent"
 done
 SWAP
 
