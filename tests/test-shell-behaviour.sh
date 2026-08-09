@@ -1117,6 +1117,24 @@ ok "受上限保护的旧包一个没动" "$(find "${d}/remote" -name 'old*.gpkg
 contains "输出说明执行隔离" "${out}" "从公开路径移除"
 rm -rf "${d}"
 
+# A fresh root has no index naming anything, so a non-empty quarantine list must
+# not block the first publication: pruning an index that does not exist yet is
+# a wait for something only publishing can create.
+d=$(setup_publish)
+stage_index "${d}" 2
+mkdir -p "${d}/remote/app-misc"
+printf 'restricted\n' > "${d}/remote/app-misc/restricted.gpkg.tar"
+printf 'app-misc/restricted.gpkg.tar\n' > "${d}/stage/quarantine.txt"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "全新的根带隔离清单仍能发布" "$?" "0"
+ok "全新的根上隔离产物同样移除" \
+   "$(test -e "${d}/remote/app-misc/restricted.gpkg.tar" && echo 在 || echo 不在)" "不在"
+contains "说明尚未有索引可改写" "${out}" "尚未有索引"
+ok "首次发布仍写出公开索引" \
+   "$(test -s "${d}/remote/Packages" && echo 有 || echo 无)" "有"
+rm -rf "${d}"
+
 d=$(setup_publish)
 stage_index "${d}" 1
 mkdir -p "${d}/remote/app-misc"
