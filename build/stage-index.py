@@ -88,6 +88,7 @@ def safe_path(value):
 GENTOO_TREE = os.environ.get("GENTOO_TREE", "/var/db/repos/gentoo")
 IMMEDIATE_QUARANTINE_STATES = frozenset(
     {"yes", "license", "unknown", "kernel-module"})
+REVISION = re.compile(r"^[0-9a-fA-F]{40}$")
 
 RUNTIME_FIELDS = ("RDEPEND", "PDEPEND", "IDEPEND")
 
@@ -120,7 +121,7 @@ def portage_policy(overlay):
         try:
             return db.aux_get(cpv, ["INHERITED"], myrepo=repo or None)[0]
         except Exception:                                  # noqa: BLE001
-            return ""
+            return None
 
     return get_restrict, get_license, get_inherited
 
@@ -296,10 +297,14 @@ def select(entries, overlay=None, excluded=None, with_deps=None, lookup=None,
             lifecycle_state = "masked"
         elif source_only(key[0]):
             lifecycle_state = "source"
-        elif kernel_module(inherit_lookup(key[0], repo)):
-            lifecycle_state = "kernel-module"
         elif current_exists is False:
             lifecycle_state = "removed"
+        else:
+            inherited = inherit_lookup(key[0], repo)
+            if inherited is None:
+                lifecycle_state = "unknown"
+            elif kernel_module(inherited):
+                lifecycle_state = "kernel-module"
 
         bindist = effective_bindist(key[0], f, lookup)
         if bindist == "yes":
@@ -411,6 +416,12 @@ def main(pkgdir, stage, overlay=None, rev="", gentoo_rev="", lookup=None, seed_f
     pkgdir, stage = pathlib.Path(pkgdir), pathlib.Path(stage)
     overlay = pathlib.Path(overlay) if overlay else None
 
+    missing = [name for name, value in
+               (("gentoo", gentoo_rev), ("gentoo-zh", rev))
+               if REVISION.fullmatch(value or "") is None]
+    if missing:
+        sys.exit("拒绝 stage：无法确认仓库提交：" + "、".join(missing))
+
     header, entries = parse((pkgdir / "Packages").read_text())
     excluded = read_excluded()
     for path in excluded_files:
@@ -427,7 +438,7 @@ def main(pkgdir, stage, overlay=None, rev="", gentoo_rev="", lookup=None, seed_f
             continue
         reported.add((cpv, state))
         if state == "unknown":
-            print(f"!! 不发布 {cpv}：无法确认当前 RESTRICT 或 LICENSE",
+            print(f"!! 不发布 {cpv}：无法确认当前 RESTRICT、LICENSE 或 INHERITED",
                   file=sys.stderr)
         elif state == "license":
             print(f"!! 不发布 {cpv}：LICENSE 不属于 @BINARY-REDISTRIBUTABLE",

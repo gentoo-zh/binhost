@@ -16,6 +16,14 @@ spec.loader.exec_module(stage_index)
 
 HEADER = "ACCEPT_KEYWORDS: ~amd64\nPACKAGES: 999\nTIMESTAMP: 1\nVERSION: 0"
 HEADER_WITH_REV = HEADER + '\nREPO_REVISIONS: {}'
+OVERLAY_REV = "a" * 40
+GENTOO_REV = "b" * 40
+
+
+def stage_main(*args, **kwargs):
+    kwargs.setdefault("rev", OVERLAY_REV)
+    kwargs.setdefault("gentoo_rev", GENTOO_REV)
+    return stage_index.main(*args, **kwargs)
 
 
 def digest_of(data):
@@ -293,6 +301,30 @@ case("eclass 名字相近但不建模块的包照常发布", lambda: (
              inherited={"app-misc/a-1": "linux-info linux-mod-nonesuch"})[0])
     == ["app-misc/a-1"]))
 
+case("INHERITED 查询失败时拒绝发布", lambda: (
+    (lambda result: cpvs(result[0]) == [] and result[3] == [
+        ("sys-fs/zfs-2.4.3", "sys-fs/zfs/zfs-2.4.3.gpkg.tar", "unknown")
+    ])(run([stanza("sys-fs/zfs-2.4.3")],
+           overlay_has=["sys-fs/zfs-2.4.3"],
+           inherited={"sys-fs/zfs-2.4.3": None}))))
+
+
+def inherited_lookup_preserves_failure():
+    class BrokenDb:
+        def aux_get(self, _cpv, _fields, myrepo=None):
+            raise RuntimeError("metadata unavailable")
+
+    original = stage_index.pinned_portdbapi
+    stage_index.pinned_portdbapi = lambda *_args, **_kwargs: BrokenDb()
+    try:
+        _restrict, _license, inherited = stage_index.portage_policy("/overlay")
+        return inherited("sys-fs/zfs-2.4.3", "gentoo-zh") is None
+    finally:
+        stage_index.pinned_portdbapi = original
+
+
+case("INHERITED reader 区分查询失败与空值", inherited_lookup_preserves_failure)
+
 
 def quarantine_for(value):
     with tempfile.TemporaryDirectory() as tmp:
@@ -302,7 +334,7 @@ def quarantine_for(value):
         (pkgdir / "Packages").write_text(HEADER + "\n\n" + value + "\n")
         stage = root / "stage"
         stage.mkdir()
-        stage_index.main(pkgdir, stage, lookup=lambda _cpv, _repo: "")
+        stage_main(pkgdir, stage, lookup=lambda _cpv, _repo: "")
         return (stage / "quarantine.txt").read_text().splitlines()
 
 
@@ -328,7 +360,7 @@ def counts_for(entries):
         (pkgdir / "Packages").write_text(HEADER + "\n\n" + body + "\n")
         stage = root / "stage"
         stage.mkdir()
-        stage_index.main(pkgdir, stage, lookup=lambda _cpv, _repo: "")
+        stage_main(pkgdir, stage, lookup=lambda _cpv, _repo: "")
         return (stage / "counts.txt").read_text().split()
 
 
@@ -483,17 +515,30 @@ def staged_header(gentoo_rev):
             f"REPO: gentoo-zh\nEAPI: 8\nSLOT: 0\nMD5: {md5_of(content)}\n")
         stage = root / "stage"
         stage.mkdir()
-        stage_index.main(pkgdir, stage, rev="overlay123", gentoo_rev=gentoo_rev,
-                         lookup=lambda _cpv, _repo: "")
+        stage_main(pkgdir, stage, gentoo_rev=gentoo_rev,
+                   lookup=lambda _cpv, _repo: "")
         return (stage / "Packages").read_text()
 
 
 case("main 把两棵树的修订都写进暂存索引", lambda: (
-    'REPO_REVISIONS: {"gentoo": "gentoo123", "gentoo-zh": "overlay123"}'
-    in staged_header("gentoo123")))
+    f'REPO_REVISIONS: {{"gentoo": "{GENTOO_REV}", "gentoo-zh": "{OVERLAY_REV}"}}'
+    in staged_header(GENTOO_REV)))
 
-case("无法取得主树修订时只写 overlay", lambda: (
-    'REPO_REVISIONS: {"gentoo-zh": "overlay123"}' in staged_header("")))
+def missing_revision(rev, gentoo_rev):
+    try:
+        stage_index.main("/nonexistent", "/nonexistent", rev=rev,
+                         gentoo_rev=gentoo_rev)
+    except SystemExit as exc:
+        return str(exc)
+    return ""
+
+
+case("无法取得主树修订时拒绝 stage", lambda: (
+    "gentoo" in missing_revision(OVERLAY_REV, "")))
+case("无法取得 overlay 修订时拒绝 stage", lambda: (
+    "gentoo-zh" in missing_revision("", GENTOO_REV)))
+case("仓库修订不是 40 位提交值时拒绝 stage", lambda: (
+    "gentoo-zh" in missing_revision("abc123", GENTOO_REV)))
 
 case("插入后头部保持字母序", lambda: (
     (lambda ls: ls == sorted(ls))(stage_index.rewrite_header(
@@ -561,7 +606,7 @@ def main_channel_policy():
         seeds.write_text("app-misc/a\n")
         excluded = root / "excluded.txt"
         excluded.write_text("app-misc/b\tnot in this channel\n")
-        rc = stage_index.main(
+        rc = stage_main(
             pkgdir, stage, lookup=fake_lookup(), seed_file=seeds,
             excluded_files=(excluded,))
         _, entries = stage_index.parse((stage / "Packages").read_text())
@@ -627,7 +672,7 @@ def _escape(shape):
             HEADER + "\n\n" + stanza("app-misc/a-1", PATH="app-misc/a-1.gpkg.tar",
                                       sha1=digest_of(b"inside\n")) + "\n")
         try:
-            rc = stage_index.main(str(pkg), str(stage),
+            rc = stage_main(str(pkg), str(stage),
                                   lookup=lambda cpv, repo: "")
         except SystemExit as e:
             rc = e.code
@@ -660,7 +705,7 @@ def _digest_probe(sha1=None, md5=None, content=b"inside\n"):
             lines.append(f"MD5: {md5}")
         (pkg / "Packages").write_text(HEADER + "\n\n" + "\n".join(lines) + "\n")
         try:
-            rc = stage_index.main(str(pkg), str(stage), lookup=lambda cpv, repo: "")
+            rc = stage_main(str(pkg), str(stage), lookup=lambda cpv, repo: "")
         except SystemExit as e:
             rc = e.code
         return rc
@@ -708,7 +753,7 @@ def _dest_escape(shape):
             HEADER + "\n\n" + stanza("app-misc/a-1", PATH="app-misc/a-1.gpkg.tar",
                                       sha1=payload_sha1) + "\n")
         try:
-            rc = stage_index.main(str(pkg), str(stage),
+            rc = stage_main(str(pkg), str(stage),
                                   lookup=lambda cpv, repo: "")
         except SystemExit as e:
             rc = e.code
