@@ -75,8 +75,10 @@ def quarantine(restrict=None, license_state="yes", restrict_now="",
             lambda cpv, fields: license_state,
             lambda cpv, repo: "")
         try:
-            stage_index.main(str(pkg), str(stage), overlay=str(overlay),
-                             excluded_files=(str(exclude_file),))
+            stage_index.main(
+                str(pkg), str(stage), overlay=str(overlay),
+                rev="a" * 40, gentoo_rev="b" * 40,
+                excluded_files=(str(exclude_file),))
         except SystemExit:
             pass
         finally:
