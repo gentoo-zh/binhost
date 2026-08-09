@@ -21,21 +21,27 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ebuilds import (                                       # noqa: E402
     MetadataUnavailable, pinned_portdbapi, split_cpv, vercmp,
 )
+from portage.versions import ver_regexp                       # noqa: E402
 
 
 def series_of(version):
-    parts = version.split(".")
-    return ".".join(parts[:2]) if len(parts) >= 2 else version
+    match = ver_regexp.fullmatch(version)
+    if match is None:
+        raise ValueError(f"invalid Gentoo version: {version}")
+    parts = [match.group(1), *match.group(2).lstrip(".").split(".")]
+    return ".".join(p for p in parts[:2] if p)
+
+
+def compare_versions(left, right):
+    by_series = vercmp(left[0], right[0]) or 0
+    return by_series or vercmp(left[1], right[1]) or 0
 
 
 def all_versions(db, package):
     """[(series, version)], ordered by series then by version."""
     found = {(series_of(v), v) for v in
              (split_cpv(str(cpv))[1] for cpv in db.match(package)) if v}
-    return sorted(found, key=lambda pair: (
-        [int(p) if p.isdigit() else p for p in pair[0].split(".")],
-        functools.cmp_to_key(vercmp)(pair[1]),
-    ))
+    return sorted(found, key=functools.cmp_to_key(compare_versions))
 
 
 def main():
