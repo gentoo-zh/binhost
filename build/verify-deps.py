@@ -16,13 +16,12 @@ counts as a finding.
 
 import pathlib
 import re
-import subprocess
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from ebuilds import (                                     # noqa: E402
     default_use, index_db, isolated_portage_config, runtime_atoms, source_only,
-    split_cpv,
+    repository_revision, split_cpv,
 )
 from portage.dep import Atom                             # noqa: E402
 
@@ -169,15 +168,6 @@ def select_source(atoms, resolve):
             key = (field["CPV"], field.get("REPO", ""))
             selected[key] = field
     return [selected[key] for key in sorted(selected)]
-
-
-def repository_revision(tree):
-    try:
-        return subprocess.run(
-            ["git", "-C", str(tree), "rev-parse", "HEAD"], capture_output=True,
-            text=True).stdout.strip()
-    except FileNotFoundError:
-        return ""
 
 
 def write_source(path, tree, atoms, overlay=None, resolve=None,

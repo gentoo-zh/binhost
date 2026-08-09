@@ -2,6 +2,7 @@
 
 import argparse
 import importlib.util
+import json
 import os
 import pathlib
 import re
@@ -34,9 +35,21 @@ def safe_relative(value):
     return bool(value and not path.is_absolute() and ".." not in path.parts)
 
 
-def restore_revision(index, revision):
+def read_revisions(header):
+    match = re.search(r"^REPO_REVISIONS: (.*)$", header, re.M)
+    if not match:
+        return {}
+    revisions = json.loads(match.group(1))
+    if not isinstance(revisions, dict) or not all(
+            isinstance(name, str) and isinstance(value, str)
+            for name, value in revisions.items()):
+        raise ValueError("invalid REPO_REVISIONS")
+    return revisions
+
+
+def restore_revisions(index, revisions):
     text = index.read_text()
-    line = f'REPO_REVISIONS: {{"gentoo-zh": "{revision}"}}'
+    line = f"REPO_REVISIONS: {json.dumps(revisions, sort_keys=True)}"
     if re.search(r"^REPO_REVISIONS: ", text, re.M):
         text = re.sub(r"^REPO_REVISIONS: .*$", line, text, flags=re.M)
     else:
@@ -58,7 +71,10 @@ def signature_valid(path, home, fingerprint, scratch):
 def sign(directory, revision, public_key, fingerprint, changed_list):
     directory = pathlib.Path(directory)
     index = directory / "Packages"
-    _header, stanzas = parse_index(index.read_text())
+    header, stanzas = parse_index(index.read_text())
+    revisions = read_revisions(header)
+    if revision:
+        revisions["gentoo-zh"] = revision
     declared = re.search(r"^PACKAGES: ([0-9]+)$", index.read_text(), re.M)
     if not declared or int(declared.group(1)) != len(stanzas):
         raise ValueError("Packages count does not match its stanzas")
@@ -89,8 +105,8 @@ def sign(directory, revision, public_key, fingerprint, changed_list):
 
     env = dict(os.environ, PKGDIR=str(directory))
     subprocess.run(["emaint", "binhost", "--fix"], check=True, env=env)
-    if revision:
-        restore_revision(index, revision)
+    if revisions:
+        restore_revisions(index, revisions)
     _header, refreshed = parse_index(index.read_text())
     original_paths = {fields["PATH"] for fields in stanzas}
     refreshed_paths = {fields["PATH"] for fields in refreshed}

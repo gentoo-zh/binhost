@@ -3,6 +3,7 @@
 import functools
 import pathlib
 import re
+import subprocess
 import sys
 
 try:
@@ -25,6 +26,16 @@ SOURCE_ONLY_CATEGORIES = frozenset({"acct-group", "acct-user", "virtual"})
 KERNEL_MODULE_ECLASSES = frozenset({"linux-mod", "linux-mod-r1"})
 
 COMPILE_PHASE = re.compile(r"^(src_configure|src_compile)\s*\(\)", re.M)
+
+
+def repository_revision(tree):
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(tree), "rev-parse", "HEAD"], capture_output=True,
+            text=True)
+    except OSError:
+        return ""
+    return result.stdout.strip() if result.returncode == 0 else ""
 
 
 def builds_from_source(text):
