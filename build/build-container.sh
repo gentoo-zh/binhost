@@ -312,37 +312,14 @@ if [[ ! -s ${STAGE}.new/publish-blocked.txt ]]; then
         --gentoo-binpkgs "${GENTOO_BINPKGS}" \
         --gentoo-index "${LOGDIR}/gentoo-Packages" \
         --package-use "${smoke_package_use}" --docker "${DOCKER}" || smoke_rc=$?
+    # smoke-install.py writes its own report for every failure it can name, so
+    # a non-zero exit here means the check itself did not run. Fabricating a
+    # report for that would put the schema in two places; the alert is what has
+    # to reach someone.
     if (( smoke_rc )); then
-        SMOKE_REPORT="${LOGDIR}/smoke-install.json" \
-        SMOKE_ALERT="${LOGDIR}/smoke-alert.txt" SMOKE_RC="${smoke_rc}" \
-            python3 - <<'PY'
-import json
-import os
-import pathlib
-
-report = pathlib.Path(os.environ["SMOKE_REPORT"])
-data = {
-    "schema": 1,
-    "channel": os.environ.get("CHANNEL", "unknown"),
-    "revisions": {},
-    "selected": [],
-    "strict_eligible": [],
-    "source_fallback": [],
-    "resolver_failed": [],
-    "installed": [],
-    "gpkg_install_failed": [],
-    "harness_failed": [{
-        "reason": f"smoke-install.py exited with {os.environ['SMOKE_RC']}",
-        "output": "",
-    }],
-    "duration_seconds": 0,
-    "report_path": str(report),
-}
-report.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
-pathlib.Path(os.environ["SMOKE_ALERT"]).write_text(
-    f"gpkg 安装失败 0 个，测试环境失败 1 项；详见 {report}\n")
-PY
-        echo ">>> gpkg 安装冒烟测试：测试环境失败 1 项，详见 ${LOGDIR}/smoke-install.json"
+        printf '冒烟测试本身未能执行（退出码 %s），本轮没有报告\n' "${smoke_rc}" \
+            > "${LOGDIR}/smoke-alert.txt"
+        echo ">>> gpkg 安装冒烟测试：本身未能执行，退出码 ${smoke_rc}"
     fi
     rm -f "${smoke_package_use}"
 
