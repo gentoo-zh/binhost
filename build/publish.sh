@@ -195,6 +195,17 @@ validate_quarantine() {
 
 prepare_pruned_generation() {
     local work live dropped
+    # No published index means nothing is naming the quarantined products, so
+    # there is nothing to rewrite. Without this a first publication into a fresh
+    # root could never succeed while the quarantine list is non-empty: it would
+    # be waiting for an index that only publishing creates. An index that exists
+    # but has no complete generation behind it is a different case and still
+    # aborts below, because that index does name them.
+    # shellcheck disable=SC2029  # REMOTE_ROOT is meant to expand locally
+    if ! ssh "${REMOTE}" "[ -s '${REMOTE_ROOT}/Packages' ]"; then
+        echo ">>> 公开路径尚未有索引，隔离不需要改写它"
+        return 0
+    fi
     work=$(mktemp -d) || return 1
     live="${work}/live"
     mkdir -p "${live}" || { rm -rf "${work}"; return 1; }
