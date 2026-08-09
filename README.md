@@ -162,7 +162,8 @@ distfiles。完整镜像应使用 rsync module。
 ## 站点
 
 镜像机的 `deploy/site-sync.sh` 每五分钟从 `master` 拉取并发布静态站点。站点同步使用
-独立锁，不修改 binpkg 或 distfiles。
+独立锁，不修改 binpkg 或 distfiles。页面与 assets 先写进本次发布的目录，再由一次
+rename 整体切换，因此不会出现页面与其指纹化 assets 分属两代的中间状态。
 
 需要立即发布站点，或同时更新 nginx 配置时执行：
 

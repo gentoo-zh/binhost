@@ -15,8 +15,10 @@ if not (ROOT / "deploy").is_dir() or not (ROOT / "site").is_dir():
 FPR = re.compile(r"\b((?:[0-9A-F]{4}[ 　]?){9}[0-9A-F]{4})\b")
 
 SKIP_DIRS = {".git", "node_modules"}
+# These two feed a fixture fingerprint to a stubbed gpg; it is not a key.
 SKIP_FILES = {"tests/test-fingerprint-consistent.py",
-              "tests/test-shell-behaviour.sh"}
+              "tests/test-shell-behaviour.sh",
+              "tests/test-site-switch.sh"}
 
 ASC = ROOT / "site" / "gentoo-zh-binhost.asc"
 SERVICE = "deploy/systemd/binhost-build.service"

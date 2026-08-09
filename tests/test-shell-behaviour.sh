@@ -190,17 +190,20 @@ pubsite_interrupted() {
     d=$(mktemp -d)
     mkdir -p "${d}/site" "${d}/dest" "${d}/bin"
     printf 'KEY\n' > "${d}/site/gentoo-zh-binhost.asc"
+    printf '<p>fresh</p>\n' > "${d}/site/index.html"
     printf '<p>old</p>\n' > "${d}/dest/old.html"
     cat > "${d}/bin/gpg" <<'EOF'
 #!/bin/bash
 printf 'pub:u:255:22::::::::scSC:\nfpr:::::::::AAAA0000000000000000000000000000000000AA:\n'
 EOF
+    # A transfer that dies part way leaves an incomplete generation directory.
+    # Nothing published may change, because the switch never happens.
     cat > "${d}/bin/rsync" <<EOF
 #!/bin/bash
-case " \$* " in
-  *' --delete-delay '*) exit 23 ;;
-  *) rm -f '${d}/dest/old.html'; exit 23 ;;
-esac
+for a in "\$@"; do dest="\$a"; done
+mkdir -p "\${dest}"
+printf 'half\n' > "\${dest}/index.html"
+exit 23
 EOF
     chmod +x "${d}/bin/gpg" "${d}/bin/rsync"
     echo AAAA0000000000000000000000000000000000AA > "${d}/fpr"
@@ -208,13 +211,18 @@ EOF
         bash "${ROOT}/deploy/publish-site.sh" "${d}/site" "${d}/dest" \
         >/dev/null 2>&1
     rc=$?
-    printf '%s %s\n' "${rc}" "$(test -e "${d}/dest/old.html" && echo 保留 || echo 删除)"
+    printf '%s %s %s %s\n' "${rc}" \
+        "$(tr -d '\n' < "${d}/dest/old.html" 2>/dev/null)" \
+        "$(readlink "${d}/dest/.site" | grep -c seed)" \
+        "$(test -e "${d}/dest/index.html" && echo 上线 || echo 没上线)"
     rm -rf "${d}"
 }
 
-read -r rc old_state <<< "$(pubsite_interrupted)"
+read -r rc old_state on_seed half <<< "$(pubsite_interrupted)"
 ok "站点传输中断时退出码非零" "$((rc != 0))" "1"
-ok "站点传输中断时延迟删除旧文件" "${old_state}" "保留"
+ok "站点传输中断时已发布的内容不变" "${old_state}" "<p>old</p>"
+ok "站点传输中断时读的是转换前那一份" "${on_seed}" "1"
+ok "半份产物不会上线" "${half}" "没上线"
 
 echo "== daily.sh 的旧代过渡"
 
