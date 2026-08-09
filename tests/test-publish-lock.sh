@@ -115,13 +115,16 @@ ok "自己的锁收尾时会释放" \
    "$(test -d "${d}/root/.publish.lock" && echo 在 || echo 已释放)" "已释放"
 
 echo
-echo "== 暂存名称带上本次执行的编号"
+echo "== 暂存路径带上本次执行的编号"
+# Two publishers must not write the same staging path. The six generation files
+# go into a per-run directory; status.json is the only single file left.
 d1='$'
-ok "六个暂存档都带 RUN_ID" \
-   "$(grep -c "REMOTE_ROOT}/\.[A-Za-z.]*\.${d1}{RUN_ID}\.new" \
-      "${ROOT}/build/publish.sh")" "6"
-ok "替换时用同一个编号还原" \
-   "$(grep -c "\.${d1}name\.${d1}run\.prev" "${ROOT}/build/publish.sh")" "1"
+ok "代际目录名带 RUN_ID" \
+   "$(grep -c "^GEN=\"\.gen-${d1}{RUN_ID}\"${d1}" "${ROOT}/build/publish.sh")" "1"
+ok "status.json 的暂存名带 RUN_ID" \
+   "$(grep -c "\.status\.json\.${d1}{RUN_ID}\.new" "${ROOT}/build/publish.sh")" "2"
+ok "没有所有发布者共用的暂存名" \
+   "$(grep -c "REMOTE_ROOT}/\.[A-Za-z.]*\.new" "${ROOT}/build/publish.sh")" "0"
 rm -rf "${d}"
 
 echo

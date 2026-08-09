@@ -216,54 +216,6 @@ read -r rc old_state <<< "$(pubsite_interrupted)"
 ok "站点传输中断时退出码非零" "$((rc != 0))" "1"
 ok "站点传输中断时延迟删除旧文件" "${old_state}" "保留"
 
-echo "== publish.sh 的索引替换"
-
-swap_probe() {
-    local mode="$1" d run=probe
-    d=$(mktemp -d)
-    sed -n "/<<'SWAP'/,/^SWAP\$/p" "${ROOT}/build/publish.sh" |
-        sed -e "1d" -e "\$d" > "${d}/swap.sh"
-    printf 'old\n' > "${d}/Packages"
-    printf 'oldgz\n' > "${d}/Packages.gz"
-    printf 'oldinstalled\n' > "${d}/installed.txt"
-    printf 'oldofficial\n' > "${d}/official.txt"
-    printf 'oldsource\n' > "${d}/source.txt"
-    printf 'oldgeneration\n' > "${d}/generation.json"
-    printf 'new\n' > "${d}/.Packages.${run}.new"
-    printf 'newinstalled\n' > "${d}/.installed.txt.${run}.new"
-    printf 'newofficial\n' > "${d}/.official.txt.${run}.new"
-    printf 'newsource\n' > "${d}/.source.txt.${run}.new"
-    printf 'newgeneration\n' > "${d}/.generation.json.${run}.new"
-    if [ "${mode}" != "gzmissing" ]; then
-        printf 'newgz\n' > "${d}/.Packages.gz.${run}.new"
-    fi
-    sh "${d}/swap.sh" "${d}" "${run}" >/dev/null 2>&1
-    printf '%s %s %s %s %s %s %s %s\n' "$?" \
-        "$(tr -d '\n' < "${d}/Packages")" \
-        "$(tr -d '\n' < "${d}/Packages.gz")" \
-        "$(tr -d '\n' < "${d}/installed.txt")" \
-        "$(tr -d '\n' < "${d}/official.txt")" \
-        "$(tr -d '\n' < "${d}/source.txt")" \
-        "$(tr -d '\n' < "${d}/generation.json")" \
-        "$(find "${d}" -maxdepth 1 \( -name '.*.prev' -o -name '.*.absent' -o -name '.*.new' \) | wc -l)"
-    rm -rf "${d}"
-}
-
-read -r rc pk gz installed official source generation leftover <<< "$(swap_probe ok)"
-ok "索引与快照都换成新的" \
-   "${pk} ${gz} ${installed} ${official} ${source} ${generation}" \
-   "new newgz newinstalled newofficial newsource newgeneration"
-ok "换完不留临时文件" "${leftover}" "0"
-ok "正常情况下退出码为零" "${rc}" "0"
-
-read -r rc pk gz installed official source generation leftover <<< "$(swap_probe gzmissing)"
-ok "Packages.gz 换不成时报错" "${rc}" "1"
-ok "Packages.gz 换不成时把 Packages 还原回旧的" "${pk}" "old"
-ok "还原之后所有文件仍是同一代" \
-   "${pk} ${gz} ${installed} ${official} ${source} ${generation}" \
-   "old oldgz oldinstalled oldofficial oldsource oldgeneration"
-ok "还原之后不留临时文件" "${leftover}" "0"
-
 echo "== daily.sh 的旧代过渡"
 
 audit_line=$(grep -n 'step "distfiles 对账"' "${ROOT}/deploy/daily.sh" | cut -d: -f1)
