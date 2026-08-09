@@ -219,7 +219,7 @@ ok "站点传输中断时延迟删除旧文件" "${old_state}" "保留"
 echo "== publish.sh 的索引替换"
 
 swap_probe() {
-    local mode="$1" d
+    local mode="$1" d run=probe
     d=$(mktemp -d)
     sed -n "/<<'SWAP'/,/^SWAP\$/p" "${ROOT}/build/publish.sh" |
         sed -e "1d" -e "\$d" > "${d}/swap.sh"
@@ -229,15 +229,15 @@ swap_probe() {
     printf 'oldofficial\n' > "${d}/official.txt"
     printf 'oldsource\n' > "${d}/source.txt"
     printf 'oldgeneration\n' > "${d}/generation.json"
-    printf 'new\n' > "${d}/.Packages.new"
-    printf 'newinstalled\n' > "${d}/.installed.txt.new"
-    printf 'newofficial\n' > "${d}/.official.txt.new"
-    printf 'newsource\n' > "${d}/.source.txt.new"
-    printf 'newgeneration\n' > "${d}/.generation.json.new"
+    printf 'new\n' > "${d}/.Packages.${run}.new"
+    printf 'newinstalled\n' > "${d}/.installed.txt.${run}.new"
+    printf 'newofficial\n' > "${d}/.official.txt.${run}.new"
+    printf 'newsource\n' > "${d}/.source.txt.${run}.new"
+    printf 'newgeneration\n' > "${d}/.generation.json.${run}.new"
     if [ "${mode}" != "gzmissing" ]; then
-        printf 'newgz\n' > "${d}/.Packages.gz.new"
+        printf 'newgz\n' > "${d}/.Packages.gz.${run}.new"
     fi
-    sh "${d}/swap.sh" "${d}" >/dev/null 2>&1
+    sh "${d}/swap.sh" "${d}" "${run}" >/dev/null 2>&1
     printf '%s %s %s %s %s %s %s %s\n' "$?" \
         "$(tr -d '\n' < "${d}/Packages")" \
         "$(tr -d '\n' < "${d}/Packages.gz")" \
@@ -653,7 +653,7 @@ ok "后缀带 -bin" \
       "${ROOT}/build/kernel-archive.sh")" "1"
 
 # shellcheck disable=SC2016  # we grep for the literal ${VAR}, not its value
-ok "清理被上限挡下时以非零结束" \
+ok "清理被上限暂缓时以非零结束" \
    "$(grep -c '\[\[ -z ${blocked} \]\] || die' \
       "${ROOT}/build/kernel-archive.sh")" "1"
 # shellcheck disable=SC2016  # we grep for the literal ${VAR}, not its value
