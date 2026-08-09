@@ -1117,6 +1117,20 @@ ok "受上限保护的旧包一个没动" "$(find "${d}/remote" -name 'old*.gpkg
 contains "输出说明执行隔离" "${out}" "从公开路径移除"
 rm -rf "${d}"
 
+# Deleting a product and then uploading it again from the same stage would undo
+# the takedown silently. Staging never produces that pair, so this is a guard.
+d=$(setup_publish)
+stage_index "${d}" 2
+mkdir -p "${d}/remote"
+awk '/^PATH: /{print $2; exit}' "${d}/stage/Packages" > "${d}/stage/quarantine.txt"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "隔离清单与暂存索引重叠时不发布" "$?" "1"
+contains "并指名是哪一条" "${out}" "同时在隔离清单与暂存索引里"
+ok "重叠时不写出公开索引" \
+   "$(test -e "${d}/remote/Packages" && echo 有 || echo 无)" "无"
+rm -rf "${d}"
+
 # A fresh root has no index naming anything, so a non-empty quarantine list must
 # not block the first publication: pruning an index that does not exist yet is
 # a wait for something only publishing can create.
@@ -1156,23 +1170,26 @@ stage_index "${d}" 2
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" PUBLISH_TEST_ROOT="${d}" bash build/publish.sh 2>&1)
 ok "切换失败用例先建立完整公开代际" "$?" "0"
-printf 'app-misc/p0-1.0-1.gpkg.tar\n' > "${d}/stage/quarantine.txt"
+# Staging drops a refused product from the index, so the next stage carries one
+# package while the live index still names both.
+stage_index "${d}" 1
+printf 'app-misc/p1-1.0-1.gpkg.tar\n' > "${d}/stage/quarantine.txt"
 printf '目标版本检查失败\n' > "${d}/stage/publish-blocked.txt"
 touch "${d}/fail-activate"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" PUBLISH_TEST_ROOT="${d}" bash build/publish.sh 2>&1)
 ok "删除后切换失败时退出码非零" "$?" "1"
 ok "切换失败发生在隔离文件移除之后" \
-   "$(test -e "${d}/remote/app-misc/p0-1.0-1.gpkg.tar" && echo 在 || echo 不在)" "不在"
+   "$(test -e "${d}/remote/app-misc/p1-1.0-1.gpkg.tar" && echo 在 || echo 不在)" "不在"
 ok "切换失败时公开索引仍是上一代" \
-   "$(grep -c 'PATH: app-misc/p0-1.0-1.gpkg.tar' "${d}/remote/Packages")" "1"
+   "$(grep -c 'PATH: app-misc/p1-1.0-1.gpkg.tar' "${d}/remote/Packages")" "1"
 contains "切换失败时说明下一轮会修复" "${out}" "下一轮会再次修复"
 rm -f "${d}/fail-activate"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" PUBLISH_TEST_ROOT="${d}" bash build/publish.sh 2>&1)
 ok "下一轮仍由发布闸门中止" "$?" "1"
 ok "下一轮修复公开索引" \
-   "$(grep -c 'PATH: app-misc/p0-1.0-1.gpkg.tar' "${d}/remote/Packages")" "0"
+   "$(grep -c 'PATH: app-misc/p1-1.0-1.gpkg.tar' "${d}/remote/Packages")" "0"
 contains "下一轮继续输出发布闸门原因" "${out}" "目标版本检查失败"
 rm -rf "${d}"
 

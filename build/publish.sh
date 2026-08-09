@@ -190,6 +190,14 @@ validate_quarantine() {
         case ${rel} in
             /*|*..*) echo "!! 隔离清单里的路径不合法：${rel}" >&2; return 1 ;;
         esac
+        # Staging never lists a refused product, so this cannot happen from the
+        # pipeline. It has to be refused anyway: the same run would delete the
+        # file and then upload it again from the stage, undoing the takedown
+        # without saying so.
+        if grep -qxF "PATH: ${rel}" "${STAGE}/Packages"; then
+            echo "!! ${rel} 同时在隔离清单与暂存索引里，不发布" >&2
+            return 1
+        fi
     done < "${QUARANTINE}"
 }
 
