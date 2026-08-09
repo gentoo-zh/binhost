@@ -51,6 +51,9 @@ jobs:
       - name: Quarantine carries only what cannot wait
         run: python3 tests/test-quarantine-immediacy.py
 
+      - name: The live index stops naming what was just removed
+        run: python3 tests/test-prune-index.py
+
       - name: Published index satisfies its own runtime dependencies
         run: python3 tests/test-verify-deps.py
 

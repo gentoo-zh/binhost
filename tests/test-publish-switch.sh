@@ -235,15 +235,16 @@ ok "六个档案只列一次" \
 ok "代际目录带上本次执行的编号" \
    "$(grep -c "^GEN=\"\.gen-${d1}{RUN_ID}\"${d1}" "${ROOT}/build/publish.sh")" "1"
 at() { grep -nF -e "$1" "${ROOT}/build/publish.sh" | cut -d: -f1; }
-switch_line=$(at "<<'SWITCH'")
+call_line=$(at "switch_generation \"${d1}{GEN}\" \"${d1}{STAGE}\"")
 packages_line=$(at '--info=stats2 --files-from=-')
-gen_line=$(at "\"${d1}{REMOTE}:${d1}{REMOTE_ROOT}/${d1}{GEN}/\"")
-ok "这三行各只找到一处" \
-   "$(printf '%s %s %s' "${switch_line}" "${packages_line}" "${gen_line}")" \
-   "$(printf '%s %s %s' "${switch_line}" "${packages_line}" "${gen_line}" |
-      grep -o '^[1-9][0-9]* [1-9][0-9]* [1-9][0-9]*$')"
-ok "包体先传上去，再传代际，最后才切换" \
-   "$(( ${packages_line:-0} < ${gen_line:-0} && ${gen_line:-0} < ${switch_line:-0} ))" "1"
+ok "这两行各只找到一处" \
+   "$(printf '%s %s' "${call_line}" "${packages_line}")" \
+   "$(printf '%s %s' "${call_line}" "${packages_line}" |
+      grep -o '^[1-9][0-9]* [1-9][0-9]*$')"
+ok "包体先传上去，最后才切换" "$(( ${packages_line:-0} < ${call_line:-0} ))" "1"
+ok "代际目录由切换函数自己建立" \
+   "$(grep -c "install -dm755 '${d1}{REMOTE_ROOT}/${d1}{gen}'" \
+      "${ROOT}/build/publish.sh")" "1"
 
 echo
 if (( fail )); then

@@ -93,13 +93,13 @@ Docker socket、签名私钥或主机根文件系统，也不从主机挂载 `/d
 
 `Packages`、`Packages.gz`、基础系统快照、Gentoo binhost 快照、源码快照与
 `generation.json` 按同一代发布。`generation.json` 记录其余五份文件的 SHA-256；任一
-检查失败时，不切换到新的公开索引。
+检查失败时，不切换到新的公开索引。镜像上这六个名称是指向 `.gen/` 的符号链接，`.gen`
+再指向本次发布的目录，因此整代替换只是一次 rename，不会出现混合代。
 
 源码本地安装、mask、排除或版本移除产生的常规退役，只在新一代索引发布成功后清理。
 缓存产物后来设置 `RESTRICT=bindist`、许可证不再允许发布，或再分发资格无法确认时，
-产物写入 `quarantine.txt`，并在索引切换前立即隔离。这项顺序优先满足合规下架，因此
-旧索引可能暂时返回 404；具体边界见
-[`docs/accepted-risks.md`](docs/accepted-risks.md)。
+产物写入 `quarantine.txt`，并在索引切换前立即隔离。移除之后当场改写当前公开的那一代，
+使其不再列出这些文件，因此下架与索引一致，不会留下指向已删除文件的条目。
 
 `build/cycle.sh` 依次更新 overlay、执行完整构建并发布结果。stable 频道使用 Gentoo 主树
 稳定关键字，只对 `::gentoo-zh` 接受 `~amd64`；unstable 频道全局接受 `~amd64`。两个频道
