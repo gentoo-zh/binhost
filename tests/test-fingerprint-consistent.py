@@ -21,8 +21,9 @@ SKIP_FILES = {"tests/test-fingerprint-consistent.py",
               "tests/test-site-switch.sh"}
 
 ASC = ROOT / "site" / "gentoo-zh-binhost.asc"
-SERVICE = "deploy/systemd/binhost-build.service"
-REQUIRED = {SERVICE, "site/index.html", "docs/key-rotation.md"}
+SERVICES = {"deploy/systemd/binhost-build.service",
+            "deploy/systemd/binhost-build-unstable.service"}
+REQUIRED = SERVICES | {"site/index.html", "docs/key-rotation.md"}
 
 bad = 0
 
@@ -76,12 +77,19 @@ if not found:
     fail("仓库里一个指纹都没有")
     sys.exit(1)
 
-signing = sorted(f for f, files in found.items() if SERVICE in files)
+service_keys = {
+    service: sorted(f for f, files in found.items() if service in files)
+    for service in SERVICES
+}
+for service, fingerprints in sorted(service_keys.items()):
+    if len(fingerprints) != 1:
+        fail(f"{service} 里应当只有一个指纹，实际 {len(fingerprints)} 个")
+signing = sorted({f for fingerprints in service_keys.values() for f in fingerprints})
 if len(signing) != 1:
-    fail(f"{SERVICE} 里应当只有一个指纹，实际 {len(signing)} 个")
+    fail("stable 与 unstable 构建服务必须使用同一把签名密钥")
 
 def check_carriers(fpr):
-    for f in sorted(REQUIRED - set(found[fpr]) - {SERVICE}):
+    for f in sorted(REQUIRED - set(found[fpr]) - SERVICES):
         fail(f"{f} 未包含正在签名的那把 {fpr[:8]}")
 
 
