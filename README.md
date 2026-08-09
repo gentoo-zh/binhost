@@ -19,7 +19,7 @@ nginx 配置，以及构建、签名和发布 [gentoo-zh overlay](https://github
 | `nginx/` | HTTP、HTTP/3 和文件服务配置 |
 | `site/` | 静态站点与公开签名密钥 |
 | `site/tools/` | 站点生成与检查，只在 CI 执行 |
-| `docs/` | 已知风险、延后事项与密钥轮替手册 |
+| `docs/` | 依赖闭包边界与密钥轮替手册 |
 
 ## 发布范围
 
@@ -75,7 +75,7 @@ Docker socket、签名私钥或主机根文件系统，也不从主机挂载 `/d
 一般源码依赖带 USE 约束时，不会因使用者配置未知而推定为可用。对于本地安装的
 `acct-group/*`、`acct-user/*` 与 `virtual/*`，源码快照使用当前 ebuild 的 `IUSE` 默认启用项。
 这套检查不等同于执行完整的 Portage 依赖解析，边界记录在
-[`docs/accepted-risks.md`](docs/accepted-risks.md)。
+[`docs/dependency-closure.md`](docs/dependency-closure.md)。
 
 暂存索引必须覆盖直接构建清单中每个套件的当前可用版本，并通过运行期依赖检查。
 无法取得必要快照、依赖无法满足或索引不完整时，本次不会发布新索引。
@@ -194,7 +194,8 @@ rename 整体切换，因此不会出现页面与其指纹化 assets 分属两�
 
 - 添加、移除或移动套件见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
 - 排除的套件及原因见 [`build/excluded.txt`](build/excluded.txt)。
-- 当前接受的风险与延后事项见 [`docs/accepted-risks.md`](docs/accepted-risks.md)。
+- 依赖闭包的检查范围与复核方法见
+  [`docs/dependency-closure.md`](docs/dependency-closure.md)。
 - 签名密钥轮替与泄露处置见 [`docs/key-rotation.md`](docs/key-rotation.md)。
 
 ## 许可
