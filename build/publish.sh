@@ -26,6 +26,75 @@ RUN_ID="${RUN_ID:-$(hostname -s)-$$-$(date +%s)}"
 LOCK_DIR="${LOCK_DIR:-${REMOTE_ROOT}/.publish.lock}"
 LOCK_STALE_H="${LOCK_STALE_H:-6}"
 
+# One generation on the mirror: upload the six files into their own directory,
+# then repoint .gen at it. The six public names are links into .gen, so that
+# rename is the whole replacement.
+switch_generation() {
+    local gen="$1" src="$2"
+    # shellcheck disable=SC2029  # REMOTE_ROOT and gen are meant to expand locally
+    ssh "${REMOTE}" "install -dm755 '${REMOTE_ROOT}/${gen}'" || return 1
+    printf '%s\n' "${GEN_FILES[@]}" |
+        rsync -a --files-from=- "${src}/" "${REMOTE}:${REMOTE_ROOT}/${gen}/" || return 1
+    # shellcheck disable=SC2029  # as above
+    if ! ssh "${REMOTE}" "sh -s '${REMOTE_ROOT}' '${gen}' ${GEN_FILES[*]}" <<'SWITCH'
+set -u
+cd "$1" || exit 1
+gen="$2"
+shift 2
+files="$*"
+tmp=".switch-${gen#.gen-}"
+
+if [ -e .gen ] && [ ! -L .gen ]; then
+    echo "!! .gen 不是符号链接，无法切换代际" >&2
+    exit 1
+fi
+
+# Turning the six names into links must not change what they resolve to, so
+# the first run seeds a generation from what is already published. From then on
+# the rename at the end is the only thing a reader can observe.
+relink=0
+for name in ${files}; do
+    [ -L "${name}" ] || relink=1
+done
+if [ "${relink}" = 1 ]; then
+    seed=".gen-seed-${gen#.gen-}"
+    rm -rf "${seed}" && mkdir "${seed}" || exit 1
+    # -L is cp's default and is written out because it is the point: a name
+    # that is already a link contributes what it resolves to, so a root where
+    # only some names were converted is seeded by value like the rest.
+    for name in ${files}; do
+        [ -e "${name}" ] || continue
+        cp -pL "${name}" "${seed}/${name}" || exit 1
+    done
+    ln -sfn "${seed}" "${tmp}" && mv -Tf "${tmp}" .gen || exit 1
+    for name in ${files}; do
+        ln -sfn ".gen/${name}" "${tmp}" && mv -Tf "${tmp}" "${name}" || exit 1
+    done
+fi
+
+# After the seed, so that aborting here leaves the six reading what they read
+# before this run rather than a half-built generation.
+for name in ${files}; do
+    if [ ! -s "${gen}/${name}" ]; then
+        echo "!! ${gen}/${name} 缺失或为空，不切换" >&2
+        exit 1
+    fi
+done
+
+ln -sfn "${gen}" "${tmp}" || exit 1
+mv -Tf "${tmp}" .gen || { rm -f "${tmp}"; exit 1; }
+
+for old in .gen-*; do
+    [ -d "${old}" ] || continue
+    [ "${old}" = "${gen}" ] || rm -rf "${old}"
+done
+SWITCH
+    then
+        echo "!! 代际未能切换，公开的仍是上一代" >&2
+        return 1
+    fi
+}
+
 # shellcheck disable=SC2029
 ssh "${REMOTE}" "install -dm755 ${REMOTE_ROOT}"
 
@@ -65,6 +134,35 @@ release_lock() {
 trap release_lock EXIT
 QUARANTINE="${STAGE}/quarantine.txt"
 
+# Removing the quarantined products leaves the live index naming files that are
+# gone. Rewriting it right after keeps both promises at once: the products are
+# down now, and no index sends a reader to a missing file. Failing this is not
+# fatal, the ordinary publication replaces the index anyway, but it is reported.
+prune_live_index() {
+    local work live dropped
+    work=$(mktemp -d) || return 1
+    live="${work}/live"
+    mkdir -p "${live}" || { rm -rf "${work}"; return 1; }
+    # -L because after the first switch the six names are links; a missing name
+    # fails the transfer, which is the wanted answer: an incomplete root has no
+    # generation to rewrite.
+    if ! printf '%s\n' "${GEN_FILES[@]}" |
+            rsync -aL --files-from=- "${REMOTE}:${REMOTE_ROOT}/" "${live}/"; then
+        rm -rf "${work}"
+        return 1
+    fi
+    dropped=$(python3 "$(dirname "$0")/prune-index.py" "${live}" "${QUARANTINE}") ||
+        { rm -rf "${work}"; return 1; }
+    if [[ ${dropped} == 0 ]]; then
+        rm -rf "${work}"
+        return 0
+    fi
+    echo ">>> 公开的索引里有 ${dropped} 条指向刚移除的产物，改写后立即切换"
+    switch_generation ".gen-prune-${RUN_ID}" "${live}" || { rm -rf "${work}"; return 1; }
+    rm -rf "${work}"
+}
+
+
 if [[ -s ${QUARANTINE} ]]; then
     q=$(wc -l < "${QUARANTINE}")
     echo ">>> ${q} 个产物不可继续散布，先从公开路径移除"
@@ -87,6 +185,9 @@ if [[ -s ${QUARANTINE} ]]; then
         exit 1
     }
     echo ">>> 实际移除 ${gone} 个"
+    if (( gone > 0 )) && ! prune_live_index; then
+        echo "!! 未能改写公开的索引，它仍然列出刚移除的产物" >&2
+    fi
 fi
 
 if [[ -s ${STAGE}/publish-blocked.txt ]]; then
@@ -194,69 +295,7 @@ printf '%s\n' "${paths[@]}" |
     { grep -E "files transferred|Total transferred file size" || true; } | sed 's/^/    /'
 
 GEN=".gen-${RUN_ID}"
-# shellcheck disable=SC2029  # REMOTE_ROOT is meant to expand locally
-ssh "${REMOTE}" "install -dm755 '${REMOTE_ROOT}/${GEN}'"
-printf '%s\n' "${GEN_FILES[@]}" |
-    rsync -a --files-from=- "${STAGE}/" "${REMOTE}:${REMOTE_ROOT}/${GEN}/"
-
-# shellcheck disable=SC2029  # REMOTE_ROOT and GEN are meant to expand locally
-if ! ssh "${REMOTE}" "sh -s '${REMOTE_ROOT}' '${GEN}' ${GEN_FILES[*]}" <<'SWITCH'
-set -u
-cd "$1" || exit 1
-gen="$2"
-shift 2
-files="$*"
-tmp=".switch-${gen#.gen-}"
-
-if [ -e .gen ] && [ ! -L .gen ]; then
-    echo "!! .gen 不是符号链接，无法切换代际" >&2
-    exit 1
-fi
-
-# Turning the six names into links must not change what they resolve to, so
-# the first run seeds a generation from what is already published. From then on
-# the rename at the end is the only thing a reader can observe.
-relink=0
-for name in ${files}; do
-    [ -L "${name}" ] || relink=1
-done
-if [ "${relink}" = 1 ]; then
-    seed=".gen-seed-${gen#.gen-}"
-    rm -rf "${seed}" && mkdir "${seed}" || exit 1
-    # -L is cp's default and is written out because it is the point: a name
-    # that is already a link contributes what it resolves to, so a root where
-    # only some names were converted is seeded by value like the rest.
-    for name in ${files}; do
-        [ -e "${name}" ] || continue
-        cp -pL "${name}" "${seed}/${name}" || exit 1
-    done
-    ln -sfn "${seed}" "${tmp}" && mv -Tf "${tmp}" .gen || exit 1
-    for name in ${files}; do
-        ln -sfn ".gen/${name}" "${tmp}" && mv -Tf "${tmp}" "${name}" || exit 1
-    done
-fi
-
-# After the seed, so that aborting here leaves the six reading what they read
-# before this run rather than a half-built generation.
-for name in ${files}; do
-    if [ ! -s "${gen}/${name}" ]; then
-        echo "!! ${gen}/${name} 缺失或为空，不切换" >&2
-        exit 1
-    fi
-done
-
-ln -sfn "${gen}" "${tmp}" || exit 1
-mv -Tf "${tmp}" .gen || { rm -f "${tmp}"; exit 1; }
-
-for old in .gen-*; do
-    [ -d "${old}" ] || continue
-    [ "${old}" = "${gen}" ] || rm -rf "${old}"
-done
-SWITCH
-then
-    echo "!! 代际未能切换，公开的仍是上一代" >&2
-    exit 1
-fi
+switch_generation "${GEN}" "${STAGE}" || exit 1
 
 ts=$(awk '/^TIMESTAMP: /{print $2; exit}' "${STAGE}/Packages")
 n=$(awk '/^PACKAGES: /{print $2; exit}' "${STAGE}/Packages")

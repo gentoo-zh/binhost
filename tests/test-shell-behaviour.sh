@@ -917,6 +917,7 @@ ok "发布闸门失败时退出码非零" "$?" "1"
 ok "发布闸门失败时仍执行隔离" \
    "$(test -e "${d}/remote/app-misc/restricted.gpkg.tar" && echo 在 || echo 不在)" "不在"
 ok "发布闸门失败时保留公开索引" "$(tr -d '\n' < "${d}/remote/Packages")" "old index"
+contains "公开的一代不完整时说出未能改写" "${out}" "未能改写公开的索引"
 contains "发布闸门失败时输出具体原因" "${out}" "目标版本检查失败"
 rm -rf "${d}"
 
