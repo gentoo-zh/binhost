@@ -333,8 +333,12 @@ check_build_status() {
 check_build_status stable build-status.json
 check_build_status unstable build-status-unstable.json
 
-if [[ -w $(dirname "${HEARTBEAT}") ]] 2>/dev/null; then
-    date +%s > "${HEARTBEAT}"
+# The scheduled run owns this file, so testing the directory said yes while the
+# write said no: another user could create the file here but not overwrite the
+# one root already left. That printed a bare Permission denied and looked like a
+# fault. Try the write and say plainly when it did not happen.
+if [[ -d $(dirname "${HEARTBEAT}") ]] && ! date +%s 2>/dev/null > "${HEARTBEAT}"; then
+    note "心跳写入" "本次未更新 ${HEARTBEAT}，由排程执行的那次负责"
 fi
 
 stamp=$(curl -fsS --max-time 15 "${SITE}/.health" 2>/dev/null | tr -dc '0-9')
