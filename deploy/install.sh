@@ -56,32 +56,6 @@ missing=''
 for cmd in git rsync logrotate certbot; do command -v \${cmd} >/dev/null || missing=\"\${missing} \${cmd}\"; done
 [ -z \"\${missing}\" ] || { echo \"!! 缺少命令：\${missing}\" >&2; exit 1; }
 
-echo '--- 脚本'
-sudo install -dm755 /usr/local/lib/binhost /var/log/emirrordist
-sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/mirrors /var/lib/binhost-site
-[ -e /var/lib/binhost-site.lock ] || sudo install -m644 -o '${SITE_USER}' -g '${SITE_USER}' /dev/null /var/lib/binhost-site.lock
-sudo install -m755 daily.sh            /usr/local/bin/binhost-daily
-sudo install -m755 distfiles-sync.sh   /usr/local/bin/binhost-distfiles-sync
-sudo install -m755 distfiles-index.sh  /usr/local/bin/binhost-distfiles-index
-sudo install -m755 server-status.sh    /usr/local/bin/binhost-server-status
-sudo install -m755 site-sync.sh        /usr/local/bin/binhost-site-sync
-sudo install -m755 publish-site.sh     /usr/local/lib/binhost/publish-site.sh
-sudo install -m755 status.sh           /usr/local/bin/binhost-status
-sudo install -m644 alert.sh            /usr/local/lib/binhost/alert.sh
-sudo install -m644 gen-packages.py     /usr/local/lib/binhost/gen-packages.py
-sudo install -m644 ebuilds.py          /usr/local/lib/binhost/ebuilds.py
-sudo install -m755 verify-deps.py      /usr/local/lib/binhost/verify-deps.py
-sudo install -m755 generation.py       /usr/local/lib/binhost/generation.py
-sudo install -m644 dep-exceptions.txt  /usr/local/lib/binhost/dep-exceptions.txt
-sudo install -m644 packages.txt        /usr/local/lib/binhost/packages.txt
-sudo install -m644 excluded.txt        /usr/local/lib/binhost/excluded.txt
-sudo install -m644 stable-excluded.txt /usr/local/lib/binhost/stable-excluded.txt
-sudo install -m755 audit-distfiles.py  /usr/local/lib/binhost/audit-distfiles.py
-printf %s '${COMMIT}' | sudo install -m644 /dev/stdin /usr/local/lib/binhost/VERSION
-
-echo '--- rsync'
-sudo install -m644 rsyncd.conf /etc/rsyncd.conf
-
 echo '--- 防火墙'
 listening=\$(sudo sshd -T 2>/dev/null | awk '/^port /{print \$2}')
 if [ '${SKIP_SSH_PORT_CHECK:-0}' = 1 ]; then
@@ -140,34 +114,74 @@ if ! nginx -V 2>&1 | grep -q http_v3; then
     echo '    nginx 没有 http_v3，重新编译'
     sudo emerge --oneshot --quiet-build=y www-servers/nginx
 fi
+mkdir -p nginx-test/conf.d
+cp mirror-common.inc headers-site.inc headers-files.inc nginx-test/conf.d/
+CERT=/etc/letsencrypt/live/distfiles.gentoozh.org
+if sudo test -r \"\${CERT}/fullchain.pem\" && sudo test -r \"\${CERT}/privkey.pem\"; then
+    cp distfiles.conf nginx-test/conf.d/distfiles.conf
+else
+    if sudo grep -qs 'listen 443' /etc/nginx/conf.d/distfiles.conf; then
+        echo '    !! 无法读取证书，但现有配置在监听 443；保留现有配置' >&2
+        echo '       证书确实已失效时，先处理证书，再重新执行本脚本' >&2
+        sudo cat /etc/nginx/conf.d/distfiles.conf > nginx-test/conf.d/distfiles.conf
+    else
+        echo '    证书尚未签发，先只配置 HTTP；签发之后重新执行本脚本'
+        awk '/^server \{/{n++} n<2' distfiles.conf |
+            tee nginx-test/conf.d/distfiles.conf >/dev/null
+    fi
+fi
+sed -e 's|include modules-enabled/\*.conf;|include /etc/nginx/modules-enabled/*.conf;|' \
+    -e 's|include mime.types.nginx;|include /etc/nginx/mime.types.nginx;|' \
+    -e 's|include /etc/nginx/conf.d/\*.conf;|include ${tmp}/nginx-test/conf.d/*.conf;|' \
+    nginx.conf > nginx-test/nginx.conf
+sudo nginx -t -c '${tmp}/nginx-test/nginx.conf'
+sudo install -m644 logrotate-binhost nginx-test/logrotate-binhost
+sudo logrotate -d nginx-test/logrotate-binhost >/dev/null
+
+echo '--- 站台锁'
+[ -e /var/lib/binhost-site.lock ] ||
+    sudo install -m644 -o '${SITE_USER}' -g '${SITE_USER}' /dev/null /var/lib/binhost-site.lock
+exec 9>/var/lib/binhost-site.lock
+flock -n 9 || { echo '另一次站台同步正在进行，未部署' >&2; exit 1; }
+
+echo '--- 脚本'
+sudo install -dm755 /usr/local/lib/binhost /var/log/emirrordist
+sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/mirrors /var/lib/binhost-site
+sudo install -m755 daily.sh            /usr/local/bin/binhost-daily
+sudo install -m755 distfiles-sync.sh   /usr/local/bin/binhost-distfiles-sync
+sudo install -m755 distfiles-index.sh  /usr/local/bin/binhost-distfiles-index
+sudo install -m755 server-status.sh    /usr/local/bin/binhost-server-status
+sudo install -m755 site-sync.sh        /usr/local/bin/binhost-site-sync
+sudo install -m755 publish-site.sh     /usr/local/lib/binhost/publish-site.sh
+sudo install -m755 status.sh           /usr/local/bin/binhost-status
+sudo install -m644 alert.sh            /usr/local/lib/binhost/alert.sh
+sudo install -m644 gen-packages.py     /usr/local/lib/binhost/gen-packages.py
+sudo install -m644 ebuilds.py          /usr/local/lib/binhost/ebuilds.py
+sudo install -m755 verify-deps.py      /usr/local/lib/binhost/verify-deps.py
+sudo install -m755 generation.py       /usr/local/lib/binhost/generation.py
+sudo install -m644 dep-exceptions.txt  /usr/local/lib/binhost/dep-exceptions.txt
+sudo install -m644 packages.txt        /usr/local/lib/binhost/packages.txt
+sudo install -m644 excluded.txt        /usr/local/lib/binhost/excluded.txt
+sudo install -m644 stable-excluded.txt /usr/local/lib/binhost/stable-excluded.txt
+sudo install -m755 audit-distfiles.py  /usr/local/lib/binhost/audit-distfiles.py
+
+echo '--- rsync'
+sudo install -m644 rsyncd.conf /etc/rsyncd.conf
+
 sudo install -dm755 /srv/pub
 sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/pub/binpkgs /srv/pub/distfiles /srv/pub/gigos /srv/pub/gentoo-cjk-kernel
 # mirror-common.inc serves the ACME challenge from here, and certbot renews
 # through that path.
 sudo install -dm755 /var/www/acme/.well-known/acme-challenge
 sudo install -dm755 /etc/nginx/conf.d
-sudo install -m644 nginx.conf         /etc/nginx/nginx.conf
-sudo install -m644 mirror-common.inc  /etc/nginx/conf.d/mirror-common.inc
-sudo install -m644 headers-site.inc   /etc/nginx/conf.d/headers-site.inc
-sudo install -m644 headers-files.inc  /etc/nginx/conf.d/headers-files.inc
-CERT=/etc/letsencrypt/live/distfiles.gentoozh.org
-if sudo test -r \"\${CERT}/fullchain.pem\" && sudo test -r \"\${CERT}/privkey.pem\"; then
-    sudo install -m644 distfiles.conf /etc/nginx/conf.d/distfiles.conf
-else
-    if sudo grep -qs 'listen 443' /etc/nginx/conf.d/distfiles.conf; then
-        echo '    !! 无法读取证书，但现有配置在监听 443；保留现有配置' >&2
-        echo '       证书确实已失效时，先处理证书，再重新执行本脚本' >&2
-    else
-        echo '    证书尚未签发，先只配置 HTTP；签发之后重新执行本脚本'
-        awk '/^server \{/{n++} n<2' distfiles.conf |
-            sudo install -m644 /dev/stdin /etc/nginx/conf.d/distfiles.conf
-    fi
-fi
-sudo nginx -t
+sudo install -m644 nginx.conf                          /etc/nginx/nginx.conf
+sudo install -m644 nginx-test/conf.d/mirror-common.inc /etc/nginx/conf.d/mirror-common.inc
+sudo install -m644 nginx-test/conf.d/headers-site.inc  /etc/nginx/conf.d/headers-site.inc
+sudo install -m644 nginx-test/conf.d/headers-files.inc /etc/nginx/conf.d/headers-files.inc
+sudo install -m644 nginx-test/conf.d/distfiles.conf    /etc/nginx/conf.d/distfiles.conf
 
 echo '--- 日志轮替'
 sudo install -m644 logrotate-binhost /etc/logrotate.d/binhost
-sudo logrotate -d /etc/logrotate.d/binhost >/dev/null
 
 echo '--- 定时任务'
 if [ -n '${SIGNING_FPR}' ]; then
@@ -233,6 +247,8 @@ fi
 sudo rc-service node_exporter restart >/dev/null 2>&1 ||
     echo "    !! node_exporter 未能启动（可选）"
 [ \${svc_bad} -eq 0 ] || { echo "!! 关键服务未能启动" >&2; exit 1; }
+printf %s '${COMMIT}' | sudo install -m644 /dev/stdin /usr/local/lib/binhost/VERSION
+cd /
 rm -rf '${tmp}'
 "
 
