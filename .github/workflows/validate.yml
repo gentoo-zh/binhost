@@ -123,6 +123,9 @@ jobs:
       - name: Kernel series come from the overlay
         run: python3 tests/test-kernel-series.py
 
+      - name: Kernel archive payloads match the Manifest
+        run: python3 tests/test-kernel-manifest.py
+
       - name: The signing fingerprint agrees everywhere
         run: python3 tests/test-fingerprint-consistent.py
 
@@ -254,6 +257,9 @@ jobs:
 
       - name: Delete budgets, DONE markers and index consistency
         run: bash tests/test-shell-behaviour.sh
+
+      - name: Kernel archive rejects damaged payloads
+        run: bash tests/test-kernel-archive-integrity.sh
 
       - name: Publication alerts distinguish cleanup from transfer failures
         run: bash tests/test-cycle.sh

@@ -37,6 +37,8 @@ MAX_BUILDS="${MAX_BUILDS:-10}"
 # The whole point of this kernel. IUSE has it on by default, but an upstream
 # default is not a guarantee, so it is requested here and checked afterwards.
 REQUIRED_USE_FLAG="${REQUIRED_USE_FLAG:-cjk}"
+BIN_PACKAGE="${BIN_PACKAGE:-${PACKAGE}-bin}"
+MANIFEST="${MANIFEST:-${OVERLAY}/${BIN_PACKAGE}/Manifest}"
 if [[ -z ${DOCKER:-} ]]; then
     DOCKER="docker"
     docker info >/dev/null 2>&1 || DOCKER="sudo docker"
@@ -46,6 +48,26 @@ MAKEOPTS="${MAKEOPTS:--j$(nproc) -l$(nproc)}"
 LOCK="${LOCK:-/var/lib/binhost/stage/kernel-archive.lock}"
 
 die() { echo "!!! $*" >&2; exit 1; }
+
+remote_matches_manifest() {
+    local path="$1" expected="$2" size algorithm digest command actual
+    IFS=$'\t' read -r size algorithm digest <<< "${expected}"
+    case "${algorithm}" in
+        SHA512) command=sha512sum ;;
+        BLAKE2B) command=b2sum ;;
+        *) die "Manifest 使用了不支持的摘要算法：${algorithm}" ;;
+    esac
+    actual=$(ssh "${REMOTE}" bash -s -- "${path}" "${command}" 2>/dev/null <<'EOF'
+path=$1
+checksum=$2
+test -f "${path}"
+stat -c '%s' "${path}"
+"${checksum}" "${path}"
+EOF
+    ) || return 1
+    [[ $(sed -n '1p' <<< "${actual}") == "${size}" &&
+       $(sed -n '2p' <<< "${actual}" | awk '{print $1}') == "${digest}" ]]
+}
 
 # Set when the cap blocks a cleanup. Everything else still runs, but the run
 # ends non-zero so OnFailure reaches someone: refusing to delete is the safe
@@ -70,14 +92,14 @@ mapfile -t wanted < <(
 
 echo ">>> overlay 提供 ${#wanted[@]} 条内核线"
 
-# shellcheck disable=SC2029  # REMOTE_ROOT is meant to expand locally
-published=$(ssh "${REMOTE}" "ls ${REMOTE_ROOT}/*/*.gpkg.tar 2>/dev/null | xargs -r -n1 basename" || true)
-
 todo=()
 for entry in "${wanted[@]}"; do
     read -r series version <<< "${entry}"
     name="${PACKAGE#*/}-${version}-1.${ARCH}.gpkg.tar"
-    if grep -qxF "${name}" <<< "${published}"; then
+    expected=$(python3 "${SCRIPT_DIR}/kernel-manifest.py" entry \
+        "${MANIFEST}" "${name}") || die "${name} 无法从 Manifest 核验"
+    remote_path="${REMOTE_ROOT}/${series}/${name}"
+    if remote_matches_manifest "${remote_path}" "${expected}"; then
         echo "    ${series}  ${version}  已发布，跳过"
         continue
     fi
@@ -154,6 +176,9 @@ for entry in ${todo[@]+"${todo[@]}"}; do
     fi
 
     name="${PACKAGE#*/}-${version}-1.${ARCH}.gpkg.tar"
+    python3 "${SCRIPT_DIR}/kernel-manifest.py" verify \
+        "${MANIFEST}" "${name}" "${built}" ||
+        die "${version} 产物与 Manifest 不一致，不发布"
     # shellcheck disable=SC2029  # as above
     ssh "${REMOTE}" "install -dm755 ${REMOTE_ROOT}/${series}"
     rsync -a "${built}" "${REMOTE}:${REMOTE_ROOT}/${series}/${name}"
