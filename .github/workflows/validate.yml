@@ -267,6 +267,9 @@ jobs:
       - name: One rename replaces the whole generation
         run: bash tests/test-publish-switch.sh
 
+      - name: The site changes generation in one rename
+        run: bash tests/test-site-switch.sh
+
       - name: The status check reads the site copy only when no sync holds it
         run: bash tests/test-site-sync-check.sh
 
