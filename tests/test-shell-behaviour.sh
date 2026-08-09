@@ -699,6 +699,43 @@ EOF
     case "${out}" in *'<--'*) echo failed ;; *) echo passed ;; esac
 }
 
+# status.sh writes the heartbeat itself. The scheduled run on the mirror is root
+# and owns the file; anyone else can create files in that directory but cannot
+# overwrite root's, so testing the directory answered yes and the write failed.
+heartbeat_probe() {
+    local mode="$1" d out state
+    d=$(mktemp -d); mkdir -p "${d}/bin" "${d}/site"
+    printf '#!/bin/bash\nexit 22\n' > "${d}/bin/curl"
+    chmod +x "${d}/bin/curl"
+    case "${mode}" in
+        writable) : ;;
+        unwritable) : > "${d}/site/.health"; chmod 444 "${d}/site/.health"; chmod 555 "${d}/site" ;;
+        absent)    rm -rf "${d}/site" ;;
+    esac
+    out=$( cd "${ROOT}" && PATH="${d}/bin:${PATH}" ALERT_CONF=/nonexistent \
+        STATE_FILE="${d}/s" VERSION_FILE="${d}/v" SIGNING_GNUPGHOME="${d}/nokey" \
+        DISK_PATH="${d}/nodisk" HEARTBEAT="${d}/site/.health" \
+        SITE_WORK="${d}/nowork" SITE_DEST="${d}/nodest" MONITORS_FILE="${d}/nomon" \
+        bash ops/status.sh 2>&1 )
+    state=$(grep -c '心跳写入' <<< "${out}")
+    printf '%s %s %s\n' "${state}" \
+        "$(grep -ci 'permission denied' <<< "${out}")" \
+        "$(test -s "${d}/site/.health" && echo 有 || echo 无)"
+    chmod 755 "${d}/site" 2>/dev/null
+    rm -rf "${d}"
+}
+
+read -r said denied written <<< "$(heartbeat_probe writable)"
+ok "能写时写出心跳" "${written}" "有"
+ok "能写时不多说一句" "${said}" "0"
+
+read -r said denied written <<< "$(heartbeat_probe unwritable)"
+ok "写不进去时说出来" "${said}" "1"
+ok "写不进去时不留裸的权限错误" "${denied}" "0"
+
+read -r said denied written <<< "$(heartbeat_probe absent)"
+ok "没有这个目录的机器不提心跳写入" "${said}" "0"
+
 ok "抓取源清单为空时算故障" "$(exporter_probe "")" "failed"
 ok "有抓取源时才算通过" \
    "$(exporter_probe " elements = { 1.2.3.4, 5.6.7.8 }")" "passed"
