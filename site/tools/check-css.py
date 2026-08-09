@@ -7,15 +7,21 @@ from collections import Counter, defaultdict
 
 
 def rules(css):
-    out, media = [], None
+    out, media, depth = [], [], 0
     for lineno, line in enumerate(css.split("\n"), 1):
-        if re.match(r"\s*@media", line):
-            media = line.strip()
-        elif media and line == "}":
-            media = None
+        structural = re.sub(r"(['\"])(?:\\.|(?!\1).)*\1", "", line)
+        opens = structural.count("{")
+        closes = structural.count("}")
+        if re.match(r"\s*@media", structural):
+            label = structural.split("{", 1)[0].strip()
+            if opens > closes:
+                media.append((label, depth + 1))
         m = re.match(r"^([^@{}/][^{]*)\{", line)
         if m:
-            out.append((lineno, m.group(1).strip(), media))
+            out.append((lineno, m.group(1).strip(), media[-1][0] if media else None))
+        depth += opens - closes
+        while media and depth < media[-1][1]:
+            media.pop()
     return out
 
 

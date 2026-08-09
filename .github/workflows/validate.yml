@@ -239,6 +239,8 @@ jobs:
         run: python3 site/tools/check-copy.py site
       - name: The copy checker still catches every shape
         run: python3 tests/test-check-copy.py
+      - name: Site checkers reject structural bypasses
+        run: python3 tests/test-site-checkers.py
       - name: Check stylesheet
         run: python3 site/tools/check-css.py site
 
