@@ -947,6 +947,23 @@ emaint_line=$(grep -n '^emaint binhost --fix' \
 ok "完整构建在修复索引前处理保留库" \
    "$(( container_rebuild_line < emaint_line ))" "1"
 
+echo "== gpkg 冒烟测试不阻挡发布"
+
+# The Python side has its own assertions, but the shell wiring is where a gate
+# would be added by accident: the block sits right next to four steps that do
+# write publish-blocked.txt.
+d1='$'
+smoke_block=$(sed -n "/^    smoke_rc=0${d1}/,/^    rm -f \"${d1}{smoke_package_use}\"${d1}/p" \
+              "${ROOT}/build/build-container.sh")
+ok "找得到冒烟测试这一段" "$([[ -n ${smoke_block} ]] && echo yes)" "yes"
+ok "这一段不写发布阻挡文件" \
+   "$(grep -c 'publish-blocked' <<< "${smoke_block}")" "0"
+ok "本身未能执行时改为发出告警" \
+   "$(grep -c 'smoke-alert.txt' <<< "${smoke_block}")" "2"
+ok "冒烟测试排在同代清单之前" \
+   "$(( $(grep -n '^    smoke_rc=0$' "${ROOT}/build/build-container.sh" | cut -d: -f1) <
+        $(grep -n 'generation.py" create' "${ROOT}/build/build-container.sh" | cut -d: -f1) ))" "1"
+
 echo "== publish.sh"
 
 d=$(setup_publish)

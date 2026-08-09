@@ -245,6 +245,24 @@ for category in ("source_fallback", "resolver_failed", "gpkg_install_failed",
         check(f"{category} 的告警范围正确",
               pathlib.Path(probe.alert).exists(), should_alert)
 
+print("== 容器自己失败")
+# The fake docker returns a payload with status 0 everywhere else, so nothing
+# exercised the branch that reads a non-zero container exit. A crashed
+# container has to land in harness_failed and alert, not disappear.
+with tempfile.TemporaryDirectory() as directory:
+    docker = fake_docker(directory, payload=copy.deepcopy(base_payload),
+                         exit_code=3)
+    probe = args(directory, docker)
+    smoke.run(probe)
+    report = json.loads(pathlib.Path(probe.report).read_text())
+    check("容器非零退出归类为测试环境失败", len(report["harness_failed"]), 1)
+    check("报告写出容器的退出码",
+          "3" in report["harness_failed"][0]["reason"])
+    check("容器非零退出不算软件包损坏", report["gpkg_install_failed"], [])
+    check("容器非零退出会告警", pathlib.Path(probe.alert).is_file())
+    check("容器非零退出仍不建立发布阻挡文件",
+          not pathlib.Path(probe.stage, "publish-blocked.txt").exists())
+
 print("== 逾时")
 with tempfile.TemporaryDirectory() as directory:
     docker = fake_docker(directory, sleep=True)
