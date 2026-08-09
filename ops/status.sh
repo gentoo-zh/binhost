@@ -26,6 +26,17 @@ SITE_LOCK="${SITE_LOCK:-${SITE_WORK}.lock}"
 SITE_STALE_H="${SITE_STALE_H:-2}"
 SITE_DEST="${SITE_DEST:-/srv/mirrors}"
 BUILD_STALE_H="${BUILD_STALE_H:-3}"
+INDEX_SAMPLE_COUNT="${INDEX_SAMPLE_COUNT:-3}"
+[[ ${INDEX_SAMPLE_COUNT} =~ ^[1-9][0-9]*$ ]] || INDEX_SAMPLE_COUNT=3
+
+STATUS_DIR=$(cd "$(dirname "$0")" && pwd)
+GENERATION_TOOL="${GENERATION_TOOL:-}"
+if [[ -z ${GENERATION_TOOL} ]]; then
+    for candidate in /usr/local/lib/binhost/generation.py \
+        /var/lib/binhost/build/generation.py "${STATUS_DIR}/../build/generation.py"; do
+        [[ -r ${candidate} ]] && { GENERATION_TOOL="${candidate}"; break; }
+    done
+fi
 
 problems=0
 failures=()
@@ -205,15 +216,28 @@ else
 fi
 
 check_channel_index() {
-    local label=$1 root=$2 head ts n age path code
-    head=$(curl -fsS --max-time 15 -r 0-2047 "${SITE}${root}/Packages" 2>/dev/null)
-    if [[ -z ${head} ]]; then
-        bad "${label} 索引" "尚未发布"
+    local label=$1 root=$2 tmp name ts n age hash start checks i index path code
+    local -a paths
+
+    tmp=$(mktemp -d)
+    for name in Packages Packages.gz installed.txt official.txt source.txt generation.json; do
+        if ! curl -fsS --max-time 20 "${SITE}${root}/${name}" \
+            > "${tmp}/${name}" 2>/dev/null; then
+            bad "${label} 同代清单" "无法获取 ${name}"
+            rm -rf "${tmp}"
+            return
+        fi
+    done
+    if [[ -z ${GENERATION_TOOL} ]] ||
+       ! python3 "${GENERATION_TOOL}" verify "${tmp}" >/dev/null 2>&1; then
+        bad "${label} 同代清单" "generation.json 与索引或快照不一致"
+        rm -rf "${tmp}"
         return
     fi
+    note "${label} 同代清单" "验证通过"
 
-    ts=$(grep -m1 '^TIMESTAMP: ' <<< "${head}" | awk '{print $2}')
-    n=$(grep -m1 '^PACKAGES: ' <<< "${head}" | awk '{print $2}')
+    ts=$(awk '/^TIMESTAMP: /{print $2; exit}' "${tmp}/Packages")
+    n=$(awk '/^PACKAGES: /{print $2; exit}' "${tmp}/Packages")
     if [[ ! ${ts} =~ ^[0-9]+$ ]]; then
         bad "${label} 索引" "TIMESTAMP 无法解析"
     else
@@ -227,19 +251,30 @@ check_channel_index() {
         fi
     fi
 
-    path=$(curl -fsS --max-time 20 "${SITE}${root}/Packages" 2>/dev/null |
-           awk '/^PATH: /{print $2; exit}')
-    if [[ -z ${path} ]]; then
-        bad "${label} 取包" "索引里无法获取一条 PATH"
+    mapfile -t paths < <(awk '/^PATH: /{print $2}' "${tmp}/Packages")
+    if (( ${#paths[@]} == 0 )); then
+        bad "${label} 取包" "索引未列出 PATH"
+        rm -rf "${tmp}"
         return
     fi
-    code=$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' -L \
-           "${SITE}${root}/${path}" 2>/dev/null)
-    if [[ ${code} == 200 ]]; then
-        note "${label} 取包" "正常"
-    else
-        bad "${label} 取包" "HTTP ${code}"
-    fi
+
+    checks=${INDEX_SAMPLE_COUNT}
+    (( checks > ${#paths[@]} )) && checks=${#paths[@]}
+    hash=$(sha256sum "${tmp}/generation.json" | cut -c1-8)
+    start=$(( 16#${hash} % ${#paths[@]} ))
+    for ((i = 0; i < checks; i++)); do
+        index=$(( (start + i * ${#paths[@]} / checks) % ${#paths[@]} ))
+        path=${paths[index]}
+        code=$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' -L \
+               "${SITE}${root}/${path}" 2>/dev/null)
+        if [[ ${code} != 200 ]]; then
+            bad "${label} 取包抽查" "${path} 返回 HTTP ${code}"
+            rm -rf "${tmp}"
+            return
+        fi
+    done
+    note "${label} 取包抽查" "${checks} 个均可下载"
+    rm -rf "${tmp}"
 }
 
 check_channel_index stable "/binpkgs/${TAG}"
@@ -317,7 +352,9 @@ check_build_status() {
 
     jage=$(( ( $(date +%s) - jts ) / 3600 ))
     page=$(( ( $(date +%s) - jprog ) / 3600 ))
-    if [[ ${jstate} == failed ]]; then
+    if [[ ${jstate} != "running" && ${jstate} != "done" && ${jstate} != "failed" ]]; then
+        bad "${label} 构建状态" "state 无法解析：${jstate:-缺失}"
+    elif [[ ${jstate} == failed ]]; then
         bad "${label} 构建状态" "上次构建失败（${jage} 小时前）"
     elif [[ ${jstate} == running ]] && (( page >= BUILD_STALE_H )); then
         bad "${label} 构建状态" "${jphase:-未知} 阶段已 ${page} 小时没有进展"

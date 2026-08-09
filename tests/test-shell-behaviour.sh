@@ -833,6 +833,7 @@ EOF
 NOW=$(date +%s); STALE=$(( NOW - 4 * 3600 ))
 FRESH_JSON="{\"state\":\"running\",\"phase\":\"per-package\",\"progress_at\":${NOW},\"generated\":${NOW}}"
 STALE_JSON="{\"state\":\"running\",\"phase\":\"per-package\",\"progress_at\":${STALE},\"generated\":${NOW}}"
+DONE_JSON="{\"state\":\"done\",\"phase\":\"done\",\"generated\":${NOW}}"
 ok "监控持续刷新但构建无进展时判为故障" \
    "$(build_status_probe "${STALE_JSON}")" \
    "failed"
@@ -842,9 +843,102 @@ ok "两者都新时正常" \
 ok "旧格式没有 progress_at 时退回看 generated" \
    "$(build_status_probe "{\"state\":\"running\",\"generated\":${NOW}}")" \
    "passed"
+ok "完成状态仍然正常" "$(build_status_probe "${DONE_JSON}")" "passed"
+ok "未知状态直接判为无法解析" \
+   "$(build_status_probe "{\"state\":\"garbage\",\"generated\":${NOW}}")" \
+   "failed"
+ok "缺少状态同样判为无法解析" \
+   "$(build_status_probe "{\"generated\":${NOW}}")" \
+   "failed"
 ok "unstable 构建无进展时同样判为故障" \
    "$(build_status_probe "${FRESH_JSON}" "${STALE_JSON}")" \
    "failed"
+
+index_health_probe() {
+    local mode="$1" d channel root out
+    d=$(mktemp -d)
+    mkdir -p "${d}/bin"
+    for channel in stable unstable; do
+        if [[ ${channel} == stable ]]; then
+            root="${d}/site/binpkgs/x86-64"
+        else
+            root="${d}/site/unstable/binpkgs/x86-64"
+        fi
+        mkdir -p "${root}"
+        cat > "${root}/Packages" <<EOF
+TIMESTAMP: ${NOW}
+PACKAGES: 2
+
+CPV: app-misc/example-1
+PATH: app-misc/example/example-1.gpkg.tar
+
+CPV: app-misc/missing-2
+PATH: app-misc/missing/missing-2.gpkg.tar
+EOF
+        printf 'compressed\n' > "${root}/Packages.gz"
+        printf 'installed\n' > "${root}/installed.txt"
+        printf 'official\n' > "${root}/official.txt"
+        printf 'source\n' > "${root}/source.txt"
+        python3 "${ROOT}/build/generation.py" create "${root}"
+    done
+    [[ ${mode} != mixed ]] || printf 'changed\n' >> \
+        "${d}/site/binpkgs/x86-64/official.txt"
+
+    cat > "${d}/bin/curl" <<EOF
+#!/bin/bash
+url=''
+for arg in "\$@"; do
+    case \${arg} in https://*) url=\${arg};; esac
+done
+case \${url} in
+  *api.github.com/repos/gentoo-zh/binhost/commits/master*)
+    echo '  "sha": "${SHA40}",'; exit 0 ;;
+  https://test/distfiles-status.json)
+    echo '{"generated":${NOW},"files":1}'; exit 0 ;;
+  https://test/build-status.json|https://test/build-status-unstable.json)
+    echo '${DONE_JSON}'; exit 0 ;;
+  https://test/.health)
+    echo '${NOW}'; exit 0 ;;
+esac
+if [[ "\$*" == *"%{http_code}"* ]]; then
+    if [[ '${mode}' == missing && \${url} == *missing-2.gpkg.tar ]]; then
+        printf 404
+    else
+        printf 200
+    fi
+    exit 0
+fi
+cat "${d}/site\${url#https://test}"
+EOF
+    printf '#!/bin/bash\nexit 1\n' > "${d}/bin/sudo"
+    printf '#!/bin/bash\nexit 1\n' > "${d}/bin/openssl"
+    chmod +x "${d}/bin"/*
+    printf '%s\n' "${SHA40}" > "${d}/VERSION"
+    out=$( cd "${ROOT}" && PATH="${d}/bin:${PATH}" SITE=https://test \
+        ALERT_CONF=/nonexistent STATE_FILE="${d}/state" VERSION_FILE="${d}/VERSION" \
+        SIGNING_GNUPGHOME="${d}/nokey" DISK_PATH="${d}/nodisk" \
+        HEARTBEAT="${d}/nowhere/.health" SITE_WORK="${d}/nowork" \
+        SITE_DEST="${d}/nodest" MONITORS_FILE="${d}/nomon" \
+        bash ops/status.sh 2>&1 )
+    rm -rf "${d}"
+    printf '%s\n' "${out}"
+}
+
+echo "== status.sh 验证同代清单并轮替抽查"
+out=$(index_health_probe healthy)
+ok "两个频道的同代清单都通过" \
+   "$(grep -c '同代清单.*验证通过' <<< "${out}")" "2"
+ok "两个频道都明确标出抽查数量" \
+   "$(grep -c '取包抽查.*2 个均可下载' <<< "${out}")" "2"
+out=$(index_health_probe mixed)
+ok "快照与 generation.json 混代时判为故障" \
+   "$([[ $(grep 'stable 同代清单' <<< "${out}") == *'<--'* ]] && echo failed)" \
+   "failed"
+out=$(index_health_probe missing)
+ok "第二个 PATH 返回 404 时抽查会发现" \
+   "$([[ $(grep 'stable 取包抽查' <<< "${out}") == *'missing-2.gpkg.tar'*'<--'* ]] && echo failed)" \
+   "failed"
+
 ok "监控同时检查两个频道的索引" \
    "$(grep -c '^check_channel_index \(stable\|unstable\) ' ops/status.sh)" "2"
 ok "监控同时检查两个频道的构建状态" \
