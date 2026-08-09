@@ -82,6 +82,8 @@ def safe_path(value):
         return None
     if any(part in ("", "..") for part in p.parts):
         return None
+    if str(p) != value:
+        return None
     return p
 
 

@@ -283,6 +283,24 @@ index_header_ok() {
 mapfile -t paths < <(awk '/^PATH: /{print $2}' "${STAGE}/Packages")
 (( ${#paths[@]} )) || { echo "索引未列出任何软件包" >&2; exit 1; }
 
+noncanonical=$(python3 -c '
+import pathlib
+import sys
+
+for value in sys.argv[1:]:
+    normalized = str(pathlib.PurePosixPath(value))
+    if value != normalized:
+        print(f"{value} -> {normalized}")
+' "${paths[@]}") || {
+    echo "无法核对索引里的 PATH，中止发布" >&2
+    exit 1
+}
+if [[ -n ${noncanonical} ]]; then
+    echo "!! 索引里的 PATH 不是正规形式：" >&2
+    printf '   %s\n' "${noncanonical}" >&2
+    exit 1
+fi
+
 missing=0
 index_header_ok "${STAGE}/Packages" "${#paths[@]}" || { echo "中止发布" >&2; exit 1; }
 

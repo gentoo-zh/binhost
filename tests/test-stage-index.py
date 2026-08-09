@@ -637,6 +637,12 @@ case("PATH 为空时全部拒绝", lambda: (
 case("PATH 带前后空白时全部拒绝", lambda: (
     run([stanza("app-misc/a-1", PATH=" app-misc/a-1.gpkg.tar")])[2] is not None))
 
+case("PATH 带当前目录前缀时全部拒绝", lambda: (
+    run([stanza("app-misc/a-1", PATH="./app-misc/a-1.gpkg.tar")])[2] is not None))
+
+case("PATH 带重复分隔符时全部拒绝", lambda: (
+    run([stanza("app-misc/a-1", PATH="app-misc//a-1.gpkg.tar")])[2] is not None))
+
 case("正常的相对路径照常通过", lambda: (
     run([stanza("app-misc/a-1", PATH="app-misc/a-1-1.gpkg.tar")])[2] is None))
 

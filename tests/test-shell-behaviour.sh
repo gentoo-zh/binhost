@@ -1079,6 +1079,20 @@ rm -rf "${d}"
 
 d=$(setup_publish)
 stage_index "${d}" 2
+sed -i 's|^PATH: app-misc/p0|PATH: ./app-misc/p0|' "${d}/stage/Packages"
+gzip -c "${d}/stage/Packages" > "${d}/stage/Packages.gz"
+python3 "${ROOT}/build/generation.py" create "${d}/stage"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "非正规 PATH 会中止发布" "$?" "1"
+contains "并且指出原值与正规值" "${out}" \
+    "./app-misc/p0-1.0-1.gpkg.tar -> app-misc/p0-1.0-1.gpkg.tar"
+ok "拒绝后没有上传包体" \
+   "$(find "${d}/remote" -name '*.gpkg.tar' | wc -l)" "0"
+rm -rf "${d}"
+
+d=$(setup_publish)
+stage_index "${d}" 2
 printf '2\n7\n' > "${d}/stage/counts.txt"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
