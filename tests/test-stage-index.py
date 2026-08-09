@@ -467,6 +467,34 @@ def non_git_tree_has_no_revision():
 
 case("主树不是 git 仓库时省略修订而不失败", non_git_tree_has_no_revision)
 
+
+def staged_header(gentoo_rev):
+    """main() has to hand the revision through, not just accept the argument."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp)
+        pkgdir = root / "pkgdir"
+        pkgdir.mkdir()
+        content = b"x\n"
+        blob = pkgdir / "app-misc/a/a-1.gpkg.tar"
+        blob.parent.mkdir(parents=True)
+        blob.write_bytes(content)
+        (pkgdir / "Packages").write_text(
+            HEADER + "\n\nCPV: app-misc/a-1\nPATH: app-misc/a/a-1.gpkg.tar\n"
+            f"REPO: gentoo-zh\nEAPI: 8\nSLOT: 0\nMD5: {md5_of(content)}\n")
+        stage = root / "stage"
+        stage.mkdir()
+        stage_index.main(pkgdir, stage, rev="overlay123", gentoo_rev=gentoo_rev,
+                         lookup=lambda _cpv, _repo: "")
+        return (stage / "Packages").read_text()
+
+
+case("main 把两棵树的修订都写进暂存索引", lambda: (
+    'REPO_REVISIONS: {"gentoo": "gentoo123", "gentoo-zh": "overlay123"}'
+    in staged_header("gentoo123")))
+
+case("无法取得主树修订时只写 overlay", lambda: (
+    'REPO_REVISIONS: {"gentoo-zh": "overlay123"}' in staged_header("")))
+
 case("插入后头部保持字母序", lambda: (
     (lambda ls: ls == sorted(ls))(stage_index.rewrite_header(
         "ACCEPT_KEYWORDS: ~amd64\nPACKAGES: 1\nTIMESTAMP: 1\nVERSION: 0", 7, "abc").splitlines())))

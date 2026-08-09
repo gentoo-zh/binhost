@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import json
 import pathlib
 import sys
 import tempfile
@@ -89,6 +90,21 @@ with tempfile.TemporaryDirectory() as tmp:
     assert ('REPO_REVISIONS: {"gentoo": "gentoo123", '
             '"gentoo-zh": "overlay123"}') in index
     assert index.count("REPO_REVISIONS:") == 1
+
+# A header nobody can parse must stop the run: silently rewriting it would drop
+# whichever revisions were already recorded.
+for broken in ('REPO_REVISIONS: not json', 'REPO_REVISIONS: ["gentoo"]',
+               'REPO_REVISIONS: {"gentoo": 1}'):
+    try:
+        sign_packages.read_revisions(f"PACKAGES: 1\n{broken}\nVERSION: 0")
+    except (ValueError, json.JSONDecodeError):
+        pass
+    else:
+        raise AssertionError(f"接受了无法解析的头部： {broken}")
+
+assert sign_packages.read_revisions("PACKAGES: 1\nVERSION: 0") == {}
+assert sign_packages.read_revisions(
+    'REPO_REVISIONS: {"gentoo": "a"}') == {"gentoo": "a"}
 
 assert sign_packages.signature_valid(
     pathlib.Path("package"), pathlib.Path("home"), "fingerprint",
