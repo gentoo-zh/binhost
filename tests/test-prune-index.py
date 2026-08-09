@@ -153,13 +153,16 @@ with tempfile.TemporaryDirectory() as raw:
 print()
 print(">>> publish.sh 按这个形状使用它")
 publish = (ROOT / "build" / "publish.sh").read_text()
-check("移除之后才改写",
-      publish.index("实际移除") < publish.index("! prune_live_index; then"))
-check("改写走的是同一个切换函数",
-      'switch_generation ".gen-prune-${RUN_ID}" "${live}"' in publish)
-check("改写失败不会中止发布",
-      "! prune_live_index; then" in publish and
-      "未能改写公开的索引" in publish)
+check("移除之前准备修剪后的代际",
+      publish.index("if ! prepare_pruned_generation; then") <
+      publish.index("实际移除"))
+check("准备阶段只上传，不提前切换",
+      'prepare_generation "${PRUNE_GEN}" "${live}"' in publish)
+check("移除之后立即切换准备好的代际",
+      publish.index("实际移除") <
+      publish.index('activate_generation "${PRUNE_GEN}"'))
+check("准备或切换失败都会中止发布",
+      "隔离产物仍保留" in publish and "下一轮会再次修复" in publish)
 check("取回时解引用符号链接", "rsync -aL --files-from=-" in publish)
 
 print()

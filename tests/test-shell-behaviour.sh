@@ -58,7 +58,17 @@ else
     cp -f "${src}" "${dst}"
 fi
 EOF
-    chmod +x "${d}/bin/ssh" "${d}/bin/rsync"
+    cat > "${d}/bin/mv" <<'EOF'
+#!/bin/bash
+last=${!#}
+if [[ ${last} == .gen && -n ${PUBLISH_TEST_ROOT:-} &&
+      -e ${PUBLISH_TEST_ROOT}/fail-activate ]]; then
+    echo "injected generation switch failure" >&2
+    exit 1
+fi
+exec /bin/mv "$@"
+EOF
+    chmod +x "${d}/bin/ssh" "${d}/bin/rsync" "${d}/bin/mv"
     echo "${d}"
 }
 
@@ -967,18 +977,21 @@ ok "冒烟测试排在同代清单之前" \
 echo "== publish.sh"
 
 d=$(setup_publish)
+stage_index "${d}" 3
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "隔离用例先建立完整公开代际" "$?" "0"
 stage_index "${d}" 2
 mkdir -p "${d}/remote/app-misc"
 for ((i = 0; i < 30; i++)); do echo x > "${d}/remote/app-misc/old${i}-1.0-1.gpkg.tar"; done
-echo x > "${d}/remote/app-misc/banned-1.0-1.gpkg.tar"
-echo "app-misc/banned-1.0-1.gpkg.tar" > "${d}/stage/quarantine.txt"
+echo "app-misc/p2-1.0-1.gpkg.tar" > "${d}/stage/quarantine.txt"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
 ok "清理仍被上限拦下" "$?" "3"
 ok "但不可再散布的那个已经移除" \
-   "$(test -e "${d}/remote/app-misc/banned-1.0-1.gpkg.tar" && echo 在 || echo 不在)" "不在"
+   "$(test -e "${d}/remote/app-misc/p2-1.0-1.gpkg.tar" && echo 在 || echo 不在)" "不在"
 ok "受上限保护的旧包一个没动" "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "30"
-contains "输出说明先执行隔离" "${out}" "先从公开路径移除"
+contains "输出说明执行隔离" "${out}" "从公开路径移除"
 rm -rf "${d}"
 
 d=$(setup_publish)
@@ -991,11 +1004,35 @@ printf '目标版本检查失败\n' > "${d}/stage/publish-blocked.txt"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
 ok "发布闸门失败时退出码非零" "$?" "1"
-ok "发布闸门失败时仍执行隔离" \
-   "$(test -e "${d}/remote/app-misc/restricted.gpkg.tar" && echo 在 || echo 不在)" "不在"
+ok "准备失败时隔离文件仍在" \
+   "$(test -e "${d}/remote/app-misc/restricted.gpkg.tar" && echo 在 || echo 不在)" "在"
 ok "发布闸门失败时保留公开索引" "$(tr -d '\n' < "${d}/remote/Packages")" "old index"
-contains "公开的一代不完整时说出未能改写" "${out}" "未能改写公开的索引"
-contains "发布闸门失败时输出具体原因" "${out}" "目标版本检查失败"
+contains "公开的一代不完整时说明没有隔离" "${out}" "隔离产物仍保留"
+rm -rf "${d}"
+
+d=$(setup_publish)
+stage_index "${d}" 2
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" PUBLISH_TEST_ROOT="${d}" bash build/publish.sh 2>&1)
+ok "切换失败用例先建立完整公开代际" "$?" "0"
+printf 'app-misc/p0-1.0-1.gpkg.tar\n' > "${d}/stage/quarantine.txt"
+printf '目标版本检查失败\n' > "${d}/stage/publish-blocked.txt"
+touch "${d}/fail-activate"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" PUBLISH_TEST_ROOT="${d}" bash build/publish.sh 2>&1)
+ok "删除后切换失败时退出码非零" "$?" "1"
+ok "切换失败发生在隔离文件移除之后" \
+   "$(test -e "${d}/remote/app-misc/p0-1.0-1.gpkg.tar" && echo 在 || echo 不在)" "不在"
+ok "切换失败时公开索引仍是上一代" \
+   "$(grep -c 'PATH: app-misc/p0-1.0-1.gpkg.tar' "${d}/remote/Packages")" "1"
+contains "切换失败时说明下一轮会修复" "${out}" "下一轮会再次修复"
+rm -f "${d}/fail-activate"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" PUBLISH_TEST_ROOT="${d}" bash build/publish.sh 2>&1)
+ok "下一轮仍由发布闸门中止" "$?" "1"
+ok "下一轮修复公开索引" \
+   "$(grep -c 'PATH: app-misc/p0-1.0-1.gpkg.tar' "${d}/remote/Packages")" "0"
+contains "下一轮继续输出发布闸门原因" "${out}" "目标版本检查失败"
 rm -rf "${d}"
 
 d=$(setup_publish)
@@ -1006,7 +1043,9 @@ printf '../../etc/passwd\n' > "${d}/stage/quarantine.txt"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
 ok "隔离清单里的越界路径被拒绝" "$?" "1"
-contains "并且说明隔离失败" "${out}" "产物未能移除"
+contains "并且指出路径不合法" "${out}" "路径不合法"
+ok "越界路径被拒绝时公开文件仍在" \
+   "$(test -e "${d}/remote/app-misc/banned-1.0-1.gpkg.tar" && echo 在 || echo 不在)" "在"
 rm -rf "${d}"
 
 d=$(setup_publish)
