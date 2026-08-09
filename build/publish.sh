@@ -14,6 +14,11 @@ REMOTE_ROOT="${REMOTE_ROOT:-${CHANNEL_REMOTE_ROOT}}"
 MAX_RETIRE_SHARE="${MAX_RETIRE_SHARE:-20}"
 MAX_RETIRE_COUNT="${MAX_RETIRE_COUNT:-60}"
 
+# These six describe one generation and have to change together. Each name on
+# the mirror is a symlink into .gen/, and .gen is a symlink to the generation
+# directory, so replacing all six is one rename of .gen.
+GEN_FILES=(Packages Packages.gz installed.txt official.txt source.txt generation.json)
+
 # Every publisher writes the same staging names under REMOTE_ROOT, so two of
 # them at once would interleave into one mixed generation. One builder plus the
 # local lock is not the guarantee: a manual run and the timer are two.
@@ -59,6 +64,7 @@ release_lock() {
 }
 trap release_lock EXIT
 QUARANTINE="${STAGE}/quarantine.txt"
+
 if [[ -s ${QUARANTINE} ]]; then
     q=$(wc -l < "${QUARANTINE}")
     echo ">>> ${q} 个产物不可继续散布，先从公开路径移除"
@@ -187,48 +193,70 @@ printf '%s\n' "${paths[@]}" |
     rsync -a --info=stats2 --files-from=- "${STAGE}/" "${REMOTE}:${REMOTE_ROOT}/" |
     { grep -E "files transferred|Total transferred file size" || true; } | sed 's/^/    /'
 
-rsync -a "${STAGE}/installed.txt" "${REMOTE}:${REMOTE_ROOT}/.installed.txt.${RUN_ID}.new"
-rsync -a "${STAGE}/official.txt" "${REMOTE}:${REMOTE_ROOT}/.official.txt.${RUN_ID}.new"
-rsync -a "${STAGE}/source.txt" "${REMOTE}:${REMOTE_ROOT}/.source.txt.${RUN_ID}.new"
-rsync -a "${STAGE}/generation.json" "${REMOTE}:${REMOTE_ROOT}/.generation.json.${RUN_ID}.new"
-rsync -a "${STAGE}/Packages" "${REMOTE}:${REMOTE_ROOT}/.Packages.${RUN_ID}.new"
-rsync -a "${STAGE}/Packages.gz" "${REMOTE}:${REMOTE_ROOT}/.Packages.gz.${RUN_ID}.new"
-
-# These files identify one generation. Restore the complete previous set
-# if any rename fails.
+GEN=".gen-${RUN_ID}"
 # shellcheck disable=SC2029  # REMOTE_ROOT is meant to expand locally
-ssh "${REMOTE}" "sh -s '${REMOTE_ROOT}' '${RUN_ID}'" <<'SWAP'
+ssh "${REMOTE}" "install -dm755 '${REMOTE_ROOT}/${GEN}'"
+printf '%s\n' "${GEN_FILES[@]}" |
+    rsync -a --files-from=- "${STAGE}/" "${REMOTE}:${REMOTE_ROOT}/${GEN}/"
+
+# shellcheck disable=SC2029  # REMOTE_ROOT and GEN are meant to expand locally
+if ! ssh "${REMOTE}" "sh -s '${REMOTE_ROOT}' '${GEN}' ${GEN_FILES[*]}" <<'SWITCH'
 set -u
 cd "$1" || exit 1
-run="$2"
-files='Packages Packages.gz installed.txt official.txt source.txt generation.json'
-for name in $files; do
-    if [ -e "$name" ]; then
-        cp -p "$name" ".$name.$run.prev" || exit 1
-    else
-        : > ".$name.$run.absent" || exit 1
-    fi
+gen="$2"
+shift 2
+files="$*"
+tmp=".switch-${gen#.gen-}"
+
+if [ -e .gen ] && [ ! -L .gen ]; then
+    echo "!! .gen 不是符号链接，无法切换代际" >&2
+    exit 1
+fi
+
+# Turning the six names into links must not change what they resolve to, so
+# the first run seeds a generation from what is already published. From then on
+# the rename at the end is the only thing a reader can observe.
+relink=0
+for name in ${files}; do
+    [ -L "${name}" ] || relink=1
 done
-for name in $files; do
-    if ! mv -f ".$name.$run.new" "$name"; then
-        for restore in $files; do
-            if [ -e ".$restore.$run.prev" ]; then
-                mv -f ".$restore.$run.prev" "$restore"
-            elif [ -e ".$restore.$run.absent" ]; then
-                rm -f "$restore"
-            fi
-        done
-        for cleanup in $files; do
-            rm -f ".$cleanup.$run.prev" ".$cleanup.$run.absent" ".$cleanup.$run.new"
-        done
-        echo "!! 同代文件未能全部替换，已还原上一代" >&2
+if [ "${relink}" = 1 ]; then
+    seed=".gen-seed-${gen#.gen-}"
+    rm -rf "${seed}" && mkdir "${seed}" || exit 1
+    # -L is cp's default and is written out because it is the point: a name
+    # that is already a link contributes what it resolves to, so a root where
+    # only some names were converted is seeded by value like the rest.
+    for name in ${files}; do
+        [ -e "${name}" ] || continue
+        cp -pL "${name}" "${seed}/${name}" || exit 1
+    done
+    ln -sfn "${seed}" "${tmp}" && mv -Tf "${tmp}" .gen || exit 1
+    for name in ${files}; do
+        ln -sfn ".gen/${name}" "${tmp}" && mv -Tf "${tmp}" "${name}" || exit 1
+    done
+fi
+
+# After the seed, so that aborting here leaves the six reading what they read
+# before this run rather than a half-built generation.
+for name in ${files}; do
+    if [ ! -s "${gen}/${name}" ]; then
+        echo "!! ${gen}/${name} 缺失或为空，不切换" >&2
         exit 1
     fi
 done
-for cleanup in $files; do
-    rm -f ".$cleanup.$run.prev" ".$cleanup.$run.absent"
+
+ln -sfn "${gen}" "${tmp}" || exit 1
+mv -Tf "${tmp}" .gen || { rm -f "${tmp}"; exit 1; }
+
+for old in .gen-*; do
+    [ -d "${old}" ] || continue
+    [ "${old}" = "${gen}" ] || rm -rf "${old}"
 done
-SWAP
+SWITCH
+then
+    echo "!! 代际未能切换，公开的仍是上一代" >&2
+    exit 1
+fi
 
 ts=$(awk '/^TIMESTAMP: /{print $2; exit}' "${STAGE}/Packages")
 n=$(awk '/^PACKAGES: /{print $2; exit}' "${STAGE}/Packages")
@@ -241,8 +269,8 @@ fi
 # shellcheck disable=SC2029  # REMOTE_ROOT is meant to expand locally
 printf '{"packages":%s,"overlay":%s,"deps":%s,"generated":%s}\n' \
     "${n:-0}" "${overlay}" "${deps}" "${ts:-0}" |
-    ssh "${REMOTE}" "cat > ${REMOTE_ROOT}/.status.json.new &&
-                     mv -f ${REMOTE_ROOT}/.status.json.new ${REMOTE_ROOT}/status.json"
+    ssh "${REMOTE}" "cat > ${REMOTE_ROOT}/.status.json.${RUN_ID}.new &&
+                     mv -f ${REMOTE_ROOT}/.status.json.${RUN_ID}.new ${REMOTE_ROOT}/status.json"
 
 # shellcheck disable=SC2029  # as above
 want=${#paths[@]}
