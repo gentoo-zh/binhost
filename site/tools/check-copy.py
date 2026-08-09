@@ -16,6 +16,10 @@ from html.parser import HTMLParser                        # noqa: E402
 
 VISIBLE_ATTRS = {"title", "aria-label", "placeholder", "alt", "content", "value"}
 SKIP_TAGS = {"script", "style"}
+VOID_TAGS = {
+    "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
+    "param", "source", "track", "wbr",
+}
 SPECIMEN = "data-specimen"
 
 
@@ -26,8 +30,17 @@ class Visible(HTMLParser):
         self.skip = 0
         self.specimen = []
 
+    def visible_attrs(self, attrs):
+        for name, value in attrs:
+            if name in VISIBLE_ATTRS and value:
+                self.parts.append(value)
+
     def handle_starttag(self, tag, attrs):
         names = {n for n, _ in attrs}
+        if tag in VOID_TAGS:
+            if not self.skip and SPECIMEN not in names:
+                self.visible_attrs(attrs)
+            return
         if tag in SKIP_TAGS or SPECIMEN in names:
             self.skip += 1
             self.specimen.append(tag)
@@ -35,12 +48,12 @@ class Visible(HTMLParser):
         if self.skip:
             self.specimen.append(tag)
             return
-        for name, value in attrs:
-            if name in VISIBLE_ATTRS and value:
-                self.parts.append(value)
+        self.visible_attrs(attrs)
 
     def handle_startendtag(self, tag, attrs):
-        self.handle_starttag(tag, attrs)
+        names = {n for n, _ in attrs}
+        if not self.skip and tag not in SKIP_TAGS and SPECIMEN not in names:
+            self.visible_attrs(attrs)
 
     def handle_endtag(self, tag):
         if self.specimen and self.specimen[-1] == tag:

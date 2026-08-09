@@ -320,9 +320,6 @@ main > .title:not(:first-child) {
   padding: 0.08rem 0.34rem; border-radius: 0.3rem; color: var(--fg-body);
   overflow-wrap: anywhere;
 }
-a { color: var(--primary); text-decoration: none; }
-
-
 .foot { margin-top: 2.6rem; border-top: 1px solid var(--border); }
 .foot-inner {
   max-width: 1100px; margin: 0 auto; padding: 1.2rem 1.25rem 2.6rem;
