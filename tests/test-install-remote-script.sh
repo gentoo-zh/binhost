@@ -39,6 +39,21 @@ lacks() {
 tmp=$(mktemp -d)
 trap 'rm -rf "${tmp}"' EXIT
 
+mkdir -p "${tmp}/fake-bin"
+cat > "${tmp}/fake-bin/ssh" <<'EOF'
+#!/bin/sh
+if [ "$1" = "mktemp -d" ]; then
+    printf '/tmp/fake\n'
+else
+    printf '%s\n' "$1"
+fi
+EOF
+cat > "${tmp}/fake-bin/rsync" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+chmod +x "${tmp}/fake-bin/ssh" "${tmp}/fake-bin/rsync"
+
 render() {
     local script="$1" out="$2"
     # shellcheck disable=SC2016  # the sed patterns match ${VAR} literally
@@ -47,7 +62,7 @@ render() {
         -e 's|^rsync -a |: rsync -a |' \
         -e 's|^ssh "${REMOTE}" "set -euo pipefail|printf "%s" "set -euo pipefail|' \
         "${ROOT}/${script}" > "${tmp}/render.sh"
-    ( bash "${tmp}/render.sh" > "${out}" 2>/dev/null ) || true
+    ( PATH="${tmp}/fake-bin:${PATH}" bash "${tmp}/render.sh" > "${out}" 2>/dev/null ) || true
 }
 
 echo "== install.sh 传输的远端脚本"
@@ -71,6 +86,61 @@ lacks "没有留下未展开的 SSH_PORT" '__SSH_PORT__/${SSH_PORT}' "${tmp}/rem
 has "端口已代换成实际值" "s/__SSH_PORT__/60001/g" "${tmp}/remote.sh"
 has "锁档已存在就不重建" \
     "[ -e /var/lib/binhost-site.lock ] ||" "${tmp}/remote.sh"
+
+line_of() {
+    local line
+    line=$(grep -nF -- "$2" "$1" | head -1 | cut -d: -f1) || true
+    printf '%s\n' "${line:-0}"
+}
+
+echo
+echo "== 部署验证、锁与版本标记的顺序"
+
+install="${ROOT}/deploy/install.sh"
+nginx_check=$(line_of "${install}" "sudo nginx -t -c")
+nginx_install=$(line_of "${install}" "sudo install -m644 nginx.conf")
+logrotate_check=$(line_of "${install}" "sudo logrotate -d nginx-test/logrotate-binhost")
+logrotate_install=$(line_of "${install}" "sudo install -m644 logrotate-binhost /etc/logrotate.d/binhost")
+site_lock_fd=$(line_of "${install}" "exec 9>/var/lib/binhost-site.lock")
+site_lock=$(line_of "${install}" "flock -n 9")
+script_install=$(line_of "${install}" "sudo install -m755 daily.sh")
+nginx_reload=$(line_of "${install}" "rc-service nginx reload")
+site_version=$(line_of "${install}" "/usr/local/lib/binhost/VERSION")
+
+ok "nginx 配置先在暂存路径验证" \
+   "$((nginx_check < nginx_install))" "1"
+ok "日志轮替配置同样先验证" \
+   "$((logrotate_check < logrotate_install))" "1"
+ok "站台锁先打开描述符再加锁" \
+   "$((site_lock_fd < site_lock))" "1"
+ok "站台锁涵盖脚本替换、nginx reload 与 VERSION" \
+   "$((site_lock < script_install && script_install < nginx_reload &&
+       nginx_reload < site_version))" "1"
+
+builder="${ROOT}/deploy/install-builder.sh"
+d1='$'
+builder_lock_fd=$(line_of "${builder}" "exec 9>'${d1}{ROOT}/stage/build.lock'")
+builder_lock=$(line_of "${builder}" "flock -n 9")
+builder_scripts=$(line_of "${builder}" "sudo rsync -a --delete")
+builder_units=$(line_of "${builder}" "sudo install -m644 '${d1}{tmp}'/systemd")
+builder_version=$(line_of "${builder}" "'${d1}{ROOT}/build/VERSION'")
+ok "建置锁涵盖脚本、单元与 VERSION" \
+   "$((builder_lock < builder_scripts && builder_scripts < builder_units &&
+       builder_units < builder_version))" "1"
+ok "建置锁先打开描述符再加锁" \
+   "$((builder_lock_fd < builder_lock))" "1"
+ok "持锁的建置部署使用同一个远端 shell" \
+   "$(grep -cF "${d1}{REMOTE} \"set -euo pipefail" "${builder}")" "1"
+
+PATH="${tmp}/fake-bin:${PATH}" REMOTE=ssh SIGNING_KEY=test \
+    bash "${builder}" > "${tmp}/builder-remote.sh"
+if bash -n "${tmp}/builder-remote.sh"; then
+    echo "  ✓ 建置机收到的远端脚本语法正确"
+    pass=$((pass + 1))
+else
+    echo "  ✗ 建置机收到的远端脚本语法错误"
+    fail=$((fail + 1))
+fi
 
 echo
 echo "== 防火墙的自动回滚"

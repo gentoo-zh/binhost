@@ -14,28 +14,30 @@ git diff --quiet && git diff --cached --quiet || COMMIT="${COMMIT}-dirty"
 
 say() { printf '\n=== %s ===\n' "$1"; }
 
-say "确认没有构建正在进行"
-if ${REMOTE} "[ -e '${ROOT}/stage/build.lock' ] && ! flock -n '${ROOT}/stage/build.lock' -c true"; then
-    echo "有构建正在执行（${ROOT}/stage/build.lock）。" >&2
-    echo "请等待当前构建结束；如需立即覆盖，请设置 FORCE=1。" >&2
-    [ "${FORCE:-}" = 1 ] || exit 1
-    echo "已设置 FORCE=1，继续部署。" >&2
-else
-    echo "  没有"
-fi
-
-say "上传构建脚本"
+say "上传"
 tmp=$(${REMOTE} 'mktemp -d')
-rsync -a -e "${REMOTE% *}" build ops "${REMOTE##* }:${tmp}/"
+rsync -a -e "${REMOTE% *}" build ops deploy/systemd "${REMOTE##* }:${tmp}/"
 
 # shellcheck disable=SC2029  # the path is meant to expand locally
 ${REMOTE} "set -euo pipefail
 sudo install -dm755 '${ROOT}' '${ROOT}/logs' '${ROOT}/stage'
+sudo chown ${BUILD_USER}:${BUILD_USER} '${ROOT}/stage'
+exec 9>'${ROOT}/stage/build.lock'
+if ! flock -n 9; then
+    echo '有构建正在执行（${ROOT}/stage/build.lock）。' >&2
+    echo '请等待当前构建结束；如需立即覆盖，请设置 FORCE=1。' >&2
+    if [ '${FORCE:-0}' != 1 ]; then
+        rm -rf '${tmp}'
+        exit 1
+    fi
+    echo '已设置 FORCE=1，继续部署。' >&2
+fi
+trap \"rm -rf '${tmp}'\" EXIT
+
+echo '--- 构建脚本'
 sudo rsync -a --delete '${tmp}/build/' '${ROOT}/build/'
 sudo rsync -a --delete '${tmp}/ops/' '${ROOT}/ops/'
-rm -rf '${tmp}'
 sudo install -m755 '${ROOT}/ops/status.sh' /usr/local/bin/binhost-status
-printf %s '${COMMIT}' | sudo install -m644 /dev/stdin '${ROOT}/build/VERSION'
 
 echo '--- overlay 副本'
 [ -d '${ROOT}/overlay/.git' ] ||
@@ -53,14 +55,10 @@ if sudo test -e /etc/binhost/alert.conf; then
 else
     echo '    /etc/binhost/alert.conf 尚未建立，告警不会发出'
 fi
-"
 
-say "定时单元"
-utmp=$(${REMOTE} 'mktemp -d')
-rsync -a -e "${REMOTE% *}" deploy/systemd/ "${REMOTE##* }:${utmp}/"
-${REMOTE} "sudo install -m644 ${utmp}/binhost-*.service ${utmp}/binhost-*.timer \
+echo '--- 定时单元'
+sudo install -m644 '${tmp}'/systemd/binhost-*.service '${tmp}'/systemd/binhost-*.timer \
     /etc/systemd/system/
-rm -rf '${utmp}'
 for unit in binhost-build.service binhost-build-unstable.service; do
     sudo sed -i -e 's|^Environment=SIGNING_KEY=.*|Environment=SIGNING_KEY=${SIGNING_KEY}|' \
         \"/etc/systemd/system/\${unit}\"
@@ -74,7 +72,9 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now \
     binhost-build.timer binhost-build-unstable.timer binhost-status.timer \
     binhost-kernel.timer
-systemctl list-timers --all --no-pager | grep binhost || true"
+printf %s '${COMMIT}' | sudo install -m644 /dev/stdin '${ROOT}/build/VERSION'
+systemctl list-timers --all --no-pager | grep binhost || true
+"
 
 say "完成"
 echo "尚需手动设置：签名密钥（${ROOT}/gnupg）、到镜像机的免密 ssh、"
