@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Every script directory has to appear in the CI globs that lint it.
+"""Every script directory has to appear in the CI globs that lint it, and
+every test file has to be named by a CI step that runs it.
 
 py_compile and shellcheck take explicit globs, so moving scripts into a new
 directory drops them out of CI silently: nothing references the old path any
@@ -7,7 +8,10 @@ more, so a grep for stale references comes back clean while the new directory
 is checked by nothing at all. That happened twice while splitting build/.
 
 tests/ is deliberately outside the py_compile glob: those files are executed
-by CI one by one, which subsumes compiling them.
+by CI one by one, which subsumes compiling them. That per-file listing is the
+second gap: a new test passes locally, nobody adds the step, and it never runs
+again. tests/test-publish-lock.sh and tests/test-site-sync-check.sh were
+written, merged and never executed by CI.
 """
 
 import pathlib
@@ -68,6 +72,11 @@ for d in sorted(dirs_holding(".py") - PY_EXEMPT):
 for d in sorted(dirs_holding(".sh") - SH_EXEMPT):
     check(f"{d}/ 的 .sh 在 shellcheck 里", d in sh,
           "已列出：" + " ".join(sorted(sh)))
+
+workflow = WORKFLOW.read_text()
+run_by_ci = set(re.findall(r"tests/(test-[A-Za-z0-9._-]+)", workflow))
+for f in sorted(p.name for p in (ROOT / "tests").glob("test-*")):
+    check(f"CI 有执行 tests/{f} 的步骤", f in run_by_ci)
 
 print()
 print("  CI 脚本覆盖：全部通过" if not failed else f"  {failed} 项不通过")

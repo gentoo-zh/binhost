@@ -258,6 +258,12 @@ jobs:
       - name: install.sh 传输的远端脚本能解析，防火墙有回滚
         run: bash tests/test-install-remote-script.sh
 
+      - name: A second publisher waits for the mirror lock
+        run: bash tests/test-publish-lock.sh
+
+      - name: The status check reads the site copy only when no sync holds it
+        run: bash tests/test-site-sync-check.sh
+
   nginx:
     runs-on: ubuntu-latest
     container: nginx@sha256:5a88c9c45479443d7be2eadc894b4ed0a9801bae03d97a5760ae13b5c2005942  # nginx:mainline
