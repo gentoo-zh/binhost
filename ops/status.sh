@@ -88,11 +88,30 @@ else
     bad "部署版本" "缺少 VERSION，安装时未记录提交号"
 fi
 
-if [[ ! -d ${SITE_WORK}/.git && -d ${SITE_DEST} && -e ${SITE_DEST}/index.html ]]; then
-    bad "站点同步" "${SITE_WORK} 不是仓库副本，而 ${SITE_DEST} 里有站点内容"
-elif [[ -d ${SITE_WORK}/.git ]]; then
+site_syncing() { [[ -e ${SITE_LOCK} ]] && ! flock -n "${SITE_LOCK}" true 2>/dev/null; }
+
+check_site_sync() {
+    local fetched age_h here_site marked drift pages f
+
     fetched=$(stat -c %Y "${SITE_WORK}/.git/FETCH_HEAD" 2>/dev/null || echo 0)
     age_h=$(( ($(date +%s) - fetched) / 3600 ))
+
+    if (( fetched == 0 )); then
+        bad "站点同步" "${SITE_WORK}/.git/FETCH_HEAD 不存在，同步从未执行"
+        return
+    fi
+    if (( age_h >= SITE_STALE_H )); then
+        bad "站点同步" "上次拉取在 ${age_h} 小时前，五分钟一次的同步已停止"
+        return
+    fi
+    # The revision and the comparisons below have to come from a tree nobody is
+    # rewriting, so the lock is tested before them and again after. Reading
+    # first left a window as wide as one diff -rq plus one cmp per page.
+    if site_syncing; then
+        note "站点同步" "同步正在执行，本次不比对仓库副本与已发布内容"
+        return
+    fi
+
     here_site=$(git -C "${SITE_WORK}" rev-parse HEAD 2>/dev/null)
     marked=$(cat "${SITE_WORK}/.synced" 2>/dev/null || true)
     drift=$(diff -rq "${SITE_WORK}/site/assets" "${SITE_DEST}/assets" 2>&1 | wc -l)
@@ -100,12 +119,11 @@ elif [[ -d ${SITE_WORK}/.git ]]; then
     for f in "${SITE_WORK}"/site/*.html; do
         cmp -s "${f}" "${SITE_DEST}/$(basename "${f}")" || pages=$((pages + 1))
     done
-    if (( fetched == 0 )); then
-        bad "站点同步" "${SITE_WORK}/.git/FETCH_HEAD 不存在，同步从未执行"
-    elif (( age_h >= SITE_STALE_H )); then
-        bad "站点同步" "上次拉取在 ${age_h} 小时前，五分钟一次的同步已停止"
-    elif [[ -e ${SITE_LOCK} ]] && ! flock -n "${SITE_LOCK}" true 2>/dev/null; then
+
+    if site_syncing; then
         note "站点同步" "同步正在执行，本次不比对仓库副本与已发布内容"
+    elif [[ ! ${here_site} =~ ^[0-9a-f]{40}$ ]]; then
+        bad "站点同步" "无法解析 ${SITE_WORK} 的版本：${here_site:-无输出}"
     elif [[ ${marked} != "${here_site}" ]]; then
         bad "站点同步" "仓库副本在 ${here_site:0:8}，上次完成的是 ${marked:0:8}，最近一次未完成"
     elif (( drift )); then
@@ -119,6 +137,12 @@ elif [[ -d ${SITE_WORK}/.git ]]; then
     else
         note "站点同步" "${here_site:0:8}，${age_h} 小时内已拉取"
     fi
+}
+
+if [[ ! -d ${SITE_WORK}/.git && -d ${SITE_DEST} && -e ${SITE_DEST}/index.html ]]; then
+    bad "站点同步" "${SITE_WORK} 不是仓库副本，而 ${SITE_DEST} 里有站点内容"
+elif [[ -d ${SITE_WORK}/.git ]]; then
+    check_site_sync
 fi
 
 if [[ -d ${SIGNING_GNUPGHOME} ]]; then
