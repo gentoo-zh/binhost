@@ -75,6 +75,29 @@ ok "发布失败时明确说明未发布" \
 ok "目标套件失败摘要会附在发布告警中" \
    "$([[ ${message} == *构建失败*app-misc/example* ]] && echo yes)" "yes"
 
+echo "== cycle.sh 被信号中止时不会报告成功"
+
+# The traps come out of cycle.sh itself so this binds to the real file: remove
+# them there and the run below reports done again.
+signal_probe() {
+    local d
+    d=$(mktemp -d)
+    cat > "${d}/probe.sh" <<'PROBE'
+on_exit() { local rc=$1 state; state=done; (( rc )) && state=failed
+            echo "${state}" > "${STATE_FILE}"; }
+PROBE
+    grep -E '^trap ' "${ROOT}/build/cycle.sh" >> "${d}/probe.sh"
+    printf 'true\nsleep 30\n' >> "${d}/probe.sh"
+    STATE_FILE="${d}/state" bash "${d}/probe.sh" & local pid=$!
+    sleep 0.5
+    kill -TERM "${pid}" 2>/dev/null
+    wait "${pid}" 2>/dev/null
+    cat "${d}/state" 2>/dev/null
+    rm -rf "${d}"
+}
+
+ok "收到 SIGTERM 时写出 failed" "$(signal_probe)" "failed"
+
 echo
 if (( fail )); then
     echo ">>> ${fail} 项未通过，${pass} 项通过"
