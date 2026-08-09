@@ -29,6 +29,13 @@ LOCK_STALE_H="${LOCK_STALE_H:-6}"
 # Upload and validate a generation without making it public.
 prepare_generation() {
     local gen="$1" src="$2" require_linked="${3:-0}"
+    # An empty or unexpected name would make the rm below delete the published
+    # root itself. Every caller passes a literal .gen- prefix; this is the guard
+    # that keeps one bad edit from wiping the mirror.
+    case ${gen} in
+        .gen-?*) ;;
+        *) echo "!! 代际目录名不合法：${gen:-空}" >&2; return 1 ;;
+    esac
     # shellcheck disable=SC2029  # REMOTE_ROOT and gen are meant to expand locally
     ssh "${REMOTE}" "rm -rf '${REMOTE_ROOT}/${gen}' &&
                      install -dm755 '${REMOTE_ROOT}/${gen}'" || return 1

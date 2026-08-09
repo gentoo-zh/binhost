@@ -957,6 +957,35 @@ emaint_line=$(grep -n '^emaint binhost --fix' \
 ok "完整构建在修复索引前处理保留库" \
    "$(( container_rebuild_line < emaint_line ))" "1"
 
+echo "== 代际目录名不合法时不动已发布的目录"
+
+# prepare_generation removes the generation directory before rebuilding it. An
+# empty name would turn that into a delete of the published root.
+gen_guard_probe() {
+    local name="$1" d out
+    d=$(mktemp -d); mkdir -p "${d}/bin" "${d}/remote/keepme"
+    printf '#!/bin/bash\nexit 0\n' > "${d}/bin/ssh"
+    printf '#!/bin/bash\nexit 0\n' > "${d}/bin/rsync"
+    chmod +x "${d}/bin/ssh" "${d}/bin/rsync"
+    sed -n '/^prepare_generation() {/,/^}/p' "${ROOT}/build/publish.sh" > "${d}/p.sh"
+    cat >> "${d}/p.sh" <<'PROBE'
+GEN_FILES=(Packages)
+prepare_generation "$1" /nonexistent
+PROBE
+    out=$(cd "${d}" && PATH="${d}/bin:${PATH}" REMOTE=x REMOTE_ROOT="${d}/remote" \
+          bash "${d}/p.sh" "${name}" 2>&1)
+    printf '%s|%s\n' "$?" "${out}"
+    rm -rf "${d}"
+}
+
+IFS='|' read -r rc out <<< "$(gen_guard_probe '')"
+ok "空名称被拒绝" "$((rc != 0))" "1"
+ok "并说明名称不合法" "$([[ ${out} == *不合法* ]] && echo yes)" "yes"
+IFS='|' read -r rc out <<< "$(gen_guard_probe '../..')"
+ok "越界名称被拒绝" "$((rc != 0))" "1"
+IFS='|' read -r rc out <<< "$(gen_guard_probe '.gen-')"
+ok "只有前缀没有编号也拒绝" "$((rc != 0))" "1"
+
 echo "== gpkg 冒烟测试不阻挡发布"
 
 # The Python side has its own assertions, but the shell wiring is where a gate
