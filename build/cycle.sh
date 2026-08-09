@@ -70,6 +70,11 @@ if ! ./build/run-full.sh; then
     alert_exit
 fi
 
+if [[ -s ${LOGDIR}/smoke-alert.txt ]]; then
+    alert "binhost gpkg 安装冒烟测试发现问题（$(hostname)）：
+$(cat "${LOGDIR}/smoke-alert.txt")"
+fi
+
 publish_rc=0
 ./build/publish.sh || publish_rc=$?
 if (( publish_rc )); then

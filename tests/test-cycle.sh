@@ -17,7 +17,7 @@ ok() {
 }
 
 cycle_probe() {
-    local publish_rc="$1" with_report="$2" d out rc
+    local publish_rc="$1" with_report="$2" with_smoke="${3:-no}" d out rc
     d=$(mktemp -d)
     mkdir -p "${d}/build" "${d}/ops" "${d}/bin" "${d}/logs" "${d}/overlay"
     cp "${ROOT}/build/cycle.sh" "${d}/build/cycle.sh"
@@ -49,6 +49,10 @@ EOF
         printf 'app-misc/example\n' > "${d}/logs/failed.txt"
         printf '构建失败（1 个）\n    app-misc/example\n' > "${d}/logs/report.txt"
     fi
+    if [[ ${with_smoke} == yes ]]; then
+        printf 'gpkg 安装失败 1 个，测试环境失败 0 项\n' \
+            > "${d}/logs/smoke-alert.txt"
+    fi
     set +e
     out=$(cd "${d}" && PATH="${d}/bin:${PATH}" OVERLAY="${d}/overlay" \
         LOGDIR="${d}/logs" STAGE="${d}/stage" LOCK="${d}/lock" \
@@ -74,6 +78,11 @@ ok "发布失败时明确说明未发布" \
    "$([[ ${message} == *未发布到镜像机* ]] && echo yes)" "yes"
 ok "目标套件失败摘要会附在发布告警中" \
    "$([[ ${message} == *构建失败*app-misc/example* ]] && echo yes)" "yes"
+
+IFS='|' read -r rc message out <<< "$(cycle_probe 0 no yes)"
+ok "冒烟测试告警不改变成功退出码" "${rc}" "0"
+ok "安装失败进入既有告警路径" \
+   "$([[ ${message} == *gpkg*安装冒烟测试*安装失败* ]] && echo yes)" "yes"
 
 echo "== cycle.sh 被信号中止时不会报告成功"
 
