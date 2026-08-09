@@ -87,7 +87,8 @@ fi
 
 sudo install -dm755 -o "$(id -u)" -g "$(id -g)" \
     "${PKGDIR}" "$(dirname "${STAGE}")" "${LOGDIR}" "${GENTOO_BINPKGS}"
-rm -f "${LOGDIR}"/*.log "${LOGDIR}"/failed.txt "${LOGDIR}"/gentoo-Packages
+rm -f "${LOGDIR}"/*.log "${LOGDIR}"/failed.txt "${LOGDIR}"/gentoo-Packages \
+    "${LOGDIR}"/smoke-install.json "${LOGDIR}"/smoke-alert.txt
 
 empty=$(find "${PKGDIR}" -name '*.gpkg.tar' -size 0 -print -delete | wc -l)
 (( empty )) && echo ">>> 移除 ${empty} 个 0 字节的缓存包" 
@@ -268,7 +269,6 @@ elif ! python3 "$(dirname "$0")/persist-packages.py" "${STAGE}.new" \
         > "${STAGE}.new/publish-blocked.txt"
 fi
 cleanup_signing_input
-rm -f "${STAGE}.new/.signed-packages"
 
 source_policy=(--source-keywords "${CHANNEL_ACCEPT_KEYWORDS}")
 if [[ -n ${CHANNEL_OVERLAY_KEYWORDS} ]]; then
@@ -295,10 +295,62 @@ if [[ ! -s ${STAGE}.new/publish-blocked.txt ]] &&
 fi
 
 if [[ ! -s ${STAGE}.new/publish-blocked.txt ]]; then
+    smoke_package_use="${LOGDIR}/smoke-package.use"
+    cat "${COMMON_PACKAGE_USE}" > "${smoke_package_use}"
+    if [[ ${CHANNEL} == stable ]]; then
+        cat "${STABLE_PACKAGE_USE}" >> "${smoke_package_use}"
+    fi
+    # Source fallback is normal Gentoo behavior. Making it a publication gate
+    # would keep this check permanently red, after which its alerts get ignored.
+    smoke_rc=0
+    python3 "$(dirname "$0")/smoke-install.py" \
+        --channel "${CHANNEL}" --stage "${STAGE}.new" \
+        --changed-list "${STAGE}.new/.signed-packages" \
+        --report "${LOGDIR}/smoke-install.json" \
+        --alert "${LOGDIR}/smoke-alert.txt" \
+        --base "${BASE}" --tree "${TREE}" --overlay "${OVERLAY}" \
+        --gentoo-binpkgs "${GENTOO_BINPKGS}" \
+        --gentoo-index "${LOGDIR}/gentoo-Packages" \
+        --package-use "${smoke_package_use}" --docker "${DOCKER}" || smoke_rc=$?
+    if (( smoke_rc )); then
+        SMOKE_REPORT="${LOGDIR}/smoke-install.json" \
+        SMOKE_ALERT="${LOGDIR}/smoke-alert.txt" SMOKE_RC="${smoke_rc}" \
+            python3 - <<'PY'
+import json
+import os
+import pathlib
+
+report = pathlib.Path(os.environ["SMOKE_REPORT"])
+data = {
+    "schema": 1,
+    "channel": os.environ.get("CHANNEL", "unknown"),
+    "revisions": {},
+    "selected": [],
+    "strict_eligible": [],
+    "source_fallback": [],
+    "resolver_failed": [],
+    "installed": [],
+    "gpkg_install_failed": [],
+    "harness_failed": [{
+        "reason": f"smoke-install.py exited with {os.environ['SMOKE_RC']}",
+        "output": "",
+    }],
+    "duration_seconds": 0,
+    "report_path": str(report),
+}
+report.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+pathlib.Path(os.environ["SMOKE_ALERT"]).write_text(
+    f"gpkg 安装失败 0 个，测试环境失败 1 项；详见 {report}\n")
+PY
+        echo ">>> gpkg 安装冒烟测试：测试环境失败 1 项，详见 ${LOGDIR}/smoke-install.json"
+    fi
+    rm -f "${smoke_package_use}"
+
     gzip -kf "${STAGE}.new/Packages"
     python3 "$(dirname "$0")/generation.py" create "${STAGE}.new" ||
         die "无法建立同代清单"
 fi
+rm -f "${STAGE}.new/.signed-packages"
 
 rm -rf "${STAGE}.old"
 [[ -d ${STAGE} ]] && mv "${STAGE}" "${STAGE}.old"

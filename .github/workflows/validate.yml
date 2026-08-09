@@ -75,6 +75,9 @@ jobs:
       - name: Verified signatures persist without following cache symlinks
         run: python3 tests/test-persist-packages.py
 
+      - name: Gpkg installation smoke tests stay deterministic and advisory
+        run: python3 tests/test-smoke-install.py
+
       - name: Package list separates the two repositories
         run: python3 tests/test-gen-packages.py
 

@@ -89,6 +89,27 @@ Docker socket、签名私钥或主机根文件系统，也不从主机挂载 `/d
 签名容器只重新签署没有当前密钥有效签名的软件包。签名完成后，宿主机使用指定公钥独立
 验证每个索引条目，再将已验签的变更写回持久 PKGDIR；没有变化的软件包保持原有字节。
 
+### 安装冒烟测试
+
+依赖与版本检查通过后，构建机在无网络的一次性容器中抽样安装已验签的 gpkg。每个频道
+最多检查 32 个包：优先选择最多 24 个本次新签或重新签名的包，再按仓库与包体大小轮替
+抽验最多 8 个未变更的包。测试容器只读挂载暂存包、Gentoo binhost 本地缓存与两棵源码
+树，不使用特权模式或设备直通。
+
+stable 与 unstable 的结构化报告分别写入
+`/var/lib/binhost/logs/stable/x86-64/smoke-install.json` 和
+`/var/lib/binhost/logs/x86-64/smoke-install.json`。报告包含以下字段：
+
+- `schema`、`channel`、`revisions` 与 `report_path` 标识报告格式、频道和输入版本。
+- `selected` 记录抽样包及其仓库、大小、路径和签名变化状态。
+- `strict_eligible`、`source_fallback`、`resolver_failed`、`installed`、
+  `gpkg_install_failed` 与 `harness_failed` 记录各阶段结果。
+- `duration_seconds` 记录本次检查耗时。
+
+摘要同时写入本轮构建日志。`source_fallback` 是 Portage 在 binpkg 不适用时改用源码构建的
+正常行为，因此第一版检查只报告数字，不阻止发布。`gpkg_install_failed` 与
+`harness_failed` 会发送告警；测试超过十分钟时归入 `harness_failed`。
+
 ### 发布与退役
 
 `Packages`、`Packages.gz`、基础系统快照、Gentoo binhost 快照、源码快照与
