@@ -28,6 +28,11 @@ SITE_DEST="${SITE_DEST:-/srv/mirrors}"
 BUILD_STALE_H="${BUILD_STALE_H:-3}"
 INDEX_SAMPLE_COUNT="${INDEX_SAMPLE_COUNT:-3}"
 [[ ${INDEX_SAMPLE_COUNT} =~ ^[1-9][0-9]*$ ]] || INDEX_SAMPLE_COUNT=3
+KERNEL_PACKAGE="${KERNEL_PACKAGE:-sys-kernel/gentoo-cjk-kernel}"
+KERNEL_ARCH="${KERNEL_ARCH:-amd64}"
+KERNEL_OVERLAY="${KERNEL_OVERLAY:-/var/lib/binhost/overlay}"
+KERNEL_TREE="${KERNEL_TREE:-/var/db/repos/gentoo}"
+KERNEL_SERIES_TOOL="${KERNEL_SERIES_TOOL:-/var/lib/binhost/build/kernel-series.py}"
 
 STATUS_DIR=$(cd "$(dirname "$0")" && pwd)
 GENERATION_TOOL="${GENERATION_TOOL:-}"
@@ -65,6 +70,53 @@ case ${COMPONENT} in
     *)       TRACKED="" ;;
 esac
 
+check_kernel_archive() {
+    local output rc line series version extra archive url code
+    local -a versions missing
+
+    [[ ${COMPONENT} == builder ]] || return
+    if [[ ! -r ${KERNEL_SERIES_TOOL} ]]; then
+        bad "内核归档" "缺少 ${KERNEL_SERIES_TOOL}，无法核对 overlay 版本"
+        return
+    fi
+    if [[ ! -d ${KERNEL_OVERLAY} || ! -d ${KERNEL_TREE} ]]; then
+        bad "内核归档" "overlay 或 Gentoo 主仓库不存在，无法取得应发布版本"
+        return
+    fi
+
+    output=$(OVERLAY="${KERNEL_OVERLAY}" TREE="${KERNEL_TREE}" \
+        PACKAGE="${KERNEL_PACKAGE}" python3 "${KERNEL_SERIES_TOOL}" 2>&1)
+    rc=$?
+    if (( rc != 0 )); then
+        bad "内核归档" "无法取得 overlay 版本：${output:-无输出}"
+        return
+    fi
+    mapfile -t versions <<< "${output}"
+    if (( ${#versions[@]} == 0 )) || [[ -z ${versions[0]} ]]; then
+        bad "内核归档" "overlay 未列出 ${KERNEL_PACKAGE} 的任何版本"
+        return
+    fi
+
+    missing=()
+    for line in "${versions[@]}"; do
+        read -r series version extra <<< "${line}"
+        if [[ -z ${series} || -z ${version} || -n ${extra} ]]; then
+            bad "内核归档" "版本清单格式无法解析：${line}"
+            return
+        fi
+        archive="${KERNEL_PACKAGE#*/}-${version}-1.${KERNEL_ARCH}.gpkg.tar"
+        url="${SITE}/gentoo-cjk-kernel/${KERNEL_ARCH}/${series}/${archive}"
+        code=$(curl -sSIL --max-time 20 -o /dev/null -w '%{http_code}' \
+            "${url}" 2>/dev/null || true)
+        [[ ${code} == 200 ]] || missing+=("${series}/${version} HTTP ${code:-无响应}")
+    done
+    if (( ${#missing[@]} )); then
+        bad "内核归档" "缺少 overlay 版本：$(IFS='；'; echo "${missing[*]}")"
+    else
+        note "内核归档" "${#versions[@]} 个 overlay 版本均可下载"
+    fi
+}
+
 if [[ -n ${VERSION_FILE} && -r ${VERSION_FILE} ]]; then
     here=$(tr -d ' \n' < "${VERSION_FILE}")
     there=$(curl -fsS --max-time 20 "${REPO_API}" 2>/dev/null |
@@ -98,6 +150,8 @@ if [[ -n ${VERSION_FILE} && -r ${VERSION_FILE} ]]; then
 else
     bad "部署版本" "缺少 VERSION，安装时未记录提交号"
 fi
+
+check_kernel_archive
 
 site_syncing() { [[ -e ${SITE_LOCK} ]] && ! flock -n "${SITE_LOCK}" true 2>/dev/null; }
 
