@@ -6,6 +6,14 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 const html = fs.readFileSync(path.join(ROOT, "site/index.html"), "utf8");
 const css = fs.readFileSync(path.join(ROOT, "site/assets/site.css"), "utf8");
+const channelOptions = [...html.matchAll(/<button\b[^>]*\bdata-channel="[^"]+"[^>]*>/g)]
+  .map((match) => {
+    const attributes = Object.fromEntries(
+      [...match[0].matchAll(/\b(data-[a-z-]+)="([^"]*)"/g)]
+        .map((attribute) => [attribute[1], attribute[2]])
+    );
+    return { getAttribute(name) { return attributes[name] || null; } };
+  });
 const script = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
   .map((match) => match[1])
   .find((body) => body.includes("Promise.allSettled"));
@@ -34,25 +42,7 @@ async function render(build, channel, locale = "zh-tw") {
     },
     querySelectorAll(selector) {
       if (selector !== "[data-channel]") return [];
-      return [
-        {
-          getAttribute(name) {
-            return {
-              "data-channel": "stable", "data-path": "/binpkgs/x86-64",
-              "data-status": "/build-status.json", "data-fact-label": "factStableBinRow",
-            }[name] || null;
-          },
-        },
-        {
-          getAttribute(name) {
-            return {
-              "data-channel": "unstable", "data-path": "/unstable/binpkgs/x86-64",
-              "data-status": "/build-status-unstable.json",
-              "data-fact-label": "factUnstableBinRow",
-            }[name] || null;
-          },
-        },
-      ];
+      return channelOptions;
     },
     addEventListener(name, callback) { listeners[name] = callback; },
   };
@@ -90,7 +80,16 @@ async function render(build, channel, locale = "zh-tw") {
   (0, eval)(script);
   await new Promise((resolve) => setImmediate(resolve));
   if (channel) {
-    listeners.channelchange({ detail: Object.assign({ channel: "unstable" }, channel) });
+    const option = channelOptions.find(
+      (item) => item.getAttribute("data-channel") === channel
+    );
+    listeners.channelchange({
+      detail: {
+        channel,
+        path: option && option.getAttribute("data-path"),
+        status: option && option.getAttribute("data-status"),
+      },
+    });
     await new Promise((resolve) => setImmediate(resolve));
   }
   return { html: facts.innerHTML, server: serverFacts.innerHTML, calls: calls };
@@ -99,6 +98,8 @@ async function render(build, channel, locale = "zh-tw") {
 (async function () {
   check("首页包含状态渲染脚本", Boolean(script));
   if (!script) process.exit(1);
+  check("从首页读到两个频道的配置", channelOptions.length === 2,
+        String(channelOptions.length));
   check("库存区与状态区都预留了行高",
         css.includes("min-height: calc(3 * 1.75 * 0.95rem + 0.7rem)") &&
         css.includes("min-height: calc(2 * 1.75 * 0.95rem + 0.7rem)") &&
@@ -139,10 +140,7 @@ async function render(build, channel, locale = "zh-tw") {
   const running = await render({
     state: "running", kind: "source", done: 7, total: 9,
     now: "app-misc/<unsafe>", generated: Math.floor(Date.now() / 1000),
-  }, {
-    path: "/unstable/binpkgs/x86-64",
-    status: "/build-status-unstable.json",
-  });
+  }, "unstable");
   check("进行中的构建仍显示进度且转义包名",
         running.html.includes("7/9") && running.html.includes("正在建置") &&
         running.html.includes("app-misc/&lt;unsafe&gt;") &&

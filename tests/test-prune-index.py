@@ -12,6 +12,7 @@ import importlib.util
 import json
 import pathlib
 import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -153,17 +154,39 @@ with tempfile.TemporaryDirectory() as raw:
 print()
 print(">>> publish.sh 按这个形状使用它")
 publish = (ROOT / "build" / "publish.sh").read_text()
-check("移除之前准备修剪后的代际",
-      publish.index("if ! prepare_pruned_generation; then") <
-      publish.index("实际移除"))
-check("准备阶段只上传，不提前切换",
-      'prepare_generation "${PRUNE_GEN}" "${live}"' in publish)
-check("移除之后立即切换准备好的代际",
-      publish.index("实际移除") <
-      publish.index('activate_generation "${PRUNE_GEN}"'))
-check("准备或切换失败都会中止发布",
-      "隔离产物仍保留" in publish and "下一轮会再次修复" in publish)
-check("取回时解引用符号链接", "rsync -aL --files-from=-" in publish)
+start = "\nif [[ -s ${QUARANTINE} ]]; then\n"
+end = "\nif [[ -s ${STAGE}/publish-blocked.txt ]]; then\n"
+if start not in publish or end not in publish:
+    check("读到隔离发布区块", False)
+else:
+    block = publish.split(start, 1)[1].split(end, 1)[0]
+    with tempfile.TemporaryDirectory() as raw:
+        root = pathlib.Path(raw)
+        stage = root / "stage"
+        stage.mkdir()
+        quarantine = stage / "quarantine.txt"
+        quarantine.write_text(PATHS[1] + "\n")
+        events = root / "events"
+        harness = f"""\
+set -euo pipefail
+STAGE={shlex.quote(str(stage))}
+QUARANTINE={shlex.quote(str(quarantine))}
+EVENTS={shlex.quote(str(events))}
+REMOTE=test
+REMOTE_ROOT={shlex.quote(str(root / "public"))}
+PRUNE_GEN=""
+record() {{ printf '%s\\n' "$1" >> "${{EVENTS}}"; }}
+validate_quarantine() {{ record validate; }}
+prepare_pruned_generation() {{ record prepare; PRUNE_GEN=.gen-prune-test; }}
+activate_generation() {{ record activate; }}
+ssh() {{ cat >/dev/null; record delete; printf '1\\n'; }}
+""" + start.lstrip("\n") + block + "\n"
+        result = subprocess.run(["bash", "-c", harness], capture_output=True, text=True)
+        recorded = events.read_text().splitlines() if events.exists() else []
+        check("隔离发布区块执行成功", result.returncode == 0, result.stderr)
+        check("先准备代际，再移除产物，最后切换",
+              recorded == ["validate", "prepare", "delete", "activate"],
+              repr(recorded))
 
 print()
 print("  索引改写：全部通过" if not failed else f"  {failed} 项不通过")
