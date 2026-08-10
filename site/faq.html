@@ -156,7 +156,7 @@
       Portage 接受二进制包时也不比较 <code>CFLAGS</code>，因此仍可能存在例外。
     </p>
 
-    <h2 data-i18n="q5">如何确认安装的包没被修改？</h2>
+    <h2 data-i18n="q5">如何验证下载的二进制包来自本站且内容未被修改？</h2>
     <p data-i18n-html="a5">
       签名内嵌在每个 gpkg 包里（<code>image.tar.zst.sig</code>），和官方 binhost 一样。
       配置里的 <code>verify-signature = true</code> 让 Portage 拒绝本源里验签不过的包，
@@ -319,7 +319,7 @@ window.MIRROR_I18N = {
     a3: '本站只使用一個 profile 建置，不分別產生 OpenRC 與 systemd 產物。Portage 會依目前 USE 與相依性判斷二進位套件是否適用；不適用時改為從原始碼建置。',
     q4: '二進位套件是否可能無法在我的 CPU 上執行？',
     a4: '建置環境使用 <code>CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"</code>，不使用 <code>-march=native</code>。該設定不能約束 ebuild 附帶的上游預先編譯物件或程式庫；Portage 接受二進位套件時也不比較 <code>CFLAGS</code>，因此仍可能存在例外。',
-    q5: '如何確認安裝的套件沒被竄改？',
+    q5: '如何驗證下載的二進位套件來自本站且內容未被修改？',
     a5: '簽章內嵌在每個 gpkg 套件裡（<code>image.tar.zst.sig</code>），和官方 binhost 一樣。設定裡的 <code>verify-signature = true</code> 讓 Portage 拒絕本站驗簽不過的套件，它寫在 <code>binrepos.conf</code> 裡，只作用於本站。',
     a5b: '另有一個全域設定 <code>FEATURES=binpkg-request-signature</code>，它對所有來源生效並覆蓋上面那條。它還要求透過 <code>FEATURES=buildpkg</code> 建置的套件帶簽章；這些套件預設沒有簽章。啟用該功能時必須同時設定 <code>binpkg-signing</code>、本機簽章金鑰，以及讓 gpg 讀到 getuto 儲存的密碼。',
     q6: '如何停用？',
@@ -361,7 +361,7 @@ window.MIRROR_I18N = {
     q11: 'How do I obtain the signing key without installing the sec-keys package?',
     a11: 'Download the signing-key file, then point the <code>--import</code> path in step 1 to that file. Downloading it does not require root.',title: 'FAQ',
     q1: 'Why does emerge still compile after I have configured it?',
-    a1: 'Portage does not compare profile names directly; it checks binary package metadata against the current configuration. A profile change can alter USE and dependency choices and make an existing binary package unsuitable, in which case Portage builds from source. Run <code>emerge -pv</code> to check: only a <code>[binary]</code> prefix means the package came from here.',
+    a1: 'Portage does not compare profile names directly; it checks binary package metadata against the current configuration. A profile change can alter USE and dependency choices and make an existing binary package unsuitable, in which case Portage builds from source. Run <code>emerge -pv</code> to check: a <code>[binary]</code> prefix means Portage selected a binary package.',
     q13: 'What is the difference between stable and unstable?',
     a13: 'Choose the channel that matches the keywords used by your system for the Gentoo repository. Both channels accept <code>~amd64</code> packages from the gentoo-zh overlay. They differ in whether runtime dependencies are built with stable or testing keywords.',
     chName: 'Channel', chMain: 'Gentoo repository', chOverlay: 'gentoo-zh overlay', chUri: 'sync-uri path',
@@ -373,7 +373,7 @@ window.MIRROR_I18N = {
     a3: 'This host builds with one profile rather than producing separate OpenRC and systemd artifacts. Portage checks each binary package against the current USE flags and dependencies; when it is not applicable, Portage builds from source.',
     q4: 'Could a binary package fail to run on my CPU?',
     a4: 'The build environment uses <code>CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"</code> and does not use <code>-march=native</code>. This setting cannot constrain upstream prebuilt objects or libraries bundled by an ebuild, and Portage does not compare <code>CFLAGS</code> when accepting a binary package, so exceptions remain possible.',
-    q5: 'How do I confirm nothing has been modified?',
+    q5: 'How do I verify that a downloaded binary package came from this host unchanged?',
     a5: 'The signature is embedded in each gpkg package (<code>image.tar.zst.sig</code>), the same way the official Gentoo binhost does it. <code>verify-signature = true</code> makes portage refuse anything from this repository whose signature does not check out; it lives in <code>binrepos.conf</code> and applies to this repository only.',
     a5b: 'There is also a global setting, <code>FEATURES=binpkg-request-signature</code>, which applies to every source and overrides the above. It also requires signatures on packages built through <code>FEATURES=buildpkg</code>; those packages are unsigned by default. Enabling it therefore requires <code>binpkg-signing</code>, a local signing key, and a way for gpg to read the passphrase stored by getuto.',
     q6: 'How do I stop using it?',
