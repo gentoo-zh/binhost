@@ -11,9 +11,12 @@ newcomer or retire pull request, so tracking them would report the mirror as
 behind for a list the mirror rebuilds from git on its own.
 """
 
+import os
 import pathlib
 import re
+import subprocess
 import sys
+import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 INSTALL = ROOT / "deploy" / "install.sh"
@@ -52,37 +55,60 @@ def shipped_to_mirror():
                       block.group(1))
 
 
-def tracked_for(component):
-    m = re.search(rf'^\s*{component}\)\s+TRACKED="([^"]+)"', STATUS.read_text(), re.M)
-    return m.group(1).split() if m else []
+def tracked_at_runtime(path):
+    """Ask status.sh whether a deployed revision changing path is behind."""
+    with tempfile.TemporaryDirectory() as raw:
+        root = pathlib.Path(raw)
+        bindir = root / "bin"
+        bindir.mkdir()
+        version = root / "VERSION"
+        version.write_text("1" * 40)
+        curl = bindir / "curl"
+        curl.write_text(f"""#!/bin/sh
+case "$*" in
+  *'/commits/master'*) printf '  "sha": "{'2' * 40}",\\n' ;;
+  *'/compare/'*) printf '      "filename": "{path}",\\n' ;;
+  *) exit 22 ;;
+esac
+""")
+        curl.chmod(0o755)
+        env = os.environ.copy()
+        env.update({
+            "PATH": f"{bindir}:{env['PATH']}",
+            "COMPONENT": "mirror",
+            "VERSION_FILE": str(version),
+            "SITE_WORK": str(root / "missing-site"),
+            "SITE_DEST": str(root / "missing-public"),
+            "SIGNING_GNUPGHOME": str(root / "missing-gnupg"),
+            "HEARTBEAT": str(root / "missing-health"),
+            "DISK_PATH": str(root),
+        })
+        result = subprocess.run(["bash", str(STATUS)], env=env,
+                                capture_output=True, text=True)
+        return "已变更" in result.stdout
 
 
 shipped = shipped_to_mirror()
-tracked = tracked_for("mirror")
+tracked = {path: tracked_at_runtime(path) for path in shipped}
 
 check("读到了 install.sh 送往镜像机的档案", bool(shipped), str(shipped))
-check("读到了 status.sh 的 mirror 追踪清单", bool(tracked), str(tracked))
-if not (shipped and tracked):
+if not shipped:
     sys.exit(1)
-
-
-def covered(path):
-    return any(path == prefix or path.startswith(prefix + "/") for prefix in tracked)
 
 
 for path in shipped:
     if path.endswith((".py", ".sh")):
-        check(f"{path} 在追踪清单里", covered(path),
-              "改动它不会判定镜像机落后；追踪清单：" + " ".join(tracked))
+        check(f"{path} 在追踪清单里", tracked[path],
+              "status.sh 执行后没有把该路径的变更判定为落后")
 
 for path in shipped:
-    if covered(path) or path in UNTRACKED_ON_PURPOSE:
+    if tracked[path] or path in UNTRACKED_ON_PURPOSE:
         continue
     check(f"{path} 未被追踪且没有写明理由", False,
           "要么加进 status.sh 的 mirror 清单，要么写进本测试的 UNTRACKED_ON_PURPOSE")
 
 for path, reason in UNTRACKED_ON_PURPOSE.items():
-    check(f"{path} 的豁免仍然成立", path in shipped and not covered(path),
+    check(f"{path} 的豁免仍然成立", path in shipped and not tracked[path],
           f"{reason}；它已经不再送往镜像机或已被追踪，请移除这条豁免")
 
 print()

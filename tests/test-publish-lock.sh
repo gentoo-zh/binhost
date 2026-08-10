@@ -81,6 +81,8 @@ echo
 echo "== 别人正在发布时暂缓"
 held_by "${d}" runA now
 out=$(take "${d}" runB)
+rc=$?
+ok "锁冲突时退出码非零" "$([[ ${rc} -ne 0 ]] && echo yes)" "yes"
 ok "第二个发布者暂缓" "$([[ ${out} == *已有发布进行中* ]] && echo yes)" "yes"
 ok "说出锁的持有者" "$([[ ${out} == *runA* ]] && echo yes)" "yes"
 ok "不夺走别人的锁" \
@@ -96,6 +98,8 @@ echo
 echo "== 未到期限的锁不接管"
 held_by "${d}" runA '1 hour ago'
 out=$(take "${d}" runD)
+rc=$?
+ok "未到期限的锁冲突时退出码非零" "$([[ ${rc} -ne 0 ]] && echo yes)" "yes"
 ok "一小时的锁仍然暂缓" "$([[ ${out} == *已有发布进行中* ]] && echo yes)" "yes"
 ok "持有者没有被改写" \
    "$(cat "${d}/root/.publish.lock/owner" 2>/dev/null)" "runA"
