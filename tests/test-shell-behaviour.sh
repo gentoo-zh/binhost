@@ -427,6 +427,10 @@ shared_lock=$(grep -c "LOCK=\"\${LOCK:-/var/lib/binhost/stage/build.lock}\"" \
     "${ROOT}/build/build-container.sh")
 ok "两个频道共用全局构建锁" "${shared_lock}" "1"
 
+archive_lock=$(grep -c "LOCK=\"\${LOCK:-/var/lib/binhost/stage/build.lock}\"" \
+    "${ROOT}/build/kernel-archive.sh")
+ok "内核归档与一般建置共用全局锁" "${archive_lock}" "1"
+
 for script in base-image.sh build-container.sh cycle.sh run-full.sh publish.sh; do
     sourced=$(grep -c 'source=build/channel.sh' "${ROOT}/build/${script}")
     ok "${script} 读取统一频道配置" "${sourced}" "1"
