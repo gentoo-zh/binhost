@@ -1,5 +1,12 @@
 # 加入一个包
 
+## 规则来源
+
+- [发布范围与构建频道](README.md#发布范围)
+- [依赖闭包边界](docs/dependency-closure.md)
+- [站点设计与文案规范](site/design.html)
+- [提交信息](#提交信息)
+
 在 [`build/packages.txt`](build/packages.txt) 中添加一行 `category/package`，按字母序排列。
 
 ```diff
@@ -14,8 +21,8 @@
 python3 tools/validate.py /var/db/repos/gentoo-zh
 ```
 
-只需提交 `build/packages.txt`。站点的包列表由镜像机每小时按 overlay 重新生成，
-不入版本库。
+只需提交 `build/packages.txt`。镜像机每日按 overlay 为 stable 与 unstable 分别生成
+站点包列表，生成结果不入版本库。
 
 ## 适合收录的包
 
@@ -39,7 +46,10 @@ python3 tools/validate.py /var/db/repos/gentoo-zh
 
 ## 合并之后
 
-合并不等于立即可用。包在下次构建时产出，构建由 binhost-build.timer 在每日 16:00（Asia/Shanghai）触发，另有最多 15 分钟的随机延迟，产物签名后发布。
+合并不等于立即可用。stable 由 `binhost-build.timer` 在每日 16:00
+（Asia/Shanghai）触发，unstable 由 `binhost-build-unstable.timer` 在每日 04:00
+触发；两者各有最多 15 分钟的随机延迟。包会在符合对应频道边界的下一次构建中产出，
+签名后分别发布。
 
 清单决定直接构建目标。构建软件包时会同时构建其依赖；其中属于本 overlay 的依赖和
 `::gentoo` 运行期依赖会随之一并发布，因此实际发布数多于清单条数。仅用于构建的依赖

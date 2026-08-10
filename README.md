@@ -15,10 +15,10 @@ nginx 配置，以及构建、签名和发布 [gentoo-zh overlay](https://github
 | `build/` | 构建、暂存、签名、发布与一致性检查 |
 | `deploy/` | 镜像机和构建机的安装、同步、定时任务与监控 |
 | `ops/` | 两台共用的健康检查与告警 |
-| `tools/` | 清单增删与仓库校验，只在 CI 执行 |
+| `tools/` | 清单维护、仓库校验与提交检查，供本机与 CI 使用 |
 | `nginx/` | HTTP、HTTP/3 和文件服务配置 |
 | `site/` | 静态站点与公开签名密钥 |
-| `site/tools/` | 站点生成与检查，只在 CI 执行 |
+| `site/tools/` | 站点数据生成与内容检查，供镜像机、本机与 CI 使用 |
 | `docs/` | 依赖闭包边界与密钥轮替手册 |
 
 ## 发布范围
@@ -133,6 +133,10 @@ stable 与 unstable 的结构化报告分别写入
 
 `build/publish.sh` 会在镜像机上取得发布锁，两个发布者不会同时写入。
 
+`build/kernel-archive.sh` 每日检查 `sys-kernel/gentoo-cjk-kernel` 的各条版本线，并将
+对应 `-bin` ebuild 使用的归档发布到 `/gentoo-cjk-kernel/amd64/`。该任务在 10:00
+（UTC+8）后随机 0–15 分钟执行，与两个频道的完整构建分开运行。
+
 在确认没有自动构建运行后，可在构建机手动执行：
 
 ```bash
@@ -215,8 +219,7 @@ rename 整体切换，因此不会出现页面与其指纹化 assets 分属两�
 
 - 添加、移除或移动套件见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
 - 排除的套件及原因见 [`build/excluded.txt`](build/excluded.txt)。
-- 依赖闭包的检查范围与复核方法见
-  [`docs/dependency-closure.md`](docs/dependency-closure.md)。
+- 依赖闭包边界见 [`docs/dependency-closure.md`](docs/dependency-closure.md)。
 - 签名密钥轮替与泄露处置见 [`docs/key-rotation.md`](docs/key-rotation.md)。
 
 ## 许可
