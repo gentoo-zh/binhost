@@ -17,7 +17,7 @@ app-i18n/fcitx-kkc		依赖 libkkc 的 configure 需要 XML::Parser，基础镜�
 app-misc/crush			许可证 FSL-1.1-MIT 含竞争用途限制，不属于 @BINARY-REDISTRIBUTABLE
 media-gfx/scangearmp		许可证 Canon-IJ 只准搭配 Canon 喷墨机使用，不在 @BINARY-REDISTRIBUTABLE
 media-plugins/osdlyrics	configure 需要 XML::Parser，基础镜像补 perl-cleaner 后复查
-net-proxy/proxy-server		ebuild 没有 KEYWORDS 声明，任何架构都装不上
+net-proxy/proxy-server		ebuild 没有 KEYWORDS 声明，本站两个频道都不可见
 sys-kernel/mkinitcpio		需要 dbus[systemd]，与我们的 OpenRC profile 不兼容
 sys-kernel/xanmod-kernel	内核配置因人而异，发预编译的等于把我们的配置强加给用户
 app-dicts/fcitx-pinyin-moegirl	许可证 CC-BY-NC-SA-3.0 含非商业限制，不属于 @BINARY-REDISTRIBUTABLE
