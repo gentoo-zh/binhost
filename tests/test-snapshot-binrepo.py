@@ -18,8 +18,9 @@ with tempfile.TemporaryDirectory() as tmp:
     source = cache / "example.invalid" / "binpkgs" / "x86-64" / "Packages"
     source.parent.mkdir(parents=True)
     source.write_text(
-        "PACKAGES: 1\nTIMESTAMP: 1\n\n"
-        "CPV: app-misc/a-1\nPATH: app-misc/a/a-1-1.gpkg.tar\n"
+        "PACKAGES: 2\nTIMESTAMP: 1\n\n"
+        "CPV: app-misc/a-1\nPATH: app-misc/a/a-1-1.gpkg.tar\n\n"
+        "CPV: app-misc/b-2\nPATH: app-misc/b/b-2-1.gpkg.tar\n"
     )
     config = root / "gentoo.conf"
     config.write_text(
@@ -30,7 +31,7 @@ with tempfile.TemporaryDirectory() as tmp:
     assert snapshot_binrepo.capture(config, cache, output) == source
     assert output.read_bytes() == source.read_bytes()
 
-    source.write_text("PACKAGES: 2\n\nCPV: app-misc/a-1\n")
+    source.write_text("PACKAGES: 3\n\nCPV: app-misc/a-1\nCPV: app-misc/b-2\n")
     try:
         snapshot_binrepo.capture(config, cache, output)
     except ValueError:

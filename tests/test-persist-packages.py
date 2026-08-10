@@ -13,40 +13,59 @@ persist_packages = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(persist_packages)
 
 
-def index(relative, content):
-    return (
-        "PACKAGES: 1\nVERSION: 0\n\n"
-        "CPV: app-misc/a-1\n"
-        f"PATH: {relative}\n"
-        "MD5: old\nSHA1: old\nSIZE: 3\nMTIME: 1\n"
-    )
+def index(entries):
+    stanzas = [
+        (f"CPV: {cpv}\n"
+         f"PATH: {relative}\n"
+         "MD5: old\nSHA1: old\nSIZE: 3\nMTIME: 1")
+        for cpv, relative in entries
+    ]
+    return (f"PACKAGES: {len(stanzas)}\nVERSION: 0\n\n"
+            + "\n\n".join(stanzas) + "\n")
 
 
 with tempfile.TemporaryDirectory() as tmp:
     root = pathlib.Path(tmp)
     source = root / "source"
     target = root / "target"
-    relative = "app-misc/a/a-1-1.gpkg.tar"
-    payload = b"new signed package\n"
-    for directory, content in ((source, payload), (target, b"old")):
-        package = directory / relative
-        package.parent.mkdir(parents=True)
-        package.write_bytes(content)
-        (directory / "Packages").write_text(index(relative, content))
+    entries = [
+        ("app-misc/a-1", "app-misc/a/a-1-1.gpkg.tar"),
+        ("app-misc/b-2", "app-misc/b/b-2-1.gpkg.tar"),
+    ]
+    target_only = ("app-misc/kept-3", "app-misc/kept/kept-3-1.gpkg.tar")
+    payloads = {
+        entries[0][1]: b"new signed package a\n",
+        entries[1][1]: b"new signed package b\n",
+    }
+    for directory in (source, target):
+        for relative, payload in payloads.items():
+            package = directory / relative
+            package.parent.mkdir(parents=True, exist_ok=True)
+            package.write_bytes(payload if directory == source else b"old")
+    kept = target / target_only[1]
+    kept.parent.mkdir(parents=True)
+    kept.write_bytes(b"target only")
+    (source / "Packages").write_text(index(entries))
+    (target / "Packages").write_text(index(entries + [target_only]))
     changed = root / "changed.txt"
-    changed.write_text(relative + "\n")
+    changed.write_text("\n".join(relative for _cpv, relative in entries) + "\n")
 
-    assert persist_packages.persist(source, target, changed) == 1
-    assert (target / relative).read_bytes() == payload
+    assert persist_packages.persist(source, target, changed) == 2
+    for relative, payload in payloads.items():
+        assert (target / relative).read_bytes() == payload
     refreshed = (target / "Packages").read_text()
-    assert f"MD5: {hashlib.md5(payload).hexdigest()}" in refreshed
-    assert f"SHA1: {hashlib.sha1(payload).hexdigest()}" in refreshed
-    assert f"SIZE: {len(payload)}" in refreshed
+    for payload in payloads.values():
+        assert f"MD5: {hashlib.md5(payload).hexdigest()}" in refreshed
+        assert f"SHA1: {hashlib.sha1(payload).hexdigest()}" in refreshed
+        assert f"SIZE: {len(payload)}" in refreshed
+    _header, _stanzas, indexed = persist_packages.parse_index(refreshed)
+    assert set(indexed) == {relative for _cpv, relative in entries + [target_only]}
+    assert kept.read_bytes() == b"target only"
 
-    before = (target / relative).stat().st_mtime_ns
+    before = (target / entries[0][1]).stat().st_mtime_ns
     changed.write_text("")
     assert persist_packages.persist(source, target, changed) == 0
-    assert (target / relative).stat().st_mtime_ns == before
+    assert (target / entries[0][1]).stat().st_mtime_ns == before
 
 with tempfile.TemporaryDirectory() as tmp:
     root = pathlib.Path(tmp)
@@ -57,11 +76,12 @@ with tempfile.TemporaryDirectory() as tmp:
     package = source / relative
     package.parent.mkdir(parents=True)
     package.write_bytes(b"signed")
-    (source / "Packages").write_text(index(relative, b"signed"))
+    entries = [("app-misc/a-1", relative)]
+    (source / "Packages").write_text(index(entries))
     target.mkdir()
     outside.mkdir()
     (target / "app-misc").symlink_to(outside, target_is_directory=True)
-    (target / "Packages").write_text(index(relative, b"old"))
+    (target / "Packages").write_text(index(entries))
     changed = root / "changed.txt"
     changed.write_text(relative + "\n")
     try:

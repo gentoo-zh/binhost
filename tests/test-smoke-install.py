@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 import copy
+import contextlib
 import importlib.util
+import io
 import json
 import pathlib
 import stat
@@ -134,6 +136,32 @@ check("频道变化会改变抽样", first != other_channel)
 check("仓库版本变化会改变抽样", first != other_revision)
 check("CPV 集合变化会改变抽样", first != other_cpv)
 
+same_slot = [
+    {
+        "atom": "=app-misc/same-1::gentoo-zh",
+        "cpv": "app-misc/same-1",
+        "repo": "gentoo-zh",
+        "path": "app-misc/same/same-1-1.gpkg.tar",
+        "size": 1000,
+        "slot": "0",
+        "cp": "app-misc/same",
+    },
+    {
+        "atom": "=app-misc/same-2::gentoo-zh",
+        "cpv": "app-misc/same-2",
+        "repo": "gentoo-zh",
+        "path": "app-misc/same/same-2-1.gpkg.tar",
+        "size": 2000,
+        "slot": "0",
+        "cp": "app-misc/same",
+    },
+]
+preferred = smoke.select_packages(
+    "stable", revisions, copy.deepcopy(same_slot), [same_slot[1]["path"]],
+    strict_limit=1, rotating_limit=1)
+check("同 slot 抽样优先选择本轮新签版本",
+      [item["atom"] for item in preferred], [same_slot[1]["atom"]])
+
 print("== 失败分类")
 check("严格预检通过后等待实际安装",
       smoke.classify(0), "strict-eligible")
@@ -173,6 +201,54 @@ check("逐包重试按实际退出码记录成功", installed, ["=a/b-1::gentoo"
 check("逐包重试按实际退出码记录失败", install_failed,
       [{"atom": "=a/c-1::gentoo", "output": "broken gpkg"}])
 
+print("== 容器内安装")
+with tempfile.TemporaryDirectory() as directory:
+    sandbox = pathlib.Path(directory)
+    selection = sandbox / "selection.json"
+    selected_atom = "=app-misc/selected-1::gentoo-zh"
+    selection.write_text(json.dumps([{"atom": selected_atom}]))
+    gentoo_packages = sandbox / "run" / "binhost-smoke" / "gentoo-packages"
+    gentoo_packages.mkdir(parents=True)
+    (gentoo_packages / "package.gpkg.tar").write_text("gpkg")
+    real_path = pathlib.Path
+
+    def sandbox_path(*parts):
+        path = real_path(*parts)
+        try:
+            path.relative_to(sandbox)
+        except ValueError:
+            if path.is_absolute():
+                return sandbox / path.relative_to("/")
+        return path
+
+    emerge_calls = []
+
+    def successful_emerge(command):
+        emerge_calls.append(command)
+        return 0, "ok"
+
+    original_pathlib = smoke.pathlib
+    original_run_emerge = smoke.run_emerge
+    original_install_selected = smoke.install_selected
+    output = io.StringIO()
+    try:
+        smoke.pathlib = SimpleNamespace(Path=sandbox_path)
+        smoke.run_emerge = successful_emerge
+        smoke.install_selected = lambda atoms: original_install_selected(
+            atoms, successful_emerge)
+        with contextlib.redirect_stdout(output):
+            smoke.inside(selection)
+    finally:
+        smoke.pathlib = original_pathlib
+        smoke.run_emerge = original_run_emerge
+        smoke.install_selected = original_install_selected
+    inside_result = json.loads(output.getvalue())
+    install_calls = [command for command in emerge_calls if "-1vK" in command]
+    check("容器内报告实际安装选中的 atom",
+          inside_result["installed"], [selected_atom])
+    check("容器内安装命令使用选中的 atom",
+          [command[-1] for command in install_calls], [selected_atom])
+
 print("== 官方快取边界")
 with tempfile.TemporaryDirectory() as directory:
     root = pathlib.Path(directory)
@@ -195,6 +271,12 @@ PATH: app-misc/missing/missing-1-1.gpkg.tar
     check("离线索引只保留已有 gpkg", count, 1)
     check("离线索引移除缺少的路径", "missing-1" not in filtered)
     check("离线索引修正软件包数量", "PACKAGES: 1" in filtered)
+    kept_paths = [line.removeprefix("PATH: ") for line in filtered.splitlines()
+                  if line.startswith("PATH: ")]
+    check("离线索引保留现有 gpkg 的 PATH", kept_paths,
+          [package.relative_to(package_root).as_posix()])
+    check("离线索引的 PATH 均存在于磁盘",
+          all((package_root / path).is_file() for path in kept_paths))
 
 print("== 容器边界")
 with tempfile.TemporaryDirectory() as directory:
