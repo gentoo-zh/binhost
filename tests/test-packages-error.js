@@ -42,6 +42,7 @@ global.fetch = () => Promise.reject(new Error("offline"));
 global.MutationObserver = class { observe() {} };
 
 (0, eval)(fs.readFileSync(path.join(ROOT, "site/assets/util.js"), "utf8"));
+const zeroSize = human(0) === "0 B";
 const blocks = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
   .map((match) => match[1]);
 (0, eval)(blocks.sort((left, right) => right.length - left.length)[0]);
@@ -53,5 +54,6 @@ setImmediate(() => {
     document.getElementById("depRows").innerHTML === "" &&
     document.getElementById("retry").hidden === false;
   console.log(`  ${okay ? "✓" : "✗"} packages.json 失败时两张表显示同一错误状态`);
-  process.exit(okay ? 0 : 1);
+  console.log(`  ${zeroSize ? "✓" : "✗"} 零字节文件显示为 0 B`);
+  process.exit(okay && zeroSize ? 0 : 1);
 });

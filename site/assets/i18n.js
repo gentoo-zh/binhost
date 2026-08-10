@@ -10,6 +10,7 @@
     'zh-tw': { light: '淺色', dark: '深色', system: '跟隨系統' },
     'en': { light: 'Light', dark: 'Dark', system: 'System' }
   };
+  var THEME_MODES = Object.keys(THEME_LABEL.en);
   var COPIED = { 'zh-cn': '已复制', 'zh-tw': '已複製', 'en': 'Copied' };
   var COPY_FAILED = {
     'zh-cn': '复制失败，请手动选取',
@@ -42,6 +43,9 @@
 
   function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function read(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function normaliseTheme(mode) {
+    return THEME_MODES.indexOf(mode) >= 0 ? mode : 'system';
+  }
 
   var enabled = window.MIRROR_LANGS || LANGS.map(function (p) { return p[0]; });
   var LANG_LIST = LANGS.filter(function (p) { return enabled.indexOf(p[0]) >= 0; });
@@ -56,7 +60,7 @@
   }
 
   var curLang = detectLang();
-  var themeMode = read('mirror-theme') || 'system';
+  var themeMode = normaliseTheme(read('mirror-theme') || 'system');
 
   var langBtns = {};
   document.querySelectorAll('.lang-btn').forEach(function (b) {
@@ -134,13 +138,14 @@
     if (!themeBtn) return;
     var title = THEME_WORD[curLang] + THEME_SEP[curLang] + THEME_LABEL[curLang][themeMode];
     themeBtn.title = title; themeBtn.setAttribute('aria-label', title);
-    ['light', 'dark', 'system'].forEach(function (m) {
+    THEME_MODES.forEach(function (m) {
       if (!items[m]) return;
       items[m].lastChild.textContent = THEME_LABEL[curLang][m];
       items[m].setAttribute('aria-checked', m === themeMode ? 'true' : 'false');
     });
   }
   function applyTheme(mode) {
+    mode = normaliseTheme(mode);
     themeMode = mode;
     var root = document.documentElement;
     root.setAttribute('data-theme-mode', mode);

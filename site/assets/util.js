@@ -6,7 +6,9 @@ function esc(s) {
 }
 
 function human(n) {
-  if (!n) return "";
+  if (n === null || n === undefined || n === "") return "";
+  n = Number(n);
+  if (!Number.isFinite(n)) return "";
   if (n < 1024) return n + " B";
   var unit = ["K", "M", "G", "T"];
   var i = -1;

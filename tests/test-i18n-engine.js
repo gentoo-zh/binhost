@@ -19,6 +19,7 @@ function elem(attrs, text) {
                mode: a["data-mode"], lang: a["data-lang"] },
     textContent: text || "", hidden: false, style: {},
     getAttribute: (k) => a[k], setAttribute: (k, v) => { a[k] = v; },
+    removeAttribute: (k) => { delete a[k]; },
     classList: { toggle() {}, add() {}, remove() {}, contains: () => false },
     _h: {},
     addEventListener(type, f) { (e._h[type] = e._h[type] || []).push(f); },
@@ -71,7 +72,7 @@ for (const [lang, url] of Object.entries(want)) {
   check(`${lang} 的链接指向 ${url}`, r.href === url, `实际 ${r.href}`);
 }
 
-function menuRun() {
+function menuRun(storedTheme) {
   const items = ["light", "dark", "system"].map((m) =>
     elem({ "data-mode": m, class: "menu-item" }, ""));
   items.forEach((i) => { i.innerHTML = "<svg></svg><span></span>"; });
@@ -84,9 +85,11 @@ function menuRun() {
   wrap.querySelector = (s) => (/theme-btn/.test(s) ? btn : /menu/.test(s) ? menu : null);
   wrap.contains = () => true;
 
+  const root = elem({}, "");
+  root.lang = "zh-cn";
+  const stored = {};
   global.document = {
-    documentElement: { lang: "zh-cn", setAttribute() {}, removeAttribute() {},
-                       classList: { remove() {} }, style: {} },
+    documentElement: root,
     querySelector: (s) => (/menu-wrap/.test(s) ? wrap : null),
     querySelectorAll: () => ({ length: 0, forEach() {} }),
     getElementById: () => null, createElement: () => elem({}, ""),
@@ -96,11 +99,14 @@ function menuRun() {
   };
   global.window = { MIRROR_I18N: {}, addEventListener() {} };
   global.navigator = { language: "zh-CN" };
-  global.localStorage = { getItem: () => null, setItem() {} };
+  global.localStorage = {
+    getItem: (key) => key === "mirror-theme" ? storedTheme : null,
+    setItem: (key, value) => { stored[key] = value; },
+  };
   global.CustomEvent = class { constructor() {} };
   (0, eval)(fs.readFileSync(path.join(ROOT, "site/assets/strings.js"), "utf8"));
   (0, eval)(fs.readFileSync(path.join(ROOT, "site/assets/i18n.js"), "utf8"));
-  return { menu, btn, items };
+  return { menu, btn, items, root, stored };
 }
 
 const m = menuRun();
@@ -144,6 +150,19 @@ check("选一项之后菜单收起", m.menu.hidden === true);
         items[1].getAttribute("aria-checked") === "true" &&
         items[2].getAttribute("aria-checked") === "false",
         items.map((i) => i.getAttribute("data-mode") + "=" + i.getAttribute("aria-checked")).join(" "));
+}
+
+{
+  const { btn, items, root, stored } = menuRun("sepia");
+  const label = btn.getAttribute("aria-label");
+  check("无效主题值回到 system",
+        root.getAttribute("data-theme-mode") === "system" &&
+        root.getAttribute("data-theme") === undefined &&
+        root.style.colorScheme === "light dark" &&
+        items[2].getAttribute("aria-checked") === "true" &&
+        !String(label).includes("undefined") &&
+        stored["mirror-theme"] === "system",
+        `mode=${root.getAttribute("data-theme-mode")} label=${label}`);
 }
 
 console.log(failed ? `\n  ${failed} 项不通过` : "\n  语言链接与主题菜单：全部通过");
