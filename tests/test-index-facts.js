@@ -127,6 +127,8 @@ async function render(build, channel, locale = "zh-tw") {
         (done.server.match(/class="row"/g) || []).length === 2 &&
         done.server.includes("運行時間") && done.server.includes("出站流量") &&
         (done.server.match(/更新於 /g) || []).length === 1, done.server);
+  check("出站流量显示实际传输量",
+        done.server.includes("4.9 MiB") && !done.server.includes("92 KiB"), done.server);
   check("默认读取 stable 的索引和构建状态",
         done.calls.includes("/binpkgs/x86-64/status.json") &&
         done.calls.includes("/unstable/binpkgs/x86-64/status.json") &&

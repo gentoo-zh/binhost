@@ -101,6 +101,16 @@ ok "解析失败会成为故障" \
 rm -rf "${d}"
 
 echo
+echo "== overlay 版本格式错误时拒绝"
+d=$(setup)
+RESOLVER_MODE=invalid out=$(run "${d}")
+ok "缺少版本栏会成为格式故障" \
+   "$([[ ${out} == *'版本清单格式无法解析：not-a-version'* ]] && echo yes)" "yes"
+ok "格式故障不会检查错误归档路径" \
+   "$(test -e "${d}/urls" && wc -l < "${d}/urls" || echo 0)" "0"
+rm -rf "${d}"
+
+echo
 if (( fail )); then
     echo ">>> ${fail} 项未通过，${pass} 项通过"
     exit 1

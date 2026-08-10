@@ -101,6 +101,11 @@ ok "接管后写入新持有者" "$([[ ${out} == *owner=runC* ]] && echo yes)" "
 ok "接管者结束时释放自己的锁" \
    "$(test -d "${d}/root/.publish.lock" && echo 在 || echo 已释放)" "已释放"
 
+held_by "${d}" runA '2 hours ago'
+out=$(LOCK_STALE_H=1 take "${d}" runC-custom)
+ok "自定义一小时期限会接管两小时前的锁" \
+   "$([[ ${out} == *stale-taken* ]] && echo yes)" "yes"
+
 echo
 echo "== 未到期限的锁不接管"
 held_by "${d}" runA '1 hour ago'

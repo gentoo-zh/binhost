@@ -6,6 +6,7 @@ import os
 import pathlib
 import sys
 import tempfile
+import time
 
 BUILD = pathlib.Path(__file__).resolve().parent.parent / "build"
 
@@ -341,6 +342,16 @@ case("deps.txt 单独成档，不占用 packages.txt 的状态栏", lambda: (
 case("deps.txt 的说明行都以 # 开头", lambda: (
     all(l.startswith("#") or not l.strip() or l.split()[0].count("/") == 1
         for l in run_main(stanza("dev-libs/lib-1", "gentoo"))[2].splitlines())))
+
+case("deps.txt 依次写出套件、slot 与版本", lambda: (
+    (lambda text: [line.split() for line in text.splitlines()
+                   if line and not line.startswith("#")]
+     == [["dev-libs/lib", "7", "1.2-r3"]])(
+        run_main(stanza("dev-libs/lib-1.2-r3", "gentoo", slot="7"))[2])))
+
+case("套件资料生成时间落在本次执行期间", lambda: (
+    (lambda before, result: before <= result[1]["generated"] <= int(time.time()))(
+        int(time.time()), run_main(stanza("dev-libs/lib-1", "gentoo")))))
 
 case("binpkg 与 distfiles 四种组合分别写出", lambda: (
     availability_matrix()[2] == {
