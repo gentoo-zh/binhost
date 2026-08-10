@@ -3,6 +3,7 @@
 set -uo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
+REAL_RSYNC=$(command -v rsync)
 pass=0
 fail=0
 
@@ -77,6 +78,72 @@ linked() {
 
 leftovers() {
     find "$1" -maxdepth 1 \( -name '.switch-*' -o -name '.gen-seed-*' \) | wc -l
+}
+
+# Run the complete publisher against a local directory. These wrappers preserve
+# stdin and execute the same remote shell blocks and rsync file lists, so the
+# assertions below cover their filesystem effects instead of their source text.
+transport() {
+    local d="$1"
+    mkdir -p "${d}/bin"
+    cat > "${d}/bin/ssh" <<'EOF'
+#!/bin/bash
+shift
+exec /bin/sh -c "$*"
+EOF
+    cat > "${d}/bin/rsync" <<'EOF'
+#!/bin/bash
+set -eu
+args=()
+for arg in "$@"; do
+    case ${arg} in
+        fixture:*) arg=${arg#fixture:} ;;
+    esac
+    args+=("${arg}")
+done
+exec "${REAL_RSYNC}" "${args[@]}"
+EOF
+    chmod +x "${d}/bin/ssh" "${d}/bin/rsync"
+}
+
+package_generation() {
+    local generation_root="$1" payload_root="$2" mark="$3" path size i=0
+    shift 3
+    mkdir -p "${generation_root}" "${payload_root}"
+    {
+        printf 'ACCEPT_KEYWORDS: amd64\nARCH: amd64\n'
+        printf 'PACKAGES: %s\nTIMESTAMP: 1700000000\nVERSION: 0\n\n' "$#"
+        for path in "$@"; do
+            i=$((i + 1))
+            mkdir -p "${payload_root}/$(dirname "${path}")"
+            printf '%s-%s\n' "${mark}" "${path}" > "${payload_root}/${path}"
+            size=$(stat -c %s "${payload_root}/${path}")
+            (( i == 1 )) || printf '\n'
+            printf 'CPV: app-misc/pkg%s-1\nPATH: %s\nREPO: gentoo-zh\nSIZE: %s\nSLOT: 0\n' \
+                "${i}" "${path}" "${size}"
+        done
+    } > "${generation_root}/Packages"
+    gzip -n -c "${generation_root}/Packages" > "${generation_root}/Packages.gz"
+    printf 'installed\n' > "${generation_root}/installed.txt"
+    printf 'official\n' > "${generation_root}/official.txt"
+    printf 'source\n' > "${generation_root}/source.txt"
+    python3 "${ROOT}/build/generation.py" create "${generation_root}"
+}
+
+link_generation() {
+    local public="$1" gen="$2" name
+    ln -s "${gen}" "${public}/.gen"
+    for name in "${FILES[@]}"; do
+        ln -s ".gen/${name}" "${public}/${name}"
+    done
+}
+
+run_publish() {
+    local root="$1" stage="$2" public="$3" run_id="$4"
+    PATH="${root}/bin:${PATH}" REAL_RSYNC="${REAL_RSYNC}" \
+        CHANNEL=stable STAGE="${stage}" REMOTE=fixture REMOTE_ROOT="${public}" \
+        LOCK_DIR="${public}/.publish.lock" RUN_ID="${run_id}" \
+        bash "${ROOT}/build/publish.sh"
 }
 
 echo "== 首次切换：六个名称变成链接，内容不变"
@@ -223,6 +290,54 @@ else
        "$(test -d "${d}/.gen-run1" && echo 在 || echo 不在)" "在"
     rm -rf "${d}"
 fi
+
+echo
+echo "== 完整发布：隔离删除与修剪代际都改变临时公开根"
+effects_root=$(mktemp -d)
+trap 'rm -rf "${effects_root}"' EXIT
+transport "${effects_root}"
+public="${effects_root}/public-prune"
+stage="${effects_root}/stage-prune"
+mkdir -p "${public}/.gen-live" "${stage}"
+denied=app-misc/denied-1.gpkg.tar
+retained=app-misc/retained-1.gpkg.tar
+package_generation "${public}/.gen-live" "${public}" old "${denied}" "${retained}"
+link_generation "${public}" .gen-live
+printf '%s\n' "${denied}" > "${stage}/quarantine.txt"
+printf 'PATH: app-misc/next-1.gpkg.tar\n' > "${stage}/Packages"
+printf 'test stop after quarantine\n' > "${stage}/publish-blocked.txt"
+out=$(run_publish "${effects_root}" "${stage}" "${public}" prune-run 2>&1)
+rc=$?
+ok "发布按预设闸门停止" "$((rc != 0))" "1"
+ok "隔离包体确实从公开路径移除" \
+   "$(test -e "${public}/${denied}" && echo 在 || echo 已移除)" "已移除"
+ok "未被隔离的包体仍在原路径" \
+   "$(cat "${public}/${retained}" 2>/dev/null)" "old-${retained}"
+ok "公开索引已经移除隔离路径" \
+   "$(grep -cF "PATH: ${denied}" "${public}/Packages")" "0"
+ok "公开索引仍保留原代际的其他内容" \
+   "$(grep -cF "PATH: ${retained}" "${public}/Packages")" "1"
+ok "修剪后代际通过独立清单验证" \
+   "$(python3 "${ROOT}/build/generation.py" verify "${public}/.gen" >/dev/null 2>&1; echo $?)" "0"
+
+echo
+echo "== 完整发布：新 PATH 在指定公开根取得到"
+public="${effects_root}/public-upload"
+stage="${effects_root}/stage-upload"
+uploaded=app-misc/uploaded-1.gpkg.tar
+package_generation "${stage}" "${stage}" new "${uploaded}"
+out=$(run_publish "${effects_root}" "${stage}" "${public}" upload-run 2>&1)
+rc=$?
+ok "完整发布成功" "${rc}" "0"
+ok "新 PATH 位于指定公开根" \
+   "$(cat "${public}/${uploaded}" 2>/dev/null)" "new-${uploaded}"
+ok "公开索引列出的 PATH 可以取得" \
+   "$(path=$(awk '/^PATH: /{print $2; exit}' "${public}/Packages"); \
+      test -s "${public}/${path}" && echo yes)" "yes"
+ok "发布锁已经释放" \
+   "$(test -d "${public}/.publish.lock" && echo 在 || echo 已释放)" "已释放"
+rm -rf "${effects_root}"
+trap - EXIT
 
 echo
 echo "== publish.sh 按这个形状使用它"
