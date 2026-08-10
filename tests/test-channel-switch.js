@@ -117,6 +117,10 @@ check("stable 默认使用原有路径和默认状态文件",
         return event.type === "channelchange" && event.detail.channel === "stable" &&
           event.detail.status === "/build-status.json";
       }));
+check("stable 默认显示自己的说明面板",
+      panels.every(function (panel) {
+        return panel.hidden === (panel.getAttribute("data-channel-panel") !== "stable");
+      }));
 
 unstable.click();
 check("切换 unstable 会同步更新全部 sync-uri",

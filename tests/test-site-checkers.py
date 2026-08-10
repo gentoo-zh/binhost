@@ -55,6 +55,15 @@ with tempfile.TemporaryDirectory() as base:
     script = tools / "render-chrome.py"
     subprocess.run([sys.executable, script], check=True, capture_output=True, text=True)
     clean = subprocess.run([sys.executable, script, "--check"], capture_output=True, text=True)
+    rendered = page.read_text()
+    for name in ("head", "nav", "foot"):
+        expected = (f"<!-- chrome:{name} -->\n<{name}>内容</{name}>\n"
+                    f"<!-- /chrome:{name} -->\n")
+        if expected in rendered:
+            print(f"  ✓ 共用 {name} 区块使用自己的模板")
+        else:
+            print(f"  ✗ 共用 {name} 区块没有使用自己的模板")
+            bad += 1
     nav = "<!-- chrome:nav -->\n<nav>内容</nav>\n<!-- /chrome:nav -->\n"
     page.write_text(page.read_text().replace(nav, ""))
     missing = subprocess.run([sys.executable, script, "--check"], capture_output=True, text=True)

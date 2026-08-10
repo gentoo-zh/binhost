@@ -68,11 +68,14 @@ const root = element({ "data-lang": "zh-cn" });
 const listeners = {};
 const topValue = element({ "data-src-suffix": "/binpkgs/x86-64" });
 const topCopy = element({ "data-src-suffix": "/binpkgs/x86-64" });
+const distList = /data-src-switch="dist"[^>]*data-src-list='([^']+)'/.exec(html);
+const distValue = element({ "data-src-list": distList ? distList[1] : "" });
 global.document = {
   documentElement: root,
   querySelectorAll(selector) {
     if (selector === "[data-src-switch]") return groups;
     if (selector === '[data-src-slot="top"]') return [topValue];
+    if (selector === '[data-src-slot="dist"]') return [distValue];
     if (selector === '.copy-chip[data-src-copy="top"]') return [topCopy];
     return [];
   },
@@ -109,6 +112,9 @@ check("简体中文默认选择教育网联合镜像站",
 check("镜像选择器会写出完整 binpkg 地址",
       topValue.textContent === cernet + "/binpkgs/x86-64" &&
       topCopy.getAttribute("data-copy") === cernet + "/binpkgs/x86-64");
+check("GENTOO_MIRRORS 保留选择项以外的回退镜像",
+      distValue.textContent === '"${GENTOO_MIRRORS} ' + mirrorUris.join(" ") + '"',
+      distValue.textContent);
 
 topValue.setAttribute("data-src-suffix", "/unstable/binpkgs/x86-64");
 topCopy.setAttribute("data-src-suffix", "/unstable/binpkgs/x86-64");

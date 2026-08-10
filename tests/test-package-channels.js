@@ -64,7 +64,7 @@ const firstStable = new Promise(function (resolve) { resolveFirstStable = resolv
 const stableData = {
   schema: 4,
   packages: [{ cp: "app-misc/stable", binhost: true, dist: [] }],
-  deps: [{ cp: "dev-libs/stable", slot: "0", ver: "1" }],
+  deps: [{ cp: "dev-libs/stable", slot: "7", ver: "1.2-r3" }],
 };
 const unstableData = {
   schema: 4,
@@ -159,6 +159,10 @@ function settle() {
         nodes.depRows.innerHTML.includes("dev-libs/stable") &&
         nodes.packagesText.href === "/packages.txt" &&
         nodes.depsText.href === "/deps.txt");
+  check("依赖表分别显示 SLOT 与版本",
+        nodes.depRows.innerHTML.includes('<td class="slot">7</td>') &&
+        nodes.depRows.innerHTML.includes('<td class="ver">1.2-r3</td>'),
+        nodes.depRows.innerHTML);
 
   console.log(failed ? `\n  ${failed} 项不通过` : "\n  包列表频道切换：全部通过");
   process.exit(failed ? 1 : 0);

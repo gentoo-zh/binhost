@@ -2,6 +2,7 @@
 
 import hashlib
 import importlib.util
+import os
 import pathlib
 import tempfile
 
@@ -42,6 +43,11 @@ with tempfile.TemporaryDirectory() as tmp:
             package = directory / relative
             package.parent.mkdir(parents=True, exist_ok=True)
             package.write_bytes(payload if directory == source else b"old")
+    source_mtimes = {}
+    for number, (_cpv, relative) in enumerate(entries):
+        source_mtimes[relative] = (1700000000 + number) * 1_000_000_000
+        package = source / relative
+        os.utime(package, ns=(source_mtimes[relative], source_mtimes[relative]))
     kept = target / target_only[1]
     kept.parent.mkdir(parents=True)
     kept.write_bytes(b"target only")
@@ -58,9 +64,14 @@ with tempfile.TemporaryDirectory() as tmp:
         assert f"MD5: {hashlib.md5(payload).hexdigest()}" in refreshed
         assert f"SHA1: {hashlib.sha1(payload).hexdigest()}" in refreshed
         assert f"SIZE: {len(payload)}" in refreshed
-    _header, _stanzas, indexed = persist_packages.parse_index(refreshed)
+    _header, refreshed_stanzas, indexed = persist_packages.parse_index(refreshed)
     assert set(indexed) == {relative for _cpv, relative in entries + [target_only]}
     assert kept.read_bytes() == b"target only"
+    for relative, mtime_ns in source_mtimes.items():
+        assert (target / relative).stat().st_mtime_ns == mtime_ns
+        stanza_text = next(stanza for stanza in refreshed_stanzas
+                           if f"PATH: {relative}" in stanza)
+        assert f"MTIME: {mtime_ns // 1_000_000_000}" in stanza_text
 
     before = (target / entries[0][1]).stat().st_mtime_ns
     changed.write_text("")

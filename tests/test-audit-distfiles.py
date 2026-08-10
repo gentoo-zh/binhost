@@ -504,11 +504,14 @@ def _concurrent_reap():
             second = json.loads(_p.Path(audit.STATE).read_text())["x.tar.gz"]
         finally:
             audit.STATE, audit.RECYCLE, audit.LEDGER = old
-        return first, second
+        return first, second, int(time.time())
 
 
 case("第二次执行沿用第一次记下的时间，不会把宽限期重置", lambda: (
     (lambda r: r[0] == r[1])(_concurrent_reap())))
+
+case("首次发现孤儿的时间不在未来", lambda: (
+    (lambda r: r[0] <= r[2])(_concurrent_reap())))
 
 
 def _reap_lock_unavailable():

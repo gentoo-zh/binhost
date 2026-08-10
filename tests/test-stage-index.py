@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import os
 import pathlib
 import re
 import sys
@@ -694,13 +695,17 @@ for _shape in ("final", "relative", "intermediate", "fifo"):
 case("正常文件照常 stage", lambda: _escape("plain")[0] in (0, None))
 
 
-def _digest_probe(sha1=None, md5=None, content=b"inside\n", return_content=False):
+def _digest_probe(sha1=None, md5=None, content=b"inside\n", return_content=False,
+                  mtime_ns=None, return_mtime=False):
     """Stage one package and report whether main accepted it."""
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
         pkg = d / "pkg"
         (pkg / "app-misc").mkdir(parents=True)
-        (pkg / "app-misc" / "a-1.gpkg.tar").write_bytes(content)
+        package = pkg / "app-misc" / "a-1.gpkg.tar"
+        package.write_bytes(content)
+        if mtime_ns is not None:
+            os.utime(package, ns=(mtime_ns, mtime_ns))
         stage = d / "stage"
         stage.mkdir()
         lines = ["CPV: app-misc/a-1", "PATH: app-misc/a-1.gpkg.tar",
@@ -716,7 +721,10 @@ def _digest_probe(sha1=None, md5=None, content=b"inside\n", return_content=False
             rc = e.code
         if return_content:
             output = stage / "app-misc" / "a-1.gpkg.tar"
-            return rc, output.read_bytes() if output.exists() else None
+            result = (rc, output.read_bytes() if output.exists() else None)
+            if return_mtime:
+                return result + (output.stat().st_mtime_ns if output.exists() else None,)
+            return result
         return rc
 
 
@@ -727,6 +735,12 @@ case("正常 stage 逐字节保留来源内容", lambda: (
     (lambda content: _digest_probe(
         sha1=digest_of(content), content=content, return_content=True)
      == (0, content))(bytes(range(256)) + b"stage\n")))
+
+case("正常 stage 保留来源修改时间", lambda: (
+    (lambda mtime: _digest_probe(
+        sha1=digest_of(b"inside\n"), mtime_ns=mtime,
+        return_content=True, return_mtime=True) == (0, b"inside\n", mtime))(
+            1700000000123456789)))
 
 case("SHA1 不符时拒绝，不按旧 stanza 发布", lambda: (
     (lambda rc: rc not in (0, None) and "SHA1" in str(rc))(
@@ -1103,8 +1117,8 @@ case("或组一个分支都满足不了时什么都不发", lambda: (
     deps([stanza("app-misc/a-1", rdepend="|| ( dev-libs/gone dev-libs/missing )"), LIB])
     == ["app-misc/a-1"]))
 
-case("或组满足不了要记进未解析清单", lambda: (
-    (lambda u: any("||" in a for a in u))(
+case("或组满足不了要完整记进未解析清单", lambda: (
+    (lambda u: set(u) == {"|| ( dev-libs/gone dev-libs/missing )"})(
         run([stanza("app-misc/a-1", rdepend="|| ( dev-libs/gone dev-libs/missing )")],
             with_deps=True)[4])))
 
@@ -1115,6 +1129,32 @@ case("索引中不存在的原子记进未解析清单", lambda: (
 case("未解析清单记下是谁引用的", lambda: (
     run([stanza("app-misc/a-1", rdepend="sys-libs/glibc")],
         with_deps=True)[4]["sys-libs/glibc"] == {"app-misc/a-1"}))
+
+def main_unresolved_consumers():
+    with tempfile.TemporaryDirectory() as temporary:
+        root = pathlib.Path(temporary)
+        pkgdir = root / "pkgdir"
+        stage = root / "stage"
+        stage.mkdir()
+        records = []
+        for cpv in ("app-misc/a-1", "app-misc/b-1"):
+            content = f"{cpv}\n".encode()
+            relative = pathlib.Path("app-misc") / f"{cpv.split('/')[-1]}.gpkg.tar"
+            package = pkgdir / relative
+            package.parent.mkdir(parents=True, exist_ok=True)
+            package.write_bytes(content)
+            records.append(stanza(
+                cpv, PATH=str(relative), sha1=digest_of(content),
+                rdepend="sys-libs/glibc"))
+        (pkgdir / "Packages").write_text(
+            HEADER + "\n\n" + "\n\n".join(records) + "\n")
+        stage_main(pkgdir, stage, lookup=fake_lookup())
+        return (stage / "unresolved.txt").read_text()
+
+
+case("未解析清单写下所有引用者", lambda: (
+    main_unresolved_consumers()
+    == "sys-libs/glibc\tapp-misc/a-1 app-misc/b-1\n"))
 
 case("virtual 留给使用者的 Portage 从源码解析", lambda: (
     deps([stanza("app-misc/a-1", rdepend="virtual/lib"),

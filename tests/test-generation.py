@@ -36,6 +36,16 @@ with tempfile.TemporaryDirectory() as tmp:
     assert tuple(manifest["files"]) == FILES
     assert manifest["files"] == EXPECTED_DIGESTS
     generation.verify(root)
+    manifest["schema"] = 2
+    (root / "generation.json").write_text(json.dumps(manifest))
+    try:
+        generation.verify(root)
+    except ValueError as error:
+        assert "unsupported shape" in str(error)
+    else:
+        raise AssertionError("an unknown generation schema was accepted")
+    manifest["schema"] = 1
+    (root / "generation.json").write_text(json.dumps(manifest))
     originals = {name: (root / name).read_bytes() for name in FILES}
     for name in FILES:
         (root / name).write_text("changed\n")

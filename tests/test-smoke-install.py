@@ -341,6 +341,18 @@ for category in ("source_fallback", "resolver_failed", "gpkg_install_failed",
         check(f"{category} 的告警范围正确",
               pathlib.Path(probe.alert).exists(), should_alert)
 
+with tempfile.TemporaryDirectory() as directory:
+    alert = pathlib.Path(directory, "smoke-alert.txt")
+    result = copy.deepcopy(base_payload)
+    result["gpkg_install_failed"] = [{}, {}]
+    result["harness_failed"] = [{}]
+    result["report_path"] = str(pathlib.Path(directory, "smoke-install.json"))
+    smoke.write_alert(alert, result)
+    text = alert.read_text()
+    check("告警分别写出安装失败与测试环境失败数量",
+          text, f"gpkg 安装失败 2 个，测试环境失败 1 项；"
+                f"详见 {result['report_path']}\n")
+
 print("== 容器自己失败")
 # The fake docker returns a payload with status 0 everywhere else, so nothing
 # exercised the branch that reads a non-zero container exit. A crashed

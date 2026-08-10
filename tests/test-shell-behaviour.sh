@@ -804,6 +804,7 @@ snap() {
 }
 
 phase_of() { grep -o '"phase":"[a-z-]*"' <<< "$1" | cut -d'"' -f4; }
+state_of() { grep -o '"state":"[a-z-]*"' <<< "$1" | cut -d'"' -f4; }
 field_of() { grep -o "\"$2\":[0-9]*" <<< "$1" | cut -d: -f2; }
 
 s=$(snap "42 173 app-misc/foo" "")
@@ -817,6 +818,7 @@ case "${s}" in *'"now":"app-misc/foo"'*) ok "逐包阶段报出当前套件" yes
 s=$(snap "" ">>> Emerging (5 of 10) app-misc/bar
 >>> Installing (5 of 10) app-misc/bar")
 ok "整体阶段仍按 whole.log 计数" "$(field_of "${s}" "done")" "1"
+ok "整体阶段报出建置总数" "$(field_of "${s}" total)" "10"
 ok "整体阶段标出 phase" "$(phase_of "${s}")" "whole"
 
 s=$(snap "" "")
@@ -845,6 +847,8 @@ s=$(finish_status)
 started=$(field_of "${s}" started)
 finished=$(field_of "${s}" finished)
 duration=$(field_of "${s}" duration)
+ok "完成状态标出 done state" "$(state_of "${s}")" "done"
+ok "完成状态标出 done phase" "$(phase_of "${s}")" "done"
 ok "完成状态保留开始与结束时间" \
    "$([ -n "${started}" ] && [ -n "${finished}" ] && echo both || echo missing)" "both"
 ok "完成状态的用时由同一次起止时间计算" "$(( finished - started ))" "${duration}"
@@ -1268,6 +1272,9 @@ ok "有 counts.txt 时正常发布" "$?" "0"
 ok "status.json 分开记 overlay 与依赖数" \
    "$(python3 -c "import json;d=json.load(open('${d}/remote/status.json'));print(d['overlay'],d['deps'])" 2>/dev/null)" \
    "2 7"
+ok "status.json 沿用发布索引的生成时间" \
+   "$(python3 -c "import json;print(json.load(open('${d}/remote/status.json'))['generated'])")" \
+   "$(awk '/^TIMESTAMP: /{print $2; exit}' "${d}/stage/Packages")"
 rm -rf "${d}"
 
 d=$(setup_publish)
@@ -1636,7 +1643,14 @@ setup_site() {
     cat > "${d}/bin/git" <<'EOF'
 #!/bin/bash
 case "$*" in
-    *rev-parse*) echo 1111111111111111111111111111111111111111 ;;
+    *rev-parse*)
+        if [[ -e ${WORK}/.git/reset-done ]]; then
+            echo 2222222222222222222222222222222222222222
+        else
+            echo 1111111111111111111111111111111111111111
+        fi
+        ;;
+    *reset*) : > "${WORK}/.git/reset-done" ;;
     *) exit 0 ;;
 esac
 EOF
@@ -1665,7 +1679,8 @@ echo AAAA0000000000000000000000000000000000AA > "${d}/fpr"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" WORK="${d}/work" DEST="${d}/dest" \
       FPR_FILE="${d}/fpr" LOCK="${d}/lock" bash deploy/site-sync.sh 2>&1)
 ok "指纹相符时正常结束" "$?" "0"
-ok "并且写下 DONE" "$(cat "${d}/work/.synced" 2>/dev/null)" "1111111111111111111111111111111111111111"
+ok "并且写下更新后的 DONE" "$(cat "${d}/work/.synced" 2>/dev/null)" \
+   "2222222222222222222222222222222222222222"
 ok "公钥已发布" "$(cat "${d}/dest/gentoo-zh-binhost.asc" 2>/dev/null)" "KEY"
 rm -rf "${d}"
 
