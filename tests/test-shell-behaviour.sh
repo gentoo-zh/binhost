@@ -1393,6 +1393,35 @@ mirror_index() {
     gzip -c "${dir}/src/Packages" > "${dir}/src/Packages.gz"
 }
 
+# activate_index_generation refuses an incomplete generation. Nothing exercised
+# that branch, so removing the check left every test green.
+index_guard_probe() {
+    local d out
+    d=$(setup_mirror)
+    mirror_index "${d}" 1
+    ( cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" \
+      DEST="${d}/dest" bash deploy/mirror-sync.sh ) >/dev/null 2>&1
+    sed -n '/^activate_index_generation() {/,/^}/p' "${ROOT}/deploy/mirror-sync.sh" \
+        > "${d}/probe.sh"
+    cat >> "${d}/probe.sh" <<'PROBE'
+activate_index_generation "$1"
+PROBE
+    mkdir -p "${d}/dest/.index-gen-empty"
+    : > "${d}/dest/.index-gen-empty/Packages"
+    : > "${d}/dest/.index-gen-empty/Packages.gz"
+    out=$(DEST="${d}/dest" INDEX_FILES="Packages Packages.gz" \
+          bash -c 'INDEX_FILES=(Packages Packages.gz); source "$0"; ' \
+          "${d}/probe.sh" .index-gen-empty 2>&1)
+    printf '%s|%s|%s\n' "$?" "${out}" \
+        "$(readlink "${d}/dest/.index" 2>/dev/null)"
+    rm -rf "${d}"
+}
+
+IFS='|' read -r rc out active <<< "$(index_guard_probe)"
+ok "空的索引代际不会被启用" "$((rc != 0))" "1"
+ok "并说明索引保持原样" "$([[ ${out} == *索引保持原样* ]] && echo yes)" "yes"
+ok "仍指向先前那一代" "$([[ ${active} == .index-gen-* && ${active} != .index-gen-empty ]] && echo yes)" "yes"
+
 d=$(setup_mirror)
 mirror_index "${d}" 3 9
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
