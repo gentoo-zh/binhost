@@ -16,7 +16,7 @@ ok() {
     fi
 }
 
-PAGES=(index.html faq.html)
+PAGES=(index.html faq.html packages.html)
 
 # The fingerprint check the publisher exists for: a page names its stylesheet
 # with the generation's mark, so a page and an asset from different runs are
@@ -84,7 +84,7 @@ site "${d}/dest" A
 out=$(publish "${d}")
 ok "退出码为零" "$?" "0"
 ok "读到的还是同一代" "$(marks "${d}")" "A"
-ok "五个名称都指向 .site" "$(linked "${d}")" "5"
+ok "六个名称都指向 .site" "$(linked "${d}")" "6"
 ok "assets 变成链接而不是目录" \
    "$([[ -L ${d}/dest/assets ]] && echo 链接 || echo 目录)" "链接"
 ok "不留临时档" "$(leftovers "${d}")" "0"
@@ -94,7 +94,7 @@ echo "== 再次发布：页面与 assets 一起换代"
 site "${d}/src" B
 publish "${d}" >/dev/null
 ok "页面与 assets 同为新一代" "$(marks "${d}")" "B"
-ok "五个名称仍然指向 .site" "$(linked "${d}")" "5"
+ok "六个名称仍然指向 .site" "$(linked "${d}")" "6"
 ok "上一代目录已移除" \
    "$(find "${d}/dest" -maxdepth 1 -name '.site-*' -type d | wc -l)" "1"
 ok "不留临时档" "$(leftovers "${d}")" "0"
@@ -144,7 +144,7 @@ rc=$?
 ok "退出码非零" "$((rc != 0))" "1"
 ok "读的是种子那一代" \
    "$([[ $(readlink "${d}/dest/.site") == .site-seed-* ]] && echo 是 || echo 否)" "是"
-ok "五个名称都读得到" \
+ok "六个名称都读得到" \
    "$(for n in "${PAGES[@]}" assets/site.css robots.txt gentoo-zh-binhost.asc; do
         [[ -s ${d}/dest/${n} ]] || echo x; done | wc -l)" "0"
 ok "手动放的那份没有被换掉" "$(marks "${d}")" "AD"
@@ -176,7 +176,7 @@ ok "退出码非零" "$((rc != 0))" "1"
 ok "说明来源缺 index.html" \
    "$([[ ${out} == *未包含\ index.html* ]] && echo yes)" "yes"
 ok "已发布的站点原样保留" "$(marks "${d}")" "A"
-ok "五个名称仍然指向 .site" "$(linked "${d}")" "5"
+ok "六个名称仍然指向 .site" "$(linked "${d}")" "6"
 rm -rf "${d}"
 
 echo
@@ -194,7 +194,7 @@ else
     chmod 700 "${d}/dest"
     ok "退出码非零" "$((rc != 0))" "1"
     ok "读到的仍是上一代" "$(marks "${d}")" "A"
-    ok "五个名称仍然指向 .site" "$(linked "${d}")" "5"
+    ok "六个名称仍然指向 .site" "$(linked "${d}")" "6"
     rm -rf "${d}"
 fi
 

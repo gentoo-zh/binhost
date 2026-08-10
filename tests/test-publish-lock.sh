@@ -40,6 +40,9 @@ PROBE
         "${ROOT}/build/publish.sh" >> "${d}/probe.sh"
     cat >> "${d}/probe.sh" <<'TAIL'
 echo "${held}"
+if [[ ${CAPTURE_OWNER:-0} == 1 ]]; then
+    printf 'owner=%s\n' "$(cat "${LOCK_DIR}/owner" 2>/dev/null)"
+fi
 TAIL
 
     cat > "${d}/release.sh" <<'RELEASE'
@@ -56,9 +59,10 @@ TAIL
 }
 
 take() {
-    local d="$1" run="$2"
+    local d="$1" run="$2" capture_owner="${3:-0}"
     PATH="${d}/bin:${PATH}" REMOTE=x REMOTE_ROOT="${d}/root" \
         RUN_ID="${run}" LOCK_STALE_H="${LOCK_STALE_H:-6}" \
+        CAPTURE_OWNER="${capture_owner}" \
         bash "${d}/probe.sh" 2>&1
 }
 
@@ -91,8 +95,11 @@ ok "不夺走别人的锁" \
 echo
 echo "== 陈旧的锁会被接管"
 held_by "${d}" runA '10 hours ago'
-out=$(take "${d}" runC)
+out=$(take "${d}" runC 1)
 ok "超过期限就接管" "$([[ ${out} == *stale-taken* ]] && echo yes)" "yes"
+ok "接管后写入新持有者" "$([[ ${out} == *owner=runC* ]] && echo yes)" "yes"
+ok "接管者结束时释放自己的锁" \
+   "$(test -d "${d}/root/.publish.lock" && echo 在 || echo 已释放)" "已释放"
 
 echo
 echo "== 未到期限的锁不接管"

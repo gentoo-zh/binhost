@@ -165,5 +165,40 @@ check("选一项之后菜单收起", m.menu.hidden === true);
         `mode=${root.getAttribute("data-theme-mode")} label=${label}`);
 }
 
+function copyRun(value) {
+  const chip = elem({ class: "copy-chip", "data-copy": value }, "");
+  chip.closest = (sel) => sel === ".copy-chip" ? chip : null;
+  const root = elem({}, "");
+  root.lang = "zh-cn";
+  let copied;
+  global.document = {
+    documentElement: root,
+    querySelector: () => null,
+    querySelectorAll: () => ({ length: 0, forEach() {} }),
+    getElementById: () => null,
+    createElement: () => elem({}, ""),
+    _h: {},
+    addEventListener(type, f) { (this._h[type] = this._h[type] || []).push(f); },
+    dispatchEvent() {}, title: "",
+  };
+  global.window = { MIRROR_I18N: {}, addEventListener() {} };
+  Object.defineProperty(global, "navigator", {
+    configurable: true,
+    value: {
+      language: "zh-CN",
+      clipboard: { writeText(v) { copied = v; return Promise.resolve(); } },
+    },
+  });
+  global.localStorage = { getItem: () => "zh-cn", setItem() {} };
+  global.CustomEvent = class { constructor() {} };
+  (0, eval)(fs.readFileSync(path.join(ROOT, "site/assets/strings.js"), "utf8"));
+  (0, eval)(fs.readFileSync(path.join(ROOT, "site/assets/i18n.js"), "utf8"));
+  (global.document._h.click || []).forEach((f) => f({ target: chip }));
+  return copied;
+}
+
+const copyValue = "eselect repository enable gentoo-zh";
+check("复制按钮写入完整且未改动的内容", copyRun(copyValue) === copyValue);
+
 console.log(failed ? `\n  ${failed} 项不通过` : "\n  语言链接与主题菜单：全部通过");
 process.exit(failed ? 1 : 0);
