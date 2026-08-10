@@ -8,12 +8,15 @@ REPO="${REPO:-gentoo-zh}"
 OVERLAY="${OVERLAY:-/var/lib/binhost-overlay}"
 STATE="${STATE:-/var/lib/emirrordist}"
 JOBS="${JOBS:-6}"
+FAILURE_LOG="${FAILURE_LOG:-/var/log/emirrordist/failures.log}"
+SUCCESS_LOG="${SUCCESS_LOG:-/var/log/emirrordist/successes.log}"
 # emirrordist renames a finished download into place, so the temporary
 # directory has to be on the same filesystem as the distfiles. Default it to
 # the mount point holding them, outside the directory nginx serves.
 TEMP_DIR="${TEMP_DIR:-$(df -P "${DEST%/*}" | awk 'NR==2 {print $6}')/.emirrordist-tmp}"
 
-install -dm755 "${DEST}" "${STATE}" "${TEMP_DIR}" /var/log/emirrordist
+install -dm755 "${DEST}" "${STATE}" "${TEMP_DIR}" \
+    "$(dirname "${FAILURE_LOG}")" "$(dirname "${SUCCESS_LOG}")"
 
 if [[ $(stat -c %d "${TEMP_DIR}") != $(stat -c %d "${DEST}") ]]; then
     echo "!! ${TEMP_DIR} 与 ${DEST} 不在同一个文件系统" >&2
@@ -28,8 +31,8 @@ emirrordist \
     --distfiles "${DEST}" \
     --jobs "${JOBS}" \
     --distfiles-db "${STATE}/distfiles.db" \
-    --failure-log /var/log/emirrordist/failures.log \
-    --success-log /var/log/emirrordist/successes.log \
+    --failure-log "${FAILURE_LOG}" \
+    --success-log "${SUCCESS_LOG}" \
     --temp-dir "${TEMP_DIR}"
 
 n=$(find "${DEST}" -type f ! -name layout.conf | wc -l)

@@ -20,6 +20,27 @@ spec = importlib.util.spec_from_file_location("audit_distfiles", TARGET)
 audit = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(audit)
 
+PATH_ENV = ("ORPHAN_STATE", "RECYCLE", "LEDGER")
+
+
+def load_audit_with_env(values):
+    """Load a fresh module with only the requested path overrides set."""
+    old = {name: os.environ.get(name) for name in PATH_ENV}
+    try:
+        for name in PATH_ENV:
+            os.environ.pop(name, None)
+        os.environ.update(values)
+        fresh_spec = importlib.util.spec_from_file_location("audit_distfiles_env", TARGET)
+        fresh = importlib.util.module_from_spec(fresh_spec)
+        fresh_spec.loader.exec_module(fresh)
+        return fresh
+    finally:
+        for name, value in old.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+
 
 def reap(orphans, files, seen=None, grace=audit.GRACE_SECONDS):
     with tempfile.TemporaryDirectory() as tmp:
@@ -55,6 +76,64 @@ CASES = []
 
 def case(name, fn):
     CASES.append((name, fn))
+
+
+case("孤儿状态、回收目录与清理账本的预设路径不变", lambda: (
+    lambda fresh: (
+        fresh.STATE == "/var/lib/emirrordist/orphans.json"
+        and fresh.RECYCLE == "/var/lib/emirrordist/recycle"
+        and fresh.LEDGER == "/var/lib/emirrordist/reaped.json"
+    )
+)(load_audit_with_env({})))
+
+case("孤儿状态使用 STATE 覆盖值", lambda: (
+    load_audit_with_env({"ORPHAN_STATE": "/isolated/orphans.json"}).STATE
+    == "/isolated/orphans.json"))
+
+case("回收目录使用 RECYCLE 覆盖值", lambda: (
+    load_audit_with_env({"RECYCLE": "/isolated/recycle"}).RECYCLE
+    == "/isolated/recycle"))
+
+case("清理账本使用 LEDGER 覆盖值", lambda: (
+    load_audit_with_env({"LEDGER": "/isolated/reaped.json"}).LEDGER
+    == "/isolated/reaped.json"))
+
+
+def isolated_audit_paths():
+    """Exercise all configured paths without allowing a production fallback."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp) / "parallel"
+        configured = {
+            "ORPHAN_STATE": str(root / "state" / "orphans.json"),
+            "RECYCLE": str(root / "recycle"),
+            "LEDGER": str(root / "ledger" / "reaped.json"),
+        }
+        fresh = load_audit_with_env(configured)
+        if (fresh.STATE, fresh.RECYCLE, fresh.LEDGER) != tuple(configured.values()):
+            return False
+
+        files = root / "distfiles"
+        files.mkdir(parents=True)
+        orphan = files / "orphan.tar"
+        orphan.write_text("orphan")
+        fresh.reap({orphan.name}, {orphan.name: orphan}, grace=10 ** 6)
+
+        retired = files / "retired.tar"
+        retired.write_text("retired")
+        recycled = fresh.recycle(retired)
+        fresh.recent_deletions(1, now=123456789)
+
+        return (
+            pathlib.Path(configured["ORPHAN_STATE"]).exists()
+            and (pathlib.Path(f"{configured['ORPHAN_STATE']}.lock")).exists()
+            and recycled
+            and (pathlib.Path(configured["RECYCLE"]) / retired.name).exists()
+            and pathlib.Path(configured["LEDGER"]).exists()
+            and (pathlib.Path(f"{configured['LEDGER']}.lock")).exists()
+        )
+
+
+case("三个覆盖值同时使用时只写入平行根", isolated_audit_paths)
 
 
 case("刚发现的孤儿不删，只记时间", lambda: (
