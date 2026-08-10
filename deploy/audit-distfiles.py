@@ -191,22 +191,59 @@ def recent_deletions(add_count, now=None):
     now = int(time.time()) if now is None else now
     f = pathlib.Path(LEDGER)
     with locked(f):
-        try:
-            rows = json.loads(f.read_text())
-        except FileNotFoundError:
-            rows = []
-        except (OSError, ValueError) as e:
-            raise LedgerError(f"{f} 无法读取：{e}") from e
-        if not isinstance(rows, list):
-            raise LedgerError(f"{f} 内容不是清单")
-        rows = [r for r in rows if now - r[0] < WINDOW_HOURS * 3600]
+        rows = recent_deletion_rows(f, now)
         if add_count:
             rows.append([now, add_count])
-        try:
-            write_atomic(f, json.dumps(rows))
-        except OSError as e:
-            raise LedgerError(f"{f} 无法写入：{e}") from e
+        write_deletion_rows(f, rows)
     return sum(n for _, n in rows)
+
+
+def recent_deletion_rows(path, now):
+    try:
+        rows = json.loads(path.read_text())
+    except FileNotFoundError:
+        rows = []
+    except (OSError, ValueError) as e:
+        raise LedgerError(f"{path} 无法读取：{e}") from e
+    if not isinstance(rows, list):
+        raise LedgerError(f"{path} 内容不是清单")
+    return [r for r in rows if now - r[0] < WINDOW_HOURS * 3600]
+
+
+def write_deletion_rows(path, rows):
+    try:
+        write_atomic(path, json.dumps(rows))
+    except OSError as e:
+        raise LedgerError(f"{path} 无法写入：{e}") from e
+
+
+def apply_deletion_budget(limit, want, action, now=None):
+    """Reserve, spend and reconcile one cleanup under the ledger lock."""
+    now = int(time.time()) if now is None else now
+    ledger = pathlib.Path(LEDGER)
+    with locked(ledger):
+        rows = recent_deletion_rows(ledger, now)
+        spent = sum(n for _, n in rows)
+        budget = max(0, limit - spent)
+        reserved = min(budget, want)
+        reservation = [now, reserved]
+        if reserved:
+            rows.append(reservation)
+        write_deletion_rows(ledger, rows)
+
+        result, actual = action(reserved)
+        reconcile_error = None
+        if actual != reserved:
+            if reserved:
+                if actual:
+                    reservation[1] = actual
+                else:
+                    rows.remove(reservation)
+            try:
+                write_deletion_rows(ledger, rows)
+            except LedgerError as e:
+                reconcile_error = e
+        return spent, budget, reserved, result, reconcile_error
 
 
 def recycle(path):
@@ -340,16 +377,6 @@ def main(overlay, dest, aux=None):
         refused = (f"本次 {len(orphan)}/{len(have)} 个文件无人引用，"
                    f"超过 {MAX_REAP_SHARE:.0%}")
 
-    spent, budget, reserved = 0, 0, 0
-    if not refused:
-        try:
-            spent = recent_deletions(0)
-        except LedgerError as e:
-            refused = f"{e}，无法按历史清理量算预算"
-        else:
-            budget = max(0, max(MIN_REAP_BUDGET,
-                                int(len(have) * MAX_REAP_SHARE)) - spent)
-
     restricted, restricted_failed = [], []
     too_many = (len(extra) > MIN_RESTRICTED_TO_DOUBT
                 and len(extra) > len(have) * MAX_REAP_SHARE)
@@ -358,36 +385,36 @@ def main(overlay, dest, aux=None):
               f"超过 {MAX_REAP_SHARE:.0%}，没有清理", file=sys.stderr)
 
     want = len(orphan) + (0 if too_many else len(extra))
-    if not refused and budget:
-        reserved = min(budget, want)
+    spent, budget, reserved = 0, 0, 0
+    deleted, failed = [], []
+    ledger_failed = None
+
+    def clean(reservation):
+        if not too_many:
+            for f in extra:
+                if len(restricted) >= reservation:
+                    print(f"!! 达到额度上限，{len(extra) - len(restricted)} 个禁止镜像的"
+                          f"文件本次未清理", file=sys.stderr)
+                    break
+                path = paths.get(f)
+                if path is None:
+                    continue
+                (restricted if recycle(path) else restricted_failed).append(f)
+
+        left = max(0, reservation - len(restricted))
+        result = reap(orphan, paths, budget=left)
+        return result, len(result[0]) + len(restricted)
+
+    if not refused:
         try:
-            recent_deletions(reserved)
+            limit = max(MIN_REAP_BUDGET, int(len(have) * MAX_REAP_SHARE))
+            spent, budget, reserved, result, ledger_failed = apply_deletion_budget(
+                limit, want, clean)
+            deleted, failed = result
         except LedgerError as e:
-            refused = f"{e}，额度无法预留"
-            reserved = 0
-
-    if not refused and not too_many:
-        for f in extra:
-            if len(restricted) >= reserved:
-                print(f"!! 达到额度上限，{len(extra) - len(restricted)} 个禁止镜像的"
-                      f"文件本次未清理", file=sys.stderr)
-                break
-            path = paths.get(f)
-            if path is None:
-                continue
-            (restricted if recycle(path) else restricted_failed).append(f)
-
-    left = max(0, budget - len(restricted))
-    deleted, failed = ([], []) if refused else reap(orphan, paths, budget=left)
-
-    recent = spent + reserved
-    actually = len(deleted) + len(restricted)
-    if reserved != actually:
-        try:
-            recent = recent_deletions(actually - reserved)
-        except LedgerError as e:
-            print(f"!! 帐本未能核销预留额度：{e}", file=sys.stderr)
-            failed = failed + deleted
+            refused = f"{e}，无法按历史清理量算预算"
+    if ledger_failed:
+        print(f"!! 帐本未能核销预留额度：{ledger_failed}", file=sys.stderr)
     if not refused and budget == 0 and orphan:
         refused = (f"最近 {WINDOW_HOURS} 小时累计清理 {spent} 个，"
                    f"已达镜像的 {MAX_REAP_SHARE:.0%}，本次未清理")
@@ -425,7 +452,7 @@ def main(overlay, dest, aux=None):
     if expiry_failed:
         print(f"!! 回收目录有 {len(expiry_failed)} 个到期文件无法删除", file=sys.stderr)
 
-    return 1 if (missing or refused or failed or restricted_failed or too_many
+    return 1 if (missing or refused or failed or restricted_failed or ledger_failed or too_many
                  or expiry_failed) else 0
 
 
