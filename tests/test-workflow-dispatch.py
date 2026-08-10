@@ -2,11 +2,14 @@
 
 import pathlib
 
+from active_source import active_text
+
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 for name in ("newcomers.yml", "retire.yml", "moves.yml"):
-    text = (ROOT / ".github" / "workflows" / name).read_text()
+    text = active_text(
+        (ROOT / ".github" / "workflows" / name).read_text(), "yaml")
     assert "actions: write" in text
     pushed = text.index('git push -q origin "${branch}"')
     dispatched = text.index('gh workflow run validate.yml --ref "${branch}"')

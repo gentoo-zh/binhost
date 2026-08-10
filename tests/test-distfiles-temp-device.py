@@ -13,6 +13,8 @@ import subprocess
 import sys
 import tempfile
 
+from active_source import active_text
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SYNC = ROOT / "deploy" / "distfiles-sync.sh"
 
@@ -28,7 +30,7 @@ def check(name, condition, detail=""):
     failed += 1
 
 
-text = SYNC.read_text()
+text = active_text(SYNC.read_text(), "shell")
 
 check("--temp-dir 用的是 TEMP_DIR，而不是 STATE 下的子目录",
       '--temp-dir "${TEMP_DIR}"' in text,

@@ -16,7 +16,10 @@ written, merged and never executed by CI.
 
 import pathlib
 import re
+import shlex
 import sys
+
+from active_source import active_text
 
 ROOT = (pathlib.Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else
         pathlib.Path(__file__).resolve().parent.parent)
@@ -39,7 +42,7 @@ def check(name, condition, detail=""):
 
 def globs_of(command):
     """Directories named by `dir/*.ext` operands of the given CI command."""
-    text = WORKFLOW.read_text()
+    text = active_text(WORKFLOW.read_text(), "yaml")
     m = re.search(rf"^\s*run: .*\b{re.escape(command)}\b([^\n]*)$", text, re.M)
     if not m:
         return None
@@ -74,10 +77,19 @@ for d in sorted(dirs_holding(".sh") - SH_EXEMPT):
     check(f"{d}/ 的 .sh 在 shellcheck 里", d in sh,
           "已列出：" + " ".join(sorted(sh)))
 
-workflow = WORKFLOW.read_text()
-run_by_ci = set(re.findall(
-    r"^\s*run:\s*(?:python3|bash|node)\s+tests/(test-[A-Za-z0-9._-]+)(?:\s|$)",
-    workflow, re.M))
+workflow = active_text(WORKFLOW.read_text(), "yaml")
+run_by_ci = set()
+for line in workflow.splitlines():
+    match = re.match(r"^\s*run:\s*(.*?)\s*$", line)
+    if not match or re.search(r"[;&|<>]", match.group(1)):
+        continue
+    try:
+        argv = shlex.split(match.group(1))
+    except ValueError:
+        continue
+    if (len(argv) >= 2 and argv[0] in {"python3", "bash", "node"} and
+            re.fullmatch(r"tests/test-[A-Za-z0-9._-]+", argv[1])):
+        run_by_ci.add(pathlib.PurePath(argv[1]).name)
 for f in sorted(p.name for p in (ROOT / "tests").glob("test-*")):
     check(f"CI 有执行 tests/{f} 的步骤", f in run_by_ci)
 
