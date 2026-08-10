@@ -59,9 +59,7 @@ on_exit() {
     wait "${progress}" 2>/dev/null || true
     OUT="${PROGRESS_OUT}" ./build/build-progress.sh finish "${state}"
 }
-# Without this the EXIT trap reads $? from the last completed command, so a
-# run killed part way through reports done. It happened: a stable build was
-# stopped at 12:30 and the site showed it as a three minute success.
+# Preserve a nonzero status for the EXIT trap when a signal stops the run.
 trap 'exit 143' TERM INT HUP
 trap 'on_exit "$?"' EXIT
 
