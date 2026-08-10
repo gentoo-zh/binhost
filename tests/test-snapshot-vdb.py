@@ -32,8 +32,13 @@ with tempfile.TemporaryDirectory() as tmp:
     minimal = root / "sys-apps" / "base-1"
     minimal.mkdir(parents=True)
     text = module.snapshot(root)
-    stanza = text.split("\n\n")[-1]
-    assert stanza == ("CPV: sys-apps/base-1\nSLOT: 0\nUSE:\nIUSE:\n"
-                      "EAPI: 0\nREPO:\n"), stanza
+    header, *stanzas = text.rstrip("\n").split("\n\n")
+    assert header == "PACKAGES: 2\nVERSION: 1", header
+    assert set(stanzas) == {
+        ("CPV: dev-libs/lib-2-r1\nSLOT: 2/2\nUSE: foo bar\n"
+         "IUSE: foo bar baz\nEAPI: 8\nREPO: gentoo"),
+        ("CPV: sys-apps/base-1\nSLOT: 0\nUSE:\nIUSE:\n"
+         "EAPI: 0\nREPO:"),
+    }, stanzas
 
 print("  基础系统快照保留完整的 Portage 匹配元数据")
