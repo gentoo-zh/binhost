@@ -406,17 +406,5 @@ jobs:
           }
           echo "  logrotate-binhost 可解析"
 
-      - name: Verify the systemd units
-        run: |
-          cp deploy/systemd/binhost-*.service deploy/systemd/binhost-*.timer /tmp/
-          systemd-analyze verify /tmp/binhost-*.service /tmp/binhost-*.timer 2>&1 |
-            grep -v "Command .* is not executable" | grep -v "^$" > /tmp/verify.txt || true
-          if [ -s /tmp/verify.txt ]; then cat /tmp/verify.txt; exit 1; fi
-          echo "  systemd 单元可解析"
-
-      - name: Parse the cron table
-        run: |
-          awk 'NF && $1 !~ /^#/ {
-                 if (NF < 7) { print "!! 字段不足： " $0; bad=1 }
-               } END { exit bad }' deploy/cron.d-binhost
-          echo "  cron.d-binhost 字段完整"
+      - name: Validate systemd units and cron schedules
+        run: python3 tests/test-deploy-validation.py

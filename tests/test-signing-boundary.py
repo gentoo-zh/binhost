@@ -1,55 +1,166 @@
 #!/usr/bin/env python3
+"""Execute container command lines and inspect their effective arguments."""
 
+import os
 import pathlib
 import re
+import shlex
+import stat
+import subprocess
+import sys
+import tempfile
 
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
+ROOT = (pathlib.Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else
+        pathlib.Path(__file__).resolve().parent.parent)
 
 
-def block(text, start, end):
-    return text.split(start, 1)[1].split(end, 1)[0]
+def section(text, start, end):
+    first = text.index(start)
+    last = text.index(end, first) + len(end)
+    return text[first:last]
+
+
+def executable_lines(text):
+    return "\n".join(line for line in text.splitlines()
+                     if line.strip() and not line.lstrip().startswith("#"))
+
+
+def make_command(directory, name, body):
+    path = pathlib.Path(directory, name)
+    path.write_text("#!/bin/bash\nset -eu\n" + body)
+    path.chmod(path.stat().st_mode | stat.S_IXUSR)
+    return path
+
+
+def execute(snippet, values, extra="", with_python=False):
+    with tempfile.TemporaryDirectory() as directory:
+        directory = pathlib.Path(directory)
+        argv_log = directory / "argv"
+        stdin_log = directory / "stdin"
+        call_log = directory / "calls"
+        docker = make_command(directory, "docker", """
+printf 'docker\n' >> "${CALL_LOG}"
+printf '%s\\0' "$@" > "${ARGV_LOG}"
+cat > "${STDIN_LOG}"
+""")
+        path = os.environ.get("PATH", "")
+        if with_python:
+            make_command(directory, "python3", """
+printf 'python3 %s\n' "$*" >> "${CALL_LOG}"
+""")
+            path = f"{directory}:{path}"
+        assignments = [f"DOCKER={shlex.quote(str(docker))}"]
+        assignments += [f"{name}={shlex.quote(value)}"
+                        for name, value in values.items()]
+        script = "set -euo pipefail\n" + "\n".join(assignments) + "\n"
+        script += extra + "\n" + snippet + "\n"
+        env = {
+            **os.environ,
+            "PATH": path,
+            "ARGV_LOG": str(argv_log),
+            "STDIN_LOG": str(stdin_log),
+            "CALL_LOG": str(call_log),
+        }
+        result = subprocess.run(["bash", "-c", script], env=env,
+                                stdin=subprocess.DEVNULL, text=True,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                check=False)
+        assert result.returncode == 0, result.stdout
+        argv = argv_log.read_bytes().split(b"\0")
+        if argv and not argv[-1]:
+            argv.pop()
+        calls = call_log.read_text().splitlines()
+        return [word.decode() for word in argv], stdin_log.read_text(), calls
+
+
+def mounts(argv):
+    return [argv[index + 1] for index, value in enumerate(argv[:-1])
+            if value == "-v"]
+
+
+def destinations(argv):
+    return {value.rsplit(":", 2)[-2] for value in mounts(argv)}
 
 
 base = (ROOT / "build" / "base-image.sh").read_text()
-base_build = block(base, "${DOCKER} run -i", "INNER\n")
-assert "--privileged" not in base_build
-assert "--security-opt=no-new-privileges" in base_build
-assert "${PUBLIC_KEY}:/tmp/binhost.asc:ro" in base_build
-assert "${SIGNING_GNUPGHOME}:" not in base_build
+base_command = section(base, "${DOCKER} run -i", "\nINNER\n")
+base_argv, _, _ = execute(base_command, {
+    "TREE": "/tree", "OVERLAY": "/overlay", "DISTDIR": "/distfiles",
+    "PKGDIR": "/packages", "PUBLIC_KEY": "/public.asc",
+    "MAKEOPTS": "-j2", "JOBS": "2", "SIGNING_KEY": "KEY",
+    "CHANNEL_ACCEPT_KEYWORDS": "amd64",
+    "CHANNEL_OVERLAY_KEYWORDS": "~amd64", "STAGE3": "stage3@test",
+    "container": "base-build",
+})
+assert "--privileged" not in base_argv
+assert "--security-opt=no-new-privileges" in base_argv, base_argv
+assert "/public.asc:/tmp/binhost.asc:ro" in mounts(base_argv)
+assert not any("SIGNING_GNUPGHOME" in value for value in base_argv)
 
 container = (ROOT / "build" / "build-container.sh").read_text()
-untrusted = block(container, "${DOCKER} run --rm -i", "INNER\n")
-assert "--privileged" not in untrusted
-assert "--security-opt=no-new-privileges" in untrusted
-assert "SIGNING_GNUPGHOME" not in untrusted
-assert "SIGNING_KEY" not in untrusted
-assert "snapshot-vdb.py" in untrusted
-untrusted_body = block(container, "<<'INNER'\n\n", "\nINNER\n")
+untrusted_command = section(container, "${DOCKER} run --rm -i", "\nINNER\n")
+untrusted_argv, untrusted_stdin, _ = execute(untrusted_command, {
+    "TREE": "/tree", "OVERLAY": "/overlay", "DISTDIR": "/distfiles",
+    "PKGDIR": "/packages", "GENTOO_BINPKGS": "/gentoo-packages",
+    "LIST": "/packages.txt", "COMMON_PACKAGE_USE": "/package.use",
+    "LOGDIR": "/logs", "CHANNEL": "unstable", "MAKEOPTS": "-j2",
+    "JOBS": "2", "BASE": "base@test",
+}, "channel_mounts=()")
+assert "--privileged" not in untrusted_argv
+assert "--security-opt=no-new-privileges" in untrusted_argv
+assert not any("SIGNING_GNUPGHOME" in value or "SIGNING_KEY" in value
+               for value in untrusted_argv)
+assert "/usr/local/bin/snapshot-vdb" in destinations(untrusted_argv)
+untrusted_body = executable_lines(untrusted_stdin)
 assert untrusted_body.index("python3 /usr/local/bin/snapshot-vdb") \
     < untrusted_body.index('if "${EMERGE[@]}"')
 
-trusted = block(container, "${DOCKER} run --rm --network none --read-only", "'; then")
-assert "--privileged" not in trusted
-assert "--cap-drop=ALL" in trusted
-assert "--security-opt=no-new-privileges" in trusted
-assert '--user "${sign_uid}:${sign_gid}"' in trusted
-assert '"${SIGNING_IMAGE}" /bin/bash' in trusted
-assert '"${BASE}" /bin/bash' not in trusted
-assert re.search(r'SIGNING_IMAGE=.*@sha256:[0-9a-f]{64}', container)
-assert "SIGNING_GNUPGHOME" not in trusted
-assert "signing-private.gpg:ro" in trusted
-assert "signing-public.asc:ro" in trusted
-assert "sign-packages.py" in trusted and "verify-signatures.py" in trusted
-assert "--import-ownertrust" in trusted
-assert "--check-trustdb" in trusted
-assert "BINPKG_GPG_SIGNING_GPG_HOME=/run/gnupg" in trusted
-assert "BINPKG_GPG_VERIFY_GPG_HOME=/run/gnupg" in trusted
-assert '${TREE}:' not in trusted and '${OVERLAY}:' not in trusted
-assert '${PKGDIR}:' not in trusted
-assert "--export-secret-keys" in container
-assert "persist-packages.py" in container
-assert container.index('python3 "$(dirname "$0")/verify-signatures.py"') \
-    < container.index('python3 "$(dirname "$0")/persist-packages.py"')
+trusted_if = section(
+    container, "if ! ${DOCKER} run --rm --network none --read-only", "'; then")
+trusted_command = trusted_if.removeprefix("if ! ").removesuffix("; then")
+values = {
+    "STAGE": "/stage", "SIGNING_INPUT": "/signing", "sign_uid": "1000",
+    "sign_gid": "1000", "SIGNING_KEY": "KEY", "OVERLAY_REV": "REV",
+    "SIGNING_IMAGE": "stage3@sha256:" + "a" * 64,
+}
+trusted_argv, _, _ = execute(trusted_command, values)
+assert "--privileged" not in trusted_argv
+assert "--network" in trusted_argv and trusted_argv[trusted_argv.index("--network") + 1] == "none"
+assert "--read-only" in trusted_argv
+assert "--cap-drop=ALL" in trusted_argv
+assert "--security-opt=no-new-privileges" in trusted_argv
+assert "--user" in trusted_argv and trusted_argv[trusted_argv.index("--user") + 1] == "1000:1000"
+trusted_mounts = mounts(trusted_argv)
+assert "/signing/private.gpg:/run/signing-private.gpg:ro" in trusted_mounts
+assert "/signing/public.asc:/run/signing-public.asc:ro" in trusted_mounts
+assert "/usr/local/bin/sign-packages.py" in destinations(trusted_argv)
+assert "/usr/local/bin/verify-signatures.py" in destinations(trusted_argv)
+assert not destinations(trusted_argv) & {
+    "/var/db/repos/gentoo", "/var/db/repos/gentoo-zh",
+}
+assert not any(value.startswith("/packages:") for value in trusted_mounts)
+shell_index = trusted_argv.index("/bin/bash")
+assert trusted_argv[shell_index - 1].startswith("stage3@sha256:")
+inline = executable_lines(trusted_argv[trusted_argv.index("-c") + 1])
+for command in ("--import-ownertrust", "--check-trustdb",
+                "BINPKG_GPG_SIGNING_GPG_HOME=/run/gnupg",
+                "BINPKG_GPG_VERIFY_GPG_HOME=/run/gnupg",
+                "python3 /usr/local/bin/sign-packages.py"):
+    assert command in inline
 
-print("  ebuild 容器无特权，签名使用固定干净映像并由宿主机独立验签")
+flow = section(container,
+               "if ! ${DOCKER} run --rm --network none --read-only",
+               "cleanup_signing_input")
+_, _, calls = execute(flow, values | {"PKGDIR": "/packages"},
+                      "cleanup_signing_input() { :; }", with_python=True)
+assert calls[0] == "docker"
+assert "verify-signatures.py" in calls[1]
+assert "persist-packages.py" in calls[2]
+
+assignment = executable_lines(container)
+assert re.search(
+    r'^SIGNING_IMAGE="\$\{SIGNING_IMAGE:-[^"}]+@sha256:[0-9a-f]{64}\}"$',
+    assignment, re.M)
+
+print("  容器参数来自实际命令，签名后再由宿主机验签并持久化")
