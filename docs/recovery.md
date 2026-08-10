@@ -63,9 +63,8 @@ PUBLISHED_DIR="$PUBLISHED_DIR" bash "$BUILD_ROOT/kernel-archive.sh"
   的既有记录。
 
 正确的恢复路径是 `emirrordist --mirror --repo gentoo-zh`，它按 SRC_URI 逐个取。
-**这一段目前无法在隔离环境下演练**：`deploy/distfiles-sync.sh` 的两个日志路径与
-`deploy/audit-distfiles.py` 的孤儿状态、回收目录、清理账本都写死在正式路径，
-不先补环境变量覆盖就会改写正式同步状态。补完之后才能量出真实数字。
+同步日志、孤儿状态、回收目录与清理账本现在都能指向平行根，不会改写正式同步状态。
+**这一段仍未实测，耗时与可恢复数量都待补。**
 
 ## 链路速率
 
@@ -146,10 +145,28 @@ ssh build 'cd /var/lib/binhost && ./ops/status.sh'
 ### 3 distfiles
 
 ```sh
-ssh mirror 'sudo -u root /usr/local/bin/binhost-daily'
+ssh mirror 'sudo sh -s' <<'EOF'
+ROOT=/srv/recovery-rehearsal-$(date +%Y%m%d-%H%M%S)
+install -dm755 "$ROOT"
+
+DEST="$ROOT/distfiles" \
+STATE="$ROOT/emirrordist" \
+TEMP_DIR="$ROOT/.emirrordist-tmp" \
+FAILURE_LOG="$ROOT/log/emirrordist/failures.log" \
+SUCCESS_LOG="$ROOT/log/emirrordist/successes.log" \
+    /usr/local/bin/binhost-distfiles-sync
+
+ORPHAN_ORPHAN_STATE="$ROOT/emirrordist/orphans.json" \
+RECYCLE="$ROOT/emirrordist/recycle" \
+LEDGER="$ROOT/emirrordist/reaped.json" \
+    python3 /usr/local/lib/binhost/audit-distfiles.py \
+    /var/lib/binhost-overlay "$ROOT/distfiles"
+EOF
 ```
 
-按 SRC_URI 逐个取回，耗时未量测，失败的档案会留在失败日志里。上游已消失的取不回来。
+这两条命令的目标、数据库、日志与清理状态都在同一个平行根下。同步会按 SRC_URI
+逐个取回，失败的档案会记在平行根的失败日志里。上游已消失的档案取不回来。
+本段的实测耗时与结果仍待补，不要填入估算值。
 
 ### 4 内核归档与 GIG OS
 

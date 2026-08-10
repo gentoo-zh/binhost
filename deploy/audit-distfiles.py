@@ -169,9 +169,9 @@ def scan(overlay, aux=None):
 
 
 GRACE_SECONDS = 7 * 24 * 3600
-STATE = "/var/lib/emirrordist/orphans.json"
+STATE = os.environ.get("ORPHAN_STATE", "/var/lib/emirrordist/orphans.json")
 
-RECYCLE = "/var/lib/emirrordist/recycle"
+RECYCLE = os.environ.get("RECYCLE", "/var/lib/emirrordist/recycle")
 
 RECYCLE_RETENTION_SECONDS = 14 * 24 * 3600
 
@@ -181,7 +181,7 @@ MIN_RESTRICTED_TO_DOUBT = 20
 
 MIN_REAP_BUDGET = 5
 
-LEDGER = "/var/lib/emirrordist/reaped.json"
+LEDGER = os.environ.get("LEDGER", "/var/lib/emirrordist/reaped.json")
 WINDOW_HOURS = 24
 
 MARKERS = {"layout.conf", "README.txt"}
