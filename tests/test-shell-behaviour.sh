@@ -277,6 +277,33 @@ ok "distfiles 同步成功时先对账并重建索引" \
    "${calls[*]}" \
    "distfiles 同步 distfiles 对账 distfiles 索引 stable 包列表 unstable 包列表 服务器状态"
 
+daily_channel_probe() {
+    local d
+    d=$(mktemp -d)
+    cat > "${d}/gen-packages.py" <<'PY'
+import os
+
+print(f'{os.environ["OUT"]}|{os.environ["INDEX"]}')
+PY
+    sed -n '/^step "stable 包列表"/,/^$/p' "${ROOT}/deploy/daily.sh" > "${d}/block.sh"
+    (
+        # shellcheck disable=SC2317,SC2329  # The sourced block invokes this function.
+        step() {
+            shift
+            "$@"
+        }
+        # shellcheck disable=SC1091  # block.sh is generated above.
+        LIB="${d}" OVERLAY="${d}/overlay" . "${d}/block.sh"
+    )
+    rm -rf "${d}"
+}
+
+mapfile -t channel_inputs < <(daily_channel_probe)
+ok "stable 包列表实际读取 stable 索引" "${channel_inputs[0]}" \
+   "/srv/mirrors/packages.json|/srv/pub/binpkgs/x86-64/Packages"
+ok "unstable 包列表实际读取 unstable 索引" "${channel_inputs[1]}" \
+   "/srv/mirrors/packages-unstable.json|/srv/pub/unstable/binpkgs/x86-64/Packages"
+
 daily_generation_probe() {
     local mode="$1" d out calls
     d=$(mktemp -d)
@@ -414,12 +441,20 @@ unstable_unit=$(<"${ROOT}/deploy/systemd/binhost-build-unstable.service")
 stable_timer=$(<"${ROOT}/deploy/systemd/binhost-build.timer")
 unstable_timer=$(<"${ROOT}/deploy/systemd/binhost-build-unstable.timer")
 installer=$(<"${ROOT}/deploy/install-builder.sh")
+stable_timer_target=$(sed -n 's/^Unit=//p' <<< "${stable_timer}")
+stable_timer_target=${stable_timer_target:-binhost-build.service}
+unstable_timer_target=$(sed -n 's/^Unit=//p' <<< "${unstable_timer}")
+unstable_timer_target=${unstable_timer_target:-binhost-build-unstable.service}
 ok "默认构建服务明确选择 stable" \
    "$(grep -c '^Environment=CHANNEL=stable$' <<< "${stable_unit}")" "1"
 ok "测试频道服务明确选择 unstable" \
    "$(grep -c '^Environment=CHANNEL=unstable$' <<< "${unstable_unit}")" "1"
 ok "两个频道错开十二小时调度" \
    "$(grep -c '16:00:00 Asia/Shanghai' <<< "${stable_timer}")-$(grep -c '04:00:00 Asia/Shanghai' <<< "${unstable_timer}")" "1-1"
+ok "stable 定时器实际启动 stable 服务" "${stable_timer_target}" \
+   "binhost-build.service"
+ok "unstable 定时器实际启动 unstable 服务" "${unstable_timer_target}" \
+   "binhost-build-unstable.service"
 ok "安装脚本同时启用两个频道的定时器" \
    "$(grep -c 'binhost-build-unstable.timer' <<< "${installer}")" "1"
 

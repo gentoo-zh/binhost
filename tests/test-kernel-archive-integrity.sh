@@ -58,7 +58,7 @@ EOF
 
 cat > "${WORK}/bin/rsync" <<'EOF'
 #!/bin/bash
-: > "${RSYNC_MARKER}"
+printf '%s\n' "$@" > "${RSYNC_MARKER}"
 EOF
 chmod +x "${WORK}/bin"/*
 
@@ -89,3 +89,12 @@ if run_archive 1 missing >/dev/null 2>&1; then
 fi
 [[ ! -e ${WORK}/rsync-called ]]
 echo "  ✓ 新产物与 Manifest 不符时不上传"
+
+printf 'DIST %s %s SHA512 %s\n' "${NAME}" "${SIZE}" "${SHA512}" \
+    > "${WORK}/Manifest"
+rm -f "${WORK}/rsync-called"
+published=$(run_archive 1 missing)
+grep -q "已发布 7.1/${NAME}" <<< "${published}"
+echo "  ✓ 含有 cjk USE flag 的有效产物会发布"
+[[ $(tail -n1 "${WORK}/rsync-called") == "test:/archive/7.1/${NAME}" ]]
+echo "  ✓ 新产物上传到对应内核线的完整远端路径"
