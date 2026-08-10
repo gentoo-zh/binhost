@@ -6,10 +6,25 @@ import sys
 
 
 LIST = pathlib.Path(__file__).resolve().parent.parent / "build" / "packages.txt"
+STABLE_EXCLUDED = LIST.with_name("stable-excluded.txt")
 ATOM = re.compile(r"^[a-z0-9][a-z0-9+._-]*/[A-Za-z0-9][A-Za-z0-9+._-]*$")
 
 
-def main(source, target, path=LIST):
+def move_stable_exclusion(path, source, target):
+    path = pathlib.Path(path)
+    if not path.exists():
+        return
+    lines = path.read_text().splitlines()
+    changed = False
+    for index, line in enumerate(lines):
+        if line.split(maxsplit=1)[:1] == [source]:
+            lines[index] = target + line[len(source):]
+            changed = True
+    if changed:
+        path.write_text("\n".join(lines) + "\n")
+
+
+def main(source, target, path=LIST, stable_path=STABLE_EXCLUDED):
     if not ATOM.match(source) or not ATOM.match(target):
         raise ValueError("source and target must be category/package atoms")
     path = pathlib.Path(path)
@@ -20,6 +35,7 @@ def main(source, target, path=LIST):
         raise ValueError(f"{target} is already in packages.txt")
     packages[packages.index(source)] = target
     path.write_text("\n".join(sorted(packages, key=str.lower)) + "\n")
+    move_stable_exclusion(stable_path, source, target)
 
 
 if __name__ == "__main__":

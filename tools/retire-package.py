@@ -9,6 +9,7 @@ import sys
 LISTS = pathlib.Path(__file__).resolve().parent.parent / "build"
 LIST = LISTS / "packages.txt"
 EXCLUDED = LISTS / "excluded.txt"
+STABLE_EXCLUDED = LISTS / "stable-excluded.txt"
 ATOM = re.compile(r"^[a-z0-9][a-z0-9+._-]*/[A-Za-z0-9][A-Za-z0-9+._-]*$")
 
 GONE = "overlay 中已不存在该软件包"
@@ -25,6 +26,15 @@ def already_excluded(cp):
     return False
 
 
+def remove_stable_exclusion(cp):
+    if not STABLE_EXCLUDED.exists():
+        return
+    lines = STABLE_EXCLUDED.read_text().splitlines()
+    kept = [line for line in lines if line.split(maxsplit=1)[:1] != [cp]]
+    if kept != lines:
+        STABLE_EXCLUDED.write_text("\n".join(kept) + "\n")
+
+
 def main(cp, reason):
     if not ATOM.match(cp):
         sys.exit(f"不是一个 category/package: {cp}")
@@ -36,6 +46,7 @@ def main(cp, reason):
         sys.exit(f"{cp} 不在清单里")
     body.remove(cp)
     LIST.write_text("\n".join(body) + "\n")
+    remove_stable_exclusion(cp)
 
     if reason == GONE:
         print(f"移出 {cp}：{reason}")

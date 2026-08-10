@@ -12,8 +12,12 @@ spec.loader.exec_module(move)
 
 with tempfile.TemporaryDirectory() as tmp:
     path = pathlib.Path(tmp) / "packages.txt"
+    stable = pathlib.Path(tmp) / "stable-excluded.txt"
     path.write_text("app-misc/old\napp-misc/z-last\n")
-    move.main("app-misc/old", "net-misc/new", path)
+    stable.write_text("# stable only\n\napp-misc/old\trequires testing dependency\n")
+    move.main("app-misc/old", "net-misc/new", path, stable)
     assert path.read_text().splitlines() == ["app-misc/z-last", "net-misc/new"]
+    assert stable.read_text() == (
+        "# stable only\n\nnet-misc/new\trequires testing dependency\n")
 
-print("  move 会在同一份清单中替换来源与目标")
+print("  move 会同步替换主清单与 stable 排除项")
