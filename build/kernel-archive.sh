@@ -201,7 +201,10 @@ for entry in ${todo[@]+"${todo[@]}"}; do
     built="${PKGDIR}/${PACKAGE}/${PACKAGE#*/}-${version}-1.gpkg.tar"
     [[ -f ${built} ]] || die "建置完成但没有 -1 产物：${built}"
 
-    inner=$(tar -tf "${built}" | head -n1 | cut -d/ -f1)
+    # sed consumes the whole listing. head would close the pipe after the first
+    # line, tar would take SIGPIPE, and pipefail turns that into 141 with no
+    # message: the run died right after building, before publishing.
+    inner=$(tar -tf "${built}" | sed -n '1{s|/.*||;p;}')
     [[ ${inner} == "${PACKAGE#*/}-${version}-1" ]] ||
         die "${version} 包内目录是 ${inner}，不是 -1，${PACKAGE#*/}-bin 无法安装"
 

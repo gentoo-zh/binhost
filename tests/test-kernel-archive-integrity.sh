@@ -13,6 +13,12 @@ mkdir -p "${WORK}/bin" "${WORK}/overlay" "${WORK}/tree" \
 REAL_PYTHON=$(command -v python3)
 NAME=gentoo-cjk-kernel-7.1.7-1.amd64.gpkg.tar
 printf 'cjk\n' > "${WORK}/metadata/metadata/USE"
+# Enough entries that `tar -tf | head -n1` reliably takes SIGPIPE. A real gpkg
+# lists tens of thousands of paths; a two-entry fixture hid that for weeks.
+mkdir -p "${WORK}/outer/gentoo-cjk-kernel-7.1.7-1/image"
+for i in $(seq 1 3000); do
+    : > "${WORK}/outer/gentoo-cjk-kernel-7.1.7-1/image/f${i}"
+done
 tar -C "${WORK}/metadata" -cf - metadata | zstd -q -o "${WORK}/metadata.tar.zst"
 cp "${WORK}/metadata.tar.zst" \
     "${WORK}/outer/gentoo-cjk-kernel-7.1.7-1/metadata.tar.zst"
@@ -20,6 +26,11 @@ tar --mtime=@1 -C "${WORK}/outer" -cf "${WORK}/built-first.gpkg.tar" \
     gentoo-cjk-kernel-7.1.7-1
 tar --mtime=@2 -C "${WORK}/outer" -cf "${WORK}/built-second.gpkg.tar" \
     gentoo-cjk-kernel-7.1.7-1
+mkdir -p "${WORK}/outer-wrong/gentoo-cjk-kernel-7.1.7-3"
+cp "${WORK}/metadata.tar.zst" \
+    "${WORK}/outer-wrong/gentoo-cjk-kernel-7.1.7-3/metadata.tar.zst"
+tar --mtime=@1 -C "${WORK}/outer-wrong" -cf "${WORK}/wrong-inner.gpkg.tar" \
+    gentoo-cjk-kernel-7.1.7-3
 cp "${WORK}/built-first.gpkg.tar" "${WORK}/corrupt.gpkg.tar"
 printf X | dd of="${WORK}/corrupt.gpkg.tar" bs=1 seek=512 conv=notrunc status=none
 
@@ -168,6 +179,21 @@ cmp "${TEST_BUILT}" "${WORK}/remote/archive/7.1/${NAME}"
 cmp "${TEST_BUILT}" "${WORK}/published/7.1/${NAME}"
 [[ ! -e ${WORK}/published/7.1/gentoo-cjk-kernel-7.1.7-1.gpkg.tar ]]
 echo "  ✓ 发布成功后按发布名保留完全相同的位元组"
+
+# The -bin ebuild resolves BINPKG=${P/-bin}-1 against the directory inside the
+# gpkg. Renaming the file does not rename what is inside it, so an artifact with
+# the right file name and the wrong inner directory has to be refused.
+reset_case
+TEST_BUILT="${WORK}/wrong-inner.gpkg.tar"
+write_manifest "${NAME}" "${TEST_BUILT}"
+if run_archive 1 >"${WORK}/inner.out" 2>&1; then
+    echo "  ✗ 包内目录不是 -1 时应当失败"
+    exit 1
+fi
+grep -q '不是 -1' "${WORK}/inner.out"
+[[ ! -e ${WORK}/remote/archive/7.1/${NAME} ]]
+[[ ! -e ${WORK}/published/7.1/${NAME} ]]
+echo "  ✓ 包内目录不是 -1 时不发布也不保留"
 
 reset_case
 RSYNC_FAIL=upload
