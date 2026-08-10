@@ -128,9 +128,6 @@ def portage_policy(overlay):
     return get_restrict, get_license, get_inherited
 
 
-def portage_restrict(overlay):
-    return portage_policy(overlay)[0]
-
 
 def effective_bindist(cpv, f, lookup):
     """yes / no / unknown, where unknown is withheld exactly like yes.

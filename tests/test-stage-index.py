@@ -869,7 +869,7 @@ case("同名 CPV 在另一个仓库受限时不影响本仓库的判定", lambda
 
 def portage_lookup_error(overlay):
     try:
-        stage_index.portage_restrict(overlay)
+        stage_index.portage_policy(overlay)
     except stage_index.MetadataUnavailable as e:
         return str(e)
     return None

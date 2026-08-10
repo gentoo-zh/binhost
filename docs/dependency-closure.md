@@ -6,17 +6,17 @@
 
 ## 检查链路
 
-[`runtime_atoms()`](../build/ebuilds.py#L111-L125) 使用 Portage 的 `Atom` 与
+[`runtime_atoms()`](../build/ebuilds.py) 使用 Portage 的 `Atom` 与
 `use_reduce()` 读取
 binpkg 已求值的 `RDEPEND`、`PDEPEND` 与 `IDEPEND`。版本、revision、slot、sub-slot、
 repository 与 USE 约束由 Portage 的 `fakedbapi.match()` 匹配，不在脚本中另行拆解。
 
-[`runtime_closure()`](../build/stage-index.py#L172-L230) 从直接构建目标开始遍历运行期
+[`runtime_closure()`](../build/stage-index.py) 从直接构建目标开始遍历运行期
 依赖。它只接收
 许可证、`RESTRICT` 与排除政策均允许发布的候选项，因此闭包不会把不可再分发的候选项
 带进公开索引。没有从候选索引取得匹配的表达式写入 `unresolved.txt`，供后续检查处理。
 
-[`verify-deps.py`](../build/verify-deps.py#L201-L269) 再检查最终暂存索引。每个运行期
+[`verify-deps.py`](../build/verify-deps.py) 再检查最终暂存索引。每个运行期
 依赖表达式必须
 由以下四个来源之一满足：
 
