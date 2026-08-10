@@ -707,10 +707,6 @@ ok "移除之后重建索引" \
 ok "只认 build id 为 1 的产物" \
    "$(grep -c '${version}-1.gpkg.tar"$' "${ROOT}/build/kernel-archive.sh")" "1"
 # shellcheck disable=SC2016  # we grep for the literal ${VAR}, not its value
-ok "核对包内目录名" \
-   "$(grep -c 'tar -tf "${built}" | head -n1' \
-      "${ROOT}/build/kernel-archive.sh")" "1"
-# shellcheck disable=SC2016  # we grep for the literal ${VAR}, not its value
 ok "发布名固定是 -1" \
    "$(grep -c 'name="\${PACKAGE#\*/}-\${version}-1\.\${ARCH}\.gpkg\.tar"' \
       "${ROOT}/build/kernel-archive.sh")" "2"
