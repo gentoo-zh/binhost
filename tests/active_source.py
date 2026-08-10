@@ -42,6 +42,24 @@ def _shell_line(line):
     return line.rstrip()
 
 
+def _quoted_comment(line, marker):
+    """Drop a comment that starts outside quotes, at line start or after space."""
+    single = False
+    double = False
+    for index, char in enumerate(line):
+        if single:
+            single = char != "'"
+        elif double:
+            double = char != '"'
+        elif char == "'":
+            single = True
+        elif char == '"':
+            double = True
+        elif char == marker and (index == 0 or line[index - 1].isspace()):
+            return line[:index].rstrip()
+    return line.rstrip()
+
+
 def active_text(text, syntax):
     """Return source text with comments for the selected syntax removed."""
     lines = []
@@ -52,8 +70,9 @@ def active_text(text, syntax):
             if line.lstrip().startswith(("#", ";")):
                 line = ""
         elif syntax == "yaml":
-            if line.lstrip().startswith("#"):
-                line = ""
+            # A trailing comment is a comment too. Stripping only whole lines
+            # left `run: skip  # tests/test-x.py` looking like a command.
+            line = _quoted_comment(line, "#")
         else:
             raise ValueError(f"unsupported source syntax: {syntax}")
         lines.append(line)
