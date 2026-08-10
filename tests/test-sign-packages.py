@@ -37,6 +37,7 @@ with tempfile.TemporaryDirectory() as tmp:
     )
     changed = root / ".changed"
     updated = []
+    emaint_calls = []
 
     class FakeGpkg:
         def __init__(self, _settings, gpkg_file, verify_signature):
@@ -60,7 +61,11 @@ with tempfile.TemporaryDirectory() as tmp:
         sign_packages.verify_signatures.import_key = lambda *args: None
         sign_packages.signature_valid = (
             lambda path, *_args: pathlib.Path(path).as_posix().endswith(valid))
-        def fake_emaint(*_args, **_kwargs):
+        def fake_emaint(args, *, check, env):
+            assert args == ["emaint", "binhost", "--fix"]
+            assert check is True
+            assert env["PKGDIR"] == str(root)
+            emaint_calls.append(args)
             index = root / "Packages"
             index.write_text(index.read_text().replace(
                 'REPO_REVISIONS: {"gentoo": "gentoo123", '
@@ -84,6 +89,7 @@ with tempfile.TemporaryDirectory() as tmp:
         sign_packages.subprocess.run = original_run
 
     assert result == (1, 2)
+    assert emaint_calls == [["emaint", "binhost", "--fix"]]
     assert updated == [str(root / invalid)]
     assert changed.read_text() == invalid + "\n"
     index = (root / "Packages").read_text()
