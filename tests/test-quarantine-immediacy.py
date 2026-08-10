@@ -36,20 +36,25 @@ def check(name, condition, detail=""):
 
 
 def quarantine(restrict=None, license_state="yes", restrict_now="",
-               excluded=(), masked=(), in_overlay=True):
-    """Stage one package and return the lines publish.sh would act on."""
+               excluded=(), masked=(), in_overlay=True, packages=("a",)):
+    """Stage packages and return the lines publish.sh would act on."""
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
         pkg = d / "pkg"
         (pkg / "app-misc").mkdir(parents=True)
-        (pkg / "app-misc" / "a-1.gpkg.tar").write_text("inside\n")
         stage = d / "stage"
         stage.mkdir()
-        lines = ["CPV: app-misc/a-1", "PATH: app-misc/a-1.gpkg.tar",
-                 "REPO: gentoo-zh", "EAPI: 8", "SLOT: 0"]
-        if restrict:
-            lines.append(f"RESTRICT: {restrict}")
-        (pkg / "Packages").write_text(HEADER + "\n\n" + "\n".join(lines) + "\n")
+        records = []
+        for package in packages:
+            (pkg / "app-misc" / f"{package}-1.gpkg.tar").write_text("inside\n")
+            lines = [f"CPV: app-misc/{package}-1",
+                     f"PATH: app-misc/{package}-1.gpkg.tar",
+                     "REPO: gentoo-zh", "EAPI: 8", "SLOT: 0"]
+            if restrict:
+                lines.append(f"RESTRICT: {restrict}")
+            records.append("\n".join(lines))
+        (pkg / "Packages").write_text(
+            HEADER + "\n\n" + "\n\n".join(records) + "\n")
 
         overlay = d / "overlay"
         prof = overlay / "profiles"
@@ -58,9 +63,10 @@ def quarantine(restrict=None, license_state="yes", restrict_now="",
         (prof / "package.mask").write_text(
             "".join(f"# masked\n{cp}\n" for cp in masked))
         if in_overlay:
-            ebuild = overlay / "app-misc" / "a"
-            ebuild.mkdir(parents=True)
-            (ebuild / "a-1.ebuild").write_text("EAPI=8\n")
+            for package in packages:
+                ebuild = overlay / "app-misc" / package
+                ebuild.mkdir(parents=True)
+                (ebuild / f"{package}-1.ebuild").write_text("EAPI=8\n")
 
         exclude_file = d / "excluded.txt"
         exclude_file.write_text("".join(f"{cp}\treason\n" for cp in excluded))
@@ -97,6 +103,9 @@ check("缓存 stanza 记录了 bindist",
       quarantine(restrict="bindist") == [PATH])
 check("许可证不可再分发", quarantine(license_state="no") == [PATH])
 check("再分发资格无法确认", quarantine(license_state="unknown") == [PATH])
+check("多项立即隔离产物全部写入清单",
+      quarantine(license_state="no", packages=("a", "b")) ==
+      ["app-misc/a-1.gpkg.tar", "app-misc/b-1.gpkg.tar"])
 
 print(">>> 可以等的：留到新索引切换成功后再清理")
 check("只是被 mask", quarantine(masked=("app-misc/a",)) == [])

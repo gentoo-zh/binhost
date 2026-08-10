@@ -694,7 +694,7 @@ for _shape in ("final", "relative", "intermediate", "fifo"):
 case("正常文件照常 stage", lambda: _escape("plain")[0] in (0, None))
 
 
-def _digest_probe(sha1=None, md5=None, content=b"inside\n"):
+def _digest_probe(sha1=None, md5=None, content=b"inside\n", return_content=False):
     """Stage one package and report whether main accepted it."""
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
@@ -714,11 +714,19 @@ def _digest_probe(sha1=None, md5=None, content=b"inside\n"):
             rc = stage_main(str(pkg), str(stage), lookup=lambda cpv, repo: "")
         except SystemExit as e:
             rc = e.code
+        if return_content:
+            output = stage / "app-misc" / "a-1.gpkg.tar"
+            return rc, output.read_bytes() if output.exists() else None
         return rc
 
 
 case("SHA1 与索引相符时照常 stage", lambda: (
     _digest_probe(sha1=digest_of(b"inside\n")) in (0, None)))
+
+case("正常 stage 逐字节保留来源内容", lambda: (
+    (lambda content: _digest_probe(
+        sha1=digest_of(content), content=content, return_content=True)
+     == (0, content))(bytes(range(256)) + b"stage\n")))
 
 case("SHA1 不符时拒绝，不按旧 stanza 发布", lambda: (
     (lambda rc: rc not in (0, None) and "SHA1" in str(rc))(
@@ -1078,6 +1086,13 @@ case("不同 slot 各取一个", lambda: (
 case("或组取第一个索引能满足的分支", lambda: (
     deps([stanza("app-misc/a-1", rdepend="|| ( dev-libs/gone dev-libs/lib )"), LIB])
     == ["app-misc/a-1", "dev-libs/lib-1"]))
+
+case("或组的合取分支缺少原子时改选完整分支", lambda: (
+    deps([stanza(
+        "app-misc/a-1",
+        rdepend="|| ( ( dev-libs/lib dev-libs/missing ) dev-libs/deep )"),
+          LIB, DEEP])
+    == ["app-misc/a-1", "dev-libs/deep-1"]))
 
 case("或组两个分支都在时只取前一个", lambda: (
     deps([stanza("app-misc/a-1", rdepend="|| ( dev-libs/lib dev-libs/deep )"),
