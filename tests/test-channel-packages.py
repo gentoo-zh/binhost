@@ -10,7 +10,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "build/channel_packages.py"
 
 
-def run(packages, excluded):
+def run(packages, excluded, previous=None):
     with tempfile.TemporaryDirectory() as temporary:
         directory = pathlib.Path(temporary)
         package_file = directory / "packages.txt"
@@ -18,6 +18,8 @@ def run(packages, excluded):
         output = directory / "effective.txt"
         package_file.write_text(packages)
         excluded_file.write_text(excluded)
+        if previous is not None:
+            output.write_text(previous)
         result = subprocess.run(
             [sys.executable, "-B", SCRIPT, package_file, excluded_file, output],
             capture_output=True, text=True)
@@ -64,8 +66,8 @@ case("共用清单不能重复", lambda: (
     lambda result: result[0] != 0 and "duplicate package" in result[1])(
         run("app-misc/a\napp-misc/a\n", "")))
 
-case("失败时不留下半份有效清单", lambda: (
-    lambda result: result[0] != 0 and result[2] == "")(
-        run("app-misc/a\n", "app-misc/b\tnot stable\n")))
+case("失败时保留上一份有效清单", lambda: (
+    lambda result: result[0] != 0 and result[2] == "app-misc/previous\n")(
+        run("app-misc/a\n", "app-misc/b\tnot stable\n", "app-misc/previous\n")))
 
 sys.exit(1 if failures else 0)
