@@ -111,6 +111,8 @@ assert "--privileged" not in untrusted_argv
 assert "--security-opt=no-new-privileges" in untrusted_argv
 assert not any("SIGNING_GNUPGHOME" in value or "SIGNING_KEY" in value
                for value in untrusted_argv)
+assert "/tree:/var/db/repos/gentoo:ro" in mounts(untrusted_argv)
+assert "/overlay:/var/db/repos/gentoo-zh:ro" in mounts(untrusted_argv)
 assert "/usr/local/bin/snapshot-vdb" in destinations(untrusted_argv)
 untrusted_body = executable_lines(untrusted_stdin)
 assert untrusted_body.index("python3 /usr/local/bin/snapshot-vdb") \
@@ -132,6 +134,7 @@ assert "--cap-drop=ALL" in trusted_argv
 assert "--security-opt=no-new-privileges" in trusted_argv
 assert "--user" in trusted_argv and trusted_argv[trusted_argv.index("--user") + 1] == "1000:1000"
 trusted_mounts = mounts(trusted_argv)
+assert "/stage.new:/var/cache/binpkgs" in trusted_mounts
 assert "/signing/private.gpg:/run/signing-private.gpg:ro" in trusted_mounts
 assert "/signing/public.asc:/run/signing-public.asc:ro" in trusted_mounts
 assert "/usr/local/bin/sign-packages.py" in destinations(trusted_argv)
@@ -155,8 +158,14 @@ flow = section(container,
 _, _, calls = execute(flow, values | {"PKGDIR": "/packages"},
                       "cleanup_signing_input() { :; }", with_python=True)
 assert calls[0] == "docker"
-assert "verify-signatures.py" in calls[1]
-assert "persist-packages.py" in calls[2]
+verify_call = shlex.split(calls[1])
+persist_call = shlex.split(calls[2])
+assert pathlib.Path(verify_call[1]).name == "verify-signatures.py"
+assert verify_call[2:] == ["/stage.new", "/signing/public.asc", "KEY"]
+assert pathlib.Path(persist_call[1]).name == "persist-packages.py"
+assert persist_call[2:] == [
+    "/stage.new", "/packages", "/stage.new/.signed-packages",
+]
 
 assignment = executable_lines(container)
 assert re.search(
