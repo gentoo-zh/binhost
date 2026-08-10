@@ -28,3 +28,9 @@ else:
     raise AssertionError("unknown source syntax must fail")
 
 print("  有效源码解析：全部通过")
+
+# A trailing comment is a comment. Only whole lines were stripped before, so
+# `run: skip  # tests/test-x.py` still read as a command.
+assert active_text("  run: cmd  # tests/test-x.py", "yaml") == "  run: cmd"
+assert active_text('run: "a # b"', "yaml") == 'run: "a # b"'
+assert active_text("run: a#b", "yaml") == "run: a#b"
