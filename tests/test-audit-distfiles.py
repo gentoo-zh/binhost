@@ -4,6 +4,7 @@ import importlib.util
 import json
 import contextlib
 import io
+import multiprocessing
 import os
 import pathlib
 import sys
@@ -392,6 +393,71 @@ def _budget_rounds():
     return got, cap
 
 
+def _parallel_budget_worker(root, ledger, barrier, result_queue):
+    root = pathlib.Path(root)
+    packages = {
+        "app-misc/keep": {"1": [f"keep-{i}.tar" for i in range(5)]},
+        "app-misc/blocked": {
+            "1": ([f"blocked-{i}.tar" for i in range(10)], "mirror")},
+    }
+    overlay = build_overlay(root / "overlay", packages)
+    dist = root / "dist"
+    dist.mkdir()
+    for name in [f"keep-{i}.tar" for i in range(5)] + [
+            f"blocked-{i}.tar" for i in range(10)]:
+        (dist / name).write_text("x")
+
+    old = (audit.STATE, audit.RECYCLE, audit.LEDGER, audit.recent_deletions)
+    audit.STATE = str(root / "orphans.json")
+    audit.RECYCLE = str(root / "recycle")
+    audit.LEDGER = str(ledger)
+    original_recent = audit.recent_deletions
+
+    def synchronised_recent(add_count, now=None):
+        count = original_recent(add_count, now)
+        if add_count == 0:
+            barrier.wait(timeout=10)
+        return count
+
+    audit.recent_deletions = synchronised_recent
+    try:
+        barrier.wait(timeout=10)
+        with contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stderr(io.StringIO()):
+            rc = audit.main(overlay, dist, aux=fixture_aux(packages))
+        recycled = len(list((root / "recycle").glob("*")))
+        result_queue.put((rc, recycled))
+    except Exception as e:                                 # noqa: BLE001
+        result_queue.put((type(e).__name__, str(e)))
+    finally:
+        audit.STATE, audit.RECYCLE, audit.LEDGER, audit.recent_deletions = old
+
+
+def _parallel_budget():
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp)
+        ledger = root / "reaped.json"
+        context = multiprocessing.get_context("fork")
+        barrier = context.Barrier(2)
+        result_queue = context.Queue()
+        processes = [context.Process(
+            target=_parallel_budget_worker,
+            args=(root / f"worker-{i}", ledger, barrier, result_queue))
+                     for i in range(2)]
+        for process in processes:
+            process.start()
+        for process in processes:
+            process.join(15)
+        if any(process.is_alive() for process in processes):
+            for process in processes:
+                process.terminate()
+                process.join()
+            return None
+        results = [result_queue.get(timeout=2) for _ in processes]
+        rows = json.loads(ledger.read_text())
+        return results, sum(count for _, count in rows)
+
+
 def _lock_unavailable():
     """The ledger directory is a plain file, so the lock cannot be created."""
     import tempfile as _t, pathlib as _p
@@ -480,6 +546,12 @@ case("累计额度在删除之前就生效", lambda: (
 
 case("额度耗尽后不再删除", lambda: (
     lambda r: r[0][-1] == 0)(_budget_rounds()))
+
+case("并行清理共用同一份累计额度", lambda: (
+    lambda r: r is not None and r[1] == 5
+    and sum(item[1] for item in r[0]) == 5
+    and all(item[0] == 0 for item in r[0])
+)(_parallel_budget()))
 
 def _fetch_probe():
     return run_main({"app-misc/b": {"1.0": (["b-1.0.tar.gz"], "fetch"),
