@@ -153,6 +153,14 @@ case("或组的分支索引与基础系统都没有时才算缺陷", lambda: (
              stanza("dev-libs/lib-1", repo="gentoo")],
             installed=set()))))
 
+case("或组的合取分支缺少任一原子时不算满足", lambda: (
+    set(run([
+        stanza(
+            "app-misc/a-1",
+            rdepend="|| ( ( dev-libs/lib dev-libs/missing ) dev-libs/other )"),
+        stanza("dev-libs/lib-1", repo="gentoo")], installed=set())[0])
+    == {"dev-libs/missing", "dev-libs/other"}))
+
 case("USE 依赖写在或组的基础系统分支上时也算满足", lambda: (
     (lambda r: not r[0])(
         run([stanza("app-misc/a-1",
@@ -273,21 +281,23 @@ def generated_available_snapshot():
         package = root / "Packages"
         package.write_text(
             HEADER + "\n\n" +
-            stanza("app-misc/a-1", rdepend="dev-libs/lib[foo]") + "\n")
+            stanza("app-misc/a-1",
+                   rdepend="dev-libs/lib[foo] dev-libs/helper") + "\n")
         installed = root / "installed.txt"
         installed.write_text("PACKAGES: 0\nVERSION: 1\n\n")
         source = root / "source-Packages"
         source.write_text(
-            "PACKAGES: 2\nTIMESTAMP: 123\nVERSION: 0\n\n" +
+            "PACKAGES: 3\nTIMESTAMP: 123\nVERSION: 0\n\n" +
             stanza("dev-libs/lib-2", repo="gentoo", use="foo", iuse="foo") +
+            "\n\n" + stanza("dev-libs/helper-1", repo="gentoo") +
             "\n\n" + stanza("dev-libs/unused-1", repo="gentoo") + "\n")
         output = root / "official.txt"
         if verify.main(package, installed=installed, available=source,
                        write_available_path=output) != 0:
             return False
         text = output.read_text()
-        if ("CPV: dev-libs/lib-2" not in text or
-                "CPV: dev-libs/unused-1" in text or
+        if ({field["CPV"] for field in verify.parse(text)} !=
+                {"dev-libs/helper-1", "dev-libs/lib-2"} or
                 "SOURCE_TIMESTAMP: 123" not in text):
             return False
         if verify.main(package, installed=installed, available=output) != 0:
@@ -307,7 +317,8 @@ def generated_source_snapshot():
         package = root / "Packages"
         package.write_text(
             HEADER + "\n\n" + stanza(
-                "app-misc/a-1", rdepend=">=media-libs/openh264-2.4:0/8=") + "\n")
+                "app-misc/a-1",
+                rdepend=">=media-libs/openh264-2.4:0/8= virtual/codec") + "\n")
         installed = root / "installed.txt"
         installed.write_text("PACKAGES: 0\nVERSION: 1\n\n")
         official = root / "official.txt"
@@ -315,15 +326,24 @@ def generated_source_snapshot():
         source = root / "source.txt"
 
         def resolve(atom):
-            assert str(atom) == ">=media-libs/openh264-2.4:0/8="
-            return [{"CPV": "media-libs/openh264-2.6.0", "SLOT": "0/8",
-                     "USE": "", "IUSE": "", "EAPI": "8", "REPO": "gentoo"}]
+            fields = {
+                ">=media-libs/openh264-2.4:0/8=": {
+                    "CPV": "media-libs/openh264-2.6.0", "SLOT": "0/8",
+                    "USE": "", "IUSE": "", "EAPI": "8", "REPO": "gentoo"},
+                "virtual/codec": {
+                    "CPV": "virtual/codec-1", "SLOT": "0", "USE": "",
+                    "IUSE": "", "EAPI": "8", "REPO": "gentoo"},
+            }
+            return [fields[str(atom)]]
 
         if verify.main(package, installed=installed, available=official,
                        source_tree=root, write_source_path=source,
                        resolve_source=resolve) != 0:
             return False
         text = source.read_text()
+        if {field["CPV"] for field in verify.parse(text)} != {
+                "media-libs/openh264-2.6.0", "virtual/codec-1"}:
+            return False
         if verify.main(package, installed=installed, available=official,
                        source=source) != 0:
             return False
