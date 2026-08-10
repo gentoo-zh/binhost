@@ -266,6 +266,9 @@ jobs:
       - name: Kernel archive rejects damaged payloads
         run: bash tests/test-kernel-archive-integrity.sh
 
+      - name: Kernel archive matches the overlay
+        run: bash tests/test-kernel-status.sh
+
       - name: Publication alerts distinguish cleanup from transfer failures
         run: bash tests/test-cycle.sh
 
