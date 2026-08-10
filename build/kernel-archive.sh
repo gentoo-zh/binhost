@@ -69,9 +69,7 @@ EOF
        $(sed -n '2p' <<< "${actual}" | awk '{print $1}') == "${digest}" ]]
 }
 
-# Set when the cap blocks a cleanup. Everything else still runs, but the run
-# ends non-zero so OnFailure reaches someone: refusing to delete is the safe
-# direction, and a warning nobody reads is how it stays wrong for weeks.
+# A capped cleanup fails the run so OnFailure reports incomplete retirement.
 blocked=""
 
 for path in "${OVERLAY}" "${TREE}"; do
