@@ -1,6 +1,5 @@
 dev-libs/libdbusmenu gtk3
 dev-qt/qtmultimedia gstreamer
-media-gfx/open-wallpaper-engine -waywallen
 media-libs/freetype brotli
 media-sound/feeluown -bilibili -netease -qqmusic -ytmusic
 sys-libs/zlib minizip
