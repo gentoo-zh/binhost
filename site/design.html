@@ -288,7 +288,7 @@
   <div class="demo">
     <p class="rule-do" data-i18n="do1">Portage 接受二进制包时不比较 CFLAGS，因此构建端必须保证该参数。</p>
     <p class="rule-dont" data-specimen data-i18n="dont1">我们非常重视兼容性，会尽力确保您的使用体验。</p>
-    <p class="rule-do" data-i18n="do2">这里只有 overlay 的源码，不能替代官方源。</p>
+    <p class="rule-do" data-i18n="do2">本站发布 overlay 二进制包及其部分 ::gentoo 运行期依赖。这些内容不替代官方 binhost。</p>
     <p class="rule-dont" data-specimen data-i18n="dont2">三样内容都可以直接浏览和下载哦。</p>
   </div>
 
@@ -460,7 +460,7 @@ window.MIRROR_I18N = {
     text1: '先寫結論，再說明必要理由；需要因果關係時明確寫出。每段不超過 4 句，不加入重複總結。簡體使用大陸用語，繁體使用台灣用語（軟體、網路、程式、資料、預設、記憶體），技術術語保留英文原文。',
     do1: 'Portage 接受二進位套件時不比較 CFLAGS，因此建置端必須確保該參數。',
     dont1: '我們非常重視相容性，會盡力確保您的使用體驗。',
-    do2: '這裡只有 overlay 的原始碼，不能取代官方來源。',
+    do2: '本站發布 overlay 二進位套件及其部分 ::gentoo 執行期相依套件。這些內容不取代官方 binhost。',
     dont2: '三樣內容都可以直接瀏覽和下載喔。',
     specimen: '下面三張表的範例欄保持簡體中文，用於檢查來源文案。譯文按目標語言單獨審校。',
     hBanPhrase: '禁止的句式',
@@ -534,7 +534,7 @@ window.MIRROR_I18N = {
     hSpacing: 'Spacing and separation',
     spacing1: 'Spacing is a multiple of 4. Blocks are separated by a 1px line, never by a card, a shadow or a rounded container; a 2px radius appears only on small clickable elements such as buttons and chips.',
     hMobile: 'Small screens',
-    mobile1: 'One ladder of column hiding plus one layout breakpoint. As the table runs out of width its columns give way in turn, down to the package name and its status; the layout itself changes once, at 34rem. There is no fifth step, because more steps mean each one gets less testing.',
+    mobile1: 'Responsive rules include three table-column breakpoints and one layout breakpoint. Secondary columns are hidden in order as width decreases, leaving the package name and status at the narrowest width. The page layout changes only at 34rem. Adding a breakpoint requires validation at the corresponding width.',
     thBp: 'Breakpoint',
     thBpDo: 'Effect',
     bp1: 'Hide the size column. Above it, package names do not wrap',
@@ -586,7 +586,7 @@ window.MIRROR_I18N = {
     text1: 'Conclusion first, then the reason; write out cause and effect rather than listing symptoms side by side. No paragraph runs past four sentences. No summary paragraph and no closing flourish. Simplified Chinese uses mainland terms, Traditional Chinese uses Taiwanese ones, and technical terms stay in English.',
     do1: 'Because portage does not compare CFLAGS when it accepts a binary package, this can only be guaranteed at build time.',
     dont1: 'We place the greatest importance on compatibility and will do our utmost to ensure your experience.',
-    do2: 'Only the overlay\'s own sources are here; this does not replace the official mirrors.',
+    do2: 'This host publishes overlay binary packages and some of their ::gentoo runtime dependencies. This content does not replace the official Gentoo binhost.',
     dont2: 'All three of them are ready for you to browse and download!',
     specimen: 'The example column of the three tables below does not change with the language. The rules govern the Chinese this site writes, and once a sentence is translated it is no longer the sentence being ruled out.',
     hBanPhrase: 'Banned constructions',
@@ -621,7 +621,7 @@ window.MIRROR_I18N = {
     n3: 'An oversized marketing hero',
     n4: 'An icon decorating every heading',
     n5: 'Motion. Beyond the immediate feedback on a button there is no animation',
-    never1: 'These are what a generative tool produces by default, and together they make any site look like the same template. This one stands on its typography and the way its information is organised, not on decoration.'
+    never1: 'Together these elements make sites look like the same generic template. This site establishes hierarchy through typography and information structure; decoration does not carry information.'
   }
 };
 </script>
