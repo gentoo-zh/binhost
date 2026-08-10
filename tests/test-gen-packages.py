@@ -188,10 +188,13 @@ def missing_policy_tree():
         try:
             os.environ["GENTOO_TREE"] = str(d / "missing-gentoo")
             module = fresh(d, "")
+            previous = '{"sentinel":"previous"}\n'
+            (d / "packages.json").write_text(previous)
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
                 rc = module.main(str(overlay))
-            return (rc == 1 and not (d / "packages.json").exists()
+            return (rc == 1 and (d / "packages.json").exists()
+                    and (d / "packages.json").read_text() == previous
                     and "gentoo repository does not exist" in buf.getvalue())
         finally:
             os.environ.clear()

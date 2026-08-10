@@ -94,6 +94,8 @@ CASES = [
     ("包已删除，清单未更新",                     [],               [PKG], {},            (),     "已移除"),
     ("索引里同一个包两个版本，取最高的那个",
      [f"{PKG}-1.10", f"{PKG}-1.9"], [PKG], {PKG: "1.10"}, (), "无问题"),
+    ("overlay 有多个可用版本时取最新版本",
+     [f"{PKG}-2.0"], [PKG], {PKG: ["1.0", "2.0"]}, (), "无问题"),
     ("清单成员只有 9999",                        [],               [PKG], {PKG: "9999"}, (),     "仅"),
 ]
 
@@ -339,6 +341,8 @@ def newcomers(packages, list_lines, masked=(), restrict=None, keywords=None, bod
 NEW = [
     ("在清单里的不报", {PKG: NOW}, [PKG], {}, []),
     ("不在清单里的会被报出", {PKG: NOW}, [], {}, [f"{PKG} {NOW}"]),
+    ("多个可用版本的新包报告最新版本", {PKG: ["1.0", "2.0"]}, [], {},
+     [f"{PKG} 2.0"]),
     ("被 mask 的不报", {PKG: NOW}, [], {"masked": (PKG,)}, []),
     ("acct-group 不报", {"acct-group/foo": "0"}, [], {}, []),
     ("virtual 不报", {"virtual/foo": "0"}, [], {}, []),

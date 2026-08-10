@@ -232,12 +232,14 @@ def recycle_mtime_probe():
         audit.RECYCLE = str(d / "recycle")
         try:
             assert audit.recycle(source)
-            return abs((d / "recycle" / "old.tar.gz").stat().st_mtime - time.time()) < 5
+            recycled = d / "recycle" / "old.tar.gz"
+            return recycled.read_text() == "x" \
+                and abs(recycled.stat().st_mtime - time.time()) < 5
         finally:
             audit.RECYCLE = old
 
 
-case("回收时间从移入回收目录时重新计算", recycle_mtime_probe)
+case("回收后内容完好，时间从移入回收目录时重新计算", recycle_mtime_probe)
 
 
 def expiry_probe():
