@@ -5,11 +5,13 @@ import importlib.util
 import json
 import pathlib
 import stat
+import sys
 import tempfile
 from types import SimpleNamespace
 
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
+ROOT = (pathlib.Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else
+        pathlib.Path(__file__).resolve().parent.parent)
 SCRIPT = ROOT / "build" / "smoke-install.py"
 SPEC = importlib.util.spec_from_file_location("smoke_install", SCRIPT)
 smoke = importlib.util.module_from_spec(SPEC)
@@ -203,10 +205,22 @@ with tempfile.TemporaryDirectory() as directory:
     command = smoke.docker_command(probe, selection, "smoke-test")
     mounts = [command[index + 1] for index, value in enumerate(command[:-1])
               if value == "-v"]
+    destinations = {value.rsplit(":", 2)[-2] for value in mounts}
+    required = {
+        "/var/db/repos/gentoo",
+        "/var/db/repos/gentoo-zh",
+        "/var/cache/binpkgs",
+        "/run/binhost-smoke/gentoo-packages",
+        "/run/binhost-smoke/gentoo-Packages",
+        "/usr/local/bin/smoke-install.py",
+        "/run/binhost-smoke/selection.json",
+        "/run/binhost-smoke/package.use",
+    }
     check("容器禁用网络", "--network" in command and
           command[command.index("--network") + 1] == "none")
+    check("容器带齐仓库、索引与暂存包挂载", required <= destinations)
     check("仓库与暂存包都只读挂载",
-          all(value.endswith(":ro") for value in mounts))
+          bool(mounts) and all(value.endswith(":ro") for value in mounts))
     check("容器不使用特权模式或设备直通",
           "--privileged" not in command and "--device" not in command)
 

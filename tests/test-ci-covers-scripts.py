@@ -18,7 +18,8 @@ import pathlib
 import re
 import sys
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
+ROOT = (pathlib.Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else
+        pathlib.Path(__file__).resolve().parent.parent)
 WORKFLOW = ROOT / ".github" / "workflows" / "validate.yml"
 
 PY_EXEMPT = {"tests"}
@@ -74,7 +75,9 @@ for d in sorted(dirs_holding(".sh") - SH_EXEMPT):
           "已列出：" + " ".join(sorted(sh)))
 
 workflow = WORKFLOW.read_text()
-run_by_ci = set(re.findall(r"tests/(test-[A-Za-z0-9._-]+)", workflow))
+run_by_ci = set(re.findall(
+    r"^\s*run:\s*(?:python3|bash|node)\s+tests/(test-[A-Za-z0-9._-]+)(?:\s|$)",
+    workflow, re.M))
 for f in sorted(p.name for p in (ROOT / "tests").glob("test-*")):
     check(f"CI 有执行 tests/{f} 的步骤", f in run_by_ci)
 
