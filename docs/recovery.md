@@ -12,7 +12,7 @@
 | --- | ---: | --- | ---: |
 | stable binpkg | 1.5 GB / 257 个 | 建置机 PKGDIR | 164 秒 |
 | unstable binpkg | 2.2 GB / 433 个 | 建置机 PKGDIR | 225 秒 |
-| 内核归档 | 274 MB / 2 个 | **无可用来源，见下** | 36 秒（摘要不符） |
+| 内核归档 | 274 MB / 2 个 | 建置机已发布副本（补齐后） | **未重新量测** |
 | distfiles | 24 GB / 1330 个 | 各上游 SRC_URI | **未量测，见下** |
 | GIG OS ISO | 7.8 GB / 2 个 | `Gig-OS/*` 仓库，建置机有副本 | 未量测 |
 
@@ -20,7 +20,7 @@
 
 ## 两个演练才发现的问题
 
-### 内核归档从 PKGDIR 恢复出来的档案，摘要与 ebuild 的 Manifest 不一致
+### 内核归档必须从已发布副本恢复
 
 `sys-kernel/gentoo-cjk-kernel-bin` 的 Manifest 按 URL 钉死每个档案的
 BLAKE2B 与 SHA512。gpkg 不是位元可重现的，外层 tar 带建置时间，**同一个版本重建
@@ -32,16 +32,23 @@ overlay Manifest        49503e6ab6e5dac7401792496b3d1172…
 建置机 PKGDIR 恢复的      f74824e7eaa41c3a64a08ba579f5d2a2…   不一致
 ```
 
-建置机上找不到摘要相符的副本。因此 `/srv/pub/gentoo-cjk-kernel/` 一旦丢失，
-**现有 ebuild 引用的那些版本就取不回来了**：照 PKGDIR 恢复会让每个用户的
-digest 检查失败。
+因此不能从 PKGDIR 恢复内核归档。`kernel-archive.sh` 现在把成功发布的档案原样保留在
+`PUBLISHED_DIR`，默认路径是 `/var/lib/binhost/kernel-published/<系列>/<发布名>`。
+副本只在 rsync 成功后写入；同一个发布名会被新副本覆盖。远端档案与本地副本使用同一份
+overlay 清单和 `MAX_RETIRE` 上限，overlay 移除版本后，两处档案在同一轮清理。
 
-可行的做法只有两条，都要人工决定：
+部署这项改动时，既有两条内核线尚无本地副本。执行一次正常归档任务即可补齐：脚本从
+镜像机取回已发布档案，核对大小与 overlay Manifest 的摘要，再把临时档案改成发布名。
+核对失败时，脚本不写入副本并以非零状态结束。
 
-1. 恢复后按新档案更新 overlay 的 Manifest 并送 PR，等于换掉那些版本的内容；
-2. 事先在别处留一份**已发布位元组**的副本。归档只有 274 MB，成本很低。
+```sh
+BUILD_ROOT=${BUILD_ROOT:-/var/lib/binhost/build}
+PUBLISHED_DIR=${PUBLISHED_DIR:-/var/lib/binhost/kernel-published}
+PUBLISHED_DIR="$PUBLISHED_DIR" bash "$BUILD_ROOT/kernel-archive.sh"
+```
 
-第 2 条是防患，第 1 条是事后补救。目前两条都没有做。
+这次执行不会重建摘要相符的既有版本；远端档案通过 Manifest 核验后，脚本直接补齐并跳过
+建置。补齐完成之前，内核归档仍没有可用的恢复来源。
 
 ### Gentoo 镜像不带我们的 distfiles
 
@@ -77,8 +84,8 @@ digest 检查失败。
 
 ## 恢复步骤
 
-前置条件：建置机可登入且 PKGDIR 完好、镜像机可登入、`/srv` 有足够空间
-（binpkg 与 distfiles 合计约 28 GB）。
+前置条件：建置机可登入且 PKGDIR 与内核已发布副本完好、镜像机可登入、`/srv` 有足够
+空间（binpkg 与 distfiles 合计约 28 GB）。
 
 ### 0 建立目标目录
 
@@ -146,7 +153,30 @@ ssh mirror 'sudo -u root /usr/local/bin/binhost-daily'
 
 ### 4 内核归档与 GIG OS
 
-内核归档见上面那一节，从 PKGDIR 恢复会让摘要不一致，需要人工决定走哪条路。
+内核归档只能从已发布副本恢复。先逐个核对 Manifest；全部通过后，才把原有目录结构同步
+到镜像机：
+
+```sh
+set -euo pipefail
+BUILD_ROOT=${BUILD_ROOT:-/var/lib/binhost/build}
+OVERLAY=${OVERLAY:-/var/lib/binhost/overlay}
+PUBLISHED_DIR=${PUBLISHED_DIR:-/var/lib/binhost/kernel-published}
+MANIFEST=${MANIFEST:-$OVERLAY/sys-kernel/gentoo-cjk-kernel-bin/Manifest}
+REMOTE=${REMOTE:-mirror}
+REMOTE_ROOT=${REMOTE_ROOT:-/srv/pub/gentoo-cjk-kernel/amd64}
+
+mapfile -d '' files < <(find "$PUBLISHED_DIR" -mindepth 2 -maxdepth 2 \
+    -type f -name '*.gpkg.tar' -print0)
+((${#files[@]})) || { echo "没有可恢复的内核归档副本" >&2; exit 1; }
+for f in "${files[@]}"; do
+    python3 "$BUILD_ROOT/kernel-manifest.py" verify \
+        "$MANIFEST" "$(basename "$f")" "$f"
+done
+ssh "$REMOTE" "install -dm755 '$REMOTE_ROOT'"
+rsync -a "$PUBLISHED_DIR/" "$REMOTE:$REMOTE_ROOT/"
+```
+
+不要用 PKGDIR 代替 `PUBLISHED_DIR`，即使版本和发布名相同，重建的 gpkg 摘要也可能不同。
 
 GIG OS 不由本仓库产生，恢复来源是 `Gig-OS/Live-ISO`（构建）与
 `Gig-OS/gentoozh-liveiso-infra`（`build-and-deploy.sh`、`reupload-iso.sh`）。
@@ -157,7 +187,8 @@ GIG OS 不由本仓库产生，恢复来源是 `Gig-OS/Live-ISO`（构建）与
 
 - **签章私钥。** 在 `~/.config/gentoozh/` 有离机副本；那份也没了，整条信任链要重来：
   换钥、改站点与 README 的指纹、通知已经导入旧钥的用户。
-- **已发布的内核归档位元组。** 见上，现在没有第二份。
+- **镜像机归档与建置机已发布副本同时丢失的内核归档位元组。** PKGDIR 不能替代已发布
+  副本，因为同版本重建的 gpkg 摘要可能不同。
 - **已经清理掉的历史代际。** 保留策略只留当前一代。
 - **上游已经消失的 distfile。**
 

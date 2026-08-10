@@ -29,6 +29,7 @@ LOCALVERSION="${LOCALVERSION:--gentoo-cjk-dist-bin}"
 ARCH="${ARCH:-amd64}"
 REMOTE="${REMOTE:-mirror}"
 REMOTE_ROOT="${REMOTE_ROOT:-/srv/pub/gentoo-cjk-kernel/${ARCH}}"
+PUBLISHED_DIR="${PUBLISHED_DIR:-/var/lib/binhost/kernel-published}"
 MAX_RETIRE="${MAX_RETIRE:-2}"
 # One kernel takes about twenty five minutes, so a first run over a long
 # version list would hold the machine for most of a day. What is left over
@@ -48,6 +49,41 @@ MAKEOPTS="${MAKEOPTS:--j$(nproc) -l$(nproc)}"
 LOCK="${LOCK:-/var/lib/binhost/stage/build.lock}"
 
 die() { echo "!!! $*" >&2; exit 1; }
+
+store_published_copy() {
+    local source="$1" series="$2" name="$3" directory destination temporary
+    directory="${PUBLISHED_DIR}/${series}"
+    destination="${directory}/${name}"
+    install -dm755 "${directory}"
+    temporary=$(mktemp "${directory}/.${name}.XXXXXX")
+    if ! install -m644 "${source}" "${temporary}" ||
+            ! mv -f "${temporary}" "${destination}"; then
+        rm -f "${temporary}"
+        die "无法保留已发布档案：${series}/${name}"
+    fi
+}
+
+backfill_published_copy() {
+    local remote_path="$1" series="$2" name="$3" directory destination temporary
+    directory="${PUBLISHED_DIR}/${series}"
+    destination="${directory}/${name}"
+    install -dm755 "${directory}"
+    temporary=$(mktemp "${directory}/.${name}.XXXXXX")
+    if ! rsync -a "${REMOTE}:${remote_path}" "${temporary}"; then
+        rm -f "${temporary}"
+        die "无法从镜像机补齐已发布档案：${series}/${name}"
+    fi
+    if ! python3 "${SCRIPT_DIR}/kernel-manifest.py" verify \
+            "${MANIFEST}" "${name}" "${temporary}"; then
+        rm -f "${temporary}"
+        die "镜像机上的 ${series}/${name} 与 Manifest 不一致，不保留"
+    fi
+    if ! chmod 0644 "${temporary}" || ! mv -f "${temporary}" "${destination}"; then
+        rm -f "${temporary}"
+        die "无法保留已发布档案：${series}/${name}"
+    fi
+    echo "    已从镜像机补齐 ${series}/${name}"
+}
 
 remote_matches_manifest() {
     local path="$1" expected="$2" size algorithm digest command actual
@@ -98,6 +134,10 @@ for entry in "${wanted[@]}"; do
         "${MANIFEST}" "${name}") || die "${name} 无法从 Manifest 核验"
     remote_path="${REMOTE_ROOT}/${series}/${name}"
     if remote_matches_manifest "${remote_path}" "${expected}"; then
+        retained="${PUBLISHED_DIR}/${series}/${name}"
+        if [[ ! -f ${retained} ]]; then
+            backfill_published_copy "${remote_path}" "${series}" "${name}"
+        fi
         echo "    ${series}  ${version}  已发布，跳过"
         continue
     fi
@@ -180,6 +220,7 @@ for entry in ${todo[@]+"${todo[@]}"}; do
     # shellcheck disable=SC2029  # as above
     ssh "${REMOTE}" "install -dm755 ${REMOTE_ROOT}/${series}"
     rsync -a "${built}" "${REMOTE}:${REMOTE_ROOT}/${series}/${name}"
+    store_published_copy "${built}" "${series}" "${name}"
     echo "    已发布 ${series}/${name}"
 done
 
@@ -196,14 +237,26 @@ mapfile -t remote_files < <(
     # shellcheck disable=SC2029  # as above
     ssh "${REMOTE}" "cd ${REMOTE_ROOT} 2>/dev/null && ls -1 */*.gpkg.tar 2>/dev/null" || true
 )
+mapfile -t local_files < <(
+    if [[ -d ${PUBLISHED_DIR} ]]; then
+        find "${PUBLISHED_DIR}" -mindepth 2 -maxdepth 2 -type f \
+            -name '*.gpkg.tar' -printf '%P\n'
+    fi
+)
 stale=()
-for f in ${remote_files[@]+"${remote_files[@]}"}; do
+for f in ${remote_files[@]+"${remote_files[@]}"} \
+         ${local_files[@]+"${local_files[@]}"}; do
     [[ -n ${f} ]] || continue
     keep=no
     for want in "${wanted_names[@]}"; do
         [[ ${want} == "${f}" ]] && { keep=yes; break; }
     done
-    [[ ${keep} == yes ]] || stale+=("${f}")
+    [[ ${keep} == yes ]] && continue
+    found=no
+    for have in ${stale[@]+"${stale[@]}"}; do
+        [[ ${have} == "${f}" ]] && { found=yes; break; }
+    done
+    [[ ${found} == yes ]] || stale+=("${f}")
 done
 
 if (( ${#stale[@]} )); then
@@ -211,12 +264,6 @@ if (( ${#stale[@]} )); then
         echo "!! 要清理 ${#stale[@]} 个档案，超过上限 ${MAX_RETIRE}，一个都不动" >&2
         echo "   overlay 可能读取有误，确认之后再执行" >&2
         blocked="要清理 ${#stale[@]} 个档案"
-    else
-        for f in "${stale[@]}"; do
-            echo "    清理 ${f}（overlay 已不提供这个版本）"
-            # shellcheck disable=SC2029  # as above
-            ssh "${REMOTE}" "rm -f ${REMOTE_ROOT}/${f}"
-        done
     fi
 fi
 
@@ -227,15 +274,26 @@ mapfile -t remote_series < <(
     # shellcheck disable=SC2029  # as above
     ssh "${REMOTE}" "ls -1 ${REMOTE_ROOT} 2>/dev/null" || true
 )
+mapfile -t local_series < <(
+    if [[ -d ${PUBLISHED_DIR} ]]; then
+        find "${PUBLISHED_DIR}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n'
+    fi
+)
 retire=()
-for series in "${remote_series[@]}"; do
+for series in ${remote_series[@]+"${remote_series[@]}"} \
+              ${local_series[@]+"${local_series[@]}"}; do
     [[ -n ${series} ]] || continue
     keep=no
     for entry in "${wanted[@]}"; do
         read -r have _ <<< "${entry}"
         [[ ${have} == "${series}" ]] && { keep=yes; break; }
     done
-    [[ ${keep} == yes ]] || retire+=("${series}")
+    [[ ${keep} == yes ]] && continue
+    found=no
+    for have in ${retire[@]+"${retire[@]}"}; do
+        [[ ${have} == "${series}" ]] && { found=yes; break; }
+    done
+    [[ ${found} == yes ]] || retire+=("${series}")
 done
 
 if (( ${#retire[@]} )); then
@@ -243,16 +301,24 @@ if (( ${#retire[@]} )); then
         echo "!! 要退役 ${#retire[@]} 条线，超过上限 ${MAX_RETIRE}，一条都不动" >&2
         echo "   overlay 可能读取有误，确认之后再执行" >&2
         blocked="${blocked:+${blocked}，}要退役 ${#retire[@]} 条线"
-    else
-        for series in "${retire[@]}"; do
-            echo "    退役 ${series}（overlay 已不提供）"
-            # shellcheck disable=SC2029  # as above
-            ssh "${REMOTE}" "rm -rf ${REMOTE_ROOT}/${series}"
-        done
     fi
 fi
 
 [[ -z ${blocked} ]] || die "${blocked}，都超过上限 ${MAX_RETIRE}，没有执行"
+
+for f in ${stale[@]+"${stale[@]}"}; do
+    echo "    清理 ${f}（overlay 已不提供这个版本）"
+    # shellcheck disable=SC2029  # as above
+    ssh "${REMOTE}" "rm -f ${REMOTE_ROOT}/${f}"
+    rm -f -- "${PUBLISHED_DIR}/${f}"
+done
+
+for series in ${retire[@]+"${retire[@]}"}; do
+    echo "    退役 ${series}（overlay 已不提供）"
+    # shellcheck disable=SC2029  # as above
+    ssh "${REMOTE}" "rm -rf ${REMOTE_ROOT}/${series}"
+    rm -rf -- "${PUBLISHED_DIR:?}/${series}"
+done
 
 echo ">>> 完成"
 }
