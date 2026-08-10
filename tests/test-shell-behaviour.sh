@@ -1402,6 +1402,29 @@ contains "并且说明原因" "${out}" "索引不完整"
 rm -rf "${d}"
 
 d=$(setup_mirror)
+mirror_index "${d}" 1
+rm -rf "${d}/dest"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
+      bash deploy/mirror-sync.sh 2>&1)
+ok "目标目录尚不存在时可以完成首次同步" "$?" "0"
+ok "首次同步会建立索引代际" \
+   "$([[ -L ${d}/dest/.index && -s ${d}/dest/Packages ]] && echo 已建立 || echo 未建立)" \
+   "已建立"
+rm -rf "${d}"
+
+d=$(setup_mirror)
+mirror_index "${d}" 1
+exec {mirror_lock_fd}>"${d}/dest/.mirror-sync.lock"
+flock -n "${mirror_lock_fd}"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
+      bash deploy/mirror-sync.sh 2>&1)
+ok "另一次同步持有锁时立即中止" "$?" "1"
+contains "并且说明锁仍被占用" "${out}" "仍在执行"
+flock -u "${mirror_lock_fd}"
+exec {mirror_lock_fd}>&-
+rm -rf "${d}"
+
+d=$(setup_mirror)
 mirror_index "${d}" 3
 printf 'PACKAGES: 3\n\nCPV: 别的\n' | gzip -c > "${d}/src/Packages.gz"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
@@ -1419,6 +1442,41 @@ out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}
 ok "本地文件大小与索引不符时重新下载" "$?" "0"
 ok "重新下载后内容正确" "$(cat "${d}/dest/app-misc/p1-1.0-1.gpkg.tar")" "x"
 contains "并且报出该情况" "${out}" "大小与索引不符"
+rm -rf "${d}"
+
+d=$(setup_mirror)
+mirror_index "${d}" 2
+cp "${d}/src/Packages" "${d}/dest/Packages"
+cp "${d}/src/Packages.gz" "${d}/dest/Packages.gz"
+sed -i 's/TIMESTAMP: 1754150400/TIMESTAMP: 1754150401/' "${d}/src/Packages"
+gzip -c "${d}/src/Packages" > "${d}/src/Packages.gz"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
+      bash deploy/mirror-sync.sh 2>&1)
+ok "普通索引文件会迁移为同一代链接" \
+   "$(readlink "${d}/dest/Packages") $(readlink "${d}/dest/Packages.gz")" \
+   ".index/Packages .index/Packages.gz"
+first_gen=$(readlink "${d}/dest/.index")
+ok "首次同步公开完整的新索引" \
+   "$(awk '/^TIMESTAMP: /{print $2}' "${d}/dest/Packages")" "1754150401"
+sed -i 's/TIMESTAMP: 1754150401/TIMESTAMP: 1754150402/' "${d}/src/Packages"
+gzip -c "${d}/src/Packages" > "${d}/src/Packages.gz"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
+      bash deploy/mirror-sync.sh 2>&1)
+second_gen=$(readlink "${d}/dest/.index")
+ok "下一次同步切到新的索引代际" \
+   "$([[ ${first_gen} != "${second_gen}" ]] && echo 已切换 || echo 未切换)" "已切换"
+ok "切换后只保留当前索引代际" \
+   "$(find "${d}/dest" -maxdepth 1 -type d -name '.index-gen-*' | wc -l)" "1"
+ok "索引迁移没有留下种子目录" \
+   "$(find "${d}/dest" -maxdepth 1 -type d -name '.index-seed-*' | wc -l)" "0"
+ok "两种索引入口始终来自同一代" \
+   "$(cmp -s <(gzip -dc "${d}/dest/Packages.gz") "${d}/dest/Packages" && echo 一致 || echo 不一致)" \
+   "一致"
+printf 'truncated' > "${d}/dest/app-misc/p1-1.0-1.gpkg.tar"
+rm -f "${d}/src/app-misc/p1-1.0-1.gpkg.tar"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
+      bash deploy/mirror-sync.sh 2>&1)
+ok "包下载失败时不切换索引代际" "$(readlink "${d}/dest/.index")" "${second_gen}"
 rm -rf "${d}"
 
 d=$(setup_mirror)

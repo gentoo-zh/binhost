@@ -6,13 +6,75 @@ BASE="${BASE:-https://distfiles.gentoozh.org/binpkgs/x86-64}"
 DEST="${DEST:-./x86-64}"
 MAX_REMOVE_SHARE="${MAX_REMOVE_SHARE:-20}"
 MAX_REMOVE_COUNT="${MAX_REMOVE_COUNT:-60}"
-
-before=$(find "${DEST}" -name '*.gpkg.tar' -printf x 2>/dev/null | wc -c)
+INDEX_FILES=(Packages Packages.gz)
 
 mkdir -p "${DEST}"
+before=$(find "${DEST}" -name '*.gpkg.tar' -printf x | wc -c)
 
-tmp=$(mktemp -d)
-trap 'rm -rf "${tmp}"' EXIT
+exec 9>"${DEST}/.mirror-sync.lock"
+flock -n 9 || { echo "另一次镜像同步仍在执行，本次中止" >&2; exit 1; }
+
+tmp=$(mktemp -d "${DEST}/.index-gen-XXXXXXXX")
+chmod 755 "${tmp}"
+cleanup() {
+    [[ -z ${tmp:-} ]] || rm -rf -- "${tmp}"
+}
+trap cleanup EXIT
+
+activate_index_generation() {
+    local gen="$1" name seed="" switch relink=0 active old
+
+    case ${gen} in
+        .index-gen-?*) ;;
+        *) echo "索引代际目录名不合法：${gen:-空}" >&2; return 1 ;;
+    esac
+    if [[ -e ${DEST}/.index && ! -L ${DEST}/.index ]]; then
+        echo "${DEST}/.index 不是符号链接，无法切换索引" >&2
+        return 1
+    fi
+    for name in "${INDEX_FILES[@]}"; do
+        [[ -s ${DEST}/${gen}/${name} ]] || {
+            echo "${DEST}/${gen}/${name} 缺失或为空，索引保持原样" >&2
+            return 1
+        }
+        if [[ -L ${DEST}/${name} ]]; then
+            [[ $(readlink "${DEST}/${name}") == ".index/${name}" ]] || {
+                echo "${DEST}/${name} 没有指向 .index/${name}，无法切换索引" >&2
+                return 1
+            }
+        else
+            relink=1
+        fi
+    done
+
+    switch="${DEST}/.index-switch-${BASHPID}"
+    rm -f -- "${switch}"
+
+    # Preserve what readers see while regular files are converted to links.
+    if (( relink )); then
+        seed=$(mktemp -d "${DEST}/.index-seed-XXXXXXXX")
+        chmod 755 "${seed}"
+        for name in "${INDEX_FILES[@]}"; do
+            [[ -e ${DEST}/${name} ]] || continue
+            cp -pL "${DEST}/${name}" "${seed}/${name}"
+        done
+        ln -s "${seed##*/}" "${switch}"
+        mv -Tf "${switch}" "${DEST}/.index"
+        for name in "${INDEX_FILES[@]}"; do
+            ln -s ".index/${name}" "${switch}"
+            mv -Tf "${switch}" "${DEST}/${name}"
+        done
+    fi
+
+    ln -s "${gen}" "${switch}"
+    mv -Tf "${switch}" "${DEST}/.index"
+
+    active=$(readlink "${DEST}/.index")
+    for old in "${DEST}"/.index-gen-* "${DEST}"/.index-seed-*; do
+        [[ -d ${old} ]] || continue
+        [[ ${old##*/} == "${active}" ]] || rm -rf -- "${old}"
+    done
+}
 
 echo ">>> 取索引"
 curl -fsS --max-time 60 "${BASE}/Packages" -o "${tmp}/Packages"
@@ -91,8 +153,9 @@ if (( failed )); then
     exit 1
 fi
 
-mv -f "${tmp}/Packages" "${DEST}/Packages"
-mv -f "${tmp}/Packages.gz" "${DEST}/Packages.gz"
+gen=${tmp##*/}
+tmp=""
+activate_index_generation "${gen}"
 
 declare -A wanted=()
 for p in "${paths[@]}"; do wanted["${p}"]=1; done
