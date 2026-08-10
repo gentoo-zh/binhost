@@ -45,7 +45,7 @@ if [[ -z ${DOCKER:-} ]]; then
 fi
 JOBS="${JOBS:-24}"
 MAKEOPTS="${MAKEOPTS:--j$(nproc) -l$(nproc)}"
-LOCK="${LOCK:-/var/lib/binhost/stage/kernel-archive.lock}"
+LOCK="${LOCK:-/var/lib/binhost/stage/build.lock}"
 
 die() { echo "!!! $*" >&2; exit 1; }
 
@@ -78,7 +78,7 @@ done
 
 mkdir -p "$(dirname "${LOCK}")"
 exec 9>"${LOCK}"
-flock -n 9 || { echo "另一次内核归档正在执行（${LOCK}）"; exit 0; }
+flock -n 9 || { echo "另一次建置正在执行（${LOCK}）"; exit 0; }
 
 # Every version the overlay offers, so a bump needs no edit here and a new
 # series appears on its own. The series only decides which directory holds it.
