@@ -7,6 +7,8 @@ import subprocess
 import sys
 import time
 
+from active_source import active_text
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 if not (ROOT / "deploy").is_dir() or not (ROOT / "site").is_dir():
     print("  跳过：本机没有完整仓库")
@@ -47,6 +49,12 @@ def mentions():
             text = p.read_text(errors="ignore")
         except OSError:
             continue
+        if p.suffix in (".service", ".timer"):
+            text = active_text(text, "systemd")
+        elif p.suffix == ".sh":
+            text = active_text(text, "shell")
+        elif p.suffix in (".yml", ".yaml"):
+            text = active_text(text, "yaml")
         for m in FPR.findall(text):
             out.setdefault(m.replace(" ", "").replace("　", ""), []).append(rel)
     return out

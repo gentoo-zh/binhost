@@ -4,6 +4,8 @@ import pathlib
 import re
 import sys
 
+from active_source import active_text
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 INSTALL = ROOT / "deploy" / "install.sh"
 if not INSTALL.exists():
@@ -18,7 +20,7 @@ DIRS = {
 
 def installed():
     out = {d: set() for d in DIRS}
-    for line in INSTALL.read_text().splitlines():
+    for line in active_text(INSTALL.read_text(), "shell").splitlines():
         m = re.search(r"install\s+-m\d+\s+(\S+)\s+(/usr/local/\S+)", line)
         if not m:
             continue
@@ -31,8 +33,8 @@ def installed():
 
 def referenced():
     out = {d: set() for d in DIRS}
-    for sh in sorted((ROOT / "deploy").glob("*.sh")):
-        text = sh.read_text()
+    for source in sorted(p for p in (ROOT / "deploy").iterdir() if p.is_file()):
+        text = active_text(source.read_text(), "shell")
         for d, prefixes in DIRS.items():
             for p in prefixes:
                 for m in re.finditer(re.escape(p) + r"/([A-Za-z0-9._-]+)", text):
@@ -47,7 +49,7 @@ def staged_sources():
         script = ROOT / name
         if not script.exists():
             continue
-        text = script.read_text()
+        text = active_text(script.read_text(), "shell")
         # Join continuation lines so a multi-line rsync is one command.
         joined = re.sub(r"\\\n\s*", " ", text)
         for m in re.finditer(r"^\s*(?:sudo\s+)?rsync\s+([^\n]*)$", joined, re.M):
@@ -65,7 +67,7 @@ def builder_dirs():
     script = ROOT / "deploy" / "install-builder.sh"
     if not script.exists():
         return set(), set()
-    text = re.sub(r"\\\n\s*", " ", script.read_text())
+    text = re.sub(r"\\\n\s*", " ", active_text(script.read_text(), "shell"))
     sent = set()
     for m in re.finditer(r"^\s*rsync\s+([^\n]*)$", text, re.M):
         for token in m.group(1).split():

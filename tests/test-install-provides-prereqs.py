@@ -9,6 +9,8 @@ import pathlib
 import re
 import sys
 
+from active_source import active_text
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 INSTALL = ROOT / "deploy" / "install.sh"
 CRON = ROOT / "deploy" / "cron.d-binhost"
@@ -18,7 +20,7 @@ if not INSTALL.exists():
     print(f"  跳过：{INSTALL} 不存在，本机没有完整仓库")
     sys.exit(0)
 
-install = INSTALL.read_text()
+install = active_text(INSTALL.read_text(), "shell")
 failed = 0
 
 

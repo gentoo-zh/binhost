@@ -16,6 +16,8 @@ import pathlib
 import re
 import sys
 
+from active_source import active_text
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 INSTALL = ROOT / "deploy" / "install.sh"
 NGINX = ROOT / "nginx" / "mirror-common.inc"
@@ -37,7 +39,7 @@ def check(name, condition, detail=""):
 def public_dirs():
     """Top-level names install.sh creates under /srv/pub."""
     out = set()
-    for line in INSTALL.read_text().splitlines():
+    for line in active_text(INSTALL.read_text(), "shell").splitlines():
         if "install -dm" not in line:
             continue
         for path in re.findall(r"/srv/pub/([A-Za-z0-9._-]+)", line):
