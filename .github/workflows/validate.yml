@@ -257,6 +257,9 @@ jobs:
       - name: shellcheck
         run: shellcheck build/*.sh ops/*.sh deploy/*.sh tests/*.sh deploy-site.sh
 
+      - name: A brief upstream outage is retried once
+        run: bash tests/test-fetch-retry.sh
+
       - name: Alerting survives a broken alert.conf
         run: bash tests/test-alert.sh
 

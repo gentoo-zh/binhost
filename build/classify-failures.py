@@ -7,6 +7,13 @@ import sys
 RULES = [
     ("构建失败", True,
      re.compile(r"^\s*\*\s*ERROR:.*failed \(\w+ phase\)", re.M)),
+    # Checked before the general fetch rule: the connection was made and then
+    # went wrong, so the URL is right and the ebuild needs no change. Retried
+    # once already, so reaching here means it stayed unavailable.
+    ("取源失败（上游暂时不可用，重试后仍失败）", False,
+     re.compile(r"No data received|Read error|Connection (?:reset|timed out|refused)"
+                r"|Operation timed out|Temporary failure in name resolution"
+                r"|50[0234] (?:Internal|Bad|Service|Gateway)", re.I)),
     ("取源失败", True,
      re.compile(r"Unable to fetch|Couldn't download", re.I)),
     ("许可证不允许再分发", False, None),

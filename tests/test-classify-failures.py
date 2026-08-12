@@ -55,5 +55,34 @@ check("构建失败归到 ebuild 要修", "构建失败" in out and "ebuild 需�
 check("构建失败不进 excluded.txt 那段",
       "excluded.txt" not in out or "net-misc/x " not in out.split("excluded.txt")[-1], out)
 
+# The connection succeeded and then went wrong, so the URL and the ebuild are
+# both fine. Calling this an ebuild problem sends someone to edit a file that is
+# not broken. Reaching here means the retry did not recover it either.
+TRANSIENT = """--2026-08-12 22:16:26--  (try: 3)  https://github.com/o/p/archive/v1.0.tar.gz
+Connecting to github.com|20.205.243.166|:443... connected.
+HTTP request sent, awaiting response... No data received.
+Giving up.
+
+!!! Couldn't download 'p-1.0.tar.gz'. Aborting.
+"""
+
+GONE = """--2026-08-12 22:16:20--  https://github.com/o/p/archive/v1.0.tar.gz
+HTTP request sent, awaiting response... 404 Not Found
+2026-08-12 22:16:20 ERROR 404: Not Found.
+
+!!! Couldn't download 'p-1.0.tar.gz'. Aborting.
+"""
+
+out, _ = run({"failed.txt": "net-misc/t\n", "net-misc_t.log": TRANSIENT})
+check("上游暂时不可用不算 ebuild 的问题",
+      "上游暂时不可用" in out and "构建环境，不是 ebuild 的问题" in out, out)
+check("上游暂时不可用不写进 ebuild 要修那段",
+      "net-misc/t" not in out.split("ebuild 需要修")[-1] if "ebuild 需要修" in out else True,
+      out)
+
+out, _ = run({"failed.txt": "net-misc/g\n", "net-misc_g.log": GONE})
+check("确实不存在的来源仍然归给 ebuild",
+      "取源失败" in out and "ebuild 需要修" in out and "上游暂时不可用" not in out, out)
+
 print(f"\n  {failed} 项不通过" if failed else "\n  失败分类：全部通过")
 sys.exit(1 if failed else 0)

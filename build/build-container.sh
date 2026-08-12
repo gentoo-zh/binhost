@@ -132,6 +132,7 @@ mapfile -t atoms < <(grep -E '^[a-z0-9-]+/[A-Za-z0-9._+-]+$' /tmp/packages.txt)
 echo ">>> ${#atoms[@]} packages"
 
 EMERGE=(emerge --usepkg --changed-use --with-bdeps=y --quiet-build)
+FETCH_RETRY_WAIT="${FETCH_RETRY_WAIT:-180}"
 
 python3 /usr/local/bin/snapshot-vdb /var/db/pkg /var/log/binhost/installed.txt
 
@@ -171,6 +172,48 @@ else
         done_count=$(( done_count + 1 ))
     done
     rm -f /var/log/binhost/progress
+
+    # Portage gives up after three attempts within seconds. A few seconds of
+    # upstream flakiness then costs the whole channel a publication, because a
+    # package that fails to build leaves the index short and the version check
+    # refuses to publish. Retry the fetch failures once, after a pause.
+    retry=()
+    for atom in ${failed[@]+"${failed[@]}"}; do
+        log=/var/log/binhost/${atom//\//_}.log
+        grep -qE "Unable to fetch|Couldn't download" "${log}" 2>/dev/null &&
+            retry+=("${atom}")
+    done
+    if (( ${#retry[@]} )); then
+        echo "::: ${#retry[@]} 个取源失败，等待 ${FETCH_RETRY_WAIT} 秒后重试一次"
+        sleep "${FETCH_RETRY_WAIT}"
+        recovered=()
+        for atom in "${retry[@]}"; do
+            log=/var/log/binhost/${atom//\//_}.log
+            echo "::: 重试 ${atom}"
+            if "${EMERGE[@]}" "${atom}" > "${log}.retry" 2>&1; then
+                echo "    重试成功 ${atom}"
+                recovered+=("${atom}")
+                rm -f "${log}" "${log}.retry"
+            else
+                mv -f "${log}.retry" "${log}"
+            fi
+        done
+        if (( ${#recovered[@]} )); then
+            remaining=()
+            for atom in "${failed[@]}"; do
+                keep=yes
+                for got in "${recovered[@]}"; do
+                    [[ ${atom} == "${got}" ]] && { keep=no; break; }
+                done
+                [[ ${keep} == yes ]] && remaining+=("${atom}")
+            done
+            failed=(${remaining[@]+"${remaining[@]}"})
+            : > /var/log/binhost/failed.txt
+            for atom in ${failed[@]+"${failed[@]}"}; do
+                echo "${atom}" >> /var/log/binhost/failed.txt
+            done
+        fi
+    fi
 fi
 
 echo "::: 重建保留库的使用者"
