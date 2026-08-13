@@ -13,12 +13,12 @@
 | stable binpkg | 1.5 GB / 257 个 | 建置机 PKGDIR | 164 秒 |
 | unstable binpkg | 2.2 GB / 433 个 | 建置机 PKGDIR | 225 秒 |
 | 内核归档 | 274 MB / 2 个 | 建置机已发布副本（补齐后） | **未重新量测** |
-| distfiles | 27 GB / 1403 个 | 各上游 SRC_URI | 575 秒，13 个取不回来 |
+| distfiles | 27 GB / 1403 个 | 各上游 SRC_URI | 575 秒，在用的全部取回 |
 | GIG OS ISO | 7.8 GB / 2 个 | `Gig-OS/*` 仓库，建置机有副本 | 未量测 |
 
 两个频道的 binpkg 加起来 **6 分半**可以恢复到可服务并通过同代校验。这一段没有意外。
-distfiles 再 **9 分半**取回可镜像档案的 98.8%，剩下 13 个上游已经消失，只存在于
-我们的镜像上，名单见下。
+distfiles 再 **9 分半**。演练当下 13 个取源失败，逐个复查之后没有一个是在用
+又取不回来的，复查过程见下。
 
 ## 两个演练才发现的问题
 
@@ -83,33 +83,40 @@ PUBLISHED_DIR="$PUBLISHED_DIR" bash "$BUILD_ROOT/kernel-archive.sh"
 | 第二次同步（增量） | 4 秒，退出码 0 |
 
 孤儿检查在隔离状态下正常执行：overlay 引用 1279 个，其中可镜像 1101、
-不可镜像 178；平行根上 1088，缺 13。也就是**可镜像的档案恢复了 98.8%**。
+不可镜像 178；平行根上 1088，缺 13。那 13 个逐个复查之后，没有一个是在用又取
+不回来的。
 
-### 这 13 个恢复不回来
+### 那 13 个没取回来的，逐个复查过
 
-不是网络问题，其余 1088 个同一轮都取到了。它们只存在于我们的镜像上：
+失败日志里的 13 个不能当成上游消失。2026-08-13 22:55 UTC 逐个解析 `SRC_URI`
+再取一次，再对照当时的 overlay，结果是：
 
-```
-zhwiki-20251220-all-titles-in-ns0.gz                   app-dicts/fcitx-pinyin-zhwiki
-glibc-systemd-20210729.tar.gz                          app-emulation/liblol-glibc
-autopxd2-3.2.3.tar.gz.provenance                       dev-python/autopxd2
-conda-26.7.0.tar.gz                                    dev-python/conda
-janus-2.0.0.tar.gz.provenance                          dev-python/janus
-mw2fcitx-0.25.1.tar.gz.provenance                      dev-python/mw2fcitx
-Sarasa-TTC-1.0.39.zip                                  media-fonts/sarasa-gothic
-circuitjs1-bin-4.1.3.tar.gz                            sci-electronics/circuitjs1-bin
-gentoo-kernel-config-g19.tar.bz2                       sys-kernel/gentoo-cjk-kernel
-genpatches-6.12-37.base.tar.xz                         sys-kernel/xanmod-rt
-genpatches-6.12-37.experimental.tar.xz                 sys-kernel/xanmod-rt
-genpatches-6.12-37.extras.tar.xz                       sys-kernel/xanmod-rt
-kernel-x86_64-fedora.config.6.12.12-200.fc41           sys-kernel/xanmod-rt
-```
+| 情况 | 个数 |
+| --- | ---: |
+| 当时取源失败，复查 200 | 6 |
+| 所属版本已经离开 overlay | 7 |
+| **既被引用又取不回来** | **0** |
 
-`gentoo-kernel-config-g19.tar.bz2` 要特别记一笔：`gentoo-cjk-kernel` 建置时需要
-它，没有这个档案连内核都建不出来，而内核归档的恢复又依赖建置机能重新建置。
+复查 200 的六个：`glibc-systemd-20210729.tar.gz`、`autopxd2`／`janus`／
+`mw2fcitx` 三个 PyPI `.provenance`、`Sarasa-TTC-1.0.39.zip`、
+`circuitjs1-bin-4.1.3.tar.gz`。一轮连取 1088 个档案，被限速或瞬时失败是常态。
 
-镜像本身就是这些档案唯一的存放处，所以 `/srv/pub/distfiles` 全毁时它们不在
-「九分半恢复 98.8%」的范围内。要不要另外备份、备到哪里，是尚未决定的事。
+真的 404 的五个是 `zhwiki-20251220-all-titles-in-ns0.gz`、三个
+`genpatches-6.12-37.*` 和 `kernel-x86_64-fedora.config.6.12.12-200.fc41`。
+后四个随 `sys-kernel/xanmod-rt` treeclean 一起离开，zhwiki 那个包也已经 bump，
+所以现在的 overlay 里没有任何 ebuild 还引用它们。加上演练后 bump 掉的
+`conda-26.7.0.tar.gz` 与 `gentoo-kernel-config-g19.tar.bz2`，共七个。
+
+所以就这一轮而言，**没有任何在用的档案是恢复不回来的**。
+
+不为消失的档案另外备份，2026-08-13 决定。风险是结构性的而不是一份名单：上游
+会轮替（Wikipedia 的 dump、`~mpagano` 的旧 genpatches），在档案消失到 ebuild
+被 bump 或 treeclean 之间，我们的镜像是唯一的副本。窗口期内源站全毁就是丢了，
+引用它的版本要么改 `SRC_URI`，要么退役。
+
+**取源失败与上游消失在失败日志里长得一模一样。** 这一段前后改过两次结论——先
+把 13 个都当成消失，再改成五个——才落到 0。拿到失败清单先逐个复查，别直接下
+结论。
 
 ## 链路速率
 
