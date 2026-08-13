@@ -707,8 +707,8 @@ ok "移除之后重建索引" \
 ok "只认 build id 为 1 的产物" \
    "$(grep -c '${version}-1.gpkg.tar"$' "${ROOT}/build/kernel-archive.sh")" "1"
 # shellcheck disable=SC2016  # we grep for the literal ${VAR}, not its value
-ok "发布名固定是 -1" \
-   "$(grep -c 'name="\${PACKAGE#\*/}-\${version}-1\.\${ARCH}\.gpkg\.tar"' \
+ok "发布名固定是 -1，变体后缀跟在架构后面" \
+   "$(grep -c 'name="\${PACKAGE#\*/}-\${version}-1\.\${ARCH}\${suffix}\.gpkg\.tar"' \
       "${ROOT}/build/kernel-archive.sh")" "2"
 
 echo "== status.sh 对 node_exporter 抓取源的判定"
