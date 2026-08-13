@@ -38,6 +38,18 @@ MAX_BUILDS="${MAX_BUILDS:-10}"
 # The whole point of this kernel. IUSE has it on by default, but an upstream
 # default is not a guarantee, so it is requested here and checked afterwards.
 REQUIRED_USE_FLAG="${REQUIRED_USE_FLAG:-cjk}"
+# The 32x32 font is a separate build, not a separate package: cjk32 changes the
+# kernel image, so the two cannot share one file. EXTRA_VARIANTS lists what is
+# built beyond the plain kernel, one "suffix use-flags" per line: the suffix
+# goes into the published name, the flags are requested on top of
+# REQUIRED_USE_FLAG and read back out of the built package. The plain build
+# always runs and keeps the name the existing -bin ebuilds fetch. Setting
+# EXTRA_VARIANTS to nothing leaves only that build.
+EXTRA_VARIANTS="${EXTRA_VARIANTS-.cjk32 cjk32}"
+variants=("")
+while IFS= read -r line; do
+    [[ -n ${line} ]] && variants+=("${line}")
+done <<< "${EXTRA_VARIANTS}"
 BIN_PACKAGE="${BIN_PACKAGE:-${PACKAGE}-bin}"
 MANIFEST="${MANIFEST:-${OVERLAY}/${BIN_PACKAGE}/Manifest}"
 if [[ -z ${DOCKER:-} ]]; then
@@ -129,20 +141,23 @@ echo ">>> overlay 提供 ${#wanted[@]} 条内核线"
 todo=()
 for entry in "${wanted[@]}"; do
     read -r series version <<< "${entry}"
-    name="${PACKAGE#*/}-${version}-1.${ARCH}.gpkg.tar"
-    expected=$(python3 "${SCRIPT_DIR}/kernel-manifest.py" entry \
-        "${MANIFEST}" "${name}") || die "${name} 无法从 Manifest 核验"
-    remote_path="${REMOTE_ROOT}/${series}/${name}"
-    if remote_matches_manifest "${remote_path}" "${expected}"; then
-        retained="${PUBLISHED_DIR}/${series}/${name}"
-        if [[ ! -f ${retained} ]]; then
-            backfill_published_copy "${remote_path}" "${series}" "${name}"
+    for variant in "${variants[@]}"; do
+        read -r suffix extra <<< "${variant}"
+        name="${PACKAGE#*/}-${version}-1.${ARCH}${suffix}.gpkg.tar"
+        expected=$(python3 "${SCRIPT_DIR}/kernel-manifest.py" entry \
+            "${MANIFEST}" "${name}") || die "${name} 无法从 Manifest 核验"
+        remote_path="${REMOTE_ROOT}/${series}/${name}"
+        if remote_matches_manifest "${remote_path}" "${expected}"; then
+            retained="${PUBLISHED_DIR}/${series}/${name}"
+            if [[ ! -f ${retained} ]]; then
+                backfill_published_copy "${remote_path}" "${series}" "${name}"
+            fi
+            echo "    ${series}  ${version}${suffix}  已发布，跳过"
+            continue
         fi
-        echo "    ${series}  ${version}  已发布，跳过"
-        continue
-    fi
-    echo "    ${series}  ${version}  要建置"
-    todo+=("${series} ${version}")
+        echo "    ${series}  ${version}${suffix}  要建置"
+        todo+=("${series} ${version} ${suffix} ${extra}")
+    done
 done
 
 # Retention and retirement still run when nothing was built: a series can be
@@ -159,9 +174,10 @@ else
 fi
 
 for entry in ${todo[@]+"${todo[@]}"}; do
-    read -r series version <<< "${entry}"
+    read -r series version suffix extra <<< "${entry}"
     atom="=${PACKAGE}-${version}"
-    echo "::: ${series} ${atom}"
+    use_flags="${REQUIRED_USE_FLAG}${extra:+ ${extra}}"
+    echo "::: ${series} ${atom}${suffix}"
     # --buildpkg writes the binary package and installs it in the same run, so
     # anything built against this kernel afterwards sees the one published. -B
     # cannot do this: it refuses unless every dependency is already merged, and
@@ -186,7 +202,7 @@ for entry in ${todo[@]+"${todo[@]}"}; do
                 > /etc/portage/package.unmask/binhost-dist-kernel
             printf 'CONFIG_LOCALVERSION=\"%s\"\n' '${LOCALVERSION}' \
                 > /etc/kernel/config.d/90-binpkg-localversion.config
-            printf '%s %s\n' '${PACKAGE}' '${REQUIRED_USE_FLAG}' \
+            printf '%s %s\n' '${PACKAGE}' '${use_flags}' \
                 >> /etc/portage/package.use/binhost-deps
             rm -f /var/cache/binpkgs/${PACKAGE}/${PACKAGE#*/}-${version}-[0-9]*.gpkg.tar
             emaint binhost --fix >/dev/null
@@ -209,14 +225,25 @@ for entry in ${todo[@]+"${todo[@]}"}; do
         die "${version} 包内目录是 ${inner}，不是 -1，${PACKAGE#*/}-bin 无法安装"
 
     # A USE flag that was asked for is not proof it was applied, so the built
-    # package is read back before anything is published.
-    if ! tar -xOf "${built}" "$(basename "${built}" .gpkg.tar)/metadata.tar.zst" |
-            zstd -dc | tar -xO metadata/USE |
-            tr ' ' '\n' | grep -qx "${REQUIRED_USE_FLAG}"; then
-        die "${version} 建出来的包没有 ${REQUIRED_USE_FLAG}，不发布"
-    fi
+    # package is read back before anything is published. The two variants land
+    # on the same path in PKGDIR, so this is also what keeps one from being
+    # published under the other one's name.
+    built_use=$(tar -xOf "${built}" "$(basename "${built}" .gpkg.tar)/metadata.tar.zst" |
+        zstd -dc | tar -xO metadata/USE | tr ' ' '\n')
+    for flag in ${use_flags}; do
+        grep -qx "${flag}" <<< "${built_use}" ||
+            die "${version}${suffix} 建出来的包没有 ${flag}，不发布"
+    done
+    for variant in "${variants[@]}"; do
+        read -r other_suffix other_extra <<< "${variant}"
+        [[ ${other_suffix} == "${suffix}" || -z ${other_extra} ]] && continue
+        for flag in ${other_extra}; do
+            grep -qx "${flag}" <<< "${built_use}" &&
+                die "${version}${suffix} 建出来的包带了 ${flag}，不是这个变体"
+        done
+    done
 
-    name="${PACKAGE#*/}-${version}-1.${ARCH}.gpkg.tar"
+    name="${PACKAGE#*/}-${version}-1.${ARCH}${suffix}.gpkg.tar"
     python3 "${SCRIPT_DIR}/kernel-manifest.py" verify \
         "${MANIFEST}" "${name}" "${built}" ||
         die "${version} 产物与 Manifest 不一致，不发布"
@@ -233,7 +260,10 @@ done
 wanted_names=()
 for entry in "${wanted[@]}"; do
     read -r series version <<< "${entry}"
-    wanted_names+=("${series}/${PACKAGE#*/}-${version}-1.${ARCH}.gpkg.tar")
+    for variant in "${variants[@]}"; do
+        read -r suffix _ <<< "${variant}"
+        wanted_names+=("${series}/${PACKAGE#*/}-${version}-1.${ARCH}${suffix}.gpkg.tar")
+    done
 done
 
 mapfile -t remote_files < <(

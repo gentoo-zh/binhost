@@ -143,6 +143,7 @@ run_archive() {
         RSYNC_FAIL="${RSYNC_FAIL}" DOWNLOAD_SOURCE="${DOWNLOAD_SOURCE}" \
         TEST_REMOTE="${WORK}/remote" TEST_REMOTE_ROOT=/archive \
         TEST_REMOTE_NAME=test TEST_PKGDIR="${WORK}/pkgdir" \
+        EXTRA_VARIANTS="${EXTRA_VARIANTS-}" \
         TEST_BUILT="${TEST_BUILT}" bash "${ARCHIVE_SCRIPT}"
 }
 
@@ -274,3 +275,100 @@ grep -q '与 Manifest 不一致，不保留' "${WORK}/backfill.out"
 [[ ! -e ${WORK}/published/7.1/${NAME} ]]
 [[ -z $(find "${WORK}/published/7.1" -mindepth 1 -print -quit) ]]
 echo "  ✓ 补齐档案摘要不符时不写入并报错"
+
+# cjk32 is a different kernel image, so it is a second build under a second
+# name. The two land on the same path in PKGDIR, which is why what comes back
+# is read for the flags that were asked for and for the ones that were not.
+CJK32_NAME=gentoo-cjk-kernel-7.1.7-1.amd64.cjk32.gpkg.tar
+mkdir -p "${WORK}/meta32/metadata"
+printf 'cjk cjk32\n' > "${WORK}/meta32/metadata/USE"
+tar -C "${WORK}/meta32" -cf - metadata | zstd -q -o "${WORK}/meta32.tar.zst"
+mkdir -p "${WORK}/outer32/gentoo-cjk-kernel-7.1.7-1/image"
+for i in $(seq 1 3000); do
+    : > "${WORK}/outer32/gentoo-cjk-kernel-7.1.7-1/image/f${i}"
+done
+cp "${WORK}/meta32.tar.zst" \
+    "${WORK}/outer32/gentoo-cjk-kernel-7.1.7-1/metadata.tar.zst"
+tar --mtime=@3 -C "${WORK}/outer32" -cf "${WORK}/built-cjk32.gpkg.tar" \
+    gentoo-cjk-kernel-7.1.7-1
+
+# The container command carries the package.use line, so the stub answers with
+# the variant that was actually requested.
+cat > "${WORK}/bin/docker" <<'STUB'
+#!/bin/bash
+mkdir -p "${TEST_PKGDIR}/sys-kernel/gentoo-cjk-kernel"
+built="${TEST_BUILT}"
+if [[ ${TEST_ANSWER_MODE} == honest && $* == *"'cjk cjk32'"* ]]; then
+    built="${TEST_BUILT32}"
+elif [[ ${TEST_ANSWER_MODE} == always-plain ]]; then
+    built="${TEST_BUILT}"
+elif [[ ${TEST_ANSWER_MODE} == always-cjk32 ]]; then
+    built="${TEST_BUILT32}"
+fi
+cp "${built}" \
+    "${TEST_PKGDIR}/sys-kernel/gentoo-cjk-kernel/gentoo-cjk-kernel-7.1.7-1.gpkg.tar"
+STUB
+chmod +x "${WORK}/bin/docker"
+
+write_manifest_both() {
+    write_manifest "${NAME}" "${WORK}/built-first.gpkg.tar"
+    local size sha512 blake2b
+    size=$(stat -c %s "${WORK}/built-cjk32.gpkg.tar")
+    sha512=$(sha512sum "${WORK}/built-cjk32.gpkg.tar" | awk '{print $1}')
+    blake2b=$(b2sum "${WORK}/built-cjk32.gpkg.tar" | awk '{print $1}')
+    printf 'DIST %s %s BLAKE2B %s SHA512 %s\n' \
+        "${CJK32_NAME}" "${size}" "${blake2b}" "${sha512}" >> "${WORK}/Manifest"
+}
+
+run_variants() {
+    TEST_BUILT32="${WORK}/built-cjk32.gpkg.tar" \
+        TEST_ANSWER_MODE="$2" EXTRA_VARIANTS='.cjk32 cjk32' run_archive "$1"
+}
+
+reset_case
+write_manifest_both
+run_variants 2 honest > "${WORK}/out" 2>&1
+cmp "${WORK}/built-first.gpkg.tar" "${WORK}/remote/archive/7.1/${NAME}"
+cmp "${WORK}/built-cjk32.gpkg.tar" "${WORK}/remote/archive/7.1/${CJK32_NAME}"
+cmp "${WORK}/built-first.gpkg.tar" "${WORK}/published/7.1/${NAME}"
+cmp "${WORK}/built-cjk32.gpkg.tar" "${WORK}/published/7.1/${CJK32_NAME}"
+echo "  ✓ 两个变体各自发布到自己的名字下"
+
+reset_case
+write_manifest_both
+if run_variants 2 always-plain > "${WORK}/out" 2>&1; then
+    echo "  ✗ 变体建出来没有 cjk32 却仍然发布"; exit 1
+fi
+grep -q '没有 cjk32' "${WORK}/out"
+[[ ! -e ${WORK}/remote/archive/7.1/${CJK32_NAME} ]]
+[[ ! -e ${WORK}/published/7.1/${CJK32_NAME} ]]
+echo "  ✓ 变体建出来没有 cjk32 时不发布"
+
+reset_case
+write_manifest_both
+if run_variants 2 always-cjk32 > "${WORK}/out" 2>&1; then
+    echo "  ✗ 普通变体带了 cjk32 却仍然发布"; exit 1
+fi
+grep -q '带了 cjk32' "${WORK}/out"
+[[ ! -e ${WORK}/remote/archive/7.1/${NAME} ]]
+echo "  ✓ 普通变体带了 cjk32 时不发布"
+
+reset_case
+write_manifest_both
+mkdir -p "${WORK}/remote/archive/7.1"
+cp "${WORK}/built-first.gpkg.tar" "${WORK}/remote/archive/7.1/${NAME}"
+cp "${WORK}/built-cjk32.gpkg.tar" "${WORK}/remote/archive/7.1/${CJK32_NAME}"
+run_variants 0 honest > "${WORK}/out" 2>&1
+[[ -e ${WORK}/remote/archive/7.1/${NAME} ]]
+[[ -e ${WORK}/remote/archive/7.1/${CJK32_NAME} ]]
+echo "  ✓ 版本还在时两个变体都不会被当成过期档案移除"
+
+reset_case
+write_manifest_both
+mkdir -p "${WORK}/remote/archive/7.1"
+cp "${WORK}/built-first.gpkg.tar" "${WORK}/remote/archive/7.1/${NAME}"
+run_variants 2 honest > "${WORK}/out" 2>&1
+grep -q '7.1.7  已发布，跳过' "${WORK}/out"
+grep -q '7.1.7.cjk32  要建置' "${WORK}/out"
+cmp "${WORK}/built-cjk32.gpkg.tar" "${WORK}/remote/archive/7.1/${CJK32_NAME}"
+echo "  ✓ 普通变体已发布时仍然会建 cjk32"
