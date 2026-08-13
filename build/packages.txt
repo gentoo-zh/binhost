@@ -10,6 +10,7 @@ app-dicts/fcitx-pinyin-custom-pinyin-dictionary
 app-dicts/fcitx-pinyin-sougou-dict
 app-dicts/fcitx-pinyin-zhwiki
 app-editors/edit
+app-editors/xed
 app-emulation/looking-glass
 app-emulation/winetricks-zh
 app-i18n/cskk
