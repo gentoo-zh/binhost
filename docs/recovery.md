@@ -2,9 +2,9 @@
 
 回答一个问题：源站的公开目录全毁，多久能恢复到可服务，以及哪些内容恢复不了。
 
-本文的数字来自 2026-08-10 在镜像机平行根 `/srv/recovery-rehearsal-<时间戳>` 上的
-一次实测演练，全程不碰 `/srv/pub`。**没有演练过的恢复程序不算数**，换一轮之后重新执行
-本文的命令即可再量一次。
+本文的数字来自在镜像机平行根 `/srv/recovery-rehearsal-<时间戳>` 上的实测演练，
+全程不碰 `/srv/pub`：binpkg 与内核归档是 2026-08-10 那轮，distfiles 是 2026-08-13
+那轮。**没有演练过的恢复程序不算数**，换一轮之后重新执行本文的命令即可再量一次。
 
 ## 结论摘要
 
@@ -13,10 +13,12 @@
 | stable binpkg | 1.5 GB / 257 个 | 建置机 PKGDIR | 164 秒 |
 | unstable binpkg | 2.2 GB / 433 个 | 建置机 PKGDIR | 225 秒 |
 | 内核归档 | 274 MB / 2 个 | 建置机已发布副本（补齐后） | **未重新量测** |
-| distfiles | 24 GB / 1330 个 | 各上游 SRC_URI | **未量测，见下** |
+| distfiles | 27 GB / 1403 个 | 各上游 SRC_URI | 575 秒，13 个取不回来 |
 | GIG OS ISO | 7.8 GB / 2 个 | `Gig-OS/*` 仓库，建置机有副本 | 未量测 |
 
 两个频道的 binpkg 加起来 **6 分半**可以恢复到可服务并通过同代校验。这一段没有意外。
+distfiles 再 **9 分半**取回可镜像档案的 98.8%，剩下 13 个上游已经消失，只存在于
+我们的镜像上，名单见下。
 
 ## 两个演练才发现的问题
 
@@ -64,7 +66,50 @@ PUBLISHED_DIR="$PUBLISHED_DIR" bash "$BUILD_ROOT/kernel-archive.sh"
 
 正确的恢复路径是 `emirrordist --mirror --repo gentoo-zh`，它按 SRC_URI 逐个取。
 同步日志、孤儿状态、回收目录与清理账本现在都能指向平行根，不会改写正式同步状态。
-**这一段仍未实测，耗时与可恢复数量都待补。**
+2026-08-13 在平行根上实测过，数字见下一节。
+
+## distfiles 实测
+
+2026-08-13 08:57 UTC 在镜像机的平行根
+`/srv/recovery-rehearsal-20260813-085718` 上执行，握着 `binhost-daily` 的锁，
+所以每小时那轮同步让开，不与它争上游带宽。当时公开目录是 27 GB、1403 个档案。
+
+| 项目 | 结果 |
+| --- | ---: |
+| 首次同步 | 575 秒（9 分半），退出码 0 |
+| 取回 | 1088 个档案，19 GB |
+| 平均速率 | 34 MB/s |
+| 取不回来 | 13 个 |
+| 第二次同步（增量） | 4 秒，退出码 0 |
+
+孤儿检查在隔离状态下正常执行：overlay 引用 1279 个，其中可镜像 1101、
+不可镜像 178；平行根上 1088，缺 13。也就是**可镜像的档案恢复了 98.8%**。
+
+### 这 13 个恢复不回来
+
+不是网络问题，其余 1088 个同一轮都取到了。它们只存在于我们的镜像上：
+
+```
+zhwiki-20251220-all-titles-in-ns0.gz                   app-dicts/fcitx-pinyin-zhwiki
+glibc-systemd-20210729.tar.gz                          app-emulation/liblol-glibc
+autopxd2-3.2.3.tar.gz.provenance                       dev-python/autopxd2
+conda-26.7.0.tar.gz                                    dev-python/conda
+janus-2.0.0.tar.gz.provenance                          dev-python/janus
+mw2fcitx-0.25.1.tar.gz.provenance                      dev-python/mw2fcitx
+Sarasa-TTC-1.0.39.zip                                  media-fonts/sarasa-gothic
+circuitjs1-bin-4.1.3.tar.gz                            sci-electronics/circuitjs1-bin
+gentoo-kernel-config-g19.tar.bz2                       sys-kernel/gentoo-cjk-kernel
+genpatches-6.12-37.base.tar.xz                         sys-kernel/xanmod-rt
+genpatches-6.12-37.experimental.tar.xz                 sys-kernel/xanmod-rt
+genpatches-6.12-37.extras.tar.xz                       sys-kernel/xanmod-rt
+kernel-x86_64-fedora.config.6.12.12-200.fc41           sys-kernel/xanmod-rt
+```
+
+`gentoo-kernel-config-g19.tar.bz2` 要特别记一笔：`gentoo-cjk-kernel` 建置时需要
+它，没有这个档案连内核都建不出来，而内核归档的恢复又依赖建置机能重新建置。
+
+镜像本身就是这些档案唯一的存放处，所以 `/srv/pub/distfiles` 全毁时它们不在
+「九分半恢复 98.8%」的范围内。要不要另外备份、备到哪里，是尚未决定的事。
 
 ## 链路速率
 
