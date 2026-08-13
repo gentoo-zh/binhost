@@ -84,7 +84,7 @@ def fake_docker(directory, payload=None, sleep=False, exit_code=0):
     return script
 
 
-def args(directory, docker, timeout=10):
+def args(directory, docker, timeout=10, seconds_per_package=0):
     directory = pathlib.Path(directory)
     stage = directory / "stage"
     stage.mkdir()
@@ -109,6 +109,7 @@ def args(directory, docker, timeout=10):
         tree=str(tree), overlay=str(overlay), gentoo_binpkgs=str(gentoo_binpkgs),
         gentoo_index=str(gentoo_index), package_use=str(package_use),
         docker=str(docker), strict_limit=24, rotating_limit=8, timeout=timeout,
+        seconds_per_package=seconds_per_package,
     )
 
 
@@ -384,6 +385,33 @@ with tempfile.TemporaryDirectory() as directory:
     check("逾时产生告警", pathlib.Path(probe.alert).is_file())
     check("逾时仍不建立发布阻挡文件",
           not pathlib.Path(probe.stage, "publish-blocked.txt").exists())
+
+print("== 逾时预算跟着抽样数走")
+with tempfile.TemporaryDirectory() as directory:
+    # One container installs the whole sample, so a fixed budget covers 9 and 32
+    # packages alike. The unstable channel lost every result twice this way.
+    docker = fake_docker(directory)
+    probe = args(directory, docker, timeout=600, seconds_per_package=120)
+    smoke.run(probe)
+    report = json.loads(pathlib.Path(probe.report).read_text())
+    check("抽样数决定预算", report["timeout_seconds"],
+          120 * len(report["selected"]))
+    check("预算记进报告，下次不用再猜", report["timeout_seconds"] > 600)
+
+with tempfile.TemporaryDirectory() as directory:
+    docker = fake_docker(directory)
+    probe = args(directory, docker, timeout=600, seconds_per_package=1)
+    smoke.run(probe)
+    report = json.loads(pathlib.Path(probe.report).read_text())
+    check("抽样很少时不低于下限", report["timeout_seconds"], 600)
+
+with tempfile.TemporaryDirectory() as directory:
+    docker = fake_docker(directory, sleep=True)
+    probe = args(directory, docker, timeout=0.05, seconds_per_package=0)
+    smoke.run(probe)
+    report = json.loads(pathlib.Path(probe.report).read_text())
+    check("逾时讯息带上抽样数",
+          "个包" in report["harness_failed"][0]["reason"])
 
 print()
 print("  gpkg 安装冒烟测试：全部通过" if not failed else f"  {failed} 项不通过")

@@ -17,6 +17,11 @@ SCHEMA = 1
 STRICT_LIMIT = 24
 ROTATING_LIMIT = 8
 DEFAULT_TIMEOUT = 600
+# One container installs the whole sample, so a fixed wall clock has to cover
+# anything from 9 to STRICT_LIMIT + ROTATING_LIMIT packages. The unstable
+# channel crossed 600 seconds on two consecutive runs and lost every result:
+# a timeout leaves no partial report. The budget therefore follows the sample.
+SECONDS_PER_PACKAGE = 120
 
 
 def parse_index(path):
@@ -299,6 +304,7 @@ def empty_result(channel, revisions, selected):
         "gpkg_install_failed": [],
         "harness_failed": [],
         "duration_seconds": 0,
+        "timeout_seconds": 0,
     }
 
 
@@ -354,10 +360,13 @@ def run(args):
             filter_available_index(args.gentoo_index, args.gentoo_binpkgs,
                                    gentoo_index)
             command = docker_command(args, selection, container, gentoo_index)
+            timeout = max(args.timeout,
+                          args.seconds_per_package * len(selected))
+            result["timeout_seconds"] = timeout
             try:
                 process = subprocess.run(command, text=True, stdout=subprocess.PIPE,
                                          stderr=subprocess.STDOUT, check=False,
-                                         timeout=args.timeout)
+                                         timeout=timeout)
                 if process.returncode:
                     result["harness_failed"].append({
                         "reason": f"container exited with {process.returncode}",
@@ -373,7 +382,8 @@ def run(args):
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                check=False)
                 result["harness_failed"].append({
-                    "reason": f"container exceeded {args.timeout} seconds",
+                    "reason": f"container exceeded {timeout} seconds"
+                              f"（{len(selected)} 个包）",
                     "output": tail(error.stdout or ""),
                 })
             except (json.JSONDecodeError, OSError, KeyError) as error:
@@ -404,6 +414,8 @@ def main():
     parser.add_argument("--strict-limit", type=int, default=STRICT_LIMIT)
     parser.add_argument("--rotating-limit", type=int, default=ROTATING_LIMIT)
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT)
+    parser.add_argument("--seconds-per-package", type=float,
+                        default=SECONDS_PER_PACKAGE)
     args = parser.parse_args()
     if args.inside:
         return inside(args.inside)
