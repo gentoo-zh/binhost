@@ -49,15 +49,21 @@ echo "overlay $(git -C "${OVERLAY}" rev-parse --short HEAD)"
 export BINHOST_LOCKED=1
 
 rm -f "${LOGDIR}/whole.log" "${LOGDIR}/progress"
-OUT="${PROGRESS_OUT}" ./build/build-progress.sh watch "${LOGDIR}/whole.log" &
+# Own process group, so the kill below also reaches an ssh the watcher has in
+# flight. A plain kill only fells the watcher; its child is reparented and can
+# still put a running snapshot on top of the final state.
+OUT="${PROGRESS_OUT}" setsid ./build/build-progress.sh watch "${LOGDIR}/whole.log" &
 progress=$!
 on_exit() {
     local rc=$1 state
     state='done'
     (( rc )) && state='failed'
-    kill "${progress}" 2>/dev/null || true
+    kill -- -"${progress}" 2>/dev/null || kill "${progress}" 2>/dev/null || true
     wait "${progress}" 2>/dev/null || true
-    OUT="${PROGRESS_OUT}" ./build/build-progress.sh finish "${state}"
+    # The run is over either way. A progress push that fails must not turn a
+    # finished build into a failed service; the site going stale is what
+    # ops/status.sh watches for.
+    OUT="${PROGRESS_OUT}" ./build/build-progress.sh finish "${state}" || true
 }
 # Preserve a nonzero status for the EXIT trap when a signal stops the run.
 trap 'exit 143' TERM INT HUP
