@@ -10,9 +10,16 @@ BUILD_STARTED="${BUILD_STARTED:-$(date +%s)}"
 [[ ${BUILD_STARTED} =~ ^[0-9]+$ ]] || BUILD_STARTED="$(date +%s)"
 
 push() {
+    # A fixed temp name lets two pushes collide: the watcher can still have an
+    # ssh in flight when finish starts its own, both truncate the same file, and
+    # whichever renames second gets ENOENT while the file that lands holds the
+    # two writes interleaved. mktemp gives each push its own name.
     # shellcheck disable=SC2029
-    if ! ssh "${REMOTE}" "cat > ${SITE_ROOT}/.${OUT}.new &&
-                          mv -f ${SITE_ROOT}/.${OUT}.new ${SITE_ROOT}/${OUT}"; then
+    if ! ssh "${REMOTE}" "t=\$(mktemp ${SITE_ROOT}/.${OUT}.XXXXXX) || exit 1
+                          trap 'rm -f \"\$t\"' EXIT
+                          cat > \"\$t\" &&
+                          chmod 644 \"\$t\" &&
+                          mv -f \"\$t\" ${SITE_ROOT}/${OUT}"; then
         echo "!! 构建进度未能发送到 ${REMOTE}" >&2
         return 1
     fi
