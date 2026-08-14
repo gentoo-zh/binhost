@@ -2,5 +2,6 @@
 */5 * * * * zakk /usr/local/bin/binhost-site-sync
 20 0 * * * root BINHOST_ALERT=1 /usr/local/bin/binhost-status
 17 * * * * root /usr/local/bin/binhost-daily >> /var/log/emirrordist/run.log 2>&1
+43 4 * * * root /usr/local/bin/binhost-livecd-sync >> /var/log/emirrordist/livecd-sync.log 2>&1
 
 17 3,15 * * * root /usr/bin/certbot renew --quiet --deploy-hook 'nginx -t && rc-service nginx reload'

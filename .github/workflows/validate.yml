@@ -129,6 +129,9 @@ jobs:
       - name: Kernel archive payloads match the Manifest
         run: python3 tests/test-kernel-manifest.py
 
+      - name: LiveCD synchronization stays atomic and bounded
+        run: bash tests/test-livecd-sync.sh
+
       - name: The signing fingerprint agrees everywhere
         run: python3 tests/test-fingerprint-consistent.py
 

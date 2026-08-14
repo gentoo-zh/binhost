@@ -150,6 +150,7 @@ sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/mirrors /var/lib/bi
 sudo install -m755 daily.sh            /usr/local/bin/binhost-daily
 sudo install -m755 distfiles-sync.sh   /usr/local/bin/binhost-distfiles-sync
 sudo install -m755 distfiles-index.sh  /usr/local/bin/binhost-distfiles-index
+sudo install -m755 livecd-sync.sh      /usr/local/bin/binhost-livecd-sync
 sudo install -m755 server-status.sh    /usr/local/bin/binhost-server-status
 sudo install -m755 site-sync.sh        /usr/local/bin/binhost-site-sync
 sudo install -m755 publish-site.sh     /usr/local/lib/binhost/publish-site.sh
@@ -169,7 +170,7 @@ echo '--- rsync'
 sudo install -m644 rsyncd.conf /etc/rsyncd.conf
 
 sudo install -dm755 /srv/pub
-sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/pub/binpkgs /srv/pub/distfiles /srv/pub/gigos /srv/pub/gentoo-cjk-kernel
+sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/pub/binpkgs /srv/pub/distfiles /srv/pub/gigos /srv/pub/gentoo-cjk-kernel /srv/pub/gentoo-cjk-livecd
 # mirror-common.inc serves the ACME challenge from here, and certbot renews
 # through that path.
 sudo install -dm755 /var/www/acme/.well-known/acme-challenge
