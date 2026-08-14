@@ -3,7 +3,9 @@
 set -euo pipefail
 
 DEST="${DEST:-/srv/pub/gentoo-cjk-livecd}"
-TEMP_DIR="${TEMP_DIR:-${DEST}.tmp}"
+# Same filesystem as DEST so the rename is atomic, and hidden: DEST sits in
+# the served root, where a plain sibling shows up in the public listing.
+TEMP_DIR="${TEMP_DIR:-$(dirname "${DEST}")/.$(basename "${DEST}").tmp}"
 API_URL="${API_URL:-https://api.github.com/repos/gentoo-zh/gentoo-cjk-livecd/releases?per_page=2}"
 DOWNLOAD_BASE="${DOWNLOAD_BASE:-}"
 MAX_RETIRE="${MAX_RETIRE:-2}"
