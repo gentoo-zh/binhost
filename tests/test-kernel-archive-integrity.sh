@@ -88,6 +88,7 @@ EOF
 
 cat > "${WORK}/bin/docker" <<'EOF'
 #!/bin/bash
+printf '%s\n' docker >> "${DOCKER_CALLS}"
 mkdir -p "${TEST_PKGDIR}/sys-kernel/gentoo-cjk-kernel"
 cp "${TEST_BUILT}" \
     "${TEST_PKGDIR}/sys-kernel/gentoo-cjk-kernel/gentoo-cjk-kernel-7.1.7-1.gpkg.tar"
@@ -121,7 +122,7 @@ write_manifest() {
 }
 
 reset_case() {
-    rm -rf "${WORK}/pkgdir" "${WORK}/published" "${WORK}/remote"
+    rm -rf "${WORK}/pkgdir" "${WORK}/published" "${WORK}/remote" "${WORK}/docker.calls"
     mkdir -p "${WORK}/pkgdir/sys-kernel/gentoo-cjk-kernel" \
         "${WORK}/published" "${WORK}/remote/archive"
     printf '7.1 7.1.7\n' > "${WORK}/series"
@@ -143,6 +144,7 @@ run_archive() {
         RSYNC_FAIL="${RSYNC_FAIL}" DOWNLOAD_SOURCE="${DOWNLOAD_SOURCE}" \
         TEST_REMOTE="${WORK}/remote" TEST_REMOTE_ROOT=/archive \
         TEST_REMOTE_NAME=test TEST_PKGDIR="${WORK}/pkgdir" \
+        DOCKER_CALLS="${WORK}/docker.calls" \
         EXTRA_VARIANTS="${EXTRA_VARIANTS-}" \
         TEST_BUILT="${TEST_BUILT}" bash "${ARCHIVE_SCRIPT}"
 }
@@ -158,9 +160,65 @@ echo "  ✓ 已发布的远端文件会核验并补齐本地副本"
 reset_case
 mkdir -p "${WORK}/remote/archive/7.1"
 cp "${WORK}/corrupt.gpkg.tar" "${WORK}/remote/archive/7.1/${NAME}"
-corrupt=$(run_archive 0)
-grep -q '要建置' <<< "${corrupt}"
-echo "  ✓ 同名但损坏的远端文件不按已发布处理"
+mkdir -p "${WORK}/published/7.1"
+cp "${WORK}/corrupt.gpkg.tar" "${WORK}/published/7.1/${NAME}"
+if run_archive 0 >"${WORK}/corrupt.out" 2>&1; then
+    echo "  ✗ 远端与保留副本都损坏时应当失败"
+    exit 1
+fi
+grep -q "${NAME}" "${WORK}/corrupt.out"
+[[ ! -s ${WORK}/docker.calls ]]
+echo "  ✓ 远端与保留副本都损坏时不重建也不发布"
+
+reset_case
+: > "${WORK}/Manifest"
+pending=$(run_archive 1)
+grep -q "已发布 7.1/${NAME}" <<< "${pending}"
+[[ $(grep -c "^DIST ${NAME} " "${WORK}/published/pending-manifest.txt") == 1 ]]
+python3 "${ROOT}/build/kernel-manifest.py" entry \
+    "${WORK}/published/pending-manifest.txt" "${NAME}" > "${WORK}/pending.entry"
+read -r pending_size pending_algorithm pending_digest < "${WORK}/pending.entry"
+[[ ${pending_size} == "$(stat -c %s "${TEST_BUILT}")" ]]
+[[ ${pending_algorithm} == SHA512 ]]
+[[ ${pending_digest} == "$(sha512sum "${TEST_BUILT}" | awk '{print $1}')" ]]
+echo "  ✓ Manifest 没有普通变体时建置发布并记录待加入条目"
+
+run_archive 1 >/dev/null
+[[ $(grep -c "^DIST ${NAME} " "${WORK}/published/pending-manifest.txt") == 1 ]]
+[[ $(wc -l < "${WORK}/docker.calls") == 1 ]]
+echo "  ✓ 待加入 Manifest 条目会去重"
+
+printf X | dd of="${WORK}/remote/archive/7.1/${NAME}" bs=1 seek=512 conv=notrunc status=none
+recovered_pending=$(run_archive 1)
+grep -q '从保留副本恢复' <<< "${recovered_pending}"
+[[ $(wc -l < "${WORK}/docker.calls") == 1 ]]
+cmp "${WORK}/built-first.gpkg.tar" "${WORK}/remote/archive/7.1/${NAME}"
+echo "  ✓ pending 条目对应的远端损坏时从保留副本恢复且不重建"
+
+reset_case
+: > "${WORK}/Manifest"
+run_archive 1 >/dev/null
+printf X | dd of="${WORK}/remote/archive/7.1/${NAME}" bs=1 seek=512 conv=notrunc status=none
+printf X | dd of="${WORK}/published/7.1/${NAME}" bs=1 seek=512 conv=notrunc status=none
+TEST_BUILT="${WORK}/built-second.gpkg.tar"
+run_archive 1 >/dev/null
+python3 "${ROOT}/build/kernel-manifest.py" entry \
+    "${WORK}/published/pending-manifest.txt" "${NAME}" > "${WORK}/pending.entry"
+read -r _ _ updated_digest < "${WORK}/pending.entry"
+[[ ${updated_digest} == "$(sha512sum "${TEST_BUILT}" | awk '{print $1}')" ]]
+[[ ${updated_digest} != "$(sha512sum "${WORK}/built-first.gpkg.tar" | awk '{print $1}')" ]]
+[[ $(wc -l < "${WORK}/docker.calls") == 2 ]]
+echo "  ✓ pending 条目两侧损坏时重建并更新摘要"
+
+reset_case
+mkdir -p "${WORK}/remote/archive/7.1" "${WORK}/published/7.1"
+cp "${WORK}/corrupt.gpkg.tar" "${WORK}/remote/archive/7.1/${NAME}"
+cp "${TEST_BUILT}" "${WORK}/published/7.1/${NAME}"
+recovered=$(run_archive 0)
+grep -q "从保留副本恢复" <<< "${recovered}"
+cmp "${TEST_BUILT}" "${WORK}/remote/archive/7.1/${NAME}"
+[[ ! -s ${WORK}/docker.calls ]]
+echo "  ✓ 远端损坏时会从正确的保留副本恢复且不起容器"
 
 reset_case
 printf 'DIST %s %s SHA512 %0128d\n' \
@@ -174,6 +232,7 @@ fi
 echo "  ✓ 新产物与 Manifest 不符时不上传也不保留"
 
 reset_case
+: > "${WORK}/Manifest"
 published=$(run_archive 1)
 grep -q "已发布 7.1/${NAME}" <<< "${published}"
 cmp "${TEST_BUILT}" "${WORK}/remote/archive/7.1/${NAME}"
@@ -186,7 +245,7 @@ echo "  ✓ 发布成功后按发布名保留完全相同的位元组"
 # the right file name and the wrong inner directory has to be refused.
 reset_case
 TEST_BUILT="${WORK}/wrong-inner.gpkg.tar"
-write_manifest "${NAME}" "${TEST_BUILT}"
+: > "${WORK}/Manifest"
 if run_archive 1 >"${WORK}/inner.out" 2>&1; then
     echo "  ✗ 包内目录不是 -1 时应当失败"
     exit 1
@@ -197,6 +256,7 @@ grep -q '不是 -1' "${WORK}/inner.out"
 echo "  ✓ 包内目录不是 -1 时不发布也不保留"
 
 reset_case
+: > "${WORK}/Manifest"
 RSYNC_FAIL=upload
 if run_archive 1 >/dev/null 2>&1; then
     echo "  ✗ rsync 失败时发布应当失败"
@@ -206,10 +266,11 @@ fi
 echo "  ✓ rsync 失败时不写入保留副本"
 
 reset_case
+: > "${WORK}/Manifest"
 run_archive 1 >/dev/null
 rm -f "${WORK}/remote/archive/7.1/${NAME}"
 TEST_BUILT="${WORK}/built-second.gpkg.tar"
-write_manifest "${NAME}" "${TEST_BUILT}"
+rm -f "${WORK}/published/pending-manifest.txt"
 run_archive 1 >/dev/null
 cmp "${TEST_BUILT}" "${WORK}/published/7.1/${NAME}"
 echo "  ✓ 再次发布同一个发布名会覆盖旧副本"
@@ -220,8 +281,8 @@ printf '7.1 7.1.8\n' > "${WORK}/series"
 write_manifest "${CURRENT_NAME}" "${TEST_BUILT}"
 mkdir -p "${WORK}/remote/archive/7.1" "${WORK}/published/7.1"
 cp "${TEST_BUILT}" "${WORK}/remote/archive/7.1/${CURRENT_NAME}"
-cp "${WORK}/corrupt.gpkg.tar" "${WORK}/remote/archive/7.1/${NAME}"
-cp "${WORK}/corrupt.gpkg.tar" "${WORK}/published/7.1/${NAME}"
+printf old > "${WORK}/remote/archive/7.1/${NAME}"
+printf old > "${WORK}/published/7.1/${NAME}"
 run_archive 0 >/dev/null
 [[ ! -e ${WORK}/remote/archive/7.1/${NAME} ]]
 [[ ! -e ${WORK}/published/7.1/${NAME} ]]
@@ -233,6 +294,7 @@ echo "  ✓ overlay 移除版本后会同时清理远端档案与本地副本"
 # back a line the overlay dropped.
 reset_case
 printf '7.1 7.1.7\n' > "${WORK}/series"
+: > "${WORK}/Manifest"
 mkdir -p "${WORK}/remote/archive/6.18" "${WORK}/published/6.18"
 cp "${TEST_BUILT}" "${WORK}/remote/archive/6.18/gentoo-cjk-kernel-6.18.43-1.amd64.gpkg.tar"
 cp "${TEST_BUILT}" "${WORK}/published/6.18/gentoo-cjk-kernel-6.18.43-1.amd64.gpkg.tar"
@@ -327,48 +389,19 @@ run_variants() {
 
 reset_case
 write_manifest_both
-run_variants 2 honest > "${WORK}/out" 2>&1
-cmp "${WORK}/built-first.gpkg.tar" "${WORK}/remote/archive/7.1/${NAME}"
-cmp "${WORK}/built-cjk32.gpkg.tar" "${WORK}/remote/archive/7.1/${CJK32_NAME}"
-cmp "${WORK}/built-first.gpkg.tar" "${WORK}/published/7.1/${NAME}"
-cmp "${WORK}/built-cjk32.gpkg.tar" "${WORK}/published/7.1/${CJK32_NAME}"
-echo "  ✓ 两个变体各自发布到自己的名字下"
-
-reset_case
-write_manifest_both
-if run_variants 2 always-plain > "${WORK}/out" 2>&1; then
-    echo "  ✗ 变体建出来没有 cjk32 却仍然发布"; exit 1
-fi
-grep -q '没有 cjk32' "${WORK}/out"
-[[ ! -e ${WORK}/remote/archive/7.1/${CJK32_NAME} ]]
-[[ ! -e ${WORK}/published/7.1/${CJK32_NAME} ]]
-echo "  ✓ 变体建出来没有 cjk32 时不发布"
-
-reset_case
-write_manifest_both
-if run_variants 2 always-cjk32 > "${WORK}/out" 2>&1; then
-    echo "  ✗ 普通变体带了 cjk32 却仍然发布"; exit 1
-fi
-grep -q '带了 cjk32' "${WORK}/out"
-[[ ! -e ${WORK}/remote/archive/7.1/${NAME} ]]
-echo "  ✓ 普通变体带了 cjk32 时不发布"
-
-reset_case
-write_manifest_both
-mkdir -p "${WORK}/remote/archive/7.1"
+mkdir -p "${WORK}/remote/archive/7.1" "${WORK}/published/7.1"
 cp "${WORK}/built-first.gpkg.tar" "${WORK}/remote/archive/7.1/${NAME}"
 cp "${WORK}/built-cjk32.gpkg.tar" "${WORK}/remote/archive/7.1/${CJK32_NAME}"
+cp "${WORK}/built-first.gpkg.tar" "${WORK}/published/7.1/${NAME}"
+cp "${WORK}/built-cjk32.gpkg.tar" "${WORK}/published/7.1/${CJK32_NAME}"
 run_variants 0 honest > "${WORK}/out" 2>&1
-[[ -e ${WORK}/remote/archive/7.1/${NAME} ]]
-[[ -e ${WORK}/remote/archive/7.1/${CJK32_NAME} ]]
-echo "  ✓ 版本还在时两个变体都不会被当成过期档案移除"
+grep -q '已发布，跳过' "${WORK}/out"
+echo "  ✓ Manifest 与远端一致时两个变体都跳过建置"
 
 reset_case
-write_manifest_both
-mkdir -p "${WORK}/remote/archive/7.1"
-cp "${WORK}/built-first.gpkg.tar" "${WORK}/remote/archive/7.1/${NAME}"
-run_variants 2 honest > "${WORK}/out" 2>&1
-grep -q '7.1.7  已发布，跳过' "${WORK}/out"
-grep -q '7.1.7.cjk32  要建置' "${WORK}/out"
-cmp "${WORK}/built-cjk32.gpkg.tar" "${WORK}/remote/archive/7.1/${CJK32_NAME}"
-echo "  ✓ 普通变体已发布时仍然会建 cjk32"
+: > "${WORK}/Manifest"
+EXTRA_VARIANTS='.cjk32 cjk32' run_archive 1 > "${WORK}/out" 2>&1
+grep -q '没有 Manifest 条目，跳过额外变体' "${WORK}/out"
+[[ -e ${WORK}/remote/archive/7.1/${NAME} ]]
+[[ ! -e ${WORK}/remote/archive/7.1/${CJK32_NAME} ]]
+echo "  ✓ Manifest 没有条目时额外变体维持跳过"

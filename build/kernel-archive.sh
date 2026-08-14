@@ -117,8 +117,31 @@ EOF
        $(sed -n '2p' <<< "${actual}" | awk '{print $1}') == "${digest}" ]]
 }
 
+manifest_has_entry() {
+    local manifest="$1" name="$2"
+    [[ -f ${manifest} ]] || return 1
+    awk -v name="${name}" '$1 == "DIST" && $2 == name { found=1 } END { exit !found }' \
+        "${manifest}"
+}
+
+record_pending_manifest() {
+    local source="$1" name="$2" pending size blake2b sha512
+    pending="${PUBLISHED_DIR}/pending-manifest.txt"
+    size=$(stat -c '%s' "${source}")
+    blake2b=$(b2sum "${source}" | awk '{print $1}')
+    sha512=$(sha512sum "${source}" | awk '{print $1}')
+    install -dm755 "${PUBLISHED_DIR}"
+    if [[ -f ${pending} ]]; then
+        awk -v name="${name}" '$1 != "DIST" || $2 != name' "${pending}" > "${pending}.tmp"
+        mv -f "${pending}.tmp" "${pending}"
+    fi
+    printf 'DIST %s %s BLAKE2B %s SHA512 %s\n' \
+        "${name}" "${size}" "${blake2b}" "${sha512}" >> "${pending}"
+}
+
 # A capped cleanup fails the run so OnFailure reports incomplete retirement.
 blocked=""
+pending_manifest="${PUBLISHED_DIR}/pending-manifest.txt"
 
 for path in "${OVERLAY}" "${TREE}"; do
     [[ -d ${path} ]] || die "missing: ${path}"
@@ -144,10 +167,21 @@ for entry in "${wanted[@]}"; do
     for variant in "${variants[@]}"; do
         read -r suffix extra <<< "${variant}"
         name="${PACKAGE#*/}-${version}-1.${ARCH}${suffix}.gpkg.tar"
-        expected=$(python3 "${SCRIPT_DIR}/kernel-manifest.py" entry \
-            "${MANIFEST}" "${name}") || die "${name} 无法从 Manifest 核验"
+        manifest_source=""
+        if manifest_has_entry "${MANIFEST}" "${name}"; then
+            expected=$(python3 "${SCRIPT_DIR}/kernel-manifest.py" entry \
+                "${MANIFEST}" "${name}") || die "${name} 无法从 Manifest 核验"
+            manifest_source=main
+        elif expected=$(python3 "${SCRIPT_DIR}/kernel-manifest.py" entry \
+                "${pending_manifest}" "${name}" 2>/dev/null); then
+            manifest_source=pending
+        fi
+        if [[ ${manifest_source} != main && -n ${extra} ]]; then
+            echo "    ${series}  ${version}${suffix}  没有 Manifest 条目，跳过额外变体"
+            continue
+        fi
         remote_path="${REMOTE_ROOT}/${series}/${name}"
-        if remote_matches_manifest "${remote_path}" "${expected}"; then
+        if [[ -n ${manifest_source} ]] && remote_matches_manifest "${remote_path}" "${expected}"; then
             retained="${PUBLISHED_DIR}/${series}/${name}"
             if [[ ! -f ${retained} ]]; then
                 backfill_published_copy "${remote_path}" "${series}" "${name}"
@@ -155,8 +189,23 @@ for entry in "${wanted[@]}"; do
             echo "    ${series}  ${version}${suffix}  已发布，跳过"
             continue
         fi
+        if [[ -n ${manifest_source} ]]; then
+            retained="${PUBLISHED_DIR}/${series}/${name}"
+            verify_manifest="${MANIFEST}"
+            [[ ${manifest_source} == pending ]] && verify_manifest="${pending_manifest}"
+            if [[ -f ${retained} ]] && python3 "${SCRIPT_DIR}/kernel-manifest.py" verify \
+                    "${verify_manifest}" "${name}" "${retained}"; then
+                echo "    ${series}  ${version}${suffix}  从保留副本恢复"
+                # shellcheck disable=SC2029  # as above
+                ssh "${REMOTE}" "install -dm755 ${REMOTE_ROOT}/${series}"
+                rsync -a "${retained}" "${REMOTE}:${REMOTE_ROOT}/${series}/${name}"
+                continue
+            fi
+            [[ ${manifest_source} == main ]] &&
+                die "${series}/${name} 无法重新建置（gpkg 不可重现）：远端档案与 Manifest 不一致，保留副本不存在或也不一致"
+        fi
         echo "    ${series}  ${version}${suffix}  要建置"
-        todo+=("${series} ${version} ${suffix} ${extra}")
+        todo+=("${series} ${version} ${suffix:-_} ${extra:-_} ${manifest_source:-none}")
     done
 done
 
@@ -174,7 +223,9 @@ else
 fi
 
 for entry in ${todo[@]+"${todo[@]}"}; do
-    read -r series version suffix extra <<< "${entry}"
+    read -r series version suffix extra manifest_source <<< "${entry}"
+    [[ ${suffix} == _ ]] && suffix=""
+    [[ ${extra} == _ ]] && extra=""
     atom="=${PACKAGE}-${version}"
     use_flags="${REQUIRED_USE_FLAG}${extra:+ ${extra}}"
     echo "::: ${series} ${atom}${suffix}"
@@ -244,13 +295,11 @@ for entry in ${todo[@]+"${todo[@]}"}; do
     done
 
     name="${PACKAGE#*/}-${version}-1.${ARCH}${suffix}.gpkg.tar"
-    python3 "${SCRIPT_DIR}/kernel-manifest.py" verify \
-        "${MANIFEST}" "${name}" "${built}" ||
-        die "${version} 产物与 Manifest 不一致，不发布"
     # shellcheck disable=SC2029  # as above
     ssh "${REMOTE}" "install -dm755 ${REMOTE_ROOT}/${series}"
     rsync -a "${built}" "${REMOTE}:${REMOTE_ROOT}/${series}/${name}"
     store_published_copy "${built}" "${series}" "${name}"
+    [[ ${manifest_source} == main ]] || record_pending_manifest "${built}" "${name}"
     echo "    已发布 ${series}/${name}"
 done
 
@@ -352,6 +401,12 @@ for series in ${retire[@]+"${retire[@]}"}; do
     ssh "${REMOTE}" "rm -rf ${REMOTE_ROOT}/${series}"
     rm -rf -- "${PUBLISHED_DIR:?}/${series}"
 done
+
+if [[ -s ${pending_manifest} ]]; then
+    pending_count=$(grep -c '^DIST ' "${pending_manifest}")
+    echo ">>> 有 ${pending_count} 条待加入 Manifest 的 DIST 记录："
+    cat "${pending_manifest}"
+fi
 
 echo ">>> 完成"
 }
