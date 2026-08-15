@@ -20,6 +20,10 @@ BUILD_ECLASS = {
     "distutils-r1", "dotnet-pkg", "qmake-utils", "waf-utils", "scons-utils",
 }
 PREBUILT_ECLASS = {"unpacker", "rpm", "java-pkg-simple"}
+# An AppImage is a finished binary bundle whatever the ebuild inherits. Without
+# this, sys-apps/isd reads as a package with no build stage, which is the bucket
+# for things that might still compile.
+PREBUILT_ARTIFACT = re.compile(r"\.AppImage\b", re.I)
 SOURCE_ONLY_CATEGORIES = frozenset({"acct-group", "acct-user", "virtual"})
 # A kernel module only loads on the kernel it was built against, and a
 # consumer of this binhost runs whatever kernel they chose.
@@ -44,9 +48,13 @@ def repository_revision(tree):
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
+def ships_prebuilt_artifact(text):
+    return bool(PREBUILT_ARTIFACT.search(text))
+
+
 def builds_from_source(text):
     ecl = inherits(text)
-    if ecl & PREBUILT_ECLASS:
+    if ecl & PREBUILT_ECLASS or ships_prebuilt_artifact(text):
         return False
     return bool(ecl & BUILD_ECLASS) or bool(COMPILE_PHASE.search(text))
 

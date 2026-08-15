@@ -10,6 +10,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ebuilds import (                                       # noqa: E402
     ATOM, PREBUILT_ECLASS, bindist_state, builds_from_source, inherits,
+    ships_prebuilt_artifact,
     accepts_amd64, keywords_of, newest_ebuild,
     read_mask, usable_ebuilds, version_of, vercmp,
 )
@@ -111,7 +112,7 @@ def newcomer_classifications(overlay, wanted, masked, move_destinations=()):
                 category = BINDIST
             elif restriction == "unknown":
                 category = UNKNOWN_RESTRICT
-            elif inherits(text) & PREBUILT_ECLASS:
+            elif inherits(text) & PREBUILT_ECLASS or ships_prebuilt_artifact(text):
                 category = PREBUILT
             elif builds_from_source(text):
                 category = CANDIDATE
