@@ -29,7 +29,25 @@ jobs:
         id: pick
         run: |
           set -euo pipefail
-          python3 build/check-versions.py --newcomers /tmp/overlay build/packages.txt > /tmp/new.txt
+          python3 build/check-versions.py --newcomers /tmp/overlay build/packages.txt \
+            > /tmp/new.txt 2> /tmp/buckets.txt
+          cat /tmp/buckets.txt
+
+          # These are skipped because the ebuild declares no build phase. Some of
+          # them do compile through the EAPI default, and the ebuild text cannot
+          # tell those apart, so the list goes where a person will see it.
+          grep -oE '无已知构建阶段: [0-9]+: .*' /tmp/buckets.txt > /tmp/unknown.txt || true
+          if [ -s /tmp/unknown.txt ]; then
+            {
+              echo '### 没有声明构建阶段，未提案'
+              echo
+              echo '其中若有靠 EAPI 预设阶段编译的，ebuild 文字分辨不出来，需要人工确认后手动加入清单。'
+              echo
+              echo '```'
+              tr ' ' '\n' < /tmp/unknown.txt | grep '/' || true
+              echo '```'
+            } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          fi
           total=$(find /tmp/overlay -mindepth 2 -maxdepth 2 -type d | wc -l)
           listed=$(grep -cvE '^\s*(#|$)' build/packages.txt)
           echo ">>> overlay ${total} 个目录，清单 ${listed} 个，候选 $(wc -l < /tmp/new.txt) 个"
