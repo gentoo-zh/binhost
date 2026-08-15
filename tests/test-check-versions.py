@@ -427,6 +427,30 @@ if not ok:
     bad += 1
 
 
+def appimage_probe():
+    """An AppImage is finished binary, whatever phases the ebuild declares."""
+    body = {"app-misc/bundle": (
+        'EAPI=8\nKEYWORDS="~amd64"\nSLOT="0"\n'
+        'SRC_URI="https://example.invalid/thing-1.AppImage -> ${P}.AppImage"\n')}
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp)
+        overlay = make_overlay(d / "overlay", {"app-misc/bundle": "1"}, body=body)
+        (d / "list.txt").write_text("")
+        result = subprocess.run(
+            [sys.executable, CHECK, "--newcomers", str(overlay), str(d / "list.txt")],
+            capture_output=True, text=True)
+        return (result.returncode == 0
+                and ">>> 预构建 eclass: 1: app-misc/bundle" in result.stderr
+                and "无已知构建阶段" not in result.stderr.split("app-misc/bundle")[0]
+                and result.stdout.strip() == "")
+
+
+ok = appimage_probe()
+print(f"  {'✓' if ok else '✗'} {'抓 AppImage 的包算预构建而不是无构建阶段':<24}")
+if not ok:
+    bad += 1
+
+
 def move_rows(packages=None):
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
