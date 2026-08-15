@@ -25,6 +25,12 @@ SOURCE_ONLY_CATEGORIES = frozenset({"acct-group", "acct-user", "virtual"})
 # consumer of this binhost runs whatever kernel they chose.
 KERNEL_MODULE_ECLASSES = frozenset({"linux-mod", "linux-mod-r1"})
 
+# Only an explicit phase counts. An ebuild that leans on the EAPI default
+# src_compile -- a plain upstream Makefile -- looks identical here to one that
+# installs a shell script: www-servers/darkhttpd and app-misc/spark both carry
+# nothing but `dobin ${PN}`, and only the tarball says which one compiles. A
+# wider regex cannot separate them, so the packages that fall through are
+# reported for a human instead of being guessed at.
 COMPILE_PHASE = re.compile(r"^(src_configure|src_compile)\s*\(\)", re.M)
 
 

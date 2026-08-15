@@ -29,11 +29,13 @@ app-misc/cc-switch
 app-misc/cc-switch-cli
 app-misc/gpick
 app-misc/joshuto
+app-misc/keyd
 app-misc/mdx_util
 app-misc/yazi
 app-shells/gitstatus
 app-shells/zsh-theme-powerlevel10k
 app-text/goldendict
+app-text/groff-utf8
 app-text/imewlconverter
 app-text/lektra
 dev-cpp/cppcoro
@@ -102,6 +104,7 @@ dev-util/vcpkg-tool
 dev-util/vfox
 dev-vcs/gitoxide
 games-emulation/onscripter-yuri
+games-util/sgdboop
 gnome-extra/resources
 gui-apps/crystal-dock
 gui-apps/tux-manager
@@ -177,6 +180,7 @@ sys-apps/pnpm
 sys-fs/ssdfs-tools
 sys-libs/libsolv
 sys-power/tlpui
+www-servers/darkhttpd
 www-servers/dufs
 www-servers/miniserve
 x11-libs/glbinding
