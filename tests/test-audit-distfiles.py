@@ -267,6 +267,14 @@ def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False,
         return rc, left, binned, buf.getvalue()
 
 
+# A large orphan count next to a cleanup of zero reads as a stuck reaper.
+case("宽限期内的孤儿在摘要里说明还有多少在等", lambda: (
+    lambda r: r[0] == 0 and "已无人引用 1（1 个仍在" in r[3] and r[2] == []
+)(run_main({f"app-misc/p{i}": {"1": [f"p{i}.tar.gz"]} for i in range(20)},
+           [f"p{i}.tar.gz" for i in range(20)] + ["orphan.tar.gz"],
+           grace=10 ** 6)))
+
+
 case("overlay 无法读取内容时拒绝清理", lambda: (
     lambda r: r[0] == 1 and len(r[1]) == 5 and r[2] == []
 )(run_main({}, ["a.tar.gz", "b.tar.xz", "c.zip", "d.tar.bz2", "e.crate"])))
