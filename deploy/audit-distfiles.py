@@ -428,8 +428,20 @@ def main(overlay, dest, aux=None):
               f"本次既不清理也不当作可公开", file=sys.stderr)
         for f in sorted(unsure)[:10]:
             print(f"   无法判定 {f}  <- {[p for p, _ in users.get(f, [])]}", file=sys.stderr)
+    # Without this count, an orphan total next to a cleanup of zero reads as a
+    # stuck reaper. Usually it means the files have not aged past the grace
+    # period yet, which otherwise takes reading the state file to find out.
+    waiting = ""
+    if orphan:
+        try:
+            held = len(json.loads(pathlib.Path(STATE).read_text()))
+        except (OSError, ValueError):
+            held = None
+        if held is not None:
+            waiting = f"（{held} 个仍在 {GRACE_SECONDS // 86400} 天宽限内）"
     print(f"镜像上 {len(have)}，缺 {len(missing)}，禁止镜像 {len(extra)}，"
-          f"已无人引用 {len(orphan)}，本次清理 {len(deleted) + len(restricted)}"
+          f"已无人引用 {len(orphan)}{waiting}，"
+          f"本次清理 {len(deleted) + len(restricted)}"
           f"（其中禁止镜像 {len(restricted)}）")
     if restricted_failed:
         print(f"!! {len(restricted_failed)} 个禁止镜像的文件回收失败，仍可公开存取",
