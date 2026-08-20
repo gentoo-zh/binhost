@@ -398,10 +398,26 @@ run_variants 0 honest > "${WORK}/out" 2>&1
 grep -q '已发布，跳过' "${WORK}/out"
 echo "  ✓ Manifest 与远端一致时两个变体都跳过建置"
 
+# A version the -bin ebuild does not name yet is being bootstrapped, and the
+# extra variant has no entry for the same reason the plain one has none.
 reset_case
 : > "${WORK}/Manifest"
-EXTRA_VARIANTS='.cjk32 cjk32' run_archive 1 > "${WORK}/out" 2>&1
-grep -q '没有 Manifest 条目，跳过额外变体' "${WORK}/out"
+TEST_BUILT32="${WORK}/built-cjk32.gpkg.tar" TEST_ANSWER_MODE=honest \
+    EXTRA_VARIANTS='.cjk32 cjk32' run_archive 2 > "${WORK}/out" 2>&1
+[[ -e ${WORK}/remote/archive/7.1/${NAME} ]]
+[[ -e ${WORK}/remote/archive/7.1/${CJK32_NAME} ]]
+[[ $(grep -c "^DIST " "${WORK}/published/pending-manifest.txt") == 2 ]]
+echo "  ✓ 版本尚未列入 -bin 时两个变体一起自举"
+
+# A version the -bin ebuild does name, without this variant, leaves it out on
+# purpose.
+reset_case
+write_manifest "${NAME}" "${WORK}/built-first.gpkg.tar"
+mkdir -p "${WORK}/remote/archive/7.1"
+cp "${WORK}/built-first.gpkg.tar" "${WORK}/remote/archive/7.1/${NAME}"
+TEST_BUILT32="${WORK}/built-cjk32.gpkg.tar" TEST_ANSWER_MODE=honest \
+    EXTRA_VARIANTS='.cjk32 cjk32' run_archive 2 > "${WORK}/out" 2>&1
+grep -q '\-bin 未提供这个变体，跳过' "${WORK}/out"
 [[ -e ${WORK}/remote/archive/7.1/${NAME} ]]
 [[ ! -e ${WORK}/remote/archive/7.1/${CJK32_NAME} ]]
-echo "  ✓ Manifest 没有条目时额外变体维持跳过"
+echo "  ✓ -bin 提供了这版却没这个变体时才跳过"

@@ -164,6 +164,12 @@ echo ">>> overlay 提供 ${#wanted[@]} 条内核线"
 todo=()
 for entry in "${wanted[@]}"; do
     read -r series version <<< "${entry}"
+    # Whether the -bin ebuild already names this version at all. Without it the
+    # version is being bootstrapped, and an extra variant has no entry for the
+    # same reason the plain one has none: nothing has been published yet.
+    plain_name="${PACKAGE#*/}-${version}-1.${ARCH}.gpkg.tar"
+    named_version=no
+    manifest_has_entry "${MANIFEST}" "${plain_name}" && named_version=yes
     for variant in "${variants[@]}"; do
         read -r suffix extra <<< "${variant}"
         name="${PACKAGE#*/}-${version}-1.${ARCH}${suffix}.gpkg.tar"
@@ -176,8 +182,12 @@ for entry in "${wanted[@]}"; do
                 "${pending_manifest}" "${name}" 2>/dev/null); then
             manifest_source=pending
         fi
-        if [[ ${manifest_source} != main && -n ${extra} ]]; then
-            echo "    ${series}  ${version}${suffix}  没有 Manifest 条目，跳过额外变体"
+        # Only a version the -bin ebuild already offers can be said to leave a
+        # variant out on purpose. Skipping on a missing entry alone left cjk32
+        # unable to bootstrap: it needs a digest to be built, and a build to
+        # have a digest.
+        if [[ ${manifest_source} != main && -n ${extra} && ${named_version} == yes ]]; then
+            echo "    ${series}  ${version}${suffix}  -bin 未提供这个变体，跳过"
             continue
         fi
         remote_path="${REMOTE_ROOT}/${series}/${name}"
