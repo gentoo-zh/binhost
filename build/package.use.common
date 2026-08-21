@@ -6,5 +6,6 @@ sys-libs/libsolv       conda
 dev-util/mamba         python
 app-i18n/opencc        python
 media-video/pipewire   gstreamer
+dev-qt/qtmultimedia    gstreamer
 app-shells/gitstatus   zsh-completion
 sys-kernel/installkernel dracut
