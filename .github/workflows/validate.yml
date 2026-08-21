@@ -296,6 +296,9 @@ jobs:
       - name: SIGNING_KEY 必须是指纹，部署前先问 gnupg 有没有这把私钥
         run: bash tests/test-signing-key-gate.sh
 
+      - name: 保留库使用者按 portage 的语义分类
+        run: python3 tests/test-preserved-consumers.py
+
       - name: A second publisher waits for the mirror lock
         run: bash tests/test-publish-lock.sh
 
