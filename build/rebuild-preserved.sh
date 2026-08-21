@@ -3,7 +3,12 @@
 set -euo pipefail
 
 LOG="${1:-/var/log/binhost/preserved-rebuild.log}"
-EMERGE=(emerge --usepkg --changed-use --with-bdeps=y --keep-going --quiet-build)
+# No --usepkg: the packages this set names are exactly the ones linking the
+# preserved library, and reinstalling one from a binary package that links
+# it leaves the library preserved forever. Seen 2026-08-20 with
+# app-emulation/looking-glass, whose binpkg from 07-26 still needed
+# libbfd-2.46.0 after binutils-libs moved to 2.46.1.
+EMERGE=(emerge --usepkg=n --changed-use --with-bdeps=y --keep-going --quiet-build)
 
 if ! "${EMERGE[@]}" @preserved-rebuild >"${LOG}" 2>&1; then
     echo "!!! @preserved-rebuild 未完成" >&2
