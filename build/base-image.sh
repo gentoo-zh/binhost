@@ -22,6 +22,8 @@ docker info >/dev/null 2>&1 || DOCKER="sudo docker"
 
 die() { echo "!!! $*" >&2; exit 1; }
 [[ -n ${SIGNING_KEY} ]] || die "SIGNING_KEY unset"
+[[ ${SIGNING_KEY} =~ ^[0-9A-Fa-f]{40}$ ]] ||
+    die "SIGNING_KEY must be a 40-character fingerprint, got: ${SIGNING_KEY}"
 for p in "${TREE}" "${OVERLAY}" "${DISTDIR}" "${SIGNING_GNUPGHOME}"; do
     [[ -d ${p} ]] || die "missing: ${p}"
 done

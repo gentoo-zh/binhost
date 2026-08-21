@@ -5,6 +5,12 @@ set -euo pipefail
 REMOTE="${REMOTE:?用法： REMOTE=\"ssh ...\" $0}"
 ROOT="${ROOT:-/var/lib/binhost}"
 SIGNING_KEY="${SIGNING_KEY:?需要签名密钥指纹}"
+[[ ${SIGNING_KEY} =~ ^[0-9A-Fa-f]{40}$ ]] || {
+    # A path or a short key id reaches gpg as a lookup string it cannot resolve,
+    # and the failure surfaces hours later when the finished build is signed.
+    echo "SIGNING_KEY 要 40 位指纹，收到：${SIGNING_KEY}" >&2
+    exit 1
+}
 BUILD_USER="${BUILD_USER:-adminc3b9c6}"
 
 cd "$(dirname "$0")/.."
@@ -55,6 +61,14 @@ if sudo test -e /etc/binhost/alert.conf; then
 else
     echo '    /etc/binhost/alert.conf 尚未建立，告警不会发出'
 fi
+
+echo '--- 签名密钥'
+sudo GNUPGHOME='${ROOT}/gnupg' gpg --batch --list-secret-keys '${SIGNING_KEY}' \
+    >/dev/null 2>&1 || {
+    echo \"    !! ${ROOT}/gnupg 里没有 ${SIGNING_KEY} 的私钥\" >&2
+    exit 1
+}
+echo '    ${SIGNING_KEY} 可用'
 
 echo '--- 定时单元'
 sudo install -m644 '${tmp}'/systemd/binhost-*.service '${tmp}'/systemd/binhost-*.timer \

@@ -293,6 +293,9 @@ jobs:
       - name: install.sh 传输的远端脚本能解析，防火墙有回滚
         run: bash tests/test-install-remote-script.sh
 
+      - name: SIGNING_KEY 必须是指纹，部署前先问 gnupg 有没有这把私钥
+        run: bash tests/test-signing-key-gate.sh
+
       - name: A second publisher waits for the mirror lock
         run: bash tests/test-publish-lock.sh
 
