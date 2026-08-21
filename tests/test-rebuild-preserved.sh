@@ -29,33 +29,61 @@ probe() {
 printf '%s\n' "\$*" >> "${d}/emerge.args"
 exit 0
 EOF2
-    cat > "${d}/bin/portageq" <<EOF2
-#!/bin/bash
-if [ "${still}" = yes ]; then
-    echo "sys-libs/binutils-libs-2.46.1 /usr/lib64/libbfd-2.46.0.so"
-    exit 0
-fi
-exit 1
+    cat > "${d}/consumers" <<EOF2
+#!/usr/bin/env python3
+import sys
+if "${still}" == "yes":
+    print("仍有使用者：sys-libs/binutils-libs-2.46.1 /usr/lib64/libbfd-2.46.0.so")
+    print("    /usr/bin/something")
+    sys.exit(1)
+print("仍在登记但没有使用者：sys-libs/binutils-libs-2.46.1 /usr/lib64/libbfd-2.46.0.so")
+sys.exit(0)
 EOF2
-    chmod +x "${d}/bin/emerge" "${d}/bin/portageq"
-    PATH="${d}/bin:${PATH}" bash "${ROOT}/build/rebuild-preserved.sh" "${d}/log" \
-        > "${d}/out" 2>&1
+    chmod +x "${d}/bin/emerge" "${d}/consumers"
+    PATH="${d}/bin:${PATH}" CONSUMERS="${d}/consumers" \
+        bash "${ROOT}/build/rebuild-preserved.sh" "${d}/log" > "${d}/out" 2>&1
     rc=$?
-    printf '%s|%s|%s\n' "${rc}" \
+    printf '%s|%s|%s|%s\n' "${rc}" \
         "$(grep -c -- '--usepkg=n' "${d}/emerge.args" 2>/dev/null)" \
-        "$(grep -c 'preserved-rebuild' "${d}/emerge.args" 2>/dev/null)"
+        "$(grep -c 'preserved-rebuild' "${d}/emerge.args" 2>/dev/null)" \
+        "$(grep -c '没有使用者' "${d}/out" 2>/dev/null)"
+    rm -rf "${d}"
+}
+
+log_probe() {
+    local emerge_rc="$1" d rc
+    d=$(mktemp -d)
+    mkdir -p "${d}/bin"
+    printf '#!/bin/bash\nexit %s\n' "${emerge_rc}" > "${d}/bin/emerge"
+    printf '#!/usr/bin/env python3\nopen("%s/asked", "a").close()\n' "${d}" \
+        > "${d}/consumers"
+    chmod +x "${d}/bin/emerge" "${d}/consumers"
+    PATH="${d}/bin:${PATH}" CONSUMERS="${d}/consumers" \
+        bash "${ROOT}/build/rebuild-preserved.sh" "${d}/log" > /dev/null 2>&1
+    printf '%s|%s\n' \
+        "$(test -e "${d}/log" && echo kept || echo removed)" \
+        "$(test -e "${d}/asked" && echo 1 || echo 0)"
     rm -rf "${d}"
 }
 
 echo "== 保留库的使用者必须从源码重建"
 
-IFS='|' read -r rc source_only called <<< "$(probe no)"
-ok "清干净时退出码 0" "${rc}" "0"
+IFS='|' read -r rc source_only called noted <<< "$(probe no)"
+ok "没有使用者时退出码 0" "${rc}" "0"
 ok "呼叫了 @preserved-rebuild" "${called}" "1"
 ok "不重用二进位包" "${source_only}" "1"
+ok "残留登记记进日志而不是挡下这一轮" "${noted}" "1"
 
-IFS='|' read -r rc source_only called <<< "$(probe yes)"
-ok "仍有保留库时以非零退出" "${rc}" "1"
+IFS='|' read -r rc source_only called noted <<< "$(probe yes)"
+ok "真的有使用者时以非零退出" "${rc}" "1"
+
+# The log goes on success and stays on failure. A rebuild that failed leaves
+# a state the consumer question cannot be trusted on, so it is not asked.
+IFS='|' read -r log_state consumers_called <<< "$(log_probe 0)"
+ok "成功时不留下重建日志" "${log_state}" "removed"
+IFS='|' read -r log_state consumers_called <<< "$(log_probe 2)"
+ok "重建失败时保留日志" "${log_state}" "kept"
+ok "重建失败后不再查使用者" "${consumers_called}" "0"
 
 echo
 if (( fail )); then
