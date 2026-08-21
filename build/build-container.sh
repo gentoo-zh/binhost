@@ -40,6 +40,10 @@ cleanup_signing_input() {
 }
 trap cleanup_signing_input EXIT
 
+[[ -n ${SIGNING_KEY} ]] || die "SIGNING_KEY unset; unsigned packages are not publishable"
+[[ ${SIGNING_KEY} =~ ^[0-9A-Fa-f]{40}$ ]] ||
+    die "SIGNING_KEY must be a 40-character fingerprint, got: ${SIGNING_KEY}"
+
 if [[ -z ${BINHOST_LOCKED:-} ]]; then
     LOCK="${LOCK:-/var/lib/binhost/stage/build.lock}"
     mkdir -p "$(dirname "${LOCK}")"
@@ -62,7 +66,6 @@ if [[ ${CHANNEL} == stable ]]; then
     channel_excluded_list="${STABLE_EXCLUDED}"
     channel_mounts=(-v "${STABLE_PACKAGE_USE}:/tmp/package.use.stable:ro")
 fi
-[[ -n ${SIGNING_KEY} ]] || die "SIGNING_KEY unset; unsigned packages are not publishable"
 [[ ${SIGNING_IMAGE} =~ @sha256:[0-9a-f]{64}$ ]] ||
     die "SIGNING_IMAGE must be pinned by sha256 digest"
 for p in "${OVERLAY}" "${TREE}" "${DISTDIR}" "${SIGNING_GNUPGHOME}"; do
