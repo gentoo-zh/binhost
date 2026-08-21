@@ -106,6 +106,7 @@ ${DOCKER} run --rm -i --security-opt=no-new-privileges \
     -v "${COMMON_PACKAGE_USE}:/tmp/package.use.common:ro" \
     "${channel_mounts[@]}" \
     -v "$(dirname "$0")/rebuild-preserved.sh:/usr/local/bin/rebuild-preserved:ro" \
+    -v "$(dirname "$0")/preserved-consumers.py:/usr/local/bin/preserved-consumers:ro" \
     -v "$(dirname "$0")/snapshot-binrepo.py:/usr/local/bin/snapshot-binrepo:ro" \
     -v "$(dirname "$0")/snapshot-vdb.py:/usr/local/bin/snapshot-vdb:ro" \
     -v "${LOGDIR}:/var/log/binhost" \

@@ -3,11 +3,9 @@
 set -euo pipefail
 
 LOG="${1:-/var/log/binhost/preserved-rebuild.log}"
-# No --usepkg: the packages this set names are exactly the ones linking the
-# preserved library, and reinstalling one from a binary package that links
-# it leaves the library preserved forever. Seen 2026-08-20 with
-# app-emulation/looking-glass, whose binpkg from 07-26 still needed
-# libbfd-2.46.0 after binutils-libs moved to 2.46.1.
+CONSUMERS="${CONSUMERS:-/usr/local/bin/preserved-consumers}"
+# No --usepkg: this set names the packages linking the preserved library, and a
+# binary package built against the old one would come back linking it again.
 EMERGE=(emerge --usepkg=n --changed-use --with-bdeps=y --keep-going --quiet-build)
 
 if ! "${EMERGE[@]}" @preserved-rebuild >"${LOG}" 2>&1; then
@@ -16,17 +14,14 @@ if ! "${EMERGE[@]}" @preserved-rebuild >"${LOG}" 2>&1; then
     exit 1
 fi
 
-if preserved=$(portageq list_preserved_libs / 2>&1); then
-    echo "!!! @preserved-rebuild 完成后仍有保留库" >&2
-    printf '%s\n' "${preserved}" >&2
+# Asking whether the registry is empty fails a run that is fine: portage leaves
+# an entry until some later merge notices nothing needs it, and the last step of
+# a build is not a merge. Ask instead whether anything still links them.
+if ! report=$(python3 "${CONSUMERS}" 2>&1); then
+    echo "!!! 保留库仍有使用者，重建没有覆盖它们" >&2
+    printf '%s\n' "${report}" >&2
     exit 1
-else
-    rc=$?
-    if (( rc != 1 )); then
-        echo "!!! 无法检查保留库" >&2
-        printf '%s\n' "${preserved}" >&2
-        exit 1
-    fi
 fi
+[[ -z ${report} ]] || printf '%s\n' "${report}"
 
 rm -f "${LOG}"

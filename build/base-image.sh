@@ -47,6 +47,7 @@ ${DOCKER} run -i --security-opt=no-new-privileges --name "${container}" \
     -v "${PKGDIR}:/var/cache/binpkgs" \
     -v "${PUBLIC_KEY}:/tmp/binhost.asc:ro" \
     -v "$(dirname "$0")/rebuild-preserved.sh:/usr/local/bin/rebuild-preserved:ro" \
+    -v "$(dirname "$0")/preserved-consumers.py:/usr/local/bin/preserved-consumers:ro" \
     -e "MAKEOPTS=${MAKEOPTS}" -e "JOBS=${JOBS}" -e "SIGNING_KEY=${SIGNING_KEY}" \
     -e "BINHOST_ACCEPT_KEYWORDS=${CHANNEL_ACCEPT_KEYWORDS}" \
     -e "BINHOST_OVERLAY_KEYWORDS=${CHANNEL_OVERLAY_KEYWORDS}" \
