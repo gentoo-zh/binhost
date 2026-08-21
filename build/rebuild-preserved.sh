@@ -4,9 +4,18 @@ set -euo pipefail
 
 LOG="${1:-/var/log/binhost/preserved-rebuild.log}"
 CONSUMERS="${CONSUMERS:-/usr/local/bin/preserved-consumers}"
-# No --usepkg: this set names the packages linking the preserved library, and a
-# binary package built against the old one would come back linking it again.
-EMERGE=(emerge --usepkg=n --changed-use --with-bdeps=y --keep-going --quiet-build)
+# Two flags decide whether this rebuild does anything at all.
+#
+# --changed-use limits a reinstall to packages whose USE changed. Nothing about
+# a preserved library changes USE, so the set resolves to zero packages and the
+# rebuild silently does nothing. Without it, emerge reinstalls what the set
+# names, which is the point.
+#
+# --usepkg=n alone does not reach the source: FEATURES carries getbinpkg, so
+# portage still fetches the binary package, and that package is the one linked
+# against the old library. --getbinpkg=n is what turns [binary R] into
+# [ebuild R].
+EMERGE=(emerge --usepkg=n --getbinpkg=n --with-bdeps=y --keep-going --quiet-build)
 
 if ! "${EMERGE[@]}" @preserved-rebuild >"${LOG}" 2>&1; then
     echo "!!! @preserved-rebuild 未完成" >&2
