@@ -153,10 +153,9 @@ fi
 
 check_kernel_archive
 
-site_syncing() { [[ -e ${SITE_LOCK} ]] && ! flock -n "${SITE_LOCK}" true 2>/dev/null; }
 
 check_site_sync() {
-    local fetched age_h here_site marked drift pages f
+    local fetched age_h here_site marked drift pages f site_fd
 
     fetched=$(stat -c %Y "${SITE_WORK}/.git/FETCH_HEAD" 2>/dev/null || echo 0)
     age_h=$(( ($(date +%s) - fetched) / 3600 ))
@@ -169,10 +168,16 @@ check_site_sync() {
         bad "站点同步" "上次拉取在 ${age_h} 小时前，五分钟一次的同步已停止"
         return
     fi
-    # The revision and the comparisons below have to come from a tree nobody is
-    # rewriting, so the lock is tested before them and again after. Reading
-    # first left a window as wide as one diff -rq plus one cmp per page.
-    if site_syncing; then
+    # Hold the lock across every read below. Testing it and then reading is a
+    # race the schedule loses regularly: cron starts the five-minute sync and
+    # this check in the same minute, so the test can run before the sync takes
+    # the lock and the tree is then rewritten mid-read.
+    if ! exec {site_fd}>"${SITE_LOCK}" 2>/dev/null; then
+        bad "站点同步" "打不开 ${SITE_LOCK}"
+        return
+    fi
+    if ! flock -n "${site_fd}"; then
+        exec {site_fd}>&-
         note "站点同步" "同步正在执行，本次不比对仓库副本与已发布内容"
         return
     fi
@@ -184,10 +189,9 @@ check_site_sync() {
     for f in "${SITE_WORK}"/site/*.html; do
         cmp -s "${f}" "${SITE_DEST}/$(basename "${f}")" || pages=$((pages + 1))
     done
+    exec {site_fd}>&-
 
-    if site_syncing; then
-        note "站点同步" "同步正在执行，本次不比对仓库副本与已发布内容"
-    elif [[ ! ${here_site} =~ ^[0-9a-f]{40}$ ]]; then
+    if [[ ! ${here_site} =~ ^[0-9a-f]{40}$ ]]; then
         bad "站点同步" "无法解析 ${SITE_WORK} 的版本：${here_site:-无输出}"
     elif [[ ${marked} != "${here_site}" ]]; then
         bad "站点同步" "仓库副本在 ${here_site:0:8}，上次完成的是 ${marked:0:8}，最近一次未完成"

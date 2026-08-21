@@ -281,6 +281,9 @@ jobs:
       - name: Overlapping progress pushes both land
         run: bash tests/test-progress-push.sh
 
+      - name: The site check reads under the lock it tests
+        run: bash tests/test-site-lock.sh
+
       - name: The same failure is not notified twice
         run: bash tests/test-status-dedup.sh
 
