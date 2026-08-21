@@ -1057,7 +1057,7 @@ EOF
 IFS=';' read -r rc calls log_state out <<< "$(preserved_probe 0 1 '')"
 ok "没有保留库时闸门通过" "${rc}" "0"
 contains "执行 Portage 的重建集合" "${calls}" \
-    "emerge --usepkg --changed-use --with-bdeps=y --keep-going --quiet-build @preserved-rebuild"
+    "emerge --usepkg=n --changed-use --with-bdeps=y --keep-going --quiet-build @preserved-rebuild"
 contains "重建后查询保留库" "${calls}" "portageq list_preserved_libs /"
 ok "成功日志不会残留" "${log_state}" "removed"
 

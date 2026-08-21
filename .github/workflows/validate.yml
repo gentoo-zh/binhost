@@ -281,6 +281,9 @@ jobs:
       - name: Overlapping progress pushes both land
         run: bash tests/test-progress-push.sh
 
+      - name: Preserved-library users are rebuilt from source
+        run: bash tests/test-rebuild-preserved.sh
+
       - name: The site check reads under the lock it tests
         run: bash tests/test-site-lock.sh
 
