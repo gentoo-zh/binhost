@@ -207,6 +207,13 @@
       镜像同步本站已签名的产物；切换不改变签名验证要求。
     </p>
 
+    <h2 data-i18n="q14">如何避免自动镜像某个包的 distfile？</h2>
+    <p data-i18n-html="a14">
+      不希望自动镜像某个包的 distfile 时，在 ebuild 的既有 <code>RESTRICT</code>
+      值中加入 <code>mirror</code>；没有该变量时可设置 <code>RESTRICT="mirror"</code>。
+      <code>RESTRICT</code> 中含 <code>fetch</code> 时，也会阻止同步流程自动获取和镜像文件。
+    </p>
+
     <h2 data-i18n="q9">如何自行建立镜像？</h2>
     <p data-i18n-html="a9">
       rsync 公开开放，无需申请。rsync module 包含 <code>binpkgs/</code> 与
@@ -326,6 +333,8 @@ window.MIRROR_I18N = {
     a6: '刪除 <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code>。已安裝的套件不受影響。',
     q8: '有哪些鏡像？',
     a8: '來源站 <a href="/">distfiles.gentoozh.org</a>、教育網聯合鏡像站 <a href="https://mirrors.cernet.edu.cn/gentoo-zh">mirrors.cernet.edu.cn/gentoo-zh</a>、南京大學 <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a>、南陽理工學院 <a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a> 與河南教育網 <a href="https://mirrors.ha.edu.cn/gentoo-zh">mirrors.ha.edu.cn/gentoo-zh</a> 均提供二進位套件與 distfiles。可在<a href="/">設定</a>頁依網路情況切換。鏡像同步本站已簽章的產物；切換不改變簽章驗證要求。',
+    q14: '如何避免自動鏡像某個套件的 distfile？',
+    a14: '不希望自動鏡像某個套件的 distfile 時，在 ebuild 的既有 <code>RESTRICT</code> 值中加入 <code>mirror</code>；沒有該變數時可設定 <code>RESTRICT="mirror"</code>。<code>RESTRICT</code> 中含 <code>fetch</code> 時，也會阻止同步流程自動取得和鏡像檔案。',
     q9: '如何自行建立鏡像？',
     a9: 'rsync 公開開放，無需申請。rsync module 包含 <code>binpkgs/</code> 與 <code>distfiles/</code>。同步到本機後用 HTTP 提供即構成一個完整的鏡像，因為索引中的 <code>PATH</code> 是相對路徑，不依賴主機名稱。',
     a9b: '建議每日同步一次。rsync 會略過其判定為未變更的檔案；同一路徑的檔案仍可能因重新簽章或重新產生而需要傳輸。<code>--delay-updates</code> 會把已傳輸的變更檔案延後到傳輸末段逐一取代，但不會將索引與套件樹作為一個整體進行原子切換。鏡像建成後在 <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issues</a> 提出，以便加入鏡像清單。',
@@ -380,6 +389,8 @@ window.MIRROR_I18N = {
     a6: 'Delete <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code>. Packages that are already installed are unaffected.',
     q8: 'Which mirrors are there?',
     a8: 'The origin at <a href="/">distfiles.gentoozh.org</a>, CERNET at <a href="https://mirrors.cernet.edu.cn/gentoo-zh">mirrors.cernet.edu.cn/gentoo-zh</a>, Nanjing University at <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a>, NYIST at <a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a>, and HERNET at <a href="https://mirrors.ha.edu.cn/gentoo-zh">mirrors.ha.edu.cn/gentoo-zh</a> carry binary packages and distfiles. Choose among them on the <a href="/">setup</a> page according to network conditions. Mirrors synchronize the signed artifacts from this host; switching does not change the verification requirement.',
+    q14: 'How do I prevent automatic mirroring of a package\'s distfile?',
+    a14: 'To exclude a package\'s distfiles from automatic mirroring, add <code>mirror</code> to the ebuild\'s existing <code>RESTRICT</code> value; use <code>RESTRICT="mirror"</code> when the variable is absent. A <code>RESTRICT</code> value containing <code>fetch</code> also prevents the sync process from fetching and mirroring the files automatically.',
     q9: 'How do I set up a mirror of my own?',
     a9: 'rsync is open and needs no application. The rsync module contains <code>binpkgs/</code> and <code>distfiles/</code>. Sync it locally, serve it over HTTP, and it is a complete mirror, because <code>PATH</code> in the index is relative and does not depend on the hostname.',
     a9b: 'Sync once a day. rsync skips files it determines are unchanged; a file at the same path can still require transfer after it is regenerated or signed again. <code>--delay-updates</code> postpones replacement of transferred files until the final stage of the transfer, one file at a time. It does not atomically switch the index and package tree as one generation. Once the mirror is running, open a <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issue</a> so it can be added to the mirror list.',
