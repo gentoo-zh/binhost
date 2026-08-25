@@ -38,6 +38,7 @@ app-text/goldendict
 app-text/groff-utf8
 app-text/imewlconverter
 app-text/lektra
+dev-build/lito
 dev-cpp/cppcoro
 dev-cpp/nameof
 dev-cpp/reproc
