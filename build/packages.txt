@@ -48,7 +48,6 @@ dev-go/staticcheck
 dev-libs/libpqmarble
 dev-libs/lunar-calendar
 dev-libs/lunar-date
-dev-libs/qml-material
 dev-libs/qnodeeditor
 dev-libs/singleapplication
 dev-libs/v2ray-domain-list-community
@@ -113,7 +112,6 @@ kde-misc/plasma-ions-china
 media-libs/libdicom
 media-libs/openslide
 media-plugins/waylyrics
-media-plugins/waywallen-display
 media-sound/euphonica
 media-sound/feeluown
 media-sound/go-musicfox
