@@ -48,7 +48,6 @@ dev-go/staticcheck
 dev-libs/libpqmarble
 dev-libs/lunar-calendar
 dev-libs/lunar-date
-dev-libs/qml-material
 dev-libs/qnodeeditor
 dev-libs/singleapplication
 dev-libs/v2ray-domain-list-community
