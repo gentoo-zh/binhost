@@ -24,3 +24,4 @@ app-dicts/fcitx-pinyin-moegirl	许可证 CC-BY-NC-SA-3.0 含非商业限制，�
 gui-apps/waywallen		0.3.1 在 compile 阶段 ninja 失败，上游问题；overlay 已无更早版本
 media-gfx/open-wallpaper-engine	默认 USE=waywallen 会拉入上面那个包
 sys-boot/zfsbootmenu		依赖 sys-fs/zfs，它要匹配建置机内核，预编译对使用者无意义
+media-plugins/waywallen-display	overlay 的 package.mask 屏蔽了全部版本

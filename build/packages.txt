@@ -113,7 +113,6 @@ kde-misc/plasma-ions-china
 media-libs/libdicom
 media-libs/openslide
 media-plugins/waylyrics
-media-plugins/waywallen-display
 media-sound/euphonica
 media-sound/feeluown
 media-sound/go-musicfox
