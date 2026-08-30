@@ -48,6 +48,9 @@ jobs:
       - name: Staging filter keeps only what is ours
         run: python3 tests/test-stage-index.py
 
+      - name: overlay 整包屏蔽的不进建置清单
+        run: python3 tests/test-drop-masked.py
+
       - name: Quarantine carries only what cannot wait
         run: python3 tests/test-quarantine-immediacy.py
 
@@ -298,6 +301,7 @@ jobs:
 
       - name: 保留库使用者按 portage 的语义分类
         run: python3 tests/test-preserved-consumers.py
+
 
       - name: A second publisher waits for the mirror lock
         run: bash tests/test-publish-lock.sh

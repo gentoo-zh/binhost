@@ -66,6 +66,14 @@ if [[ ${CHANNEL} == stable ]]; then
     channel_excluded_list="${STABLE_EXCLUDED}"
     channel_mounts=(-v "${STABLE_PACKAGE_USE}:/tmp/package.use.stable:ro")
 fi
+
+# A package the overlay masks outright cannot be built, and emerge failing on
+# it used to sink the round for everything else. Both channels drop those here;
+# the list in the repository is left alone, because a mask that stays is a
+# decision for excluded.txt rather than something a build should decide.
+MASKED_LIST="${MASKED_LIST:-${STAGE}.unmasked.txt}"
+python3 "$(dirname "$0")/drop_masked.py" "${LIST}" "${OVERLAY}" "${MASKED_LIST}"
+LIST="${MASKED_LIST}"
 [[ ${SIGNING_IMAGE} =~ @sha256:[0-9a-f]{64}$ ]] ||
     die "SIGNING_IMAGE must be pinned by sha256 digest"
 for p in "${OVERLAY}" "${TREE}" "${DISTDIR}" "${SIGNING_GNUPGHOME}"; do
