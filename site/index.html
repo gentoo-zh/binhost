@@ -251,7 +251,7 @@
   </p>
 
   <p class="note" data-i18n-html="onceNote">
-    不改 <code>make.conf</code> 时，可以只在这一次安装中取用二进制包：
+    不改 <code>make.conf</code> 时，可以只在这一次安装中使用二进制包：
   </p>
 
   <div class="code">
@@ -283,7 +283,7 @@
 
   <div class="step">
     <div class="src-pick" data-src-switch="dist" data-src-list='"${GENTOO_MIRRORS} %s"'
-         role="group" aria-label="优先取用的镜像">
+         role="group" aria-label="优先使用的镜像">
       <span class="src-label" data-i18n="srcLabelFirst">优先</span>
       <button type="button" class="src-opt on" data-i18n="srcCernet" data-src-default="zh-cn"
               data-uri="https://mirrors.cernet.edu.cn/gentoo-zh">教育网联合镜像站</button>
@@ -363,7 +363,7 @@
 window.MIRROR_I18N = {
   'zh-tw': {
 
-    factPreparing: ' 建置準備中',
+    factPreparing: ' 正在準備建置',
     factBuilding: ' 正在建置',
     factFetching: ' 正在安裝二進位套件',
     modeManual: '手動設定',
@@ -532,7 +532,7 @@ window.MIRROR_I18N = {
     var fresh = job && job.generated &&
                 (Date.now() / 1000 - job.generated) < 3 * 3600;
     if (job && job.state === 'running' && fresh) {
-      var what = job.kind === 'prepare' ? ['factPreparing', ' 构建准备中']
+      var what = job.kind === 'prepare' ? ['factPreparing', ' 正在准备构建']
                : job.kind === 'source' ? ['factBuilding', ' 正在构建']
                : ['factFetching', ' 正在安装二进制包'];
       html += '<span class="job">' +

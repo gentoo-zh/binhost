@@ -100,7 +100,7 @@
   <h1 class="title" data-i18n="title">FAQ</h1>
 
   <div class="qa">
-    <h2 data-i18n="q1">配好之后为何 emerge 不使用二进制包，仍然编译？</h2>
+    <h2 data-i18n="q1">配置之后 emerge 为何仍然从源码编译？</h2>
     <p data-i18n-html="a1">
       Portage 不会直接比较 profile 名称，而是根据当前配置检查二进制包元数据。profile 变更可能改变 USE 与依赖选择，使现有二进制包不再适用；此时 Portage 会改为编译源码。
       用 <code>emerge -pv</code> 检查，前缀为 <code>[binary]</code> 才表示采用了二进制包。
@@ -166,7 +166,7 @@
       另有一个全局开关 <code>FEATURES=binpkg-request-signature</code>，它对所有来源生效
       并覆盖上面那条。它还要求通过 <code>FEATURES=buildpkg</code> 构建的包带签名；
       这些包默认没有签名。启用该功能时必须同时配置
-      <code>binpkg-signing</code>、本机签名密钥，以及让 gpg 读到 getuto 存的口令。
+      <code>binpkg-signing</code>、本机签名密钥，以及让 gpg 能读取 getuto 存放的口令。
     </p>
 
     <h2 id="key-download" data-i18n="q11">不安装 sec-keys 包时，如何取得签名公钥？</h2>
@@ -216,7 +216,7 @@
 
     <h2 data-i18n="q9">如何自行建立镜像？</h2>
     <p data-i18n-html="a9">
-      rsync 公开开放，无需申请。rsync module 包含 <code>binpkgs/</code> 与
+      rsync 服务公开提供，无需申请。rsync module 包含 <code>binpkgs/</code> 与
       <code>distfiles/</code>。同步到本地后用 HTTP 提供即构成一个完整的镜像，
       因为索引中的 <code>PATH</code> 是相对路径，不依赖主机名。
     </p>
@@ -243,7 +243,7 @@
       再分发的那部分 <code>::gentoo</code> 运行期依赖，两者在同一份索引里，用
       <code>REPO</code> 字段区分。二进制包的许可证必须属于
       <code>@BINARY-REDISTRIBUTABLE</code>，且 <code>RESTRICT</code> 不得包含 <code>bindist</code>。
-      <code>acct-group/&#42;</code>、<code>acct-user/&#42;</code> 与 <code>virtual/&#42;</code> 在使用者
+      <code>acct-group/&#42;</code>、<code>acct-user/&#42;</code> 与 <code>virtual/&#42;</code> 在用户
       系统本地安装。<code>RESTRICT</code> 中的 <code>bindist</code> 只限制二进制包；
       distfiles 是否镜像由 <code>mirror</code>、<code>fetch</code> 与每项
       <code>SRC_URI</code> 独立决定。附带内容仅包含
@@ -268,7 +268,7 @@
         <tr><td data-i18n-html="stOffList"><code>清单外</code></td><td data-i18n-html="sdOffList">该包不是直接构建目标。上游已经提供预编译内容或构建收益较低时通常不会直接收录，但运行期依赖闭包仍可能将它作为依赖发布；包名含 <code>-bin</code> 不会自动决定该状态。</td></tr>
         <tr><td data-i18n-html="stBindist"><code>不提供 binpkg</code></td><td data-i18n-html="sdBindist">当前 ebuild 的 <code>RESTRICT</code> 包含 <code>bindist</code>，因此本站不发布该包的 binpkg。源码包和上游预编译包都可能设置这项限制，常见原因是许可证、上游发布条款或预编译内容的再分发条件不允许本站分发二进制产物；包名含 <code>-bin</code> 本身不是判定依据。distfiles 是否镜像仍按 <code>RESTRICT</code> 中的 <code>mirror</code>、<code>fetch</code> 与每项 <code>SRC_URI</code> 单独判断。</td></tr>
         <tr><td data-i18n-html="stLicense"><code>许可证限制</code></td><td data-i18n-html="sdLicense">当前 ebuild 的 <code>LICENSE</code> 表达式不属于本站固定的 <code>@BINARY-REDISTRIBUTABLE</code>。许可证可能允许附带条件的再分发，但本站不会据此发布 binpkg；该状态与 <code>RESTRICT=bindist</code> 分开判定。</td></tr>
-        <tr><td data-i18n-html="stLocal"><code>本地安装</code></td><td data-i18n-html="sdLocal"><code>acct-group</code> 与 <code>acct-user</code> 由 Portage 在使用者系统创建账号，<code>virtual</code> 由 Portage 选择实际实现。这些包无需本站预编译。</td></tr>
+        <tr><td data-i18n-html="stLocal"><code>本地安装</code></td><td data-i18n-html="sdLocal"><code>acct-group</code> 与 <code>acct-user</code> 由 Portage 在用户系统创建账号，<code>virtual</code> 由 Portage 选择实际实现。这些包无需本站预编译。</td></tr>
         <tr><td data-i18n-html="stRetiring"><code>待移除</code></td><td data-i18n-html="sdRetiring">公开索引仍有旧 binpkg，但当前 overlay、清单或发布政策已不再提供它。旧产物会保留到新一代索引发布成功，避免旧索引指向已删除文件；该状态可以与勾号同时出现。</td></tr>
         <tr><td data-i18n-html="stDist"><code>Distfiles —</code></td><td data-i18n-html="sdDist">该包没有声明 distfile、<code>RESTRICT</code> 包含 <code>mirror</code> 或 <code>fetch</code>，或声明的文件尚未全部进入镜像。破折号提示会区分没有文件与不可用；该状态不表示 binpkg 不可用。</td></tr>
       </tbody>
@@ -336,7 +336,7 @@ window.MIRROR_I18N = {
     q14: '如何避免自動鏡像某個套件的 distfile？',
     a14: '不希望自動鏡像某個套件的 distfile 時，在 ebuild 的既有 <code>RESTRICT</code> 值中加入 <code>mirror</code>；沒有該變數時可設定 <code>RESTRICT="mirror"</code>。<code>RESTRICT</code> 中含 <code>fetch</code> 時，也會阻止同步流程自動取得和鏡像檔案。',
     q9: '如何自行建立鏡像？',
-    a9: 'rsync 公開開放，無需申請。rsync module 包含 <code>binpkgs/</code> 與 <code>distfiles/</code>。同步到本機後用 HTTP 提供即構成一個完整的鏡像，因為索引中的 <code>PATH</code> 是相對路徑，不依賴主機名稱。',
+    a9: 'rsync 服務公開提供，無需申請。rsync module 包含 <code>binpkgs/</code> 與 <code>distfiles/</code>。同步到本機後用 HTTP 提供即構成一個完整的鏡像，因為索引中的 <code>PATH</code> 是相對路徑，不依賴主機名稱。',
     a9b: '建議每日同步一次。rsync 會略過其判定為未變更的檔案；同一路徑的檔案仍可能因重新簽章或重新產生而需要傳輸。<code>--delay-updates</code> 會把已傳輸的變更檔案延後到傳輸末段逐一取代，但不會將索引與套件樹作為一個整體進行原子切換。鏡像建成後在 <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issues</a> 提出，以便加入鏡像清單。',
     q7: '都收錄了哪些套件？',
     q10: '如何在 w3m、lynx 或 curl 中瀏覽？',
