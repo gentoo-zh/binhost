@@ -170,6 +170,7 @@ net-proxy/Xray
 net-proxy/yacd-meta
 net-proxy/zashboard
 net-vpn/easytier
+net-vpn/netbird
 net-vpn/rathole
 net-vpn/sstp-server
 sci-electronics/openfpgaloader
