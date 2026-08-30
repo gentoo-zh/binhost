@@ -443,7 +443,19 @@ retired=$(printf '%s\n' "${paths[@]}" | ssh "${REMOTE}" "
         echo \"确认无误后以 FORCE_RETIRE=1 重新执行\" >&2
         exit 3
     fi
-    tr '\\n' '\\0' < \"\${tmp}/retire\" | xargs -0r rm -f
+    if ! tr '\\n' '\\0' < \"\${tmp}/retire\" | xargs -0r rm -f; then
+        echo \"清理未能删除全部档案\" >&2
+        exit 4
+    fi
+    left=0
+    while IFS= read -r f; do
+        [ -n \"\${f}\" ] || continue
+        [ -e \"\${f}\" ] && left=\$(( left + 1 ))
+    done < \"\${tmp}/retire\"
+    if [ \"\${left}\" -gt 0 ]; then
+        echo \"清理后仍有 \${left} 个档案在原处\" >&2
+        exit 4
+    fi
     find . -mindepth 1 -type d -empty -delete
     echo \"\${n}\"") || {
     rc=$?

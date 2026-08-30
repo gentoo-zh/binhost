@@ -299,6 +299,9 @@ jobs:
       - name: SIGNING_KEY 必须是指纹，部署前先问 gnupg 有没有这把私钥
         run: bash tests/test-signing-key-gate.sh
 
+      - name: 分发内核闸门不受解析退出码影响，私钥先于替换检查
+        run: bash tests/test-dist-kernel-gate.sh
+
       - name: 保留库使用者按 portage 的语义分类
         run: python3 tests/test-preserved-consumers.py
 

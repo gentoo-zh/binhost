@@ -153,8 +153,14 @@ python3 /usr/local/bin/snapshot-vdb /var/db/pkg /var/log/binhost/installed.txt
 # virtual/dist-kernel: every dist-kernel arrives through it, while
 # sys-kernel/installkernel, dracut and linux-headers belong in the container.
 echo "::: 检查清单没有拉进分发内核"
-if "${EMERGE[@]}" --pretend --quiet "${atoms[@]}" 2>/dev/null |
-        grep -E '^\[[^]]*\] +virtual/dist-kernel' > /tmp/kernel-pull.txt; then
+# The resolver's own exit status must not decide this gate. Under pipefail a
+# failing --pretend makes the whole pipeline non-zero, so the `if` was false
+# even when the output did name virtual/dist-kernel -- and --pretend failing is
+# routine, a slot conflict is enough. Capture first, then match.
+"${EMERGE[@]}" --pretend --quiet "${atoms[@]}" > /tmp/kernel-pretend.txt 2>/dev/null ||
+    echo "    解析未完成，仍按已有输出检查"
+if grep -E '^\[[^]]*\] +virtual/dist-kernel' /tmp/kernel-pretend.txt \
+        > /tmp/kernel-pull.txt; then
     echo "!!! 清单会拉进分发内核，停止构建："
     sed 's/^/    /' /tmp/kernel-pull.txt
     exit 1
