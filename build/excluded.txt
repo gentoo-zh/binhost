@@ -25,4 +25,4 @@ gui-apps/waywallen		0.3.1 在 compile 阶段 ninja 失败，上游问题；overl
 media-gfx/open-wallpaper-engine	默认 USE=waywallen 会拉入上面那个包
 dev-libs/qml-material		overlay 已 mask，维护者停止维护，2026-09-27 移除
 media-plugins/waywallen-display	overlay 已 mask，维护者停止维护，2026-09-27 移除
-sys-boot/zfsbootmenu		依赖 sys-fs/zfs，它要匹配建置机内核，预编译对使用者无意义
+sys-boot/zfsbootmenu		依赖 sys-fs/zfs，它要匹配构建机内核，预编译对用户无意义

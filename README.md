@@ -4,8 +4,8 @@
 nginx 配置，以及构建、签名和发布 [gentoo-zh overlay](https://github.com/gentoo-zh/overlay)
 二进制包的脚本。
 
-使用者可直接查看[配置步骤](https://distfiles.gentoozh.org/)、
-[套件状态](https://distfiles.gentoozh.org/packages)和
+用户可直接查看[配置步骤](https://distfiles.gentoozh.org/)、
+[软件包状态](https://distfiles.gentoozh.org/packages)和
 [常见问题](https://distfiles.gentoozh.org/faq)。
 
 ## 仓库结构
@@ -24,7 +24,7 @@ nginx 配置，以及构建、签名和发布 [gentoo-zh overlay](https://github
 ## 发布范围
 
 直接构建目标来自 [`build/packages.txt`](build/packages.txt)。公开 binpkg 索引主要包含
-这些 gentoo-zh overlay 套件，并附带它们需要的部分 `::gentoo` 运行期依赖。两类产物在
+这些 gentoo-zh overlay 软件包，并附带它们需要的部分 `::gentoo` 运行期依赖。两类产物在
 同一份 `Packages` 中，以 `REPO` 字段区分。附带内容只覆盖这些运行期依赖，不替代
 [Gentoo 官方 binhost](https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart)。
 
@@ -32,15 +32,15 @@ nginx 配置，以及构建、签名和发布 [gentoo-zh overlay](https://github
 
 - 当前 ebuild 的 `LICENSE` 表达式属于固定的 `@BINARY-REDISTRIBUTABLE`。
 - 当前 ebuild 与缓存 binpkg 的 `RESTRICT` 均不包含 `bindist`。
-- 套件没有列入 [`build/excluded.txt`](build/excluded.txt)。
+- 软件包没有列入 [`build/excluded.txt`](build/excluded.txt)。
 - 暂存索引中的运行期依赖可由本次发布、基础系统、Gentoo binhost 或源码快照满足。
 
-`acct-group/*`、`acct-user/*` 与 `virtual/*` 由使用者系统的 Portage 本地安装，本站不发布
+`acct-group/*`、`acct-user/*` 与 `virtual/*` 由用户系统的 Portage 本地安装，本站不发布
 这些类别的 binpkg。`RESTRICT` 中的 `bindist` 只限制 binpkg；distfiles 是否镜像由
 `mirror`、`fetch` 与每项 `SRC_URI` 独立决定。
 
-[套件页](https://distfiles.gentoozh.org/packages)分别显示公开产物、直接构建清单、当前
-发布政策和 distfiles 镜像状态。`✓` 表示公开索引已有 binpkg，不表示套件仍在直接构建
+[软件包页](https://distfiles.gentoozh.org/packages)分别显示公开产物、直接构建清单、当前
+发布政策和 distfiles 镜像状态。`✓` 表示公开索引已有 binpkg，不表示软件包仍在直接构建
 清单。各标签的触发条件和常见原因见
 [FAQ 状态说明](https://distfiles.gentoozh.org/faq#package-status)。
 
@@ -72,12 +72,12 @@ Docker socket、签名私钥或主机根文件系统，也不从主机挂载 `/d
 构建后记录本次实际使用的 Gentoo binhost 索引。暂存阶段按完整 Portage Atom 匹配这些
 快照，再从当前 Gentoo 与 gentoo-zh 源码仓库补充无 USE 约束的可见版本。
 
-一般源码依赖带 USE 约束时，不会因使用者配置未知而推定为可用。对于本地安装的
+一般源码依赖带 USE 约束时，不会因用户配置未知而推定为可用。对于本地安装的
 `acct-group/*`、`acct-user/*` 与 `virtual/*`，源码快照使用当前 ebuild 的 `IUSE` 默认启用项。
 这套检查不等同于执行完整的 Portage 依赖解析，边界记录在
 [`docs/dependency-closure.md`](docs/dependency-closure.md)。
 
-暂存索引必须覆盖直接构建清单中每个套件的当前可用版本，并通过运行期依赖检查。
+暂存索引必须覆盖直接构建清单中每个软件包的当前可用版本，并通过运行期依赖检查。
 无法取得必要快照、依赖无法满足或索引不完整时，本次不会发布新索引。
 
 ### 签名
@@ -217,8 +217,8 @@ rename 整体切换，因此不会出现页面与其指纹化 assets 分属两�
 
 ## 维护
 
-- 添加、移除或移动套件见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
-- 排除的套件及原因见 [`build/excluded.txt`](build/excluded.txt)。
+- 添加、移除或移动软件包见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
+- 排除的软件包及原因见 [`build/excluded.txt`](build/excluded.txt)。
 - 依赖闭包边界见 [`docs/dependency-closure.md`](docs/dependency-closure.md)。
 - 签名密钥轮替与泄露处置见 [`docs/key-rotation.md`](docs/key-rotation.md)。
 
