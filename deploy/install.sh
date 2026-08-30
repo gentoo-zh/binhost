@@ -10,6 +10,7 @@ SSH_PORT="${SSH_PORT:-60001}"
 ROLLBACK_S="${ROLLBACK_S:-300}"
 CONFIRM=/run/binhost-firewall-confirmed
 ROLLBACK_FILE=/run/binhost-firewall-rollback.rules
+ROLLBACK_CONF=/run/binhost-firewall-rollback.conf
 GEN_FILE=/run/binhost-firewall-generation
 cd "$(dirname "$0")/.."
 
@@ -72,6 +73,7 @@ elif ! echo \"\${listening}\" | grep -qx '${SSH_PORT}'; then
 fi
 sed 's/__SSH_PORT__/${SSH_PORT}/g' nftables.conf > nftables.conf.real
 sudo nft -c -f nftables.conf.real
+sudo cp -a /etc/nftables.conf '${ROLLBACK_CONF}' 2>/dev/null || true
 sudo install -m644 nftables.conf.real /etc/nftables.conf
 sudo rm -f '${CONFIRM}'
 sudo sh -c 'nft list ruleset > ${ROLLBACK_FILE}'
@@ -80,6 +82,7 @@ sudo setsid sh -c 'sleep ${ROLLBACK_S}
     [ \"\$(cat ${GEN_FILE} 2>/dev/null)\" = \"${GEN}\" ] || exit 0
     [ \"\$(cat ${CONFIRM} 2>/dev/null)\" = \"${GEN}\" ] && exit 0
     if nft -c -f ${ROLLBACK_FILE} && nft flush ruleset && nft -f ${ROLLBACK_FILE}; then
+        [ -f ${ROLLBACK_CONF} ] && cp -a ${ROLLBACK_CONF} /etc/nftables.conf
         logger -t binhost \"防火墙在 ${ROLLBACK_S} 秒内未确认，已回滚到套用前的规则\"
     else
         logger -t binhost \"防火墙回滚失败，当前规则可能不可用，需要带外介入\"
