@@ -149,7 +149,7 @@ done
 
 mkdir -p "$(dirname "${LOCK}")"
 exec 9>"${LOCK}"
-flock -n 9 || { echo "另一次建置正在执行（${LOCK}）"; exit 0; }
+flock -n 9 || { echo "另一次构建正在执行（${LOCK}）"; exit 0; }
 
 # Every version the overlay offers, so a bump needs no edit here and a new
 # series appears on its own. The series only decides which directory holds it.
@@ -212,9 +212,9 @@ for entry in "${wanted[@]}"; do
                 continue
             fi
             [[ ${manifest_source} == main ]] &&
-                die "${series}/${name} 无法重新建置（gpkg 不可重现）：远端档案与 Manifest 不一致，保留副本不存在或也不一致"
+                die "${series}/${name} 无法重新构建（gpkg 不可重现）：远端档案与 Manifest 不一致，保留副本不存在或也不一致"
         fi
-        echo "    ${series}  ${version}${suffix}  要建置"
+        echo "    ${series}  ${version}${suffix}  要构建"
         todo+=("${series} ${version} ${suffix:-_} ${extra:-_} ${manifest_source:-none}")
     done
 done
@@ -268,7 +268,7 @@ for entry in ${todo[@]+"${todo[@]}"}; do
             rm -f /var/cache/binpkgs/${PACKAGE}/${PACKAGE#*/}-${version}-[0-9]*.gpkg.tar
             emaint binhost --fix >/dev/null
             emerge --quiet-build -1 --buildpkg --usepkg '${atom}'
-        " || die "${series} ${version} 建置失败"
+        " || die "${series} ${version} 构建失败"
 
     # The build id has to be 1, which is why the old binpkgs of this version are
     # cleared above. It is not only the file name: the directory inside the gpkg
@@ -276,7 +276,7 @@ for entry in ${todo[@]+"${todo[@]}"}; do
     # exactly that name. Renaming the file does not rename what is inside it, so
     # a -2 published as -1 unpacks to a directory the -bin install never finds.
     built="${PKGDIR}/${PACKAGE}/${PACKAGE#*/}-${version}-1.gpkg.tar"
-    [[ -f ${built} ]] || die "建置完成但没有 -1 产物：${built}"
+    [[ -f ${built} ]] || die "构建完成但没有 -1 产物：${built}"
 
     # sed consumes the whole listing. head would close the pipe after the first
     # line, tar would take SIGPIPE, and pipefail turns that into 141 with no

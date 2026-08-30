@@ -80,13 +80,13 @@
 
   <h1 class="title" data-i18n="title">设计语言</h1>
   <p class="lead" data-i18n="lead">
-    本页定义站点的设计值与规则。修改样式或新增页面时，以本页为准。
+    本页规定站点的设计规范。修改样式或新增页面时，以本页为准。
   </p>
 
   <h2 data-i18n="hRole">定位</h2>
 
   <p class="note" data-i18n="role1">
-    这是一个供使用者查找地址、确认包状态和浏览目录的索引站点。设计优先保证信息密度
+    本站是供用户查找地址、确认包状态和浏览目录的索引站点。设计优先保证信息密度
     与数据可读性，再考虑留白和装饰。
   </p>
 
@@ -137,7 +137,7 @@
   </div>
 
   <table class="spec">
-    <thead><tr><th data-i18n="thSize">尺寸</th><th data-i18n="thWhere">用在哪</th></tr></thead>
+    <thead><tr><th data-i18n="thSize">尺寸</th><th data-i18n="thWhere">用途</th></tr></thead>
     <tbody>
       <tr><td>1.6rem / 600</td><td data-i18n="sz1">页面标题，每页一个。34rem 以下 1.45rem</td></tr>
       <tr><td>0.95rem / 400</td><td data-i18n="sz2">引导句</td></tr>
@@ -164,7 +164,7 @@
   </p>
 
   <table class="spec">
-    <thead><tr><th data-i18n="thBp">断点</th><th data-i18n="thBpDo">做什么</th></tr></thead>
+    <thead><tr><th data-i18n="thBp">断点</th><th data-i18n="thBpDo">作用</th></tr></thead>
     <tbody>
       <tr><td>62rem</td><td data-i18n="bp1">隐藏体积列。视口更宽时包名不换行</td></tr>
       <tr><td>52rem</td><td data-i18n="bp2">隐藏版本列。指纹改为独占一行并按分组换行</td></tr>
@@ -183,7 +183,7 @@
     <tbody>
       <tr><td data-i18n="r1k">顶栏两行</td><td data-i18n="r1v">品牌、语言与主题位于第一行，导航链接位于第二行。品牌使用 flex-basis: 0，避免顶栏换成三行</td></tr>
       <tr><td data-i18n="r2k">导航链接可横向滚动</td><td data-i18n="r2v">链接保持单行，避免单个链接独占一行</td></tr>
-      <tr><td data-i18n="r3k">表格逐列隐藏</td><td data-i18n="r3v">体积、版本依次让位，状态列留到最后</td></tr>
+      <tr><td data-i18n="r3k">表格逐列隐藏</td><td data-i18n="r3v">依次隐藏体积列与版本列，状态列保留到最后</td></tr>
       <tr><td data-i18n="r4k">表头留在视口内</td><td data-i18n="r4v">thead 使用 position: sticky，top 使用 --nav-h。顶栏同样为 sticky；若 top 为 0，表头会被顶栏遮挡。util.js 测量窄屏顶栏高度并写入变量</td></tr>
       <tr><td data-i18n="r5k">包名在斜线处断行</td><td data-i18n="r5v">用 &lt;wbr&gt; 标出断点。word-break: break-all 会把 app-admin/1password 切成无法辨认的三段</td></tr>
       <tr><td data-i18n="r6k">页面不横向滚动</td><td data-i18n="r6v">代码块与地址栏在各自容器内滚动，表格通过逐列隐藏适配视口。表格外层不得设置 overflow；overflow-x 不是 visible 时，overflow-y 的 visible 会计算为 auto，sticky 表头将绑定到该容器</td></tr>
@@ -273,7 +273,7 @@
   </table>
 
   <p class="note" data-i18n="lang2">
-    导航栏与页脚由全站共用，并随当前语言切换。每个页面都显示语言按钮，确保使用者
+    导航栏与页脚由全站共用，并随当前语言切换。每个页面都显示语言按钮，用户
     可以修改全站语言偏好。
   </p>
 

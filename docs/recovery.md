@@ -10,11 +10,11 @@
 
 | 内容 | 大小 | 恢复来源 | 实测耗时 |
 | --- | ---: | --- | ---: |
-| stable binpkg | 1.5 GB / 257 个 | 建置机 PKGDIR | 164 秒 |
-| unstable binpkg | 2.2 GB / 433 个 | 建置机 PKGDIR | 225 秒 |
-| 内核归档 | 274 MB / 2 个 | 建置机已发布副本（补齐后） | **未重新量测** |
+| stable binpkg | 1.5 GB / 257 个 | 构建机 PKGDIR | 164 秒 |
+| unstable binpkg | 2.2 GB / 433 个 | 构建机 PKGDIR | 225 秒 |
+| 内核归档 | 274 MB / 2 个 | 构建机已发布副本（补齐后） | **未重新量测** |
 | distfiles | 27 GB / 1403 个 | 各上游 SRC_URI | 575 秒，在用的全部取回 |
-| GIG OS ISO | 7.8 GB / 2 个 | `Gig-OS/*` 仓库，建置机有副本 | 未量测 |
+| GIG OS ISO | 7.8 GB / 2 个 | `Gig-OS/*` 仓库，构建机有副本 | 未量测 |
 
 两个频道的 binpkg 加起来 **6 分半**可以恢复到可服务并通过同代校验。这一段没有意外。
 distfiles 再 **9 分半**。演练当下 13 个取源失败，逐个复查之后没有一个是在用
@@ -25,13 +25,13 @@ distfiles 再 **9 分半**。演练当下 13 个取源失败，逐个复查之�
 ### 内核归档必须从已发布副本恢复
 
 `sys-kernel/gentoo-cjk-kernel-bin` 的 Manifest 按 URL 钉死每个档案的
-BLAKE2B 与 SHA512。gpkg 不是位元可重现的，外层 tar 带建置时间，**同一个版本重建
+BLAKE2B 与 SHA512。gpkg 不是位元可重现的，外层 tar 带构建时间，**同一个版本重建
 一次摘要就变**。实测三个摘要：
 
 ```
 overlay Manifest        49503e6ab6e5dac7401792496b3d1172…
 正式发布的那份           49503e6ab6e5dac7401792496b3d1172…   一致
-建置机 PKGDIR 恢复的      f74824e7eaa41c3a64a08ba579f5d2a2…   不一致
+构建机 PKGDIR 恢复的      f74824e7eaa41c3a64a08ba579f5d2a2…   不一致
 ```
 
 因此不能从 PKGDIR 恢复内核归档。`kernel-archive.sh` 现在把成功发布的档案原样保留在
@@ -50,7 +50,7 @@ PUBLISHED_DIR="$PUBLISHED_DIR" bash "$BUILD_ROOT/kernel-archive.sh"
 ```
 
 这次执行不会重建摘要相符的既有版本；远端档案通过 Manifest 核验后，脚本直接补齐并跳过
-建置。补齐完成之前，内核归档仍没有可用的恢复来源。
+构建。补齐完成之前，内核归档仍没有可用的恢复来源。
 
 ### Gentoo 镜像不带我们的 distfiles
 
@@ -120,7 +120,7 @@ PUBLISHED_DIR="$PUBLISHED_DIR" bash "$BUILD_ROOT/kernel-archive.sh"
 
 ## 链路速率
 
-建置机到镜像机，`dd | ssh` 排除磁盘之后实测：
+构建机到镜像机，`dd | ssh` 排除磁盘之后实测：
 
 | 并行连线 | 合计速率 |
 | ---: | ---: |
@@ -135,7 +135,7 @@ PUBLISHED_DIR="$PUBLISHED_DIR" bash "$BUILD_ROOT/kernel-archive.sh"
 
 ## 恢复步骤
 
-前置条件：建置机可登入且 PKGDIR 与内核已发布副本完好、镜像机可登入、`/srv` 有足够
+前置条件：构建机可登入且 PKGDIR 与内核已发布副本完好、镜像机可登入、`/srv` 有足够
 空间（binpkg 与 distfiles 合计约 28 GB）。
 
 ### 0 建立目标目录
@@ -175,7 +175,7 @@ CHANNEL=$CH STAGE="$REC" REMOTE=mirror REMOTE_ROOT="/srv/pub/$SUB" \
 rm -rf "$REC"
 ```
 
-整段在建置机上执行，并且要拿到建置锁，避免复制期间 PKGDIR 被下一轮换掉：
+整段在构建机上执行，并且要拿到构建锁，避免复制期间 PKGDIR 被下一轮换掉：
 
 ```sh
 flock -w 60 /var/lib/binhost/stage/build.lock bash <上面那段>
@@ -249,14 +249,14 @@ rsync -a "$PUBLISHED_DIR/" "$REMOTE:$REMOTE_ROOT/"
 
 GIG OS 不由本仓库产生，恢复来源是 `Gig-OS/Live-ISO`（构建）与
 `Gig-OS/gentoozh-liveiso-infra`（`build-and-deploy.sh`、`reupload-iso.sh`）。
-当前两份 ISO 在建置机上有副本，恢复是复制而不是重建。**ISO 构建与 binhost 的两轮
+当前两份 ISO 在构建机上有副本，恢复是复制而不是重建。**ISO 构建与 binhost 的两轮
 构建共用同一台机器**，恢复或重建时要与 08:00 和 20:00 两个时段错开。
 
 ## 真的丢了就没有的
 
 - **签章私钥。** 在 `~/.config/gentoozh/` 有离机副本；那份也没了，整条信任链要重来：
   换钥、改站点与 README 的指纹、通知已经导入旧钥的用户。
-- **镜像机归档与建置机已发布副本同时丢失的内核归档位元组。** PKGDIR 不能替代已发布
+- **镜像机归档与构建机已发布副本同时丢失的内核归档位元组。** PKGDIR 不能替代已发布
   副本，因为同版本重建的 gpkg 摘要可能不同。
 - **已经清理掉的历史代际。** 保留策略只留当前一代。
 - **上游已经消失的 distfile。**
