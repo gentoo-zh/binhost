@@ -40,6 +40,14 @@ if ! flock -n 9; then
 fi
 trap \"rm -rf '${tmp}'\" EXIT
 
+echo '--- 签名密钥'
+sudo GNUPGHOME='${ROOT}/gnupg' gpg --batch --list-secret-keys '${SIGNING_KEY}' \
+    >/dev/null 2>&1 || {
+    echo \"    !! ${ROOT}/gnupg 里没有 ${SIGNING_KEY} 的私钥\" >&2
+    exit 1
+}
+echo '    ${SIGNING_KEY} 可用'
+
 echo '--- 构建脚本'
 sudo rsync -a --delete '${tmp}/build/' '${ROOT}/build/'
 sudo rsync -a --delete '${tmp}/ops/' '${ROOT}/ops/'
@@ -61,14 +69,6 @@ if sudo test -e /etc/binhost/alert.conf; then
 else
     echo '    /etc/binhost/alert.conf 尚未建立，告警不会发出'
 fi
-
-echo '--- 签名密钥'
-sudo GNUPGHOME='${ROOT}/gnupg' gpg --batch --list-secret-keys '${SIGNING_KEY}' \
-    >/dev/null 2>&1 || {
-    echo \"    !! ${ROOT}/gnupg 里没有 ${SIGNING_KEY} 的私钥\" >&2
-    exit 1
-}
-echo '    ${SIGNING_KEY} 可用'
 
 echo '--- 定时单元'
 sudo install -m644 '${tmp}'/systemd/binhost-*.service '${tmp}'/systemd/binhost-*.timer \
