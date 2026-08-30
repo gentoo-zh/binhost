@@ -141,6 +141,7 @@ net-misc/prips
 net-misc/reframe
 net-misc/remmina-plugin-rustdesk
 net-misc/rustdesk
+net-misc/tssh
 net-misc/tsshd
 net-p2p/n2n
 net-p2p/qbittorrent-enhanced
