@@ -39,7 +39,11 @@ def read_exceptions(path=None):
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        atom, _, reason = line.partition("\t")
+        atom, tab, reason = line.partition("\t")
+        # An exception without a reason is almost always a mistyped line, and
+        # accepting it silently drops a real unsatisfied dependency.
+        if not tab or not reason.strip():
+            raise ValueError(f"{p}: 例外缺少制表符与理由：{line}")
         out[atom.strip()] = reason.strip()
     return out
 
