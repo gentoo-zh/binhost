@@ -4,7 +4,10 @@ on:
   pull_request:
   workflow_dispatch:
   push:
-    branches: [master]
+    # A PR opened with GITHUB_TOKEN does not trigger on: pull_request, so the
+    # bot branches never got checked -- an addition naming a package that is
+    # not in the overlay reached review with no check having run at all.
+    branches: [master, 'newcomer/**', 'retire/**', 'move/**']
 
 jobs:
   packages:
