@@ -33,6 +33,9 @@ KERNEL_ARCH="${KERNEL_ARCH:-amd64}"
 KERNEL_OVERLAY="${KERNEL_OVERLAY:-/var/lib/binhost/overlay}"
 KERNEL_TREE="${KERNEL_TREE:-/var/db/repos/gentoo}"
 KERNEL_SERIES_TOOL="${KERNEL_SERIES_TOOL:-/var/lib/binhost/build/kernel-series.py}"
+# cycle.sh, kernel-archive.sh and build-container.sh all take this lock, so
+# holding it means some build is mid-flight and the archive is still catching up.
+BUILD_LOCK="${BUILD_LOCK:-/var/lib/binhost/stage/build.lock}"
 
 STATUS_DIR=$(cd "$(dirname "$0")" && pwd)
 GENERATION_TOOL="${GENERATION_TOOL:-}"
@@ -71,7 +74,7 @@ case ${COMPONENT} in
 esac
 
 check_kernel_archive() {
-    local output rc line series version extra archive url code
+    local output rc line series version extra archive url code build_fd
     local -a versions missing
 
     [[ ${COMPONENT} == builder ]] || return
@@ -82,6 +85,19 @@ check_kernel_archive() {
     if [[ ! -d ${KERNEL_OVERLAY} || ! -d ${KERNEL_TREE} ]]; then
         bad "内核归档" "overlay 或 Gentoo 主仓库不存在，无法取得应发布版本"
         return
+    fi
+
+    # A kernel run publishes one version at a time, so every version still
+    # queued reads as missing until the run ends. Reporting that as a fault
+    # fires once per check for the whole build window. If the lock cannot be
+    # opened we cannot tell, so the check proceeds rather than passing quietly.
+    if exec {build_fd}>"${BUILD_LOCK}" 2>/dev/null; then
+        if ! flock -n "${build_fd}"; then
+            exec {build_fd}>&-
+            note "内核归档" "构建正在执行，本次不比对 overlay 版本与已发布内容"
+            return
+        fi
+        exec {build_fd}>&-
     fi
 
     output=$(OVERLAY="${KERNEL_OVERLAY}" TREE="${KERNEL_TREE}" \
