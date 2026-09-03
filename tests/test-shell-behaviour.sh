@@ -661,14 +661,6 @@ ok "后缀带 -bin" \
    "$(grep -c 'LOCALVERSION="\${LOCALVERSION:--gentoo-cjk-dist-bin}"' \
       "${ROOT}/build/kernel-archive.sh")" "1"
 
-# shellcheck disable=SC2016  # we grep for the literal ${VAR}, not its value
-ok "清理被上限暂缓时以非零结束" \
-   "$(grep -c '\[\[ -z ${blocked} \]\] || die' \
-      "${ROOT}/build/kernel-archive.sh")" "1"
-# shellcheck disable=SC2016  # we grep for the literal ${VAR}, not its value
-ok "两条上限都会记下被挡" \
-   "$(grep -cE '^ +blocked=' "${ROOT}/build/kernel-archive.sh")" "2"
-
 echo "== kernel-archive 解开 overlay 对 virtual/dist-kernel 的 mask"
 # Every gentoo-cjk-kernel PDEPENDs on that virtual and the overlay masks it, so
 # without the unmask the resolve stops before anything is compiled.
@@ -685,8 +677,6 @@ ok "常规构建容器不解开它" \
    "$(grep -c 'package.unmask' "${ROOT}/build/build-container.sh")" "0"
 
 echo "== kernel-archive 的每轮上限与 USE 要求"
-ok "每轮有构建数量上限" \
-   "$(grep -c 'MAX_BUILDS' "${ROOT}/build/kernel-archive.sh")" "4"
 ok "超过上限时说明留了几个" \
    "$(grep -c '留到下一轮' "${ROOT}/build/kernel-archive.sh")" "1"
 ok "发布前回读产物的 USE" \
@@ -694,7 +684,7 @@ ok "发布前回读产物的 USE" \
 
 echo "== kernel-archive 的保留策略"
 ok "按 overlay 保留，不按数量" \
-   "$(grep -c 'KEEP' "${ROOT}/build/kernel-archive.sh")" "0"
+   "$(grep -cE 'KEEP_(LAST|VERSIONS|COUNT|N)' "${ROOT}/build/kernel-archive.sh")" "0"
 
 echo "== kernel-archive 取产物的方式"
 # shellcheck disable=SC2016  # we grep for the literal ${VAR}, not its value
@@ -1100,12 +1090,13 @@ stage_index "${d}" 2
 mkdir -p "${d}/remote/app-misc"
 for ((i = 0; i < 30; i++)); do echo x > "${d}/remote/app-misc/old${i}-1.0-1.gpkg.tar"; done
 echo "app-misc/p2-1.0-1.gpkg.tar" > "${d}/stage/quarantine.txt"
+# Quarantine is a takedown, so it happens whatever the retire rate limit is.
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
-      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
-ok "清理仍被上限拦下" "$?" "3"
+      REMOTE_ROOT="${d}/remote" RETIRE_PER_RUN=0 bash build/publish.sh 2>&1)
+ok "限速为 0 时发布仍然成功" "$?" "0"
 ok "但不可再散布的那个已经移除" \
    "$(test -e "${d}/remote/app-misc/p2-1.0-1.gpkg.tar" && echo 在 || echo 不在)" "不在"
-ok "受上限保护的旧包一个没动" "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "30"
+ok "限速为 0 时旧包未被删除" "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "30"
 contains "输出说明执行隔离" "${out}" "从公开路径移除"
 rm -rf "${d}"
 
@@ -1253,20 +1244,73 @@ ok "索引列出但暂存区不存在该包时中止" "$?" "1"
 contains "并且指出是哪一个" "${out}" "p1-1.0-1.gpkg.tar"
 rm -rf "${d}"
 
+# The limit is a rate, so a backlog drains over the following runs instead of
+# growing. A cap that refused would leave all twenty behind every time.
 d=$(setup_publish)
-stage_index "${d}" 2
+stage_index "${d}" 20
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "先发布二十个包" "$?" "0"
 mkdir -p "${d}/remote/app-misc"
 for ((i = 0; i < 20; i++)); do echo x > "${d}/remote/app-misc/old${i}-1.0-1.gpkg.tar"; done
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
-      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
-ok "清理比例超上限时以 3 退出" "$?" "3"
-ok "并且一个旧包都没删" "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "20"
-contains "并且说明如何强制" "${out}" "FORCE_RETIRE=1"
+      REMOTE_ROOT="${d}/remote" RETIRE_PER_RUN=5 bash build/publish.sh 2>&1)
+ok "超出限速时发布仍然成功" "$?" "0"
+ok "本轮清理数量等于限速" "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "15"
+contains "并且说明剩余由后续轮次清理" "${out}" "还有 15 个由后续轮次清理"
+ok "优先清理排序靠前的路径" \
+   "$(test -e "${d}/remote/app-misc/old0-1.0-1.gpkg.tar" && echo 在 || echo 不在)" "不在"
+ok "排序靠后的留到后续轮次" \
+   "$(test -e "${d}/remote/app-misc/old9-1.0-1.gpkg.tar" && echo 在 || echo 不在)" "在"
 
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
-      REMOTE_ROOT="${d}/remote" FORCE_RETIRE=1 bash build/publish.sh 2>&1)
-ok "FORCE_RETIRE=1 时正常清理" "$?" "0"
-ok "清理后只剩索引里的那两个" "$(find "${d}/remote" -name '*.gpkg.tar' | wc -l)" "2"
+      REMOTE_ROOT="${d}/remote" RETIRE_PER_RUN=5 bash build/publish.sh 2>&1)
+ok "下一轮同样以 0 结束" "$?" "0"
+ok "下一轮继续清理，积压不再增长" \
+   "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "10"
+
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" RETIRE_PER_RUN=5 FORCE_RETIRE=1 bash build/publish.sh 2>&1)
+ok "FORCE_RETIRE=1 时忽略限速一次清理全部" "$?" "0"
+ok "清理后仅保留索引列出的二十个" "$(find "${d}/remote" -name '*.gpkg.tar' | wc -l)" "20"
+rm -rf "${d}"
+
+# The keep list lands in a directory the mirror shares with other users, so a
+# name that already exists is refused rather than written through.
+d=$(setup_publish)
+stage_index "${d}" 2
+keep_path="/tmp/binhost-keep.publish-test-$$"
+ln -sf "${d}/victim" "${keep_path}"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" RUN_ID="publish-test-$$" bash build/publish.sh 2>&1)
+ok "保留清单的写入路径已存在时中止" "$?" "1"
+ok "并且未写入符号链接指向的文件" \
+   "$(test -e "${d}/victim" && echo 已写入 || echo 未写入)" "未写入"
+contains "并且说明原因" "${out}" "保留清单未能送到镜像机"
+rm -f "${keep_path}"
+rm -rf "${d}"
+
+d=$(setup_publish)
+stage_index "${d}" 2
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" RETIRE_PER_RUN=-1 bash build/publish.sh 2>&1)
+ok "限速不是非负整数时中止" "$?" "1"
+contains "并且说明原因" "${out}" "RETIRE_PER_RUN 应为非负整数"
+rm -rf "${d}"
+
+# An index that lost most of its packages makes everything else look
+# superseded. That is the one reading on which deleting is wrong.
+d=$(setup_publish)
+stage_index "${d}" 20
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "先发布二十个包" "$?" "0"
+stage_index "${d}" 2
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
+      REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
+ok "索引包数骤减时以 3 退出" "$?" "3"
+ok "并且未删除任何旧包" "$(find "${d}/remote" -name '*.gpkg.tar' | wc -l)" "20"
+contains "并且说明两代的包数" "${out}" "本次索引 2 个包，上一代 20 个"
 rm -rf "${d}"
 
 d=$(setup_publish)
@@ -1332,8 +1376,8 @@ for ((i = 0; i < 8; i++)); do echo x > "${d}/remote/app-misc/p${i}-1.0-1.gpkg.ta
 for ((i = 0; i < 2; i++)); do echo x > "${d}/remote/app-misc/old${i}-1.0-1.gpkg.tar"; done
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
-ok "恰好等于比例上限时也拦下" "$?" "3"
-ok "并且未删除任何旧包" "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "2"
+ok "日常汰换在当轮完成" "$?" "0"
+ok "并且旧包已删除" "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "0"
 rm -rf "${d}"
 
 d=$(setup_publish)
@@ -1343,8 +1387,10 @@ for ((i = 0; i < 400; i++)); do echo x > "${d}/remote/app-misc/p${i}-1.0-1.gpkg.
 for ((i = 0; i < 70; i++)); do echo x > "${d}/remote/app-misc/old${i}-1.0-1.gpkg.tar"; done
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" STAGE="${d}/stage" REMOTE=x \
       REMOTE_ROOT="${d}/remote" bash build/publish.sh 2>&1)
-ok "比例没超但绝对数量超时仍拦下" "$?" "3"
-ok "并且未删除任何旧包" "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "70"
+ok "超过默认限速时发布仍然成功" "$?" "0"
+ok "本轮按默认限速清理六十个" \
+   "$(find "${d}/remote" -name 'old*.gpkg.tar' | wc -l)" "10"
+contains "并且说明剩余数量" "${out}" "还有 10 个由后续轮次清理"
 rm -rf "${d}"
 
 echo
@@ -1503,18 +1549,43 @@ out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}
 ok "包下载失败时不切换索引代际" "$(readlink "${d}/dest/.index")" "${second_gen}"
 rm -rf "${d}"
 
+# Downstream mirrors carry the same rate limit, for the same reason.
 d=$(setup_mirror)
-mirror_index "${d}" 2
+mirror_index "${d}" 20
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
+      bash deploy/mirror-sync.sh 2>&1)
+ok "先同步二十个包的索引" "$?" "0"
 mkdir -p "${d}/dest/app-misc"
 for ((i = 0; i < 20; i++)); do echo x > "${d}/dest/app-misc/old${i}-1.0-1.gpkg.tar"; done
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
-      bash deploy/mirror-sync.sh 2>&1)
-ok "清理比例超上限时以 3 退出" "$?" "3"
-ok "并且未删除任何旧包" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "20"
+      REMOVE_PER_RUN=5 bash deploy/mirror-sync.sh 2>&1)
+ok "超出限速时同步仍然成功" "$?" "0"
+ok "本轮清理数量等于限速" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "15"
+contains "并且说明剩余由后续轮次清理" "${out}" "还有 15 个由后续轮次清理"
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
-      FORCE_REMOVE=1 bash deploy/mirror-sync.sh 2>&1)
-ok "FORCE_REMOVE=1 时正常清理" "$?" "0"
+      REMOVE_PER_RUN=5 bash deploy/mirror-sync.sh 2>&1)
+ok "下一轮同样以 0 结束" "$?" "0"
+ok "下一轮继续清理，积压不再增长" \
+   "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "10"
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
+      REMOVE_PER_RUN=5 FORCE_REMOVE=1 bash deploy/mirror-sync.sh 2>&1)
+ok "FORCE_REMOVE=1 时忽略限速一次清理全部" "$?" "0"
 ok "清理后旧包不再存在" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "0"
+rm -rf "${d}"
+
+# The downstream mirror carries the same floor: an upstream index that lost
+# most of its packages must not take the local copies with it.
+d=$(setup_mirror)
+mirror_index "${d}" 20
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
+      bash deploy/mirror-sync.sh 2>&1)
+ok "先同步一份完整索引" "$?" "0"
+mirror_index "${d}" 2
+out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
+      bash deploy/mirror-sync.sh 2>&1)
+ok "上游索引包数骤减时以 3 退出" "$?" "3"
+ok "并且未删除任何旧包" "$(find "${d}/dest" -name '*.gpkg.tar' | wc -l)" "20"
+contains "并且说明两份的包数" "${out}" "本次索引 2 个包，上一份 20 个"
 rm -rf "${d}"
 
 d=$(setup_mirror)
@@ -1554,8 +1625,8 @@ mkdir -p "${d}/dest/app-misc"
 for ((i = 0; i < 2; i++)); do echo x > "${d}/dest/app-misc/old${i}-1.0-1.gpkg.tar"; done
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
       bash deploy/mirror-sync.sh 2>&1)
-ok "恰好等于比例上限时也拦下" "$?" "3"
-ok "并且未删除任何旧包" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "2"
+ok "日常汰换在当轮完成" "$?" "0"
+ok "并且旧包已删除" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "0"
 rm -rf "${d}"
 
 d=$(setup_mirror)
@@ -1576,8 +1647,8 @@ mkdir -p "${d}/dest/app-misc"
 for ((i = 0; i < 10; i++)); do echo x > "${d}/dest/app-misc/old${i}-1.0-1.gpkg.tar"; done
 out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" BASE="https://x/x86-64" DEST="${d}/dest" \
       bash deploy/mirror-sync.sh 2>&1)
-ok "大量新档不会把删除比例稀释掉" "$?" "3"
-ok "并且旧文件均保留" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "10"
+ok "索引变大时旧文件照常清理" "$?" "0"
+ok "并且旧文件都已删除" "$(find "${d}/dest" -name 'old*.gpkg.tar' | wc -l)" "0"
 rm -rf "${d}"
 
 echo

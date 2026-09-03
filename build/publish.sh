@@ -11,8 +11,16 @@ STAGE="${STAGE:-/var/lib/binhost/stage/${CHANNEL_STORAGE}}"
 REMOTE="${REMOTE:-mirror}"
 REMOTE_ROOT="${REMOTE_ROOT:-${CHANNEL_REMOTE_ROOT}}"
 
-MAX_RETIRE_SHARE="${MAX_RETIRE_SHARE:-20}"
-MAX_RETIRE_COUNT="${MAX_RETIRE_COUNT:-60}"
+# How many superseded packages one run may delete. This is a rate limit, not a
+# veto: whatever is left over is deleted by the following runs. A cap that
+# refuses instead ratchets, because the files it declines to delete are still
+# there next time, and the count only grows.
+RETIRE_PER_RUN="${RETIRE_PER_RUN:-60}"
+
+# Retirement is skipped entirely when this run's index carries less than this
+# share of the packages the published one carried. An index that collapsed is
+# the one case where deleting what it no longer names is wrong.
+RETIRE_MIN_KEEP_SHARE="${RETIRE_MIN_KEEP_SHARE:-50}"
 
 # These six describe one generation and have to change together. Each name on
 # the mirror is a symlink into .gen/, and .gen is a symlink to the generation
@@ -388,9 +396,15 @@ python3 "$(dirname "$0")/generation.py" verify "${STAGE}" || {
 
 echo ">>> 发布 ${#paths[@]} 个包到 ${REMOTE}:${REMOTE_ROOT}"
 
+# The collapse check needs the package count of the generation that is public
+# right now. It has to be read here: the switch below replaces that index with
+# this run's own, and the count on the mirror is not the same number as the
+# file count, which also carries whatever is still waiting to be retired.
 # shellcheck disable=SC2029
-before=$(ssh "${REMOTE}" "find ${REMOTE_ROOT} -name '*.gpkg.tar' -printf x 2>/dev/null | wc -c")
-[[ ${before} =~ ^[0-9]+$ ]] || before=0
+packages_before=$(ssh "${REMOTE}" \
+    "awk '/^PACKAGES: /{print \$2; exit}' '${REMOTE_ROOT}/Packages'" 2>/dev/null) ||
+    packages_before=0
+[[ ${packages_before} =~ ^[0-9]+$ ]] || packages_before=0
 
 printf '%s\n' "${paths[@]}" |
     rsync -a --info=stats2 --files-from=- "${STAGE}/" "${REMOTE}:${REMOTE_ROOT}/" |
@@ -413,60 +427,117 @@ printf '{"packages":%s,"overlay":%s,"deps":%s,"generated":%s}\n' \
     ssh "${REMOTE}" "cat > ${REMOTE_ROOT}/.status.json.${RUN_ID}.new &&
                      mv -f ${REMOTE_ROOT}/.status.json.${RUN_ID}.new ${REMOTE_ROOT}/status.json"
 
-# shellcheck disable=SC2029  # as above
 want=${#paths[@]}
+KEEP_REMOTE="/tmp/binhost-keep.${RUN_ID}"
+
+# head -n -1 means every line but the last, so a negative limit would delete
+# almost everything instead of almost nothing.
+[[ ${RETIRE_PER_RUN} =~ ^[0-9]+$ ]] || {
+    echo "RETIRE_PER_RUN 应为非负整数，收到：${RETIRE_PER_RUN}" >&2
+    exit 1
+}
+
+# The keep list travels as a file rather than on stdin, because stdin carries
+# the script itself. Sending it first is what lets the retire step be a quoted
+# heredoc like PREPARE and SWITCH, so tests can cut it out and run it.
 # shellcheck disable=SC2029
-retired=$(printf '%s\n' "${paths[@]}" | ssh "${REMOTE}" "
-    set -u
-    tmp=\$(mktemp -d) || exit 1
-    trap 'rm -rf \"\${tmp}\"' EXIT
-    cat > \"\${tmp}/keep\"
-    got=\$(wc -l < \"\${tmp}/keep\")
-    if [ \"\${got}\" -ne ${want} ]; then
-        echo \"保留清单只收到 \${got} 行，应为 ${want}，中止清理\" >&2
-        exit 1
-    fi
-    cd ${REMOTE_ROOT} || exit 1
-    find . -name '*.gpkg.tar' -printf '%P\n' | sort > \"\${tmp}/have\"
-    have=\$(wc -l < \"\${tmp}/have\")
-    grep -vxF -f \"\${tmp}/keep\" \"\${tmp}/have\" \
-        > \"\${tmp}/retire\" || true
-    n=\$(wc -l < \"\${tmp}/retire\")
-    over=0
-    base=${before}
-    [ \"\${base}\" -gt 0 ] || base=\${have}
-    [ \"\${n}\" -gt 0 ] && [ \"\${base}\" -gt 0 ] &&
-        [ \$(( n * 100 )) -ge \$(( base * ${MAX_RETIRE_SHARE} )) ] && over=1
-    [ \"\${n}\" -ge ${MAX_RETIRE_COUNT} ] && over=1
-    if [ \"\${over}\" -eq 1 ] && [ '${FORCE_RETIRE:-0}' != 1 ]; then
-        echo \"本次要清理 \${n} 个，本次之前有 \${base} 个，达到 ${MAX_RETIRE_SHARE}% 或 ${MAX_RETIRE_COUNT} 个的上限，未清理\" >&2
-        echo \"确认无误后以 FORCE_RETIRE=1 重新执行\" >&2
-        exit 3
-    fi
-    if ! tr '\\n' '\\0' < \"\${tmp}/retire\" | xargs -0r rm -f; then
-        echo \"清理未能删除全部文件\" >&2
-        exit 4
-    fi
-    left=0
-    while IFS= read -r f; do
-        [ -n \"\${f}\" ] || continue
-        [ -e \"\${f}\" ] && left=\$(( left + 1 ))
-    done < \"\${tmp}/retire\"
-    if [ \"\${left}\" -gt 0 ]; then
-        echo \"清理后仍有 \${left} 个文件在原处\" >&2
-        exit 4
-    fi
-    find . -mindepth 1 -type d -empty -delete
-    echo \"\${n}\"") || {
+# noclobber, so a name someone else got to first is refused rather than
+# followed: the target is in a directory the mirror shares with other users.
+printf '%s\n' "${paths[@]}" | ssh "${REMOTE}" "set -C; cat > '${KEEP_REMOTE}'" || {
+    echo "保留清单未能送到镜像机，未清理" >&2
+    exit 1
+}
+
+# shellcheck disable=SC2029  # the arguments are meant to expand locally
+counts=$(ssh "${REMOTE}" \
+    "sh -s '${REMOTE_ROOT}' '${KEEP_REMOTE}' '${want}' '${packages_before}' \
+           '${RETIRE_PER_RUN}' '${RETIRE_MIN_KEEP_SHARE}' '${FORCE_RETIRE:-0}'" <<'RETIRE'
+set -u
+root="$1"
+keep="$2"
+want="$3"
+packages_before="$4"
+per_run="$5"
+min_keep_share="$6"
+force="$7"
+
+trap 'rm -f "${keep}"' EXIT
+
+got=$(wc -l < "${keep}" 2>/dev/null) || got=-1
+if [ "${got}" -ne "${want}" ]; then
+    echo "保留清单只收到 ${got} 行，应为 ${want}，未清理" >&2
+    exit 1
+fi
+
+cd "${root}" || exit 1
+tmp=$(mktemp -d) || exit 1
+trap 'rm -rf "${tmp}"; rm -f "${keep}"' EXIT
+
+find . -name '*.gpkg.tar' -printf '%P\n' | sort > "${tmp}/have"
+have=$(wc -l < "${tmp}/have")
+grep -vxF -f "${keep}" "${tmp}/have" > "${tmp}/retire" || true
+n=$(wc -l < "${tmp}/retire")
+
+# An index that lost most of its packages names almost nothing, so everything
+# else on the mirror looks superseded. Deleting on that reading is the one way
+# this step can destroy packages that are still wanted. When the count of the
+# public generation could not be read, the file count stands in, so a failed
+# reading refuses rather than waves the run through.
+base=${packages_before}
+[ "${base}" -gt 0 ] || base=${have}
+if [ "${force}" != 1 ] && [ "${base}" -gt 0 ] &&
+   [ $(( want * 100 )) -lt $(( base * min_keep_share )) ]; then
+    echo "本次索引 ${want} 个包，上一代 ${base} 个，不足 ${min_keep_share}%，未清理" >&2
+    exit 3
+fi
+
+# Sorted input and a plain head make the selection reproducible, so a run that
+# hits the limit deletes the same first slice a test can predict.
+if [ "${force}" = 1 ]; then
+    cp "${tmp}/retire" "${tmp}/doomed"
+else
+    head -n "${per_run}" "${tmp}/retire" > "${tmp}/doomed"
+fi
+d=$(wc -l < "${tmp}/doomed")
+
+if ! tr '\n' '\0' < "${tmp}/doomed" | xargs -0r rm -f; then
+    echo "清理未能删除全部文件" >&2
+    exit 4
+fi
+left=0
+while IFS= read -r f; do
+    [ -n "${f}" ] || continue
+    [ -e "${f}" ] && left=$(( left + 1 ))
+done < "${tmp}/doomed"
+if [ "${left}" -gt 0 ]; then
+    echo "清理后仍有 ${left} 个文件在原处" >&2
+    exit 4
+fi
+
+find . -mindepth 1 -type d -empty -delete
+echo "${d} $(( n - d ))"
+RETIRE
+) || {
     rc=$?
+    ssh "${REMOTE}" "rm -f '${KEEP_REMOTE}'" 2>/dev/null || true
     if (( rc == 3 )); then
-        echo ">>> 已发布 ${#paths[@]} 个；清理被上限拦下，索引与包体都已就位" >&2
+        echo ">>> 已发布 ${#paths[@]} 个；索引包数骤减，本次未清理，索引与包体都已就位" >&2
         exit 3
     fi
     exit "${rc}"
 }
 
-echo ">>> 已发布 ${#paths[@]} 个，清理 ${retired} 个"
+read -r retired pending <<< "${counts}"
+if [[ ! ${retired} =~ ^[0-9]+$ || ! ${pending} =~ ^[0-9]+$ ]]; then
+    echo "清理结果无法解析：${counts:-无输出}" >&2
+    exit 4
+fi
+
+if (( pending )); then
+    echo ">>> 已发布 ${#paths[@]} 个，清理 ${retired} 个，还有 ${pending} 个由后续轮次清理"
+else
+    echo ">>> 已发布 ${#paths[@]} 个，清理 ${retired} 个"
+fi
 
 }
 

@@ -30,7 +30,17 @@ ARCH="${ARCH:-amd64}"
 REMOTE="${REMOTE:-mirror}"
 REMOTE_ROOT="${REMOTE_ROOT:-/srv/pub/gentoo-cjk-kernel/${ARCH}}"
 PUBLISHED_DIR="${PUBLISHED_DIR:-/var/lib/binhost/kernel-published}"
-MAX_RETIRE="${MAX_RETIRE:-2}"
+# A rate limit on deletions, matching MAX_BUILDS below: what one run leaves
+# behind the next run takes. A cap that refuses instead ratchets, because the
+# files it declines to delete are still there next time. The case it used to
+# guard against, an overlay that reads as empty, is caught where the version
+# list is built, which stops the run before anything is deleted.
+RETIRE_PER_RUN="${RETIRE_PER_RUN:-2}"
+[[ ${RETIRE_PER_RUN} =~ ^[0-9]+$ ]] || {
+    echo "!!! RETIRE_PER_RUN 应为非负整数，收到：${RETIRE_PER_RUN}" >&2
+    exit 1
+}
+RETIRE_MIN_KEEP_SHARE="${RETIRE_MIN_KEEP_SHARE:-50}"
 # One kernel takes about twenty five minutes, so a first run over a long
 # version list would hold the machine for most of a day. What is left over
 # is picked up by the next run.
@@ -139,8 +149,6 @@ record_pending_manifest() {
         "${name}" "${size}" "${blake2b}" "${sha512}" >> "${pending}"
 }
 
-# A capped cleanup fails the run so OnFailure reports incomplete retirement.
-blocked=""
 pending_manifest="${PUBLISHED_DIR}/pending-manifest.txt"
 
 for path in "${OVERLAY}" "${TREE}"; do
@@ -351,12 +359,14 @@ for f in ${remote_files[@]+"${remote_files[@]}"} \
     [[ ${found} == yes ]] || stale+=("${f}")
 done
 
+# Sorted so a run that hits the limit takes the same first slice every time.
 if (( ${#stale[@]} )); then
-    if (( ${#stale[@]} > MAX_RETIRE )); then
-        echo "!! 要清理 ${#stale[@]} 个文件，超过上限 ${MAX_RETIRE}，未执行清理" >&2
-        echo "   overlay 可能读取有误，确认之后再执行" >&2
-        blocked="要清理 ${#stale[@]} 个文件"
-    fi
+    mapfile -t stale < <(printf '%s\n' "${stale[@]}" | sort)
+fi
+stale_pending=0
+if (( ${#stale[@]} > RETIRE_PER_RUN )); then
+    stale_pending=$(( ${#stale[@]} - RETIRE_PER_RUN ))
+    stale=("${stale[@]:0:RETIRE_PER_RUN}")
 fi
 
 # A series the overlay no longer offers is retired, the same way the package
@@ -388,15 +398,22 @@ for series in ${remote_series[@]+"${remote_series[@]}"} \
     [[ ${found} == yes ]] || retire+=("${series}")
 done
 
-if (( ${#retire[@]} )); then
-    if (( ${#retire[@]} > MAX_RETIRE )); then
-        echo "!! 要退役 ${#retire[@]} 条线，超过上限 ${MAX_RETIRE}，未执行退役" >&2
-        echo "   overlay 可能读取有误，确认之后再执行" >&2
-        blocked="${blocked:+${blocked}，}要退役 ${#retire[@]} 条线"
-    fi
+# The same floor the other two carry: an overlay that reads as a fraction of
+# what is published makes every other line look dropped.
+if (( ${#retire[@]} && ${#remote_series[@]} > 0 )) &&
+   (( ${#wanted[@]} * 100 < ${#remote_series[@]} * RETIRE_MIN_KEEP_SHARE )); then
+    echo "!! overlay 提供 ${#wanted[@]} 条线，镜像上有 ${#remote_series[@]} 条，不足 ${RETIRE_MIN_KEEP_SHARE}%，未退役" >&2
+    retire=()
 fi
 
-[[ -z ${blocked} ]] || die "${blocked}，超过上限 ${MAX_RETIRE}，本次未执行"
+if (( ${#retire[@]} )); then
+    mapfile -t retire < <(printf '%s\n' "${retire[@]}" | sort)
+fi
+retire_pending=0
+if (( ${#retire[@]} > RETIRE_PER_RUN )); then
+    retire_pending=$(( ${#retire[@]} - RETIRE_PER_RUN ))
+    retire=("${retire[@]:0:RETIRE_PER_RUN}")
+fi
 
 for f in ${stale[@]+"${stale[@]}"}; do
     echo "    清理 ${f}（overlay 已不提供这个版本）"
@@ -411,6 +428,13 @@ for series in ${retire[@]+"${retire[@]}"}; do
     ssh "${REMOTE}" "rm -rf ${REMOTE_ROOT}/${series}"
     rm -rf -- "${PUBLISHED_DIR:?}/${series}"
 done
+
+if (( stale_pending )); then
+    echo ">>> 还有 ${stale_pending} 个文件由后续轮次清理"
+fi
+if (( retire_pending )); then
+    echo ">>> 还有 ${retire_pending} 条线由后续轮次退役"
+fi
 
 if [[ -s ${pending_manifest} ]]; then
     pending_count=$(grep -c '^DIST ' "${pending_manifest}")

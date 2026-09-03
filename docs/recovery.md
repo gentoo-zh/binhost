@@ -37,7 +37,8 @@ overlay Manifest        49503e6ab6e5dac7401792496b3d1172…
 因此不能从 PKGDIR 恢复内核归档。`kernel-archive.sh` 现在把成功发布的文件原样保留在
 `PUBLISHED_DIR`，默认路径是 `/var/lib/binhost/kernel-published/<系列>/<发布名>`。
 副本只在 rsync 成功后写入；同一个发布名会被新副本覆盖。远端文件与本地副本使用同一份
-overlay 清单和 `MAX_RETIRE` 上限，overlay 移除版本后，两处文件在同一轮清理。
+overlay 清单和 `RETIRE_PER_RUN` 每轮限速，overlay 移除版本后，两处文件在同一轮清理；
+超出限速的部分由后续轮次接着清理。
 
 部署这项改动时，既有两条内核线尚无本地副本。执行一次正常归档任务即可补齐：脚本从
 镜像机取回已发布文件，核对大小与 overlay Manifest 的摘要，再把临时文件改成发布名。
