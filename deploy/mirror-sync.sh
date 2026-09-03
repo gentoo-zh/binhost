@@ -4,12 +4,30 @@ set -euo pipefail
 
 BASE="${BASE:-https://distfiles.gentoozh.org/binpkgs/x86-64}"
 DEST="${DEST:-./x86-64}"
-MAX_REMOVE_SHARE="${MAX_REMOVE_SHARE:-20}"
-MAX_REMOVE_COUNT="${MAX_REMOVE_COUNT:-60}"
+# A rate limit, not a veto: what one run leaves behind the next run deletes.
+# A cap that refuses instead ratchets, because the files it declines to delete
+# still count against the following run.
+REMOVE_PER_RUN="${REMOVE_PER_RUN:-60}"
+
+# Skip removal entirely when the index that was just fetched carries less than
+# this share of the packages the previous one carried.
+REMOVE_MIN_KEEP_SHARE="${REMOVE_MIN_KEEP_SHARE:-50}"
+
 INDEX_FILES=(Packages Packages.gz)
 
 mkdir -p "${DEST}"
-before=$(find "${DEST}" -name '*.gpkg.tar' -printf x | wc -c)
+# A negative limit would make the loop remove nothing and report a backlog
+# that never drains.
+[[ ${REMOVE_PER_RUN} =~ ^[0-9]+$ ]] || {
+    echo "REMOVE_PER_RUN 应为非负整数，收到：${REMOVE_PER_RUN}" >&2
+    exit 1
+}
+
+# Read before the new index replaces it. The file count is not the same number,
+# because it also carries whatever is still waiting to be removed.
+packages_before=$(awk '/^PACKAGES: /{print $2; exit}' "${DEST}/Packages" 2>/dev/null) ||
+    packages_before=0
+[[ ${packages_before} =~ ^[0-9]+$ ]] || packages_before=0
 
 exec 9>"${DEST}/.mirror-sync.lock"
 flock -n 9 || { echo "另一次镜像同步仍在执行，本次中止" >&2; exit 1; }
@@ -161,31 +179,40 @@ declare -A wanted=()
 for p in "${paths[@]}"; do wanted["${p}"]=1; done
 
 retire=()
-have=0
 while IFS= read -r -d '' f; do
-    have=$((have + 1))
     rel=${f#"${DEST}/"}
     [[ -v wanted["${rel}"] ]] || retire+=("${f}")
 done < <(find "${DEST}" -name '*.gpkg.tar' -print0)
 
-over=0
-base=${before}
-(( base > 0 )) || base=${have}
-(( ${#retire[@]} > 0 && base > 0 && ${#retire[@]} * 100 >= base * MAX_REMOVE_SHARE )) && over=1
-(( ${#retire[@]} >= MAX_REMOVE_COUNT )) && over=1
-if (( over )) && [[ ${FORCE_REMOVE:-0} != 1 ]]; then
-    echo "!! 本次要清理 ${#retire[@]} 个，本次之前有 ${base} 个，达到 ${MAX_REMOVE_SHARE}% 或 ${MAX_REMOVE_COUNT} 个的上限，未清理" >&2
-    echo "   索引与已下载的包都已就位，确认无误后以 FORCE_REMOVE=1 重新执行" >&2
+base=${packages_before}
+(( base > 0 )) || base=$(find "${DEST}" -name '*.gpkg.tar' -printf x | wc -c)
+if (( base > 0 )) && [[ ${FORCE_REMOVE:-0} != 1 ]] &&
+   (( ${#paths[@]} * 100 < base * REMOVE_MIN_KEEP_SHARE )); then
+    echo "!! 本次索引 ${#paths[@]} 个包，上一份 ${base} 个，不足 ${REMOVE_MIN_KEEP_SHARE}%，未清理" >&2
+    echo "   索引与已下载的包都已就位" >&2
     exit 3
 fi
 
+# Sorted so a run that hits the limit removes the same first slice every time.
+if (( ${#retire[@]} )); then
+    mapfile -t retire < <(printf '%s\n' "${retire[@]}" | sort)
+fi
+limit=${#retire[@]}
+[[ ${FORCE_REMOVE:-0} == 1 ]] || (( limit <= REMOVE_PER_RUN )) || limit=${REMOVE_PER_RUN}
+
 removed=0
-for f in "${retire[@]}"; do
+for f in "${retire[@]+"${retire[@]}"}"; do
+    (( removed < limit )) || break
     rm -f "${f}"
     removed=$((removed + 1))
 done
+pending=$(( ${#retire[@]} - removed ))
 
 find "${DEST}" -type d -empty -delete
 
-echo ">>> 新增 ${new}，重新下载 ${stale}，清理 ${removed}，共 ${#paths[@]}"
+if (( pending )); then
+    echo ">>> 新增 ${new}，重新下载 ${stale}，清理 ${removed}，还有 ${pending} 个由后续轮次清理，共 ${#paths[@]}"
+else
+    echo ">>> 新增 ${new}，重新下载 ${stale}，清理 ${removed}，共 ${#paths[@]}"
+fi
 echo ">>> 将 ${DEST} 通过 HTTP 提供，用户 sync-uri 指向该地址即可"

@@ -269,7 +269,7 @@
         <tr><td data-i18n-html="stBindist"><code>不提供 binpkg</code></td><td data-i18n-html="sdBindist">当前 ebuild 的 <code>RESTRICT</code> 包含 <code>bindist</code>，因此本站不发布该包的 binpkg。源码包和上游预编译包都可能设置这项限制，常见原因是许可证、上游发布条款或预编译内容的再分发条件不允许本站分发二进制产物；包名含 <code>-bin</code> 本身不是判定依据。distfiles 是否镜像仍按 <code>RESTRICT</code> 中的 <code>mirror</code>、<code>fetch</code> 与每项 <code>SRC_URI</code> 单独判断。</td></tr>
         <tr><td data-i18n-html="stLicense"><code>许可证限制</code></td><td data-i18n-html="sdLicense">当前 ebuild 的 <code>LICENSE</code> 表达式不属于本站固定的 <code>@BINARY-REDISTRIBUTABLE</code>。许可证可能允许附带条件的再分发，但本站不会据此发布 binpkg；该状态与 <code>RESTRICT=bindist</code> 分开判定。</td></tr>
         <tr><td data-i18n-html="stLocal"><code>本地安装</code></td><td data-i18n-html="sdLocal"><code>acct-group</code> 与 <code>acct-user</code> 由 Portage 在用户系统创建账号，<code>virtual</code> 由 Portage 选择实际实现。这些包无需本站预编译。</td></tr>
-        <tr><td data-i18n-html="stRetiring"><code>待移除</code></td><td data-i18n-html="sdRetiring">公开索引仍有旧 binpkg，但当前 overlay、清单或发布政策已不再提供它。旧产物会保留到新一代索引发布成功，避免旧索引指向已删除文件；该状态可以与勾号同时出现。</td></tr>
+        <tr><td data-i18n-html="stRetiring"><code>待移除</code></td><td data-i18n-html="sdRetiring">公开索引仍有旧 binpkg，但当前 overlay、清单或发布政策已不再提供它。旧产物在新一代索引发布成功后开始移除，每轮移除一部分，避免旧索引指向已删除文件；该状态可以与勾号同时出现。</td></tr>
         <tr><td data-i18n-html="stDist"><code>Distfiles —</code></td><td data-i18n-html="sdDist">该包没有声明 distfile、<code>RESTRICT</code> 包含 <code>mirror</code> 或 <code>fetch</code>，或声明的文件尚未全部进入镜像。破折号提示会区分没有文件与不可用；该状态不表示 binpkg 不可用。</td></tr>
       </tbody>
     </table>
@@ -362,7 +362,7 @@ window.MIRROR_I18N = {
     stLocal: '<code>本機安裝</code>',
     sdLocal: '<code>acct-group</code> 與 <code>acct-user</code> 由 Portage 在使用者系統建立帳號，<code>virtual</code> 由 Portage 選擇實際實作。這些套件無須本站預先編譯。',
     stRetiring: '<code>待移除</code>',
-    sdRetiring: '公開索引仍有舊 binpkg，但目前 overlay、清單或發布政策已不再提供它。舊產物會保留到新一代索引發布成功，避免舊索引指向已刪除檔案；該狀態可以與勾號同時出現。',
+    sdRetiring: '公開索引仍有舊 binpkg，但目前 overlay、清單或發布政策已不再提供它。舊產物在新一代索引發布成功後開始移除，每輪移除一部分，避免舊索引指向已刪除檔案；該狀態可以與勾號同時出現。',
     stDist: '<code>Distfiles —</code>',
     sdDist: '該套件沒有宣告 distfile、<code>RESTRICT</code> 包含 <code>mirror</code> 或 <code>fetch</code>，或宣告的檔案尚未全部進入鏡像。破折號提示會區分沒有檔案與不可用；該狀態不表示 binpkg 不可用。'
   },
@@ -418,7 +418,7 @@ window.MIRROR_I18N = {
     stLocal: '<code>local install</code>',
     sdLocal: 'Portage creates the accounts from <code>acct-group</code> and <code>acct-user</code> on the user system, while <code>virtual</code> lets Portage select the actual implementation. These packages do not need to be prebuilt by this host.',
     stRetiring: '<code>pending removal</code>',
-    sdRetiring: 'The public index still contains an old binpkg, but the current overlay, list or publication policy no longer provides it. The old artifact remains until a new index generation publishes successfully, preventing the old index from pointing to a deleted file. This status can appear with a tick.',
+    sdRetiring: 'The public index still contains an old binpkg, but the current overlay, list or publication policy no longer provides it. Removal starts once a new index generation publishes successfully and takes a share each publish, preventing the old index from pointing to a deleted file. This status can appear with a tick.',
     stDist: '<code>Distfiles —</code>',
     sdDist: 'The package declares no distfile, its <code>RESTRICT</code> includes <code>mirror</code> or <code>fetch</code>, or not every declared file has reached the mirror. The dash tooltip distinguishes no file from unavailable data. This status does not imply that the binpkg is unavailable.'
   }

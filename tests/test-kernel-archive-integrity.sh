@@ -130,7 +130,7 @@ reset_case() {
     REMOTE_CHECK_MODE="file"
     RSYNC_FAIL=none
     DOWNLOAD_SOURCE=
-    MAX_RETIRE=2
+    RETIRE_PER_RUN=2
     write_manifest "${NAME}" "${TEST_BUILT}"
 }
 
@@ -139,7 +139,7 @@ run_archive() {
         PKGDIR="${WORK}/pkgdir" PUBLISHED_DIR="${WORK}/published" \
         MANIFEST="${WORK}/Manifest" LOCK="${WORK}/lock" \
         REMOTE=test REMOTE_ROOT=/archive DOCKER=docker MAX_BUILDS="$1" \
-        MAX_RETIRE="${MAX_RETIRE}" REMOTE_CHECK_MODE="${REMOTE_CHECK_MODE}" \
+        RETIRE_PER_RUN="${RETIRE_PER_RUN}" REMOTE_CHECK_MODE="${REMOTE_CHECK_MODE}" \
         FAKE_SIZE="${FAKE_SIZE:-}" FAKE_DIGEST="${FAKE_DIGEST:-}" \
         RSYNC_FAIL="${RSYNC_FAIL}" DOWNLOAD_SOURCE="${DOWNLOAD_SOURCE}" \
         TEST_REMOTE="${WORK}/remote" TEST_REMOTE_ROOT=/archive \
@@ -311,16 +311,23 @@ for old in old-a old-b old-c; do
     printf '%s\n' "${old}" > "${WORK}/remote/archive/7.1/${old}.gpkg.tar"
     printf '%s\n' "${old}" > "${WORK}/published/7.1/${old}.gpkg.tar"
 done
-if run_archive 0 >"${WORK}/retire.out" 2>&1; then
-    echo "  ✗ 超过 MAX_RETIRE 时应当失败"
-    exit 1
-fi
-grep -q '超过上限 2，未执行清理' "${WORK}/retire.out"
+run_archive 0 >"${WORK}/retire.out" 2>&1
+grep -q '还有 1 个文件由后续轮次清理' "${WORK}/retire.out"
+left=0
 for old in old-a old-b old-c; do
-    [[ -e ${WORK}/remote/archive/7.1/${old}.gpkg.tar ]]
-    [[ -e ${WORK}/published/7.1/${old}.gpkg.tar ]]
+    [[ -e ${WORK}/remote/archive/7.1/${old}.gpkg.tar ]] && left=$(( left + 1 ))
+    [[ -e ${WORK}/published/7.1/${old}.gpkg.tar ]] ||
+        [[ ! -e ${WORK}/remote/archive/7.1/${old}.gpkg.tar ]]
 done
-echo "  ✓ 超过 MAX_RETIRE 时远端与本地文件都不变"
+[[ ${left} -eq 1 ]]
+echo "  ✓ 超过每轮限速时清理其中一部分，并说明剩余数量"
+
+# The point of the rate limit: what one run leaves behind the next run takes,
+# instead of the same backlog blocking every run for ever.
+run_archive 0 >"${WORK}/retire2.out" 2>&1
+[[ -z $(find "${WORK}/remote/archive/7.1" -name 'old-*.gpkg.tar' -print -quit) ]]
+[[ -z $(find "${WORK}/published/7.1" -name 'old-*.gpkg.tar' -print -quit) ]]
+echo "  ✓ 下一轮清理剩余部分，积压不再增长"
 
 reset_case
 mkdir -p "${WORK}/remote/archive/7.1"
