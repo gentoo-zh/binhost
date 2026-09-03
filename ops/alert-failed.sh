@@ -16,12 +16,12 @@ result=$(field Result)
 code=$(field ExecMainStatus)
 
 if [[ ${FORCE:-0} != 1 && ${result} == success ]]; then
-    echo "${UNIT} 的结果是 success，略过告警" >&2
+    echo "${UNIT} 的结果是 success，跳过告警" >&2
     exit 0
 fi
 for handled in ${HANDLED_EXITS:-10 11}; do
     if [[ ${FORCE:-0} != 1 && ${code} == "${handled}" ]]; then
-        echo "${UNIT} 已自行发出告警（退出码 ${code}），略过重复告警" >&2
+        echo "${UNIT} 已自行发出告警（退出码 ${code}），跳过重复告警" >&2
         exit 0
     fi
 done
@@ -60,7 +60,7 @@ $(hostname) · ${now} UTC+8
 if [[ -n ${tail_lines} ]]; then
     text+="
 
-最后几行：
+日志末尾：
 ${tail_lines}"
 fi
 

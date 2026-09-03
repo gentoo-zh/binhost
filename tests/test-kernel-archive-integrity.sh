@@ -315,7 +315,7 @@ if run_archive 0 >"${WORK}/retire.out" 2>&1; then
     echo "  ✗ 超过 MAX_RETIRE 时应当失败"
     exit 1
 fi
-grep -q '超过上限 2，一个都不动' "${WORK}/retire.out"
+grep -q '超过上限 2，未执行清理' "${WORK}/retire.out"
 for old in old-a old-b old-c; do
     [[ -e ${WORK}/remote/archive/7.1/${old}.gpkg.tar ]]
     [[ -e ${WORK}/published/7.1/${old}.gpkg.tar ]]

@@ -138,7 +138,7 @@ if [[ -n ${VERSION_FILE} && -r ${VERSION_FILE} ]]; then
     there=$(curl -fsS --max-time 20 "${REPO_API}" 2>/dev/null |
             sed -n 's/^  "sha": "\([0-9a-f]\{40\}\)",$/\1/p' | head -1)
     if [[ ${here} == *-dirty ]]; then
-        bad "部署版本" "${here:0:8} 是从未提交的工作树装的，无法核对"
+        bad "部署版本" "${here:0:8} 安装自未提交的工作树，无法核对"
     elif [[ ! ${here} =~ ^[0-9a-f]{40}$ ]]; then
         bad "部署版本" "VERSION 不是提交号：${here:0:16}"
     elif [[ -z ${there} ]]; then
@@ -189,7 +189,7 @@ check_site_sync() {
     # this check in the same minute, so the test can run before the sync takes
     # the lock and the tree is then rewritten mid-read.
     if ! exec {site_fd}>"${SITE_LOCK}" 2>/dev/null; then
-        bad "站点同步" "打不开 ${SITE_LOCK}"
+        bad "站点同步" "无法打开 ${SITE_LOCK}"
         return
     fi
     if ! flock -n "${site_fd}"; then
@@ -216,9 +216,9 @@ check_site_sync() {
     elif (( pages )); then
         bad "站点同步" "${pages} 个页面与仓库副本不一致，rsync 未完成"
     elif [[ ! -r ${SITE_DEST}/gentoo-zh-binhost.asc ]]; then
-        bad "站点同步" "发布目录未包含公钥，用户按站点第 1 步无法获取它"
+        bad "站点同步" "发布目录未包含公钥，用户无法按站点第 1 步获取公钥"
     elif ! cmp -s "${SITE_WORK}/site/gentoo-zh-binhost.asc" "${SITE_DEST}/gentoo-zh-binhost.asc"; then
-        bad "站点同步" "仓库里的公钥与已发布的不一致，指纹守卫可能拦下了它"
+        bad "站点同步" "仓库里的公钥与已发布的不一致，publish-site.sh 的指纹校验可能拒绝了本次发布"
     else
         note "站点同步" "${here_site:0:8}，${age_h} 小时内已拉取"
     fi
@@ -269,9 +269,9 @@ if [[ -d ${DISK_PATH} ]]; then
     read -r avail pct < <(df -P "${DISK_PATH}" | awk 'NR==2 {gsub(/%/,"",$5); print $4, $5}')
     human() { awk -v k="$1" 'BEGIN { split("K M G T", u); i=1; while (k>=1024 && i<4) { k/=1024; i++ } printf "%.0f%s", k, u[i] }'; }
     if (( pct >= DISK_WARN_PCT )); then
-        bad "磁盘" "${DISK_PATH} 用了 ${pct}%，剩 $(human "${avail}")"
+        bad "磁盘" "${DISK_PATH} 已用 ${pct}%，可用 $(human "${avail}")"
     else
-        note "磁盘" "${pct}%，剩 $(human "${avail}")"
+        note "磁盘" "${pct}%，可用 $(human "${avail}")"
     fi
 fi
 
@@ -363,7 +363,7 @@ else
     if [[ ! ${dts} =~ ^[0-9]+$ || ! ${dn} =~ ^[0-9]+$ ]]; then
         bad "distfiles" "status 无法解析"
     elif (( dn == 0 )); then
-        bad "distfiles" "一个文件都没有"
+        bad "distfiles" "没有任何文件"
     else
         dage=$(( ( $(date +%s) - dts ) / 3600 ))
         if (( dage >= DIST_MAX_AGE_H )); then
@@ -381,7 +381,7 @@ elif ! curl -fsS --max-time 10 -o /dev/null "http://127.0.0.1:${EXPORTER_PORT}/m
 else
     rules=$(sudo -n nft list chain inet filter input 2>/dev/null)
     if [[ -z ${rules} ]]; then
-        note "node_exporter" "应答正常（防火墙不由这里管）"
+        note "node_exporter" "应答正常（本机不管理防火墙规则）"
     elif [[ ${rules} != *"dport ${EXPORTER_PORT}"* ]]; then
         bad "node_exporter" "防火墙没有放行 ${EXPORTER_PORT} 的规则"
     else
@@ -449,7 +449,7 @@ check_build_status unstable build-status-unstable.json
 # one root already left. That printed a bare Permission denied and looked like a
 # fault. Try the write and say plainly when it did not happen.
 if [[ -d $(dirname "${HEARTBEAT}") ]] && ! date +%s 2>/dev/null > "${HEARTBEAT}"; then
-    note "心跳写入" "本次未更新 ${HEARTBEAT}，由排程执行的那次负责"
+    note "心跳写入" "本次未更新 ${HEARTBEAT}，由定时任务的那次写入"
 fi
 
 stamp=$(curl -fsS --max-time 15 "${SITE}/.health" 2>/dev/null | tr -dc '0-9')
@@ -466,7 +466,7 @@ fi
 
 
 if (( problems > 0 )) && [[ ! -r ${ALERT_CONF} ]]; then
-    echo "!! 有 ${problems} 项未通过，但 ${ALERT_CONF} 无法读取，告警传送失败" >&2
+    echo "!! 有 ${problems} 项未通过，但 ${ALERT_CONF} 无法读取，告警发送失败" >&2
 fi
 
 STATE_FILE="${STATE_FILE:-/var/lib/binhost/status-state}"
