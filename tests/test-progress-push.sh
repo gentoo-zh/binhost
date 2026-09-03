@@ -74,9 +74,9 @@ echo "== 两次推送重叠时都要成功"
 IFS='|' read -r rc_a rc_b valid leftovers mode <<< "$(collide)"
 ok "先发的那次成功" "${rc_a}" "0"
 ok "后发的那次成功" "${rc_b}" "0"
-ok "落地的档案是完整 JSON" "${valid}" "valid"
+ok "落地的文件是完整 JSON" "${valid}" "valid"
 ok "没有留下临时档" "${leftovers}" "0"
-ok "落地的档案可被读取" "${mode}" "644"
+ok "落地的文件可被读取" "${mode}" "644"
 
 echo
 echo "== 远端失败时如实回报"

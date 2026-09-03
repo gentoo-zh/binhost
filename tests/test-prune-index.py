@@ -112,7 +112,7 @@ try:
     check("generation.json 重新生成且能通过校验", True)
 except ValueError as error:
     check("generation.json 重新生成且能通过校验", False, str(error))
-check("清单里仍是五个档案",
+check("清单里仍是五个文件",
       set(json.loads((d / "generation.json").read_text())["files"]) ==
       set(generation.FILES))
 tmp.cleanup()

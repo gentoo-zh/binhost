@@ -124,21 +124,21 @@ builder_lock=$(line_of "${builder}" "flock -n 9")
 builder_scripts=$(line_of "${builder}" "sudo rsync -a --delete")
 builder_units=$(line_of "${builder}" "sudo install -m644 '${d1}{tmp}'/systemd")
 builder_version=$(line_of "${builder}" "'${d1}{ROOT}/build/VERSION'")
-ok "建置锁涵盖脚本、单元与 VERSION" \
+ok "构建锁涵盖脚本、单元与 VERSION" \
    "$((builder_lock < builder_scripts && builder_scripts < builder_units &&
        builder_units < builder_version))" "1"
-ok "建置锁先打开描述符再加锁" \
+ok "构建锁先打开描述符再加锁" \
    "$((builder_lock_fd < builder_lock))" "1"
-ok "持锁的建置部署使用同一个远端 shell" \
+ok "持锁的构建部署使用同一个远端 shell" \
    "$(grep -cF "${d1}{REMOTE} \"set -euo pipefail" "${builder}")" "1"
 
 PATH="${tmp}/fake-bin:${PATH}" REMOTE=ssh SIGNING_KEY=test \
     bash "${builder}" > "${tmp}/builder-remote.sh"
 if bash -n "${tmp}/builder-remote.sh"; then
-    echo "  ✓ 建置机收到的远端脚本语法正确"
+    echo "  ✓ 构建机收到的远端脚本语法正确"
     pass=$((pass + 1))
 else
-    echo "  ✗ 建置机收到的远端脚本语法错误"
+    echo "  ✗ 构建机收到的远端脚本语法错误"
     fail=$((fail + 1))
 fi
 

@@ -77,7 +77,7 @@ leftovers() {
         \( -name '.switch-*' -o -name '.site-seed-*' -o -name '.replaced-*' \) | wc -l
 }
 
-echo "== 首次发布：目标里已经有一份普通档案与真目录"
+echo "== 首次发布：目标里已经有一份普通文件与真目录"
 d=$(setup)
 site "${d}/src" A
 site "${d}/dest" A
@@ -100,7 +100,7 @@ ok "上一代目录已移除" \
 ok "不留临时档" "$(leftovers "${d}")" "0"
 
 echo
-echo "== 每日任务写在同一个目录里的档案不受影响"
+echo "== 每日任务写在同一个目录里的文件不受影响"
 printf '{"packages":1}\n' > "${d}/dest/packages.json"
 printf 'app-misc/a\n' > "${d}/dest/packages.txt"
 printf '123\n' > "${d}/dest/.health"

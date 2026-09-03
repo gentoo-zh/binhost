@@ -91,7 +91,7 @@ esac
 shipped = shipped_to_mirror()
 tracked = {path: tracked_at_runtime(path) for path in shipped}
 
-check("读到了 install.sh 送往镜像机的档案", bool(shipped), str(shipped))
+check("读到了 install.sh 送往镜像机的文件", bool(shipped), str(shipped))
 if not shipped:
     sys.exit(1)
 

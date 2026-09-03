@@ -443,7 +443,7 @@ def main(pkgdir, stage, overlay=None, rev="", gentoo_rev="", lookup=None, seed_f
             print(f"!! 不发布 {cpv}：LICENSE 不属于 @BINARY-REDISTRIBUTABLE",
                   file=sys.stderr)
         elif state == "source":
-            print(f"!! 不发布 {cpv}：该类别应在使用者系统本地安装",
+            print(f"!! 不发布 {cpv}：该类别应在用户系统本地安装",
                   file=sys.stderr)
         elif state == "kernel-module":
             print(f"!! 不发布 {cpv}：内核模块只对编它的内核有效", file=sys.stderr)

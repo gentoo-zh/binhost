@@ -307,7 +307,7 @@ with tempfile.TemporaryDirectory() as directory:
     check("容器不使用特权模式或设备直通",
           "--privileged" not in command and "--device" not in command)
 
-print("== 建置接线")
+print("== 构建接线")
 container_script = (ROOT / "build" / "build-container.sh").read_text()
 smoke_start = container_script.index('python3 "$(dirname "$0")/smoke-install.py"')
 deps = container_script.index('python3 "$(dirname "$0")/verify-deps.py"')
