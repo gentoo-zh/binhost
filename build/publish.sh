@@ -444,7 +444,7 @@ retired=$(printf '%s\n' "${paths[@]}" | ssh "${REMOTE}" "
         exit 3
     fi
     if ! tr '\\n' '\\0' < \"\${tmp}/retire\" | xargs -0r rm -f; then
-        echo \"清理未能删除全部档案\" >&2
+        echo \"清理未能删除全部文件\" >&2
         exit 4
     fi
     left=0
@@ -453,7 +453,7 @@ retired=$(printf '%s\n' "${paths[@]}" | ssh "${REMOTE}" "
         [ -e \"\${f}\" ] && left=\$(( left + 1 ))
     done < \"\${tmp}/retire\"
     if [ \"\${left}\" -gt 0 ]; then
-        echo \"清理后仍有 \${left} 个档案在原处\" >&2
+        echo \"清理后仍有 \${left} 个文件在原处\" >&2
         exit 4
     fi
     find . -mindepth 1 -type d -empty -delete

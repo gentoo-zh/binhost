@@ -264,14 +264,14 @@ case("excluded.txt 里的包不发布", lambda: (
     run([stanza("app-text/wiki2man_on_rust-0.5.1-r1")],
         excluded={"app-text/wiki2man_on_rust"})[0] == []))
 
-case("acct-group 只在使用者系统本地安装", lambda: (
+case("acct-group 只在用户系统本地安装", lambda: (
     cpvs(run([stanza("acct-group/aptly-0")], excluded={"app-misc/other"})[0])
     == []))
 
-case("acct-user 只在使用者系统本地安装", lambda: (
+case("acct-user 只在用户系统本地安装", lambda: (
     cpvs(run([stanza("acct-user/aptly-0")])[0]) == []))
 
-case("virtual 只在使用者系统本地安装", lambda: (
+case("virtual 只在用户系统本地安装", lambda: (
     cpvs(run([stanza("virtual/lib-0", repo="gentoo")])[0]) == []))
 
 case("本地安装类别从候选索引排除", lambda: (
@@ -791,7 +791,7 @@ def _dest_escape(shape):
 
 case("目的地的中间目录是 symlink 时拒绝且不写出去",
      lambda: (lambda r: r[0] not in (0, None) and not r[1])(_dest_escape("dir")))
-case("目的地的目标档案是 symlink 时拒绝且不写出去",
+case("目的地的目标文件是 symlink 时拒绝且不写出去",
      lambda: (lambda r: r[0] not in (0, None) and not r[1])(_dest_escape("file")))
 case("目的地干净时照常写入",
      lambda: _dest_escape("clean")[0] in (0, None))
@@ -1156,7 +1156,7 @@ case("未解析清单写下所有引用者", lambda: (
     main_unresolved_consumers()
     == "sys-libs/glibc\tapp-misc/a-1 app-misc/b-1\n"))
 
-case("virtual 留给使用者的 Portage 从源码解析", lambda: (
+case("virtual 留给用户的 Portage 从源码解析", lambda: (
     deps([stanza("app-misc/a-1", rdepend="virtual/lib"),
           stanza("virtual/lib-0", repo="gentoo", rdepend="|| ( dev-libs/lib dev-libs/deep )"),
           LIB, DEEP])

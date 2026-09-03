@@ -86,7 +86,7 @@ sent, used = builder_dirs()
 if sent or used:
     print(f"  install-builder.sh: rsync 送出 {sorted(sent)}，安装时读取 {sorted(used)}")
     for d in sorted(used - sent):
-        print(f"    ✗ {d}/ 没有被 rsync 送到建置机，安装那步会失败")
+        print(f"    ✗ {d}/ 没有被 rsync 送到构建机，安装那步会失败")
         bad += 1
 for script, sources in sorted(staged_sources().items()):
     print(f"  {script}: rsync 送出 {len(sources)} 个源码路径")

@@ -88,7 +88,7 @@ IFS='|' read -r late rc message progress out <<< "$(cycle_probe 1 yes)"
 ok "发布失败时保留原退出码" "${rc}" "1"
 ok "发布失败时明确说明未发布" \
    "$([[ ${message} == *未发布到镜像机* ]] && echo yes)" "yes"
-ok "目标套件失败摘要会附在发布告警中" \
+ok "目标软件包失败摘要会附在发布告警中" \
    "$([[ ${message} == *构建失败*app-misc/example* ]] && echo yes)" "yes"
 
 IFS='|' read -r late rc message progress out <<< "$(cycle_probe 0 no yes)"

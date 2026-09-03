@@ -464,7 +464,7 @@ ok "两个频道共用全局构建锁" "${shared_lock}" "1"
 
 archive_lock=$(grep -c "LOCK=\"\${LOCK:-/var/lib/binhost/stage/build.lock}\"" \
     "${ROOT}/build/kernel-archive.sh")
-ok "内核归档与一般建置共用全局锁" "${archive_lock}" "1"
+ok "内核归档与一般构建共用全局锁" "${archive_lock}" "1"
 
 for script in base-image.sh build-container.sh cycle.sh run-full.sh publish.sh; do
     sourced=$(grep -c 'source=build/channel.sh' "${ROOT}/build/${script}")
@@ -681,11 +681,11 @@ emerge_line=$(grep -n 'emerge --quiet-build -1 --buildpkg --usepkg' \
               "${ROOT}/build/kernel-archive.sh" | cut -d: -f1)
 ok "unmask 排在 emerge 之前" \
    "$(( ${unmask_line:-0} > 0 && ${unmask_line:-0} < ${emerge_line:-0} ))" "1"
-ok "常规建置容器不解开它" \
+ok "常规构建容器不解开它" \
    "$(grep -c 'package.unmask' "${ROOT}/build/build-container.sh")" "0"
 
 echo "== kernel-archive 的每轮上限与 USE 要求"
-ok "每轮有建置数量上限" \
+ok "每轮有构建数量上限" \
    "$(grep -c 'MAX_BUILDS' "${ROOT}/build/kernel-archive.sh")" "4"
 ok "超过上限时说明留了几个" \
    "$(grep -c '留到下一轮' "${ROOT}/build/kernel-archive.sh")" "1"
@@ -698,7 +698,7 @@ ok "按 overlay 保留，不按数量" \
 
 echo "== kernel-archive 取产物的方式"
 # shellcheck disable=SC2016  # we grep for the literal ${VAR}, not its value
-ok "建置前移除这个版本的旧产物" \
+ok "构建前移除这个版本的旧产物" \
    "$(grep -c 'rm -f /var/cache/binpkgs/${PACKAGE}/${PACKAGE#\*/}-${version}-' \
       "${ROOT}/build/kernel-archive.sh")" "1"
 ok "移除之后重建索引" \
@@ -808,13 +808,13 @@ ok "逐包阶段报出真实完成数" "$(field_of "${s}" "done")" "42"
 ok "逐包阶段报出总数" "$(field_of "${s}" total)" "173"
 ok "逐包阶段标出 phase" "$(phase_of "${s}")" "per-package"
 ok "逐包阶段保留本次开始时间" "$(field_of "${s}" started)" "100"
-case "${s}" in *'"now":"app-misc/foo"'*) ok "逐包阶段报出当前套件" yes yes ;;
-               *) ok "逐包阶段报出当前套件" no yes ;; esac
+case "${s}" in *'"now":"app-misc/foo"'*) ok "逐包阶段报出当前软件包" yes yes ;;
+               *) ok "逐包阶段报出当前软件包" no yes ;; esac
 
 s=$(snap "" ">>> Emerging (5 of 10) app-misc/bar
 >>> Installing (5 of 10) app-misc/bar")
 ok "整体阶段仍按 whole.log 计数" "$(field_of "${s}" "done")" "1"
-ok "整体阶段报出建置总数" "$(field_of "${s}" total)" "10"
+ok "整体阶段报出构建总数" "$(field_of "${s}" total)" "10"
 ok "整体阶段标出 phase" "$(phase_of "${s}")" "whole"
 
 s=$(snap "" "")
@@ -1025,7 +1025,7 @@ EOF
 }
 
 IFS='|' read -r seen left <<< "$(percpkg_probe)"
-ok "循环中会写出已完成数量、总数和当前套件" "${seen}" "1 3 app-misc/b"
+ok "循环中会写出已完成数量、总数和当前软件包" "${seen}" "1 3 app-misc/b"
 ok "循环结束后移除进度文件" "${left}" "无"
 
 

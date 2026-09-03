@@ -24,7 +24,7 @@ distfiles 再 **9 分半**。演练当下 13 个取源失败，逐个复查之�
 
 ### 内核归档必须从已发布副本恢复
 
-`sys-kernel/gentoo-cjk-kernel-bin` 的 Manifest 按 URL 钉死每个档案的
+`sys-kernel/gentoo-cjk-kernel-bin` 的 Manifest 按 URL 钉死每个文件的
 BLAKE2B 与 SHA512。gpkg 不是位元可重现的，外层 tar 带构建时间，**同一个版本重建
 一次摘要就变**。实测三个摘要：
 
@@ -34,13 +34,13 @@ overlay Manifest        49503e6ab6e5dac7401792496b3d1172…
 构建机 PKGDIR 恢复的      f74824e7eaa41c3a64a08ba579f5d2a2…   不一致
 ```
 
-因此不能从 PKGDIR 恢复内核归档。`kernel-archive.sh` 现在把成功发布的档案原样保留在
+因此不能从 PKGDIR 恢复内核归档。`kernel-archive.sh` 现在把成功发布的文件原样保留在
 `PUBLISHED_DIR`，默认路径是 `/var/lib/binhost/kernel-published/<系列>/<发布名>`。
-副本只在 rsync 成功后写入；同一个发布名会被新副本覆盖。远端档案与本地副本使用同一份
-overlay 清单和 `MAX_RETIRE` 上限，overlay 移除版本后，两处档案在同一轮清理。
+副本只在 rsync 成功后写入；同一个发布名会被新副本覆盖。远端文件与本地副本使用同一份
+overlay 清单和 `MAX_RETIRE` 上限，overlay 移除版本后，两处文件在同一轮清理。
 
 部署这项改动时，既有两条内核线尚无本地副本。执行一次正常归档任务即可补齐：脚本从
-镜像机取回已发布档案，核对大小与 overlay Manifest 的摘要，再把临时档案改成发布名。
+镜像机取回已发布文件，核对大小与 overlay Manifest 的摘要，再把临时文件改成发布名。
 核对失败时，脚本不写入副本并以非零状态结束。
 
 ```sh
@@ -49,7 +49,7 @@ PUBLISHED_DIR=${PUBLISHED_DIR:-/var/lib/binhost/kernel-published}
 PUBLISHED_DIR="$PUBLISHED_DIR" bash "$BUILD_ROOT/kernel-archive.sh"
 ```
 
-这次执行不会重建摘要相符的既有版本；远端档案通过 Manifest 核验后，脚本直接补齐并跳过
+这次执行不会重建摘要相符的既有版本；远端文件通过 Manifest 核验后，脚本直接补齐并跳过
 构建。补齐完成之前，内核归档仍没有可用的恢复来源。
 
 ### Gentoo 镜像不带我们的 distfiles
@@ -61,7 +61,7 @@ PUBLISHED_DIR="$PUBLISHED_DIR" bash "$BUILD_ROOT/kernel-archive.sh"
 
 - 恢复时间取决于几十个第三方站点，不是一条链路。抽样量到 GitHub release
   约 2 MiB/s。
-- **上游已经消失的档案恢复不回来。** overlay 里确实有这类包，见 dead-upstream
+- **上游已经消失的文件恢复不回来。** overlay 里确实有这类包，见 dead-upstream
   的既有记录。
 
 正确的恢复路径是 `emirrordist --mirror --repo gentoo-zh`，它按 SRC_URI 逐个取。
@@ -72,12 +72,12 @@ PUBLISHED_DIR="$PUBLISHED_DIR" bash "$BUILD_ROOT/kernel-archive.sh"
 
 2026-08-13 08:57 UTC 在镜像机的平行根
 `/srv/recovery-rehearsal-20260813-085718` 上执行，握着 `binhost-daily` 的锁，
-所以每小时那轮同步让开，不与它争上游带宽。当时公开目录是 27 GB、1403 个档案。
+所以每小时那轮同步让开，不与它争上游带宽。当时公开目录是 27 GB、1403 个文件。
 
 | 项目 | 结果 |
 | --- | ---: |
 | 首次同步 | 575 秒（9 分半），退出码 0 |
-| 取回 | 1088 个档案，19 GB |
+| 取回 | 1088 个文件，19 GB |
 | 平均速率 | 34 MB/s |
 | 取不回来 | 13 个 |
 | 第二次同步（增量） | 4 秒，退出码 0 |
@@ -99,7 +99,7 @@ PUBLISHED_DIR="$PUBLISHED_DIR" bash "$BUILD_ROOT/kernel-archive.sh"
 
 复查 200 的六个：`glibc-systemd-20210729.tar.gz`、`autopxd2`／`janus`／
 `mw2fcitx` 三个 PyPI `.provenance`、`Sarasa-TTC-1.0.39.zip`、
-`circuitjs1-bin-4.1.3.tar.gz`。一轮连取 1088 个档案，被限速或瞬时失败是常态。
+`circuitjs1-bin-4.1.3.tar.gz`。一轮连取 1088 个文件，被限速或瞬时失败是常态。
 
 真的 404 的五个是 `zhwiki-20251220-all-titles-in-ns0.gz`、三个
 `genpatches-6.12-37.*` 和 `kernel-x86_64-fedora.config.6.12.12-200.fc41`。
@@ -107,15 +107,15 @@ PUBLISHED_DIR="$PUBLISHED_DIR" bash "$BUILD_ROOT/kernel-archive.sh"
 所以现在的 overlay 里没有任何 ebuild 还引用它们。加上演练后 bump 掉的
 `conda-26.7.0.tar.gz` 与 `gentoo-kernel-config-g19.tar.bz2`，共七个。
 
-所以就这一轮而言，**没有任何在用的档案是恢复不回来的**。
+所以就这一轮而言，**没有任何在用的文件是恢复不回来的**。
 
-不为消失的档案另外备份，2026-08-13 决定。风险是结构性的而不是一份名单：上游
-会轮替（Wikipedia 的 dump、`~mpagano` 的旧 genpatches），在档案消失到 ebuild
+不为消失的文件另外备份，2026-08-13 决定。风险是结构性的而不是一份名单：上游
+会轮替（Wikipedia 的 dump、`~mpagano` 的旧 genpatches），在文件消失到 ebuild
 被 bump 或 treeclean 之间，我们的镜像是唯一的副本。窗口期内源站全毁就是丢了，
 引用它的版本要么改 `SRC_URI`，要么退役。
 
 **取源失败与上游消失在失败日志里长得一模一样。** 这一段前后改过两次结论——先
-把 13 个都当成消失，再改成五个——才落到 0。拿到失败清单先逐个复查，别直接下
+把 13 个都当成消失，再改成五个——才落到 0。获取失败清单后先逐个复查，别直接下
 结论。
 
 ## 链路速率
@@ -175,7 +175,7 @@ CHANNEL=$CH STAGE="$REC" REMOTE=mirror REMOTE_ROOT="/srv/pub/$SUB" \
 rm -rf "$REC"
 ```
 
-整段在构建机上执行，并且要拿到构建锁，避免复制期间 PKGDIR 被下一轮换掉：
+整段在构建机上执行，并且要取得构建锁，避免复制期间 PKGDIR 被下一轮换掉：
 
 ```sh
 flock -w 60 /var/lib/binhost/stage/build.lock bash <上面那段>
@@ -217,7 +217,7 @@ EOF
 ```
 
 这两条命令的目标、数据库、日志与清理状态都在同一个平行根下。同步会按 SRC_URI
-逐个取回，失败的档案会记在平行根的失败日志里。上游已消失的档案取不回来。
+逐个取回，失败的文件会记在平行根的失败日志里。上游已消失的文件取不回来。
 本段的实测耗时与结果仍待补，不要填入估算值。
 
 ### 4 内核归档与 GIG OS
@@ -256,10 +256,10 @@ GIG OS 不由本仓库产生，恢复来源是 `Gig-OS/Live-ISO`（构建）与
 
 - **签章私钥。** 在 `~/.config/gentoozh/` 有离机副本；那份也没了，整条信任链要重来：
   换钥、改站点与 README 的指纹、通知已经导入旧钥的用户。
-- **镜像机归档与构建机已发布副本同时丢失的内核归档位元组。** PKGDIR 不能替代已发布
+- **镜像机归档与构建机已发布副本同时丢失的内核归档字节。** PKGDIR 不能替代已发布
   副本，因为同版本重建的 gpkg 摘要可能不同。
 - **已经清理掉的历史代际。** 保留策略只留当前一代。
 - **上游已经消失的 distfile。**
 
-下游镜像缓存的档案不属于源站状态，不能当作必然可用的恢复来源；只有取得镜像维护者
+下游镜像缓存的文件不属于源站状态，不能当作必然可用的恢复来源；只有取得镜像维护者
 同意并完成摘要核对之后，才能作为补充来源。

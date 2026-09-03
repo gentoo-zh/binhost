@@ -32,7 +32,7 @@ trap cleanup EXIT
 api_json="${api_work}/releases.json"
 manifest="${api_work}/manifest"
 if ! curl -fsSL --max-time 60 "${API_URL}" -o "${api_json}"; then
-    fail "无法获取 GitHub release 清单，保留现有档案"
+    fail "无法获取 GitHub release 清单，保留现有文件"
 fi
 
 if ! python3 - "${api_json}" "${manifest}" <<'PY'
@@ -80,7 +80,7 @@ for release in releases[:2]:
 pathlib.Path(sys.argv[2]).write_text("\n".join("\t".join(row) for row in rows) + "\n")
 PY
 then
-    fail "GitHub release 清单为空或格式不完整，保留现有档案"
+    fail "GitHub release 清单为空或格式不完整，保留现有文件"
 fi
 
 mkdir -p "${DEST}" "${TEMP_DIR}"
@@ -154,7 +154,7 @@ download_asset() {
         return 0
     done
     rm -f "${part}"
-    echo "!! ${tag}/${name} 下载或校验失败，保留原有档案" >&2
+    echo "!! ${tag}/${name} 下载或校验失败，保留原有文件" >&2
     return 1
 }
 

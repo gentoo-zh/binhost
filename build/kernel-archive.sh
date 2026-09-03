@@ -71,7 +71,7 @@ store_published_copy() {
     if ! install -m644 "${source}" "${temporary}" ||
             ! mv -f "${temporary}" "${destination}"; then
         rm -f "${temporary}"
-        die "无法保留已发布档案：${series}/${name}"
+        die "无法保留已发布文件：${series}/${name}"
     fi
 }
 
@@ -83,7 +83,7 @@ backfill_published_copy() {
     temporary=$(mktemp "${directory}/.${name}.XXXXXX")
     if ! rsync -a "${REMOTE}:${remote_path}" "${temporary}"; then
         rm -f "${temporary}"
-        die "无法从镜像机补齐已发布档案：${series}/${name}"
+        die "无法从镜像机补齐已发布文件：${series}/${name}"
     fi
     if ! python3 "${SCRIPT_DIR}/kernel-manifest.py" verify \
             "${MANIFEST}" "${name}" "${temporary}"; then
@@ -92,7 +92,7 @@ backfill_published_copy() {
     fi
     if ! chmod 0644 "${temporary}" || ! mv -f "${temporary}" "${destination}"; then
         rm -f "${temporary}"
-        die "无法保留已发布档案：${series}/${name}"
+        die "无法保留已发布文件：${series}/${name}"
     fi
     echo "    已从镜像机补齐 ${series}/${name}"
 }
@@ -212,7 +212,7 @@ for entry in "${wanted[@]}"; do
                 continue
             fi
             [[ ${manifest_source} == main ]] &&
-                die "${series}/${name} 无法重新构建（gpkg 不可重现）：远端档案与 Manifest 不一致，保留副本不存在或也不一致"
+                die "${series}/${name} 无法重新构建（gpkg 不可重现）：远程文件与 Manifest 不一致，保留副本不存在或也不一致"
         fi
         echo "    ${series}  ${version}${suffix}  要构建"
         todo+=("${series} ${version} ${suffix:-_} ${extra:-_} ${manifest_source:-none}")
@@ -353,9 +353,9 @@ done
 
 if (( ${#stale[@]} )); then
     if (( ${#stale[@]} > MAX_RETIRE )); then
-        echo "!! 要清理 ${#stale[@]} 个档案，超过上限 ${MAX_RETIRE}，一个都不动" >&2
+        echo "!! 要清理 ${#stale[@]} 个文件，超过上限 ${MAX_RETIRE}，未执行清理" >&2
         echo "   overlay 可能读取有误，确认之后再执行" >&2
-        blocked="要清理 ${#stale[@]} 个档案"
+        blocked="要清理 ${#stale[@]} 个文件"
     fi
 fi
 
@@ -390,13 +390,13 @@ done
 
 if (( ${#retire[@]} )); then
     if (( ${#retire[@]} > MAX_RETIRE )); then
-        echo "!! 要退役 ${#retire[@]} 条线，超过上限 ${MAX_RETIRE}，一条都不动" >&2
+        echo "!! 要退役 ${#retire[@]} 条线，超过上限 ${MAX_RETIRE}，未执行退役" >&2
         echo "   overlay 可能读取有误，确认之后再执行" >&2
         blocked="${blocked:+${blocked}，}要退役 ${#retire[@]} 条线"
     fi
 fi
 
-[[ -z ${blocked} ]] || die "${blocked}，都超过上限 ${MAX_RETIRE}，没有执行"
+[[ -z ${blocked} ]] || die "${blocked}，超过上限 ${MAX_RETIRE}，本次未执行"
 
 for f in ${stale[@]+"${stale[@]}"}; do
     echo "    清理 ${f}（overlay 已不提供这个版本）"

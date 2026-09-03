@@ -181,7 +181,7 @@ read -r pending_size pending_algorithm pending_digest < "${WORK}/pending.entry"
 [[ ${pending_size} == "$(stat -c %s "${TEST_BUILT}")" ]]
 [[ ${pending_algorithm} == SHA512 ]]
 [[ ${pending_digest} == "$(sha512sum "${TEST_BUILT}" | awk '{print $1}')" ]]
-echo "  ✓ Manifest 没有普通变体时建置发布并记录待加入条目"
+echo "  ✓ Manifest 没有普通变体时构建发布并记录待加入条目"
 
 run_archive 1 >/dev/null
 [[ $(grep -c "^DIST ${NAME} " "${WORK}/published/pending-manifest.txt") == 1 ]]
@@ -238,7 +238,7 @@ grep -q "已发布 7.1/${NAME}" <<< "${published}"
 cmp "${TEST_BUILT}" "${WORK}/remote/archive/7.1/${NAME}"
 cmp "${TEST_BUILT}" "${WORK}/published/7.1/${NAME}"
 [[ ! -e ${WORK}/published/7.1/gentoo-cjk-kernel-7.1.7-1.gpkg.tar ]]
-echo "  ✓ 发布成功后按发布名保留完全相同的位元组"
+echo "  ✓ 发布成功后按发布名保留完全相同的字节"
 
 # The -bin ebuild resolves BINPKG=${P/-bin}-1 against the directory inside the
 # gpkg. Renaming the file does not rename what is inside it, so an artifact with
@@ -287,7 +287,7 @@ run_archive 0 >/dev/null
 [[ ! -e ${WORK}/remote/archive/7.1/${NAME} ]]
 [[ ! -e ${WORK}/published/7.1/${NAME} ]]
 cmp "${TEST_BUILT}" "${WORK}/published/7.1/${CURRENT_NAME}"
-echo "  ✓ overlay 移除版本后会同时清理远端档案与本地副本"
+echo "  ✓ overlay 移除版本后会同时清理远端文件与本地副本"
 
 # A whole series leaving the overlay retires both sides. Without this the local
 # store keeps a directory the mirror no longer serves, and recovery would put
@@ -315,12 +315,12 @@ if run_archive 0 >"${WORK}/retire.out" 2>&1; then
     echo "  ✗ 超过 MAX_RETIRE 时应当失败"
     exit 1
 fi
-grep -q '超过上限 2，一个都不动' "${WORK}/retire.out"
+grep -q '超过上限 2，未执行清理' "${WORK}/retire.out"
 for old in old-a old-b old-c; do
     [[ -e ${WORK}/remote/archive/7.1/${old}.gpkg.tar ]]
     [[ -e ${WORK}/published/7.1/${old}.gpkg.tar ]]
 done
-echo "  ✓ 超过 MAX_RETIRE 时远端与本地档案都不变"
+echo "  ✓ 超过 MAX_RETIRE 时远端与本地文件都不变"
 
 reset_case
 mkdir -p "${WORK}/remote/archive/7.1"
@@ -330,13 +330,13 @@ FAKE_SIZE=$(stat -c %s "${TEST_BUILT}")
 FAKE_DIGEST=$(sha512sum "${TEST_BUILT}" | awk '{print $1}')
 DOWNLOAD_SOURCE="${WORK}/corrupt.gpkg.tar"
 if run_archive 0 >"${WORK}/backfill.out" 2>&1; then
-    echo "  ✗ 补齐档案摘要不符时应当失败"
+    echo "  ✗ 补齐文件摘要不符时应当失败"
     exit 1
 fi
 grep -q '与 Manifest 不一致，不保留' "${WORK}/backfill.out"
 [[ ! -e ${WORK}/published/7.1/${NAME} ]]
 [[ -z $(find "${WORK}/published/7.1" -mindepth 1 -print -quit) ]]
-echo "  ✓ 补齐档案摘要不符时不写入并报错"
+echo "  ✓ 补齐文件摘要不符时不写入并报错"
 
 # cjk32 is a different kernel image, so it is a second build under a second
 # name. The two land on the same path in PKGDIR, which is why what comes back
@@ -396,7 +396,7 @@ cp "${WORK}/built-first.gpkg.tar" "${WORK}/published/7.1/${NAME}"
 cp "${WORK}/built-cjk32.gpkg.tar" "${WORK}/published/7.1/${CJK32_NAME}"
 run_variants 0 honest > "${WORK}/out" 2>&1
 grep -q '已发布，跳过' "${WORK}/out"
-echo "  ✓ Manifest 与远端一致时两个变体都跳过建置"
+echo "  ✓ Manifest 与远端一致时两个变体都跳过构建"
 
 # A version the -bin ebuild does not name yet is being bootstrapped, and the
 # extra variant has no entry for the same reason the plain one has none.

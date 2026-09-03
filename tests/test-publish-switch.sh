@@ -344,7 +344,7 @@ echo "== publish.sh 按这个形状使用它"
 # The patterns below name shell variables, so the dollar sign is injected
 # rather than written inside single quotes.
 d1='$'
-ok "六个档案只列一次" \
+ok "六个文件只列一次" \
    "$(grep -c '^GEN_FILES=(Packages Packages.gz installed.txt official.txt source.txt generation.json)$' \
       "${ROOT}/build/publish.sh")" "1"
 ok "代际目录带上本次执行的编号" \

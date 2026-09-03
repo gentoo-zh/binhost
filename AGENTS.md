@@ -3,10 +3,10 @@
 给自动化助手看的。人类贡献者看 [`CONTRIBUTING.md`](CONTRIBUTING.md) 与
 [`README.md`](README.md)。
 
-这套系统每天为 gentoo-zh overlay 建置二进制包，签名后发布到镜像机，用户通过
+这套系统每天为 gentoo-zh overlay 构建二进制包，签名后发布到镜像机，用户通过
 `binrepos.conf` 取用。它每天执行，改坏了用户当天就无法安装软件包。
 
-## 先跑检查器，它们是规则的权威
+## 先执行检查器，它们是规则的权威
 
 八个检查器就是这个仓库的规范，文字说明只是它们的注解。改动之后至少跑与改动
 相关的那几个：
@@ -45,10 +45,10 @@ grep 依赖。**改文案必须同时改断言**，否则测试红的是格式�
 | 软件包 | 套件 |
 | 用户 | 使用者 |
 
-例外：`build/` 里的「使用者」指 preserved-libs 的 consumer——连结某个库的那一方，
+例外：`build/` 里的 `使用者` 指 preserved-libs 的 consumer——连结某个库的那一方，
 是术语不是 user，不要替换。
 
-站点 `zh-tw` 段里的「建置」「套件」「設定」是正确的台湾用语，扫描时不要报。
+站点 `zh-tw` 段里的 `建置`、`套件`、`設定` 是正确的台湾用语，扫描时不要报。
 
 ## 测试
 
@@ -59,7 +59,7 @@ grep 依赖。**改文案必须同时改断言**，否则测试红的是格式�
 - 要求多个脚本含有完全相同的一行
 
 要断言行为：给桩、跑入口、看退出码与输出。写完之后**把被测代码改坏，确认测试
-真的会红**——这个仓库里出现过多次「测试全过但替换根本没生效」。
+真的会红**——这个仓库里出现过多次测试全过但替换根本没生效。
 
 ## 判断一个问题值不值得修
 
@@ -81,15 +81,15 @@ grep 依赖。**改文案必须同时改断言**，否则测试红的是格式�
   每个版本一条。
 - `DeadUrl` 指向 `www.kernel.org`：本地网络到该域名慢于 pkgcheck 的 5 秒超时，
   `cdn.kernel.org` 正常。
-- `binhost-alert@` 与 `SystemdUnitFailed` 接的都是「执行后失败」，接不住
-  「根本没有执行」。后者由 `Packages` 的 `Last-Modified` 超时覆盖。
+- `binhost-alert@` 与 `SystemdUnitFailed` 接的都是执行后失败，接不住
+  根本没有执行。后者由 `Packages` 的 `Last-Modified` 超时覆盖。
 
 ## 不要做的
 
-- 不 commit、不 push、不部署、不触发建置，除非维护者明确要求
+- 不 commit、不 push、不部署、不触发构建，除非维护者明确要求
 - 不在 PR 或 issue 上发评论
 - 不加 AI 署名
 - 部署前确认三个服务都处于 inactive：
   `systemctl is-active binhost-build binhost-build-unstable binhost-kernel`
-- 手动补跑 `build/` 下的脚本时不要加 `sudo`——`mirror` 是 `adminc3b9c6` 的
+- 手动执行 `build/` 下的脚本时不要加 `sudo`——`mirror` 是 `adminc3b9c6` 的
   SSH config 别名，root 没有那份配置，脚本内部需要提权时会自己 sudo
