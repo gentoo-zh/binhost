@@ -18,7 +18,8 @@ ok() {
 
 cycle_probe() {
     local publish_rc="$1" with_report="$2" with_smoke="${3:-no}"
-    local progress_rc="${4:-0}" orphan="${5:-no}" sync_rc="${6:-0}" d out rc
+    local progress_rc="${4:-0}" orphan="${5:-no}" sync_rc="${6:-0}"
+    local hold_lock="${7:-no}" published_age_h="${8:-1}" d out rc holder
     d=$(mktemp -d)
     mkdir -p "${d}/build" "${d}/ops" "${d}/bin" "${d}/logs" "${d}/overlay"
     cp "${ROOT}/build/cycle.sh" "${d}/build/cycle.sh"
@@ -65,12 +66,25 @@ EOF
         printf 'gpkg 安装失败 1 个，测试环境失败 0 项\n' \
             > "${d}/logs/smoke-alert.txt"
     fi
+    mkdir -p "${d}/stage"
+    if [[ ${published_age_h} != none ]]; then
+        : > "${d}/stage/Packages"
+        touch -d "${published_age_h} hours ago" "${d}/stage/Packages"
+    fi
+    holder=""
+    if [[ ${hold_lock} == yes ]]; then
+        mkdir -p "${d}/stage"
+        flock "${d}/stage/build.lock" sleep 30 &
+        holder=$!
+        sleep 0.3
+    fi
     set +e
     out=$(cd "${d}" && PATH="${d}/bin:${PATH}" OVERLAY="${d}/overlay" \
-        LOGDIR="${d}/logs" STAGE="${d}/stage" LOCK="${d}/lock" \
+        LOGDIR="${d}/logs" STAGE="${d}/stage" LOCK="${d}/stage/build.lock" \
         ALERT_LOG="${d}/alert.log" bash build/cycle.sh 2>&1)
     rc=$?
     set -e
+    [[ -n ${holder} ]] && kill "${holder}" 2>/dev/null
     [[ ${orphan} == yes ]] && sleep 0.6
     # 2>/dev/null goes before the input redirection: the shell reports a missing
     # file itself, and by then its own stderr must already be discarded.
@@ -156,6 +170,23 @@ PROBE
 }
 
 ok "收到 SIGTERM 时写出 failed" "$(signal_probe)" "failed"
+
+echo "== cycle.sh 让路时不算故障"
+
+# Both channels share one lock, so one running long makes the other stand
+# aside. Failing the unit for that marks a healthy machine red.
+IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no no 0 no 0 yes 1)"
+ok "锁被占住时以 0 结束" "${rc}" "0"
+ok "并且不发通知" "$([[ -z ${message// /} ]] && echo yes)" "yes"
+ok "并且说明这个频道刚发布过" \
+   "$([[ ${out} == *"跳过不算故障"* ]] && echo yes)" "yes"
+
+# A channel that keeps standing aside until it stops publishing does need
+# someone to look.
+IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no no 0 no 0 yes 40)"
+ok "很久没发布又让路时以非零结束" "$([[ ${rc} != 0 ]] && echo yes)" "yes"
+ok "并且通知里给出多久没发布" \
+   "$([[ ${message} == *"没有发布"* ]] && echo yes)" "yes"
 
 echo "== cycle.sh 的通知说明是哪个频道"
 

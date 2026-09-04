@@ -11,6 +11,9 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 OVERLAY="${OVERLAY:-/var/lib/binhost/overlay}"
 TREE="${TREE:-/var/db/repos/gentoo}"
+# A skipped round is only a fault once the channel has gone this long
+# without publishing anything.
+SKIP_STALE_H="${SKIP_STALE_H:-26}"
 LOGDIR="${LOGDIR:-/var/lib/binhost/logs/${CHANNEL_STORAGE}}"
 STAGE="${STAGE:-/var/lib/binhost/stage/${CHANNEL_STORAGE}}"
 PROGRESS_OUT="${PROGRESS_OUT:-${CHANNEL_PROGRESS_OUT}}"
@@ -36,8 +39,19 @@ mkdir -p "$(dirname "${LOCK}")"
 exec 9>"${LOCK}"
 if ! flock -n 9; then
     echo "另一次构建正在执行（${LOCK}），这次跳过" >&2
-    alert "binhost 这次被上一次阻塞（$(hostname) ${CHANNEL}）：上一次已超过一个调度间隔"
-    alert_exit
+    # Both channels share this lock, so one of them running long makes the
+    # other stand aside. That is the design working, not a fault, and failing
+    # the unit for it puts a red mark on a healthy machine. What does need
+    # someone is a channel that keeps standing aside until it stops publishing
+    # at all, so the decision is made on when this channel last published.
+    published=$(stat -c %Y "${STAGE}/Packages" 2>/dev/null || echo 0)
+    age=$(( ( $(date +%s) - published ) / 3600 ))
+    if (( published == 0 || age >= SKIP_STALE_H )); then
+        alert "binhost 连续被阻塞（$(hostname) ${CHANNEL}）：已 ${age} 小时没有发布"
+        alert_exit
+    fi
+    echo ">>> 这个频道 ${age} 小时前发布过，跳过不算故障"
+    exit 0
 fi
 
 BUILD_STARTED=$(date +%s)
