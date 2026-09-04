@@ -22,7 +22,7 @@ ALERT_CONF="${ALERT_CONF:-/etc/binhost/alert.conf}"
 on_error() {
     local rc=$1 line=$2 cmd=$3
     echo "!!! 第 ${line} 行失败（退出码 ${rc}）：${cmd}" >&2
-    alert "binhost 本次失败（$(hostname)）
+    alert "binhost 本次失败（$(hostname) ${CHANNEL}）
 第 ${line} 行，退出码 ${rc}
 ${cmd}"
     alert_exit "${rc}"
@@ -36,7 +36,7 @@ mkdir -p "$(dirname "${LOCK}")"
 exec 9>"${LOCK}"
 if ! flock -n 9; then
     echo "另一次构建正在执行（${LOCK}），这次跳过" >&2
-    alert "binhost 这次被上一次阻塞（$(hostname)）：上一次已超过一个调度间隔"
+    alert "binhost 这次被上一次阻塞（$(hostname) ${CHANNEL}）：上一次已超过一个调度间隔"
     alert_exit
 fi
 
@@ -80,17 +80,17 @@ trap 'exit 143' TERM INT HUP
 trap 'on_exit "$?"' EXIT
 
 if ! ./build/run-full.sh; then
-    alert "binhost 构建阶段失败（$(hostname)）"
+    alert "binhost 构建阶段失败（$(hostname) ${CHANNEL}）"
     alert_exit
 fi
 
 if [[ -s ${LOGDIR}/smoke-alert.txt ]]; then
-    alert "binhost gpkg 安装冒烟测试发现问题（$(hostname)）：
+    alert "binhost gpkg 安装冒烟测试发现问题（$(hostname) ${CHANNEL}）：
 $(cat "${LOGDIR}/smoke-alert.txt")"
 fi
 
 if [[ -s ${LOGDIR}/subslot-alert.txt ]]; then
-    alert "binhost 有包的依赖子槽已过期（$(hostname)）：
+    alert "binhost 有包的依赖子槽已过期（$(hostname) ${CHANNEL}）：
 $(cat "${LOGDIR}/subslot-alert.txt")"
 fi
 
@@ -98,9 +98,9 @@ publish_rc=0
 ./build/publish.sh || publish_rc=$?
 if (( publish_rc )); then
     if (( publish_rc == 3 )); then
-        message="binhost 已发布到镜像机，但索引包数骤减，退休清理未执行（$(hostname)）"
+        message="binhost 已发布到镜像机，但索引包数骤减，退休清理未执行（$(hostname) ${CHANNEL}）"
     else
-        message="binhost 发布阶段失败（$(hostname)）：包已构建，未发布到镜像机"
+        message="binhost 发布阶段失败（$(hostname) ${CHANNEL}）：包已构建，未发布到镜像机"
         if [[ -s ${LOGDIR}/report.txt ]]; then
             message="${message}
 $(cat "${LOGDIR}/report.txt")"
@@ -114,7 +114,7 @@ if [[ -s ${LOGDIR}/failed.txt ]]; then
     n=$(wc -l < "${LOGDIR}/failed.txt")
     report=$(python3 ./build/classify-failures.py "${LOGDIR}")
     echo "${report}"
-    alert "binhost 构建失败 ${n} 个（$(hostname)）:
+    alert "binhost 构建失败 ${n} 个（$(hostname) ${CHANNEL}）:
 ${report}"
 fi
 
