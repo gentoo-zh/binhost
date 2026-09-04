@@ -29,8 +29,10 @@ class FakeTree:
     def __init__(self, mapping):
         self.mapping = mapping
 
-    def current_subslot(self, cp):
-        return self.mapping.get(cp)
+    def current_subslot(self, cp, slot):
+        # Keyed by the atom the caller asked for, so a test can give one answer
+        # for cat/pkg:0 and another for the package as a whole.
+        return self.mapping.get(f"{cp}:{slot}", self.mapping.get(cp))
 
 
 def stanza(cpv, rdepend="", depend="", bdepend=""):
@@ -62,9 +64,21 @@ case("树里查不到这个包时不报", lambda: (
 case("没有 = 的依赖不看子槽", lambda: (
     stale("dev-libs/glib:2", {"dev-libs/glib": "9"}) == []))
 
-case("主槽同时变化时也报出", lambda: (
-    stale("net-libs/mbedtls:0/7.14.1=", {"net-libs/mbedtls": "16.21.7"})
-    == [("net-libs/mbedtls", "0/7.14.1", "16.21.7")]))
+case("查询时带上被钉住的槽", lambda: (
+    check.atom_for("net-libs/mbedtls", "0") == "net-libs/mbedtls:0"))
+
+case("没有写槽时按整个包查询", lambda: (
+    check.atom_for("net-libs/mbedtls", "") == "net-libs/mbedtls"))
+
+case("同一个槽里子槽变了才报", lambda: (
+    stale("net-libs/mbedtls:0/7.14.1=", {"net-libs/mbedtls:0": "8.0.0"})
+    == [("net-libs/mbedtls", "0/7.14.1", "8.0.0")]))
+
+# A := dependency pins the slot too, so a newer major version living in another
+# slot has not moved for this consumer.
+case("别的槽里有新版本不算过期", lambda: (
+    stale("net-libs/mbedtls:0/7.14.1=",
+          {"net-libs/mbedtls:0": "7.14.1", "net-libs/mbedtls": "16.21.7"}) == []))
 
 case("同一个包在一条依赖里出现两次只报一次", lambda: (
     len(stale("dev-libs/icu:0/78= dev-libs/icu:0/78=",
