@@ -38,6 +38,16 @@ def field(stanza, name):
     return m.group(1) if m else ""
 
 
+def atom_for(cp, slot):
+    """The atom to ask about: a := dependency pins the slot as well.
+
+    A package that also ships a newer major version in another slot has not
+    moved for this consumer, so the question is what the best visible version
+    inside that same slot is.
+    """
+    return f"{cp}:{slot}" if slot else cp
+
+
 class Tree:
     """The subslot of the best version a user of this channel can see.
 
@@ -61,12 +71,19 @@ class Tree:
         self.dbapi = portdbapi(mysettings=settings)
         self.cache = {}
 
-    def current_subslot(self, cp):
-        if cp not in self.cache:
-            best = self.dbapi.xmatch("bestmatch-visible", cp)
-            slot = self.dbapi.aux_get(best, ["SLOT"])[0] if best else ""
-            self.cache[cp] = slot.split("/", 1)[1] if "/" in slot else None
-        return self.cache[cp]
+    def current_subslot(self, cp, slot):
+        """The subslot of the best visible version inside that same slot.
+
+        A := dependency pins the slot as well, so a package that also ships a
+        newer major version in another slot has not moved for this consumer:
+        net-libs/mbedtls:0= stays on the 2.x line no matter what slot 3 offers.
+        """
+        atom = atom_for(cp, slot)
+        if atom not in self.cache:
+            best = self.dbapi.xmatch("bestmatch-visible", atom)
+            found = self.dbapi.aux_get(best, ["SLOT"])[0] if best else ""
+            self.cache[atom] = found.split("/", 1)[1] if "/" in found else None
+        return self.cache[atom]
 
 
 def stale_in(stanza, tree):
@@ -80,7 +97,7 @@ def stale_in(stanza, tree):
         if cp in seen:
             continue
         seen.add(cp)
-        current = tree.current_subslot(cp)
+        current = tree.current_subslot(cp, m.group("slot"))
         if current is None:
             continue
         if current != m.group("sub"):
