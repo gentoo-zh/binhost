@@ -63,6 +63,9 @@ jobs:
       - name: Published index satisfies its own runtime dependencies
         run: python3 tests/test-verify-deps.py
 
+      - name: A dependency that changed subslot is reported
+        run: python3 tests/test-check-subslots.py
+
       - name: The base snapshot retains Portage matching metadata
         run: python3 tests/test-snapshot-vdb.py
 

@@ -79,6 +79,11 @@ if [[ -s ${LOGDIR}/smoke-alert.txt ]]; then
 $(cat "${LOGDIR}/smoke-alert.txt")"
 fi
 
+if [[ -s ${LOGDIR}/subslot-alert.txt ]]; then
+    alert "binhost 有包的依赖子槽已过期（$(hostname)）：
+$(cat "${LOGDIR}/subslot-alert.txt")"
+fi
+
 publish_rc=0
 ./build/publish.sh || publish_rc=$?
 if (( publish_rc )); then
