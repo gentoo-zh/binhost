@@ -28,24 +28,37 @@ def read_stanzas(path):
     return chunks[0], [c for c in chunks[1:] if c.strip()]
 
 
+def accepted_keywords(header):
+    """The index records the keywords its generation was built with."""
+    return field(header, "ACCEPT_KEYWORDS")
+
+
 def field(stanza, name):
     m = re.search(rf"^{name}: (.*)$", stanza, re.M)
     return m.group(1) if m else ""
 
 
 class Tree:
-    """The subslot of the best version a user can currently see.
+    """The subslot of the best version a user of this channel can see.
 
     Visibility comes from portage rather than a plain version sort, because
     package.mask and the profile decide what is installable; taking the highest
-    version would read a masked one as current.
+    version would read a masked one as current. The keywords come from the
+    index being checked, not from the machine running the check: a stable
+    channel must not be measured against a version only ~arch can install.
     """
 
-    def __init__(self):
+    def __init__(self, keywords):
         import portage
+        from portage.dbapi.porttree import portdbapi
 
-        self.portage = portage
-        self.dbapi = portage.db[portage.root]["porttree"].dbapi
+        settings = portage.config(clone=portage.settings)
+        if keywords:
+            settings.unlock()
+            settings["ACCEPT_KEYWORDS"] = keywords
+            settings.backup_changes("ACCEPT_KEYWORDS")
+            settings.lock()
+        self.dbapi = portdbapi(mysettings=settings)
         self.cache = {}
 
     def current_subslot(self, cp):
@@ -81,8 +94,8 @@ def main():
     ap.add_argument("--alert", help="有发现时写到这里，供告警取用")
     args = ap.parse_args()
 
-    _, stanzas = read_stanzas(args.index)
-    tree = Tree()
+    header, stanzas = read_stanzas(args.index)
+    tree = Tree(accepted_keywords(header))
 
     findings = []
     for stanza in stanzas:
