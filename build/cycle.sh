@@ -10,6 +10,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 . "${SCRIPT_DIR}/channel.sh"
 
 OVERLAY="${OVERLAY:-/var/lib/binhost/overlay}"
+TREE="${TREE:-/var/db/repos/gentoo}"
 LOGDIR="${LOGDIR:-/var/lib/binhost/logs/${CHANNEL_STORAGE}}"
 STAGE="${STAGE:-/var/lib/binhost/stage/${CHANNEL_STORAGE}}"
 PROGRESS_OUT="${PROGRESS_OUT:-${CHANNEL_PROGRESS_OUT}}"
@@ -45,6 +46,15 @@ export BUILD_STARTED
 git -C "${OVERLAY}" fetch --quiet origin master
 git -C "${OVERLAY}" reset --quiet --hard origin/master
 echo "overlay $(git -C "${OVERLAY}" rev-parse --short HEAD)"
+
+# The overlay was brought up to date every round while ::gentoo was not, so the
+# tree the packages were built against fell as much as a week behind whatever a
+# user has. A dependency that changed subslot in that window makes every
+# package built against the older one unusable on that user's system.
+if ! sudo emaint sync -r gentoo > /dev/null; then
+    echo "!! ::gentoo 未能同步，本轮按现有的树构建" >&2
+fi
+echo "::gentoo $(date -r "${TREE}/metadata/timestamp.chk" '+%F %H:%M' 2>/dev/null || echo 未知)"
 
 export BINHOST_LOCKED=1
 
