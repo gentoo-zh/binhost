@@ -157,6 +157,17 @@ PROBE
 
 ok "收到 SIGTERM 时写出 failed" "$(signal_probe)" "failed"
 
+echo "== cycle.sh 的通知说明是哪个频道"
+
+# Both channels run on the same host, so a notice that names only the host
+# leaves the reader guessing which one it came from.
+IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 1 yes)"
+ok "发布失败的通知带上频道" \
+   "$([[ ${message} == *"stable"* ]] && echo yes)" "yes"
+IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no yes)"
+ok "冒烟测试的通知带上频道" \
+   "$([[ ${message} == *"stable"* ]] && echo yes)" "yes"
+
 echo "== cycle.sh 每轮同步 ::gentoo"
 
 # The overlay was refreshed every round and ::gentoo was not, so the tree the
