@@ -99,7 +99,8 @@ fi
 sudo install -dm755 -o "$(id -u)" -g "$(id -g)" \
     "${PKGDIR}" "$(dirname "${STAGE}")" "${LOGDIR}" "${GENTOO_BINPKGS}"
 rm -f "${LOGDIR}"/*.log "${LOGDIR}"/failed.txt "${LOGDIR}"/gentoo-Packages \
-    "${LOGDIR}"/smoke-install.json "${LOGDIR}"/smoke-alert.txt
+    "${LOGDIR}"/smoke-install.json "${LOGDIR}"/smoke-alert.txt \
+    "${LOGDIR}"/subslot-alert.txt
 
 empty=$(find "${PKGDIR}" -name '*.gpkg.tar' -size 0 -print -delete | wc -l)
 (( empty )) && echo ">>> 移除 ${empty} 个 0 字节的缓存包" 
@@ -164,6 +165,21 @@ if grep -E '^\[[^]]*\] +virtual/dist-kernel' /tmp/kernel-pretend.txt \
     echo "!!! 清单会拉进分发内核，停止构建："
     sed 's/^/    /' /tmp/kernel-pull.txt
     exit 1
+fi
+
+# The list only names what to build, so a dependency that is already installed
+# stays at whatever version the image carried. When such a dependency changes
+# subslot, every package that depends on it through := is still published with
+# the old subslot recorded, and portage on an up-to-date system quietly builds
+# from source instead. Updating the installed set first is what keeps the
+# published packages installable.
+echo "::: 更新已装依赖"
+world_rc=0
+emerge --usepkg --update --deep --newuse --with-bdeps=y --quiet-build \
+    --exclude virtual/dist-kernel @world > /var/log/binhost/world.log 2>&1 || world_rc=$?
+if (( world_rc )); then
+    echo "!!! 依赖更新未完成（退出码 ${world_rc}），仍按清单构建"
+    tail -20 /var/log/binhost/world.log | sed 's/^/    /'
 fi
 
 echo "::: 整体解析"
@@ -383,6 +399,13 @@ if [[ ! -s ${STAGE}.new/publish-blocked.txt ]]; then
         echo ">>> gpkg 安装冒烟测试：本身未能执行，退出码 ${smoke_rc}"
     fi
     rm -f "${smoke_package_use}"
+
+    # A stale := subslot does not fail anything here; it makes the published
+    # package unusable on a system whose tree has moved on, and portage says
+    # nothing. The alert is the only way it reaches anyone.
+    python3 "$(dirname "$0")/check-subslots.py" \
+        --index "${STAGE}.new/Packages" \
+        --alert "${LOGDIR}/subslot-alert.txt" || true
 
     gzip -kf "${STAGE}.new/Packages"
     python3 "$(dirname "$0")/generation.py" create "${STAGE}.new" ||
