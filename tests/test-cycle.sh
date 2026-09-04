@@ -18,7 +18,7 @@ ok() {
 
 cycle_probe() {
     local publish_rc="$1" with_report="$2" with_smoke="${3:-no}"
-    local progress_rc="${4:-0}" orphan="${5:-no}" d out rc
+    local progress_rc="${4:-0}" orphan="${5:-no}" sync_rc="${6:-0}" d out rc
     d=$(mktemp -d)
     mkdir -p "${d}/build" "${d}/ops" "${d}/bin" "${d}/logs" "${d}/overlay"
     cp "${ROOT}/build/cycle.sh" "${d}/build/cycle.sh"
@@ -48,7 +48,15 @@ EOF
 case "$*" in *rev-parse*) echo deadbeef;; esac
 exit 0
 EOF
-    chmod +x "${d}/build/"*.sh "${d}/bin/git"
+    # cycle.sh syncs ::gentoo through sudo; the stub records the call so a test
+    # can tell whether the round even tried, and can make it fail on demand.
+    cat > "${d}/bin/sudo" <<EOF
+#!/bin/bash
+printf '%s\n' "\$*" >> "${d}/sudo.log"
+case "\$*" in *"emaint sync"*) exit ${sync_rc};; esac
+exit 0
+EOF
+    chmod +x "${d}/build/"*.sh "${d}/bin/git" "${d}/bin/sudo"
     if [[ ${with_report} == yes ]]; then
         printf 'app-misc/example\n' > "${d}/logs/failed.txt"
         printf '构建失败（1 个）\n    app-misc/example\n' > "${d}/logs/report.txt"
@@ -66,32 +74,33 @@ EOF
     [[ ${orphan} == yes ]] && sleep 0.6
     # 2>/dev/null goes before the input redirection: the shell reports a missing
     # file itself, and by then its own stderr must already be discarded.
-    printf '%s|%s|%s|%s|%s\n' \
+    printf '%s|%s|%s|%s|%s|%s\n' \
         "$(cat 2>/dev/null "${d}/late.log")" \
         "${rc}" \
         "$(tr '\n' ' ' 2>/dev/null < "${d}/alert.log")" \
         "$(tr '\n' ' ' 2>/dev/null < "${d}/progress.log")" \
-        "${out}"
+        "$(tr '\n' ' ' 2>/dev/null < "${d}/sudo.log")" \
+        "$(tr '\n' ' ' <<< "${out}")"
     rm -rf "${d}"
 }
 
 echo "== cycle.sh 区分发布与清理失败"
 
-IFS='|' read -r late rc message progress out <<< "$(cycle_probe 3 no)"
+IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 3 no)"
 ok "发布后清理受阻时保留退出码 3" "${rc}" "3"
 ok "退出码 3 的通知说明索引已经发布" \
    "$([[ ${message} == *已发布到镜像机* ]] && echo yes)" "yes"
 ok "退出码 3 的通知不会声称未发布" \
    "$([[ ${message} != *未发布到镜像机* ]] && echo yes)" "yes"
 
-IFS='|' read -r late rc message progress out <<< "$(cycle_probe 1 yes)"
+IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 1 yes)"
 ok "发布失败时保留原退出码" "${rc}" "1"
 ok "发布失败时明确说明未发布" \
    "$([[ ${message} == *未发布到镜像机* ]] && echo yes)" "yes"
 ok "目标软件包失败摘要会附在发布告警中" \
    "$([[ ${message} == *构建失败*app-misc/example* ]] && echo yes)" "yes"
 
-IFS='|' read -r late rc message progress out <<< "$(cycle_probe 0 no yes)"
+IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no yes)"
 ok "冒烟测试告警不改变成功退出码" "${rc}" "0"
 ok "安装失败进入既有告警路径" \
    "$([[ ${message} == *gpkg*安装冒烟测试*安装失败* ]] && echo yes)" "yes"
@@ -101,13 +110,13 @@ echo "== 进度回报不左右这一轮的成败"
 # The publish succeeded on 2026-08-12 and the run still reported failure: the
 # final progress push lost a race, and set -e inside the EXIT trap turned that
 # into the service exit code.
-IFS='|' read -r late rc message progress out <<< "$(cycle_probe 0 no no 1)"
+IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no no 1)"
 ok "回报推送失败不改变成功退出码" "${rc}" "0"
 ok "回报推送失败不产生告警" "${message}" ""
 ok "仍然尝试写出结束状态" \
    "$([[ ${progress} == *"finish OUT="* ]] && echo yes)" "yes"
 
-IFS='|' read -r late rc message progress out <<< "$(cycle_probe 0 no)"
+IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no)"
 ok "成功时结束状态是 done" \
    "$([[ ${out} == *"finish"* || ${progress} == *"finish OUT="* ]] && echo yes)" "yes"
 ok "看守进程拿得到本频道的输出档名" \
@@ -115,14 +124,14 @@ ok "看守进程拿得到本频道的输出档名" \
 
 CHANNEL=unstable
 export CHANNEL
-IFS='|' read -r late rc message progress out <<< "$(cycle_probe 0 no)"
+IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no)"
 unset CHANNEL
 ok "unstable 的看守进程写的是 unstable 的档名" \
    "$([[ ${progress} == *"watch OUT=build-status-unstable.json"* ]] && echo yes)" "yes"
 
 # A plain kill fells the watcher and leaves its ssh running, which then lands a
 # running snapshot on top of the final state.
-IFS='|' read -r late rc message progress out <<< "$(cycle_probe 0 no no 0 yes)"
+IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no no 0 yes)"
 ok "看守进程留下的子进程一并收掉" "${late}" ""
 
 echo "== cycle.sh 被信号中止时不会报告成功"
@@ -147,6 +156,18 @@ PROBE
 }
 
 ok "收到 SIGTERM 时写出 failed" "$(signal_probe)" "failed"
+
+echo "== cycle.sh 每轮同步 ::gentoo"
+
+# The overlay was refreshed every round and ::gentoo was not, so the tree the
+# packages were built against fell behind whatever a user has.
+IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no)"
+ok "每轮都同步 ::gentoo" \
+   "$([[ ${sudo_calls} == *"emaint sync -r gentoo"* ]] && echo yes)" "yes"
+IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no no 0 no 1)"
+ok "同步失败时这一轮照常继续" "${rc}" "0"
+ok "并且说明按现有的树构建" \
+   "$([[ ${out} == *"未能同步"* ]] && echo yes)" "yes"
 
 echo
 if (( fail )); then
