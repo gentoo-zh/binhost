@@ -87,15 +87,28 @@ case("BDEPEND 里的子槽不报", lambda: (
     stale("", {"dev-lang/go": "1.27.0"}, bdepend="dev-lang/go:0/1.26.7=") == []))
 
 
-def run_main(stanzas, mapping):
+case("从索引头部读出这一代的关键字", lambda: (
+    check.accepted_keywords("ACCEPT_KEYWORDS: amd64\nPACKAGES: 1") == "amd64"))
+
+case("头部没有关键字时返回空", lambda: (
+    check.accepted_keywords("PACKAGES: 1") == ""))
+
+
+def run_main(stanzas, mapping, header=HEADER):
     """Run main(), returning (exit code, stdout, alert text or None)."""
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
-        (d / "Packages").write_text(HEADER + "\n\n" + "\n\n".join(stanzas) + "\n")
+        (d / "Packages").write_text(header + "\n\n" + "\n\n".join(stanzas) + "\n")
         alert = d / "alert.txt"
         alert.write_text("上一轮留下的内容")
         original = check.Tree
-        check.Tree = lambda: FakeTree(mapping)
+        seen = []
+
+        def fake(keywords):
+            seen.append(keywords)
+            return FakeTree(mapping)
+
+        check.Tree = fake
         argv = sys.argv
         sys.argv = ["check-subslots.py", "--index", str(d / "Packages"),
                     "--alert", str(alert)]
@@ -107,7 +120,7 @@ def run_main(stanzas, mapping):
             check.Tree = original
             sys.argv = argv
         text = alert.read_text() if alert.exists() else None
-        return rc, out.getvalue(), text
+        return rc, out.getvalue(), text, seen[0] if seen else None
 
 
 case("有过期的包时以非零退出", lambda: (
@@ -134,6 +147,15 @@ case("输出里给出检查了多少个包", lambda: (
     "1 个包" in run_main(
         [stanza("net-libs/w-1", rdepend="media-libs/libavif:0/16.3=")],
         {"media-libs/libavif": "16.3"})[1]))
+
+# Measuring a stable index with the running machine's keywords reads a version
+# only ~arch can install as current, and reports packages that were never due
+# for an update.
+case("按索引头部的关键字判断可见性，不按运行的机器", lambda: (
+    run_main([stanza("net-libs/w-1", rdepend="media-libs/libavif:0/16.3=")],
+             {"media-libs/libavif": "16.3"},
+             header="ACCEPT_KEYWORDS: amd64\nPACKAGES: 1\nVERSION: 0")[3]
+    == "amd64"))
 
 print(f"  {'用例':<44} 结果")
 bad = 0
