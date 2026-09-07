@@ -14,6 +14,8 @@ TREE="${TREE:-/var/db/repos/gentoo}"
 # A skipped round is only a fault once the channel has gone this long
 # without publishing anything.
 SKIP_STALE_H="${SKIP_STALE_H:-26}"
+# How stale the overlay copy may be before a failed fetch becomes a fault.
+OVERLAY_STALE_H="${OVERLAY_STALE_H:-26}"
 LOGDIR="${LOGDIR:-/var/lib/binhost/logs/${CHANNEL_STORAGE}}"
 STAGE="${STAGE:-/var/lib/binhost/stage/${CHANNEL_STORAGE}}"
 PROGRESS_OUT="${PROGRESS_OUT:-${CHANNEL_PROGRESS_OUT}}"
@@ -57,8 +59,29 @@ fi
 BUILD_STARTED=$(date +%s)
 export BUILD_STARTED
 
-git -C "${OVERLAY}" fetch --quiet origin master
-git -C "${OVERLAY}" reset --quiet --hard origin/master
+# A network blip of a couple of minutes is enough to fail one fetch, and the
+# copy already on disk is a few hours old at worst. Killing the round for that
+# publishes nothing, which is strictly worse than publishing what the previous
+# copy describes, so the fetch is retried and then allowed to be stale.
+fetched=0
+for attempt in 1 2 3; do
+    if git -C "${OVERLAY}" fetch --quiet origin master; then
+        fetched=1
+        break
+    fi
+    (( attempt < 3 )) && sleep "${OVERLAY_FETCH_WAIT:-30}"
+done
+if (( fetched )); then
+    git -C "${OVERLAY}" reset --quiet --hard origin/master
+else
+    pulled=$(stat -c %Y "${OVERLAY}/.git/FETCH_HEAD" 2>/dev/null || echo 0)
+    age=$(( ( $(date +%s) - pulled ) / 3600 ))
+    if (( pulled == 0 || age >= OVERLAY_STALE_H )); then
+        alert "binhost 无法取得 overlay（$(hostname) ${CHANNEL}）：本地副本已 ${age} 小时未更新"
+        alert_exit
+    fi
+    echo "!! 无法取得 overlay，按 ${age} 小时前的副本构建" >&2
+fi
 echo "overlay $(git -C "${OVERLAY}" rev-parse --short HEAD)"
 
 # The overlay was brought up to date every round while ::gentoo was not, so the

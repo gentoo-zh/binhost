@@ -19,7 +19,8 @@ ok() {
 cycle_probe() {
     local publish_rc="$1" with_report="$2" with_smoke="${3:-no}"
     local progress_rc="${4:-0}" orphan="${5:-no}" sync_rc="${6:-0}"
-    local hold_lock="${7:-no}" published_age_h="${8:-1}" d out rc holder
+    local hold_lock="${7:-no}" published_age_h="${8:-1}"
+    local fetch_rc="${9:-0}" fetched_age_h="${10:-1}" d out rc holder
     d=$(mktemp -d)
     mkdir -p "${d}/build" "${d}/ops" "${d}/bin" "${d}/logs" "${d}/overlay"
     cp "${ROOT}/build/cycle.sh" "${d}/build/cycle.sh"
@@ -44,9 +45,12 @@ EOF
 #!/bin/bash
 exit ${publish_rc}
 EOF
-    cat > "${d}/bin/git" <<'EOF'
+    cat > "${d}/bin/git" <<EOF
 #!/bin/bash
-case "$*" in *rev-parse*) echo deadbeef;; esac
+case "\$*" in
+    *rev-parse*) echo deadbeef; exit 0;;
+    *fetch*) printf 'fetch\\n' >> "${d}/fetch.log"; exit ${fetch_rc};;
+esac
 exit 0
 EOF
     # cycle.sh syncs ::gentoo through sudo; the stub records the call so a test
@@ -66,6 +70,11 @@ EOF
         printf 'gpkg 安装失败 1 个，测试环境失败 0 项\n' \
             > "${d}/logs/smoke-alert.txt"
     fi
+    mkdir -p "${d}/overlay/.git"
+    if [[ ${fetched_age_h} != none ]]; then
+        : > "${d}/overlay/.git/FETCH_HEAD"
+        touch -d "${fetched_age_h} hours ago" "${d}/overlay/.git/FETCH_HEAD"
+    fi
     mkdir -p "${d}/stage"
     if [[ ${published_age_h} != none ]]; then
         : > "${d}/stage/Packages"
@@ -81,6 +90,7 @@ EOF
     set +e
     out=$(cd "${d}" && PATH="${d}/bin:${PATH}" OVERLAY="${d}/overlay" \
         LOGDIR="${d}/logs" STAGE="${d}/stage" LOCK="${d}/stage/build.lock" \
+        OVERLAY_FETCH_WAIT=0 TREE="${d}/tree" \
         ALERT_LOG="${d}/alert.log" bash build/cycle.sh 2>&1)
     rc=$?
     set -e
@@ -88,33 +98,34 @@ EOF
     [[ ${orphan} == yes ]] && sleep 0.6
     # 2>/dev/null goes before the input redirection: the shell reports a missing
     # file itself, and by then its own stderr must already be discarded.
-    printf '%s|%s|%s|%s|%s|%s\n' \
+    printf '%s|%s|%s|%s|%s|%s|%s\n' \
         "$(cat 2>/dev/null "${d}/late.log")" \
         "${rc}" \
         "$(tr '\n' ' ' 2>/dev/null < "${d}/alert.log")" \
         "$(tr '\n' ' ' 2>/dev/null < "${d}/progress.log")" \
         "$(tr '\n' ' ' 2>/dev/null < "${d}/sudo.log")" \
+        "$(grep -c . 2>/dev/null "${d}/fetch.log")" \
         "$(tr '\n' ' ' <<< "${out}")"
     rm -rf "${d}"
 }
 
 echo "== cycle.sh 区分发布与清理失败"
 
-IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 3 no)"
+IFS='|' read -r late rc message progress sudo_calls fetches out <<< "$(cycle_probe 3 no)"
 ok "发布后清理受阻时保留退出码 3" "${rc}" "3"
 ok "退出码 3 的通知说明索引已经发布" \
    "$([[ ${message} == *已发布到镜像机* ]] && echo yes)" "yes"
 ok "退出码 3 的通知不会声称未发布" \
    "$([[ ${message} != *未发布到镜像机* ]] && echo yes)" "yes"
 
-IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 1 yes)"
+IFS='|' read -r late rc message progress sudo_calls fetches out <<< "$(cycle_probe 1 yes)"
 ok "发布失败时保留原退出码" "${rc}" "1"
 ok "发布失败时明确说明未发布" \
    "$([[ ${message} == *未发布到镜像机* ]] && echo yes)" "yes"
 ok "目标软件包失败摘要会附在发布告警中" \
    "$([[ ${message} == *构建失败*app-misc/example* ]] && echo yes)" "yes"
 
-IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no yes)"
+IFS='|' read -r late rc message progress sudo_calls fetches out <<< "$(cycle_probe 0 no yes)"
 ok "冒烟测试告警不改变成功退出码" "${rc}" "0"
 ok "安装失败进入既有告警路径" \
    "$([[ ${message} == *gpkg*安装冒烟测试*安装失败* ]] && echo yes)" "yes"
@@ -124,13 +135,13 @@ echo "== 进度回报不左右这一轮的成败"
 # The publish succeeded on 2026-08-12 and the run still reported failure: the
 # final progress push lost a race, and set -e inside the EXIT trap turned that
 # into the service exit code.
-IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no no 1)"
+IFS='|' read -r late rc message progress sudo_calls fetches out <<< "$(cycle_probe 0 no no 1)"
 ok "回报推送失败不改变成功退出码" "${rc}" "0"
 ok "回报推送失败不产生告警" "${message}" ""
 ok "仍然尝试写出结束状态" \
    "$([[ ${progress} == *"finish OUT="* ]] && echo yes)" "yes"
 
-IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no)"
+IFS='|' read -r late rc message progress sudo_calls fetches out <<< "$(cycle_probe 0 no)"
 ok "成功时结束状态是 done" \
    "$([[ ${out} == *"finish"* || ${progress} == *"finish OUT="* ]] && echo yes)" "yes"
 ok "看守进程拿得到本频道的输出档名" \
@@ -138,14 +149,14 @@ ok "看守进程拿得到本频道的输出档名" \
 
 CHANNEL=unstable
 export CHANNEL
-IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no)"
+IFS='|' read -r late rc message progress sudo_calls fetches out <<< "$(cycle_probe 0 no)"
 unset CHANNEL
 ok "unstable 的看守进程写的是 unstable 的档名" \
    "$([[ ${progress} == *"watch OUT=build-status-unstable.json"* ]] && echo yes)" "yes"
 
 # A plain kill fells the watcher and leaves its ssh running, which then lands a
 # running snapshot on top of the final state.
-IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no no 0 yes)"
+IFS='|' read -r late rc message progress sudo_calls fetches out <<< "$(cycle_probe 0 no no 0 yes)"
 ok "看守进程留下的子进程一并收掉" "${late}" ""
 
 echo "== cycle.sh 被信号中止时不会报告成功"
@@ -171,11 +182,27 @@ PROBE
 
 ok "收到 SIGTERM 时写出 failed" "$(signal_probe)" "failed"
 
+echo "== cycle.sh 容得下一次无法取得 overlay"
+
+# A network blip of a couple of minutes fails one fetch. The copy on disk is
+# hours old at worst, and building from it beats publishing nothing.
+IFS='|' read -r late rc message progress sudo_calls fetches out <<< "$(cycle_probe 0 no no 0 no 0 no 1 1 1)"
+ok "无法取得时会重试" "$([[ ${fetches} -ge 3 ]] && echo yes)" "yes"
+ok "重试后仍无法取得也照常构建" "${rc}" "0"
+ok "并且说明按几小时前的副本构建" \
+   "$([[ ${out} == *"按 1 小时前的副本构建"* ]] && echo yes)" "yes"
+
+# A copy that has not been refreshed for a long time is a different thing.
+IFS='|' read -r late rc message progress sudo_calls fetches out <<< "$(cycle_probe 0 no no 0 no 0 no 1 1 40)"
+ok "副本太旧又无法取得时以非零结束" "$([[ ${rc} != 0 ]] && echo yes)" "yes"
+ok "并且通知里给出副本多旧" \
+   "$([[ ${message} == *"未更新"* ]] && echo yes)" "yes"
+
 echo "== cycle.sh 让路时不算故障"
 
 # Both channels share one lock, so one running long makes the other stand
 # aside. Failing the unit for that marks a healthy machine red.
-IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no no 0 no 0 yes 1)"
+IFS='|' read -r late rc message progress sudo_calls fetches out <<< "$(cycle_probe 0 no no 0 no 0 yes 1)"
 ok "锁被占住时以 0 结束" "${rc}" "0"
 ok "并且不发通知" "$([[ -z ${message// /} ]] && echo yes)" "yes"
 ok "并且说明这个频道刚发布过" \
@@ -183,7 +210,7 @@ ok "并且说明这个频道刚发布过" \
 
 # A channel that keeps standing aside until it stops publishing does need
 # someone to look.
-IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no no 0 no 0 yes 40)"
+IFS='|' read -r late rc message progress sudo_calls fetches out <<< "$(cycle_probe 0 no no 0 no 0 yes 40)"
 ok "很久没发布又让路时以非零结束" "$([[ ${rc} != 0 ]] && echo yes)" "yes"
 ok "并且通知里给出多久没发布" \
    "$([[ ${message} == *"没有发布"* ]] && echo yes)" "yes"
@@ -192,10 +219,10 @@ echo "== cycle.sh 的通知说明是哪个频道"
 
 # Both channels run on the same host, so a notice that names only the host
 # leaves the reader guessing which one it came from.
-IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 1 yes)"
+IFS='|' read -r late rc message progress sudo_calls fetches out <<< "$(cycle_probe 1 yes)"
 ok "发布失败的通知带上频道" \
    "$([[ ${message} == *"stable"* ]] && echo yes)" "yes"
-IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no yes)"
+IFS='|' read -r late rc message progress sudo_calls fetches out <<< "$(cycle_probe 0 no yes)"
 ok "冒烟测试的通知带上频道" \
    "$([[ ${message} == *"stable"* ]] && echo yes)" "yes"
 
@@ -203,10 +230,10 @@ echo "== cycle.sh 每轮同步 ::gentoo"
 
 # The overlay was refreshed every round and ::gentoo was not, so the tree the
 # packages were built against fell behind whatever a user has.
-IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no)"
+IFS='|' read -r late rc message progress sudo_calls fetches out <<< "$(cycle_probe 0 no)"
 ok "每轮都同步 ::gentoo" \
    "$([[ ${sudo_calls} == *"emaint sync -r gentoo"* ]] && echo yes)" "yes"
-IFS='|' read -r late rc message progress sudo_calls out <<< "$(cycle_probe 0 no no 0 no 1)"
+IFS='|' read -r late rc message progress sudo_calls fetches out <<< "$(cycle_probe 0 no no 0 no 1)"
 ok "同步失败时这一轮照常继续" "${rc}" "0"
 ok "并且说明按现有的树构建" \
    "$([[ ${out} == *"未能同步"* ]] && echo yes)" "yes"
