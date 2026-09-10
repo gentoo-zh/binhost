@@ -43,6 +43,7 @@ dev-cpp/nameof
 dev-cpp/reproc
 dev-cpp/tgbot-cpp
 dev-debug/lldb-mi
+dev-games/alcom
 dev-go/gotests
 dev-go/staticcheck
 dev-libs/libpqmarble
