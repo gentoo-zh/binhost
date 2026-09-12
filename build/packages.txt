@@ -13,6 +13,7 @@ app-editors/edit
 app-editors/xed
 app-emulation/looking-glass
 app-emulation/winetricks-zh
+app-i18n/akaza
 app-i18n/cskk
 app-i18n/fcitx-bamboo
 app-i18n/fcitx-cskk
