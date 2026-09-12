@@ -15,6 +15,7 @@
 
 app-i18n/fcitx-kkc		依赖 libkkc 的 configure 需要 XML::Parser，基础镜像补 perl-cleaner 后复查
 app-misc/crush			许可证 FSL-1.1-MIT 含竞争用途限制，不属于 @BINARY-REDISTRIBUTABLE
+app-text/xreader		meson 的 C 项目编译很快，而 IUSE 有九个，二进制包只在 USE 完全匹配时才被采用，命中率收不回构建成本
 media-gfx/scangearmp		许可证 Canon-IJ 只准搭配 Canon 喷墨机使用，不在 @BINARY-REDISTRIBUTABLE
 media-plugins/osdlyrics	configure 需要 XML::Parser，基础镜像补 perl-cleaner 后复查
 net-proxy/proxy-server		ebuild 没有 KEYWORDS 声明，本站两个频道都不可见
