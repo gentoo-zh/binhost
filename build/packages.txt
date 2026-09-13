@@ -94,6 +94,7 @@ dev-util/codex
 dev-util/execstack
 dev-util/fvm
 dev-util/gitea-cli
+dev-util/herdr
 dev-util/mamba
 dev-util/osc
 dev-util/pack-cli
