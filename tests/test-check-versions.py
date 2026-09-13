@@ -42,7 +42,8 @@ def make_tree(root, packages, empty=()):
 
 
 def run(index_lines, list_lines, packages=None, masked=(), tree=(), body=None,
-        tree_empty=(), moves=(), excluded=None, channel_excluded=None):
+        tree_empty=(), moves=(), excluded=None, channel_excluded=None,
+        resolved=None):
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
         overlay = make_overlay(d / "overlay", packages or {}, masked, body, moves)
@@ -59,6 +60,10 @@ def run(index_lines, list_lines, packages=None, masked=(), tree=(), body=None,
             (d / "channel-excluded.txt").write_text(
                 "".join(f"{cp}\treason\n" for cp in channel_excluded))
             env["CHANNEL_EXCLUDED"] = str(d / "channel-excluded.txt")
+        if resolved is not None:
+            (d / "resolved.txt").write_text(
+                "".join("\t".join(row) + "\n" for row in resolved))
+            env["RESOLVED_VERSIONS"] = str(d / "resolved.txt")
         p = subprocess.run([sys.executable, CHECK, str(overlay),
                             str(d / "Packages"), str(d / "list.txt")],
                            capture_output=True, text=True, env=env)
@@ -117,6 +122,32 @@ for name, idx, lst, packages, masked, expect in CASES:
     if not ok:
         bad += 1
         for l in out.splitlines()[1:4]:
+            print(f"      {l}")
+
+REASON = "- app-i18n/fcitx-5.1.22::gentoo (masked by: ~amd64 keyword)"
+HELD_CASES = [
+    ("解析器保留旧版并给出原因，放行",
+     [(PKG, "0.9", NOW, REASON)], "保留", 0),
+    ("解析器记录的是别的旧版，索引仍算落后",
+     [(PKG, "0.8", NOW, REASON)], "落后", 1),
+    ("解析器拒绝的不是 overlay 最新版，索引仍算落后",
+     [(PKG, "0.9", "1.1.0", REASON)], "落后", 1),
+    ("记录未列出这个包，索引仍算落后",
+     [("app-misc/other", "0.9", NOW, REASON)], "落后", 1),
+    ("容器没写出记录，索引仍算落后",
+     None, "落后", 1),
+]
+for name, resolved, expect, want_rc in HELD_CASES:
+    rc, out = run([stanza(f"{PKG}-0.9")], [PKG], {PKG: NOW}, resolved=resolved)
+    hit = [l.strip() for l in out.splitlines() if l.startswith("    ") and PKG in l]
+    got = hit[0].split()[0] if hit else "无问题"
+    ok = got == expect and rc == want_rc
+    if expect == "保留":
+        ok = ok and REASON in hit[0] and f"本频道解析不到 {NOW}" in hit[0]
+    print(f"  {'✓' if ok else '✗'} {name:<22} {expect:<8} {got}  (退出码 {rc}，应为 {want_rc})")
+    if not ok:
+        bad += 1
+        for l in out.splitlines()[:3]:
             print(f"      {l}")
 
 rc, out = newcomer_case()

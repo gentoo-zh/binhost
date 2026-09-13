@@ -69,6 +69,9 @@ jobs:
       - name: The base snapshot retains Portage matching metadata
         run: python3 tests/test-snapshot-vdb.py
 
+      - name: A version the resolver holds back is excused with its reason
+        run: python3 tests/test-resolved-versions.py
+
       - name: The configured Gentoo binrepo index is captured intact
         run: python3 tests/test-snapshot-binrepo.py
 
