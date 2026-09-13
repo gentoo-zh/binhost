@@ -152,6 +152,31 @@ def read_excluded(overlay):
     return out | _atoms_in(channel) if channel else out
 
 
+def read_resolved(path):
+    """{cp: (installed, visible, reason)} written by resolved-versions.py in
+    the build container; empty when the container did not write it."""
+    out = {}
+    if not path or not os.path.isfile(path):
+        return out
+    for raw in pathlib.Path(path).read_text(errors="replace").splitlines():
+        parts = raw.rstrip("\n").split("\t", 3)
+        if len(parts) == 4 and ATOM.match(parts[0]):
+            out[parts[0]] = (parts[1], parts[2], parts[3])
+    return out
+
+
+def held_back(cp, got, cur, resolved):
+    """The resolver's reason when the index carries what it chose and the
+    version it refused is the overlay's newest, else None."""
+    entry = resolved.get(cp)
+    if not entry:
+        return None
+    installed, visible, reason = entry
+    if vercmp(installed, got) == 0 and vercmp(visible, cur) == 0:
+        return reason
+    return None
+
+
 def published(index):
     out = {}
     for stanza in index.read_text(errors="ignore").split("\n\n")[1:]:
@@ -179,7 +204,8 @@ def main(overlay, index, listfile):
     tree = os.environ.get("GENTOO_TREE", "/var/db/repos/gentoo")
     masked = read_mask(overlay)
     pending = pending_moves(overlay, wanted)
-    stale, absent, gone, blocked = [], [], [], []
+    resolved = read_resolved(os.environ.get("RESOLVED_VERSIONS"))
+    stale, absent, gone, blocked, held = [], [], [], [], []
     live, banned, upstreamed, unclear = [], [], [], []
     for cp in sorted(wanted):
         pkgdir = overlay / cp
@@ -205,17 +231,25 @@ def main(overlay, index, listfile):
         if got is None:
             absent.append((cp, cur))
         elif vercmp(got, cur) != 0:
-            stale.append((cp, got, cur))
+            reason = held_back(cp, got, cur, resolved)
+            if reason is None:
+                stale.append((cp, got, cur))
+            else:
+                held.append((cp, got, cur, reason))
 
     fresh = newcomers(overlay, wanted, masked, set(pending.values()))
 
     print(f">>> 版本核对：清单 {len(wanted)}，索引 {len(have)}，落后 {len(stale)}，"
-          f"缺 {len(absent)}，overlay 中不存在 {len(gone)}，已屏蔽 {len(blocked)}，"
+          f"保留 {len(held)}，缺 {len(absent)}，overlay 中不存在 {len(gone)}，"
+          f"已屏蔽 {len(blocked)}，"
           f"只有 9999 的 {len(live)}，不发布 binpkg 的 {len(banned)}，"
           f"RESTRICT 无法判定的 {len(unclear)}，"
           f"::gentoo 也有的 {len(upstreamed)}，未收录的新包 {len(fresh)}")
     for cp, got, cur in stale:
         print(f"    落后   {cp}  索引 {got}  overlay {cur}")
+    for cp, got, cur, reason in held:
+        print(f"    保留   {cp}  索引 {got}  overlay {cur}  "
+              f"本频道解析不到 {cur}：{reason}")
     for cp, cur in absent:
         print(f"    缺     {cp}  overlay {cur}")
     for cp in gone:

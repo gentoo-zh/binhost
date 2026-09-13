@@ -100,7 +100,7 @@ sudo install -dm755 -o "$(id -u)" -g "$(id -g)" \
     "${PKGDIR}" "$(dirname "${STAGE}")" "${LOGDIR}" "${GENTOO_BINPKGS}"
 rm -f "${LOGDIR}"/*.log "${LOGDIR}"/failed.txt "${LOGDIR}"/gentoo-Packages \
     "${LOGDIR}"/smoke-install.json "${LOGDIR}"/smoke-alert.txt \
-    "${LOGDIR}"/subslot-alert.txt
+    "${LOGDIR}"/subslot-alert.txt "${LOGDIR}"/resolved.txt
 
 empty=$(find "${PKGDIR}" -name '*.gpkg.tar' -size 0 -print -delete | wc -l)
 (( empty )) && echo ">>> 移除 ${empty} 个 0 字节的缓存包" 
@@ -121,6 +121,7 @@ ${DOCKER} run --rm -i --security-opt=no-new-privileges \
     -v "$(dirname "$0")/preserved-consumers.py:/usr/local/bin/preserved-consumers:ro" \
     -v "$(dirname "$0")/snapshot-binrepo.py:/usr/local/bin/snapshot-binrepo:ro" \
     -v "$(dirname "$0")/snapshot-vdb.py:/usr/local/bin/snapshot-vdb:ro" \
+    -v "$(dirname "$0")/resolved-versions.py:/usr/local/bin/resolved-versions:ro" \
     -v "${LOGDIR}:/var/log/binhost" \
     -e "OVERLAY_REV=$(git -C "${OVERLAY}" rev-parse HEAD 2>/dev/null || echo '')" \
     -e "BINHOST_CHANNEL=${CHANNEL}" \
@@ -253,6 +254,15 @@ fi
 echo "::: 重建保留库的使用者"
 /usr/local/bin/rebuild-preserved /var/log/binhost/preserved-rebuild.log
 
+# A listed package whose newest version needs a dependency this channel does
+# not accept yet (still ~arch in ::gentoo) is built at the older version the
+# resolver settles on. The version check cannot tell that from a build that
+# fell behind, so ask the resolver here and hand it the answer.
+echo "::: 记录解析器在本频道保留的旧版本"
+python3 /usr/local/bin/resolved-versions /tmp/packages.txt \
+        /var/log/binhost/resolved.txt ||
+    echo "!! 无法记录解析器保留的版本，落后的软件包将阻断发布" >&2
+
 emaint binhost --fix
 if ! python3 /usr/local/bin/snapshot-binrepo \
         /etc/portage/binrepos.conf/gentoo.conf /var/cache/edb/binhost \
@@ -365,6 +375,7 @@ fi
 
 if [[ ! -s ${STAGE}.new/publish-blocked.txt ]] &&
    ! GENTOO_TREE="${TREE}" CHANNEL_EXCLUDED="${channel_excluded_list}" \
+        RESOLVED_VERSIONS="${LOGDIR}/resolved.txt" \
         python3 "$(dirname "$0")/check-versions.py" \
         "${OVERLAY}" "${STAGE}.new/Packages" "${LIST}"; then
     echo "暂存索引未覆盖清单中的当前可用版本，本次只执行隔离" \
