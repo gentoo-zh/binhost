@@ -8,6 +8,7 @@
 app-emulation/winetricks-zh	requires a 32-bit Wine dependency graph outside the stable build profile
 dev-python/fuo-netease	runtime dependency dev-python/marshmallow-4.3.0 is ~amd64 only
 dev-python/fuo-qqmusic	runtime dependency dev-python/marshmallow-4.3.0 is ~amd64 only
+dev-util/herdr	build dependency >=dev-lang/zig-bin-0.15.2 is ~amd64 only
 kde-misc/plasma-ions-china	runtime dependency >=kde-plasma/kdeplasma-addons-6.7 is ~amd64 only
 media-plugins/waylyrics	runtime dependency gui-libs/gtk4-layer-shell is ~amd64 only
 net-misc/eternalterminal	runtime dependency dev-cpp/simpleini is ~amd64 only
