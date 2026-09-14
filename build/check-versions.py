@@ -177,6 +177,16 @@ def held_back(cp, got, cur, resolved):
     return None
 
 
+def unresolvable(cp, cur, resolved):
+    """The resolver's reason when it refused the overlay's newest version in
+    this channel, whatever the index carries; None when it did not say so."""
+    entry = resolved.get(cp)
+    if not entry:
+        return None
+    _, visible, reason = entry
+    return reason if vercmp(visible, cur) == 0 else None
+
+
 def published(index):
     out = {}
     for stanza in index.read_text(errors="ignore").split("\n\n")[1:]:
@@ -206,7 +216,7 @@ def main(overlay, index, listfile):
     pending = pending_moves(overlay, wanted)
     resolved = read_resolved(os.environ.get("RESOLVED_VERSIONS"))
     stale, absent, gone, blocked, held = [], [], [], [], []
-    live, banned, upstreamed, unclear = [], [], [], []
+    live, banned, upstreamed, unclear, unavailable = [], [], [], [], []
     for cp in sorted(wanted):
         pkgdir = overlay / cp
         if not pkgdir.is_dir():
@@ -229,7 +239,15 @@ def main(overlay, index, listfile):
             upstreamed.append(cp)
         got = have.get(cp)
         if got is None:
-            absent.append((cp, cur))
+            # The resolver refused the newest version and the version it kept
+            # instead has since left the overlay, so this channel has nothing
+            # it may publish. That is the overlay's choice, not a failed build,
+            # and a failed build never carries a resolver reason.
+            reason = unresolvable(cp, cur, resolved)
+            if reason is not None:
+                unavailable.append((cp, cur, reason))
+            else:
+                absent.append((cp, cur))
         elif vercmp(got, cur) != 0:
             reason = held_back(cp, got, cur, resolved)
             if reason is None:
@@ -240,7 +258,8 @@ def main(overlay, index, listfile):
     fresh = newcomers(overlay, wanted, masked, set(pending.values()))
 
     print(f">>> 版本核对：清单 {len(wanted)}，索引 {len(have)}，落后 {len(stale)}，"
-          f"保留 {len(held)}，缺 {len(absent)}，overlay 中不存在 {len(gone)}，"
+          f"保留 {len(held)}，缺 {len(absent)}，本频道无可用版本 {len(unavailable)}，"
+          f"overlay 中不存在 {len(gone)}，"
           f"已屏蔽 {len(blocked)}，"
           f"只有 9999 的 {len(live)}，不发布 binpkg 的 {len(banned)}，"
           f"RESTRICT 无法判定的 {len(unclear)}，"
@@ -252,6 +271,8 @@ def main(overlay, index, listfile):
               f"本频道解析不到 {cur}：{reason}")
     for cp, cur in absent:
         print(f"    缺     {cp}  overlay {cur}")
+    for cp, cur, reason in unavailable:
+        print(f"    无可用 {cp}  overlay {cur}  本频道解析不到 {cur}，旧版本已离开 overlay：{reason}")
     for cp in gone:
         moved = pending.get(cp)
         if moved:

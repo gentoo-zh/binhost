@@ -150,6 +150,30 @@ for name, resolved, expect, want_rc in HELD_CASES:
         for l in out.splitlines()[:3]:
             print(f"      {l}")
 
+# The resolver refused the newest version and the version it kept has since
+# left the overlay, so the index carries nothing for this package. That is the
+# overlay's choice, not a failed build, and must not block the other packages.
+UNAVAILABLE_CASES = [
+    ("解析不到最新版且旧版已离开 overlay，放行",
+     [(PKG, "0.9", NOW, REASON)], "无可用", 0),
+    ("索引未收录且解析器没有记录，仍算缺",
+     None, "缺", 1),
+    ("解析器拒绝的不是 overlay 最新版，仍算缺",
+     [(PKG, "0.9", "1.1.0", REASON)], "缺", 1),
+]
+for name, resolved, expect, want_rc in UNAVAILABLE_CASES:
+    rc, out = run([], [PKG], {PKG: NOW}, resolved=resolved)
+    hit = [l.strip() for l in out.splitlines() if l.startswith("    ") and PKG in l]
+    got = hit[0].split()[0] if hit else "无问题"
+    ok = got == expect and rc == want_rc
+    if expect == "无可用":
+        ok = ok and REASON in hit[0] and "旧版本已离开 overlay" in hit[0]
+    print(f"  {'✓' if ok else '✗'} {name:<22} {expect:<8} {got}  (退出码 {rc}，应为 {want_rc})")
+    if not ok:
+        bad += 1
+        for l in out.splitlines()[:3]:
+            print(f"      {l}")
+
 rc, out = newcomer_case()
 lines = [l.strip() for l in out.splitlines() if l.strip().startswith("新包")]
 ok = len(lines) == 1 and rc == 0
