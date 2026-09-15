@@ -69,6 +69,8 @@ fi
 JOBS="${JOBS:-24}"
 MAKEOPTS="${MAKEOPTS:--j$(nproc) -l$(nproc)}"
 LOCK="${LOCK:-/var/lib/binhost/stage/build.lock}"
+# How stale the overlay copy may be before a failed fetch becomes a fault.
+OVERLAY_STALE_H="${OVERLAY_STALE_H:-26}"
 
 die() { echo "!!! $*" >&2; exit 1; }
 
@@ -158,6 +160,31 @@ done
 mkdir -p "$(dirname "${LOCK}")"
 exec 9>"${LOCK}"
 flock -n 9 || { echo "另一次构建正在执行（${LOCK}）"; exit 0; }
+
+# This service runs on its own timer, not through cycle.sh, so the overlay copy
+# it reads is only as new as whatever last refreshed it. A bump to the kernel
+# ebuild would otherwise wait for the next channel round before being built.
+# Same shape as cycle.sh: retry the fetch, then tolerate a copy that is only a
+# few hours old.
+fetched=0
+for attempt in 1 2 3; do
+    if git -C "${OVERLAY}" fetch --quiet origin master; then
+        fetched=1
+        break
+    fi
+    (( attempt < 3 )) && sleep "${OVERLAY_FETCH_WAIT:-30}"
+done
+if (( fetched )); then
+    git -C "${OVERLAY}" reset --quiet --hard origin/master
+else
+    pulled=$(stat -c %Y "${OVERLAY}/.git/FETCH_HEAD" 2>/dev/null || echo 0)
+    age=$(( ( $(date +%s) - pulled ) / 3600 ))
+    if (( pulled == 0 || age >= OVERLAY_STALE_H )); then
+        die "无法取得 overlay，本地副本已 ${age} 小时未更新"
+    fi
+    echo "!! 无法取得 overlay，按 ${age} 小时前的副本构建" >&2
+fi
+echo "overlay $(git -C "${OVERLAY}" rev-parse --short HEAD)"
 
 # Every version the overlay offers, so a bump needs no edit here and a new
 # series appears on its own. The series only decides which directory holds it.
