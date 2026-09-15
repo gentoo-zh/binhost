@@ -110,6 +110,14 @@ case "${source}" in
         ;;
 esac
 EOF
+cat > "${WORK}/bin/git" <<'EOF'
+#!/bin/bash
+echo "$*" >> "${GIT_CALLS}"
+case "$3" in
+    fetch) [[ ${GIT_FETCH_RC:-0} == 0 ]] || exit "${GIT_FETCH_RC}" ;;
+    rev-parse) echo abc1234 ;;
+esac
+EOF
 chmod +x "${WORK}/bin"/*
 
 write_manifest() {
@@ -122,7 +130,8 @@ write_manifest() {
 }
 
 reset_case() {
-    rm -rf "${WORK}/pkgdir" "${WORK}/published" "${WORK}/remote" "${WORK}/docker.calls"
+    rm -rf "${WORK}/pkgdir" "${WORK}/published" "${WORK}/remote" \
+        "${WORK}/docker.calls" "${WORK}/git.calls" "${WORK}/overlay/.git"
     mkdir -p "${WORK}/pkgdir/sys-kernel/gentoo-cjk-kernel" \
         "${WORK}/published" "${WORK}/remote/archive"
     printf '7.1 7.1.7\n' > "${WORK}/series"
@@ -131,6 +140,7 @@ reset_case() {
     RSYNC_FAIL=none
     DOWNLOAD_SOURCE=
     RETIRE_PER_RUN=2
+    GIT_FETCH_RC=0
     write_manifest "${NAME}" "${TEST_BUILT}"
 }
 
@@ -145,6 +155,8 @@ run_archive() {
         TEST_REMOTE="${WORK}/remote" TEST_REMOTE_ROOT=/archive \
         TEST_REMOTE_NAME=test TEST_PKGDIR="${WORK}/pkgdir" \
         DOCKER_CALLS="${WORK}/docker.calls" \
+        GIT_CALLS="${WORK}/git.calls" GIT_FETCH_RC="${GIT_FETCH_RC}" \
+        OVERLAY_FETCH_WAIT=0 \
         EXTRA_VARIANTS="${EXTRA_VARIANTS-}" \
         TEST_BUILT="${TEST_BUILT}" bash "${ARCHIVE_SCRIPT}"
 }
@@ -428,3 +440,42 @@ grep -q '\-bin 未提供这个变体，跳过' "${WORK}/out"
 [[ -e ${WORK}/remote/archive/7.1/${NAME} ]]
 [[ ! -e ${WORK}/remote/archive/7.1/${CJK32_NAME} ]]
 echo "  ✓ -bin 提供了这版却没这个变体时才跳过"
+
+# The kernel timer does not go through cycle.sh, so the overlay copy has to be
+# refreshed here or a kernel bump waits for the next channel round.
+reset_case
+: > "${WORK}/Manifest"
+run_archive 1 > "${WORK}/out" 2>&1
+grep -q 'fetch --quiet origin master' "${WORK}/git.calls"
+grep -q 'reset --quiet --hard origin/master' "${WORK}/git.calls"
+grep -q '^overlay abc1234' "${WORK}/out"
+echo "  ✓ 每次执行先更新 overlay 副本"
+
+reset_case
+: > "${WORK}/Manifest"
+mkdir -p "${WORK}/overlay/.git"
+touch -d '2 hours ago' "${WORK}/overlay/.git/FETCH_HEAD"
+GIT_FETCH_RC=128
+run_archive 1 > "${WORK}/out" 2>&1
+[[ $(grep -c 'fetch --quiet origin master' "${WORK}/git.calls") == 3 ]]
+if grep -q 'reset --quiet --hard' "${WORK}/git.calls"; then
+    echo "  ✗ 无法取得 overlay 时不应重置副本"
+    exit 1
+fi
+grep -q '按 2 小时前的副本构建' "${WORK}/out"
+[[ -e ${WORK}/remote/archive/7.1/${NAME} ]]
+echo "  ✓ 无法取得 overlay 时重试三次，副本未过期则以副本构建"
+
+reset_case
+: > "${WORK}/Manifest"
+mkdir -p "${WORK}/overlay/.git"
+touch -d '30 hours ago' "${WORK}/overlay/.git/FETCH_HEAD"
+GIT_FETCH_RC=128
+if run_archive 1 > "${WORK}/out" 2>&1; then
+    echo "  ✗ overlay 副本过期且无法取得时应当失败"
+    exit 1
+fi
+grep -q '本地副本已 30 小时未更新' "${WORK}/out"
+[[ ! -e ${WORK}/remote/archive/7.1/${NAME} ]]
+[[ ! -s ${WORK}/docker.calls ]]
+echo "  ✓ overlay 副本过期且无法取得时不构建"
