@@ -184,6 +184,7 @@ sys-apps/pnpm
 sys-fs/ssdfs-tools
 sys-libs/libsolv
 sys-power/tlpui
+sys-process/witr
 www-servers/darkhttpd
 www-servers/dufs
 www-servers/miniserve
