@@ -12,6 +12,10 @@ import pathlib
 import re
 import sys
 
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+from ebuilds import split_cpv                            # noqa: E402
+from portage.versions import vercmp                      # noqa: E402
+
 # cat/pkg:slot/subslot=, optionally preceded by ! or !! and a version operator
 SLOT_OP = re.compile(
     r"(?:^|\s)!{0,2}[<>=~]*"
@@ -105,24 +109,57 @@ def stale_in(stanza, tree):
     return out
 
 
+def not_reusable(checked):
+    """Package names whose cached binary package portage must not pick.
+
+    checked: (cpv, stale) per stanza, one stanza per build of a version.
+
+    Portage takes the highest version it has a binary for, and among several
+    builds of it the newest. A stale build is therefore only in the way when
+    every build of the highest cached version is stale: an older version that
+    went stale is never chosen, and once one fresh build exists it is the one
+    portage picks. Naming the package here makes portage build it from source
+    this round, which is what refreshes the recorded subslot.
+    """
+    highest = {}
+    for cpv, stale in checked:
+        cp, version = split_cpv(cpv)
+        if version is None:
+            continue
+        top = highest.get(cp)
+        if top is None or vercmp(version, top[0]) > 0:
+            highest[cp] = (version, [stale])
+        elif vercmp(version, top[0]) == 0:
+            top[1].append(stale)
+    return sorted(cp for cp, (_v, builds) in highest.items() if all(builds))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--index", required=True, help="要检查的 Packages 索引")
     ap.add_argument("--alert", help="有发现时写到这里，供告警取用")
+    ap.add_argument("--exclude",
+                    help="把不应再复用二进制包的包名写到这里，每行一个")
     args = ap.parse_args()
 
     header, stanzas = read_stanzas(args.index)
     tree = Tree(accepted_keywords(header))
 
     findings = []
+    checked = []
     for stanza in stanzas:
         cpv = field(stanza, "CPV")
         if not cpv:
             continue
-        for cp, recorded, current in stale_in(stanza, tree):
+        stale = stale_in(stanza, tree)
+        checked.append((cpv, bool(stale)))
+        for cp, recorded, current in stale:
             findings.append((cpv, cp, recorded, current))
 
     print(f">>> 子槽检查：{len(stanzas)} 个包，{len(findings)} 处依赖子槽已过期")
+    if args.exclude:
+        pathlib.Path(args.exclude).write_text(
+            "".join(f"{cp}\n" for cp in not_reusable(checked)), encoding="utf-8")
     if not findings:
         if args.alert:
             pathlib.Path(args.alert).unlink(missing_ok=True)

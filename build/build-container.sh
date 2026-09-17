@@ -100,11 +100,25 @@ sudo install -dm755 -o "$(id -u)" -g "$(id -g)" \
     "${PKGDIR}" "$(dirname "${STAGE}")" "${LOGDIR}" "${GENTOO_BINPKGS}"
 rm -f "${LOGDIR}"/*.log "${LOGDIR}"/failed.txt "${LOGDIR}"/gentoo-Packages \
     "${LOGDIR}"/smoke-install.json "${LOGDIR}"/smoke-alert.txt \
-    "${LOGDIR}"/subslot-alert.txt "${LOGDIR}"/resolved.txt
+    "${LOGDIR}"/subslot-alert.txt "${LOGDIR}"/resolved.txt \
+    "${LOGDIR}"/stale-binpkgs.txt
 
 empty=$(find "${PKGDIR}" -name '*.gpkg.tar' -size 0 -print -delete | wc -l)
 (( empty )) && echo ">>> 移除 ${empty} 个 0 字节的缓存包" 
 
+
+# A cached binary package records the subslot its := dependencies had when it
+# was built. --usepkg takes it again without looking at that, so once the
+# dependency moves on the package is published with a subslot nothing provides
+# any more, and the runtime dependency gate refuses the whole round. Packages
+# the world update does not cover, because the image never had them installed,
+# are only ever refreshed this way.
+stale_binpkgs="${LOGDIR}/stale-binpkgs.txt"
+: > "${stale_binpkgs}"
+if [[ -s ${PKGDIR}/Packages ]]; then
+    python3 "$(dirname "$0")/check-subslots.py" \
+        --index "${PKGDIR}/Packages" --exclude "${stale_binpkgs}" || true
+fi
 
 echo ">>> building from ${BASE}"
 
@@ -115,6 +129,7 @@ ${DOCKER} run --rm -i --security-opt=no-new-privileges \
     -v "${PKGDIR}:/var/cache/binpkgs" \
     -v "${GENTOO_BINPKGS}:/var/cache/binhost/gentoo" \
     -v "${LIST}:/tmp/packages.txt:ro" \
+    -v "${stale_binpkgs}:/tmp/stale-binpkgs.txt:ro" \
     -v "${COMMON_PACKAGE_USE}:/tmp/package.use.common:ro" \
     "${channel_mounts[@]}" \
     -v "$(dirname "$0")/rebuild-preserved.sh:/usr/local/bin/rebuild-preserved:ro" \
@@ -146,6 +161,11 @@ mapfile -t atoms < <(grep -E '^[a-z0-9-]+/[A-Za-z0-9._+-]+$' /tmp/packages.txt)
 echo ">>> ${#atoms[@]} packages"
 
 EMERGE=(emerge --usepkg --changed-use --with-bdeps=y --quiet-build)
+mapfile -t stale < <(grep -E '^[a-z0-9-]+/[A-Za-z0-9._+-]+$' /tmp/stale-binpkgs.txt)
+if (( ${#stale[@]} )); then
+    echo ">>> ${#stale[@]} 个缓存包的依赖子槽已过期，本轮从源码重建：${stale[*]}"
+    EMERGE+=(--usepkg-exclude "${stale[*]}")
+fi
 FETCH_RETRY_WAIT="${FETCH_RETRY_WAIT:-180}"
 
 python3 /usr/local/bin/snapshot-vdb /var/db/pkg /var/log/binhost/installed.txt
@@ -176,7 +196,7 @@ fi
 # published packages installable.
 echo "::: 更新已装依赖"
 world_rc=0
-emerge --usepkg --update --deep --newuse --with-bdeps=y --quiet-build \
+"${EMERGE[@]}" --update --deep --newuse \
     --exclude virtual/dist-kernel @world > /var/log/binhost/world.log 2>&1 || world_rc=$?
 if (( world_rc )); then
     echo "!!! 依赖更新未完成（退出码 ${world_rc}），仍按清单构建"

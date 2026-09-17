@@ -108,13 +108,40 @@ case("头部没有关键字时返回空", lambda: (
     check.accepted_keywords("PACKAGES: 1") == ""))
 
 
+case("最高版本的每个构建都过期时不再复用", lambda: (
+    check.not_reusable([("net-misc/nm-1.56.1", True)]) == ["net-misc/nm"]))
+
+# Portage takes the newest build of a version, so one fresh build is enough.
+case("同一版本已有新构建时不再排除", lambda: (
+    check.not_reusable([("net-misc/nm-1.56.1", True),
+                        ("net-misc/nm-1.56.1", False)]) == []))
+
+case("过期的只是旧版本时不排除", lambda: (
+    check.not_reusable([("net-misc/nm-1.56.1", True),
+                        ("net-misc/nm-1.56.2", False)]) == []))
+
+case("最高版本过期而旧版本正常时仍排除", lambda: (
+    check.not_reusable([("net-misc/nm-1.56.1", False),
+                        ("net-misc/nm-1.56.2", True)]) == ["net-misc/nm"]))
+
+case("版本按 portage 规则比较，不按字串", lambda: (
+    check.not_reusable([("net-misc/nm-1.9", False),
+                        ("net-misc/nm-1.10", True)]) == ["net-misc/nm"]))
+
+case("排除清单按包名排序", lambda: (
+    check.not_reusable([("net-misc/b-1", True), ("app-misc/a-1", True)])
+    == ["app-misc/a", "net-misc/b"]))
+
+
 def run_main(stanzas, mapping, header=HEADER):
-    """Run main(), returning (exit code, stdout, alert text or None)."""
+    """Run main(), returning (exit code, stdout, alert text or None,
+    keywords asked for, exclude file text)."""
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
         (d / "Packages").write_text(header + "\n\n" + "\n\n".join(stanzas) + "\n")
         alert = d / "alert.txt"
         alert.write_text("上一轮留下的内容")
+        exclude = d / "exclude.txt"
         original = check.Tree
         seen = []
 
@@ -125,7 +152,7 @@ def run_main(stanzas, mapping, header=HEADER):
         check.Tree = fake
         argv = sys.argv
         sys.argv = ["check-subslots.py", "--index", str(d / "Packages"),
-                    "--alert", str(alert)]
+                    "--alert", str(alert), "--exclude", str(exclude)]
         out = io.StringIO()
         try:
             with contextlib.redirect_stdout(out):
@@ -134,7 +161,8 @@ def run_main(stanzas, mapping, header=HEADER):
             check.Tree = original
             sys.argv = argv
         text = alert.read_text() if alert.exists() else None
-        return rc, out.getvalue(), text, seen[0] if seen else None
+        excluded = exclude.read_text() if exclude.exists() else None
+        return rc, out.getvalue(), text, seen[0] if seen else None, excluded
 
 
 case("有过期的包时以非零退出", lambda: (
@@ -170,6 +198,17 @@ case("按索引头部的关键字判断可见性，不按运行的机器", lambd
              {"media-libs/libavif": "16.3"},
              header="ACCEPT_KEYWORDS: amd64\nPACKAGES: 1\nVERSION: 0")[3]
     == "amd64"))
+
+case("过期的包名写进排除清单，每行一个", lambda: (
+    run_main([stanza("net-libs/w-1", rdepend="media-libs/libavif:0/16.3="),
+              stanza("net-libs/v-1", rdepend="media-libs/libavif:0/16.3=")],
+             {"media-libs/libavif": "16.4"})[4] == "net-libs/v\nnet-libs/w\n"))
+
+# The next round reads this file to decide what not to reuse, so a clean
+# check has to leave an empty one rather than last round's names.
+case("全部正常时排除清单为空", lambda: (
+    run_main([stanza("net-libs/w-1", rdepend="media-libs/libavif:0/16.3=")],
+             {"media-libs/libavif": "16.3"})[4] == ""))
 
 print(f"  {'用例':<44} 结果")
 bad = 0
