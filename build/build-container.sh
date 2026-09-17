@@ -101,7 +101,7 @@ sudo install -dm755 -o "$(id -u)" -g "$(id -g)" \
 rm -f "${LOGDIR}"/*.log "${LOGDIR}"/failed.txt "${LOGDIR}"/gentoo-Packages \
     "${LOGDIR}"/smoke-install.json "${LOGDIR}"/smoke-alert.txt \
     "${LOGDIR}"/subslot-alert.txt "${LOGDIR}"/resolved.txt \
-    "${LOGDIR}"/stale-binpkgs.txt
+    "${LOGDIR}"/stale-binpkgs.txt "${LOGDIR}"/verify-deps.txt
 
 empty=$(find "${PKGDIR}" -name '*.gpkg.tar' -size 0 -print -delete | wc -l)
 (( empty )) && echo ">>> 移除 ${empty} 个 0 字节的缓存包" 
@@ -381,16 +381,24 @@ source_policy=(--source-keywords "${CHANNEL_ACCEPT_KEYWORDS}")
 if [[ -n ${CHANNEL_OVERLAY_KEYWORDS} ]]; then
     source_policy+=(--source-overlay-keywords "${CHANNEL_OVERLAY_KEYWORDS}")
 fi
-if [[ ! -s ${STAGE}.new/publish-blocked.txt ]] &&
-   ! python3 "$(dirname "$0")/verify-deps.py" "${STAGE}.new/Packages" \
-        --installed "${STAGE}.new/installed.txt" \
-        --available "${LOGDIR}/gentoo-Packages" \
-        --write-available "${STAGE}.new/official.txt" \
-        --source-tree "${TREE}" --source-overlay "${OVERLAY}" \
-        "${source_policy[@]}" \
-        --write-source "${STAGE}.new/source.txt"; then
-    echo "暂存索引未通过运行期依赖验证，本次只执行隔离" \
-        > "${STAGE}.new/publish-blocked.txt"
+# The verifier names the atoms it could not satisfy on stderr. They go into
+# the block note as well, so the alert says what blocked the round instead of
+# leaving that to whoever opens the journal.
+if [[ ! -s ${STAGE}.new/publish-blocked.txt ]]; then
+    deps_log="${LOGDIR}/verify-deps.txt"
+    if ! python3 "$(dirname "$0")/verify-deps.py" "${STAGE}.new/Packages" \
+            --installed "${STAGE}.new/installed.txt" \
+            --available "${LOGDIR}/gentoo-Packages" \
+            --write-available "${STAGE}.new/official.txt" \
+            --source-tree "${TREE}" --source-overlay "${OVERLAY}" \
+            "${source_policy[@]}" \
+            --write-source "${STAGE}.new/source.txt" 2> "${deps_log}"; then
+        {
+            echo "暂存索引未通过运行期依赖验证，本次只执行隔离"
+            grep -E '^   ' "${deps_log}" || true
+        } > "${STAGE}.new/publish-blocked.txt"
+    fi
+    cat "${deps_log}" >&2
 fi
 
 if [[ ! -s ${STAGE}.new/publish-blocked.txt ]] &&

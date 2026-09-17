@@ -20,7 +20,8 @@ cycle_probe() {
     local publish_rc="$1" with_report="$2" with_smoke="${3:-no}"
     local progress_rc="${4:-0}" orphan="${5:-no}" sync_rc="${6:-0}"
     local hold_lock="${7:-no}" published_age_h="${8:-1}"
-    local fetch_rc="${9:-0}" fetched_age_h="${10:-1}" d out rc holder
+    local fetch_rc="${9:-0}" fetched_age_h="${10:-1}" with_blocked="${11:-no}"
+    local d out rc holder
     d=$(mktemp -d)
     mkdir -p "${d}/build" "${d}/ops" "${d}/bin" "${d}/logs" "${d}/overlay"
     cp "${ROOT}/build/cycle.sh" "${d}/build/cycle.sh"
@@ -76,6 +77,10 @@ EOF
         touch -d "${fetched_age_h} hours ago" "${d}/overlay/.git/FETCH_HEAD"
     fi
     mkdir -p "${d}/stage"
+    if [[ ${with_blocked} == yes ]]; then
+        printf '暂存索引未通过运行期依赖验证，本次只执行隔离\n   >=net-dialup/ppp-2.4.5:0/2.5.3=  <- net-misc/networkmanager-1.56.1\n' \
+            > "${d}/stage/publish-blocked.txt"
+    fi
     if [[ ${published_age_h} != none ]]; then
         : > "${d}/stage/Packages"
         touch -d "${published_age_h} hours ago" "${d}/stage/Packages"
@@ -124,6 +129,15 @@ ok "发布失败时明确说明未发布" \
    "$([[ ${message} == *未发布到镜像机* ]] && echo yes)" "yes"
 ok "目标软件包失败摘要会附在发布告警中" \
    "$([[ ${message} == *构建失败*app-misc/example* ]] && echo yes)" "yes"
+
+# A round the dependency gate refused used to be reported as a bare publish
+# failure; which dependency blocked it only existed in the journal.
+IFS='|' read -r late rc message progress sudo_calls fetches out \
+    <<< "$(cycle_probe 10 no no 0 no 0 no 1 0 1 yes)"
+ok "依赖闸门拦下时告警给出被拦的原因" \
+   "$([[ ${message} == *未通过运行期依赖验证* ]] && echo yes)" "yes"
+ok "并且指名是哪条依赖拦下了哪个包" \
+   "$([[ ${message} == *net-dialup/ppp*networkmanager* ]] && echo yes)" "yes"
 
 IFS='|' read -r late rc message progress sudo_calls fetches out <<< "$(cycle_probe 0 no yes)"
 ok "冒烟测试告警不改变成功退出码" "${rc}" "0"

@@ -138,6 +138,10 @@ if (( publish_rc )); then
         message="binhost 已发布到镜像机，但索引包数骤减，退休清理未执行（$(hostname) ${CHANNEL}）"
     else
         message="binhost 发布阶段失败（$(hostname) ${CHANNEL}）：包已构建，未发布到镜像机"
+        if [[ -s ${STAGE}/publish-blocked.txt ]]; then
+            message="${message}
+$(cat "${STAGE}/publish-blocked.txt")"
+        fi
         if [[ -s ${LOGDIR}/report.txt ]]; then
             message="${message}
 $(cat "${LOGDIR}/report.txt")"
