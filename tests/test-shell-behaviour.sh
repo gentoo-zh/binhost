@@ -652,6 +652,43 @@ site_lock_probe() {
 ok "同步进行中时不当作故障" "$(site_lock_probe hold)" "in-progress"
 ok "同步没在执行时不一致仍是故障" "$(site_lock_probe free)" "failed"
 
+echo "== 缓存包的依赖子槽过期时不复用"
+# The block as it runs inside the container: the exclusion list is read and
+# every emerge that may take a binary package gets it, the world update too.
+stale_probe() {
+    local names="$1" d out
+    d=$(mktemp -d)
+    printf '%s' "${names}" > "${d}/stale-binpkgs.txt"
+    cat > "${d}/emerge" <<STUB
+#!/bin/bash
+printf '%s\n' "\$*" >> "${d}/emerge.log"
+STUB
+    chmod +x "${d}/emerge"
+    sed -n '/^EMERGE=(emerge/,/^FETCH_RETRY_WAIT=/p' "${ROOT}/build/build-container.sh" |
+        sed '$d' | sed "s|/tmp/stale-binpkgs.txt|${d}/stale-binpkgs.txt|" \
+        > "${d}/block.sh"
+    cat >> "${d}/block.sh" <<'EOF'
+"${EMERGE[@]}" --update --deep @world
+"${EMERGE[@]}" app-misc/target
+EOF
+    PATH="${d}:${PATH}" bash -euo pipefail "${d}/block.sh" > "${d}/out" 2>&1
+    printf '%s|%s\n' "$(tr '\n' ' ' < "${d}/emerge.log")" "$(tr '\n' ' ' < "${d}/out")"
+    rm -rf "${d}"
+}
+IFS='|' read -r calls out <<< "$(stale_probe $'net-misc/networkmanager\napp-misc/foo\n')"
+ok "清单构建不再复用过期的缓存包" \
+   "$([[ ${calls} == *"--usepkg-exclude net-misc/networkmanager app-misc/foo"*app-misc/target* ]] && echo yes)" yes
+ok "已装依赖更新同样不复用" \
+   "$([[ ${calls} == *"--usepkg-exclude net-misc/networkmanager app-misc/foo"*@world* ]] && echo yes)" yes
+ok "并且说明哪些包本轮从源码重建" \
+   "$([[ ${out} == *"2 个缓存包"*networkmanager* ]] && echo yes)" yes
+IFS='|' read -r calls out <<< "$(stale_probe '')"
+ok "没有过期的包时不加排除参数" \
+   "$([[ ${calls} != *usepkg-exclude* ]] && echo yes)" yes
+IFS='|' read -r calls out <<< "$(stale_probe $'bogus line\n')"
+ok "排除清单里不是包名的行被忽略" \
+   "$([[ ${calls} != *usepkg-exclude* ]] && echo yes)" yes
+
 echo "== kernel-archive 的 localversion"
 ok "写出 config.d 片段" \
    "$(grep -c 'kernel/config.d/90-binpkg-localversion.config' \

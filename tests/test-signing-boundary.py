@@ -106,6 +106,7 @@ untrusted_argv, untrusted_stdin, _ = execute(untrusted_command, {
     "LIST": "/packages.txt", "COMMON_PACKAGE_USE": "/package.use",
     "LOGDIR": "/logs", "CHANNEL": "unstable", "MAKEOPTS": "-j2",
     "JOBS": "2", "BASE": "base@test",
+    "stale_binpkgs": "/logs/stale-binpkgs.txt",
 }, "channel_mounts=()")
 assert "--privileged" not in untrusted_argv
 assert "--security-opt=no-new-privileges" in untrusted_argv
