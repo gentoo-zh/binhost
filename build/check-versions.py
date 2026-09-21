@@ -245,7 +245,7 @@ def main(overlay, index, listfile):
             # and a failed build never carries a resolver reason.
             reason = unresolvable(cp, cur, resolved)
             if reason is not None:
-                unavailable.append((cp, cur, reason))
+                unavailable.append((cp, cur, resolved[cp][0], reason))
             else:
                 absent.append((cp, cur))
         elif vercmp(got, cur) != 0:
@@ -271,8 +271,9 @@ def main(overlay, index, listfile):
               f"本频道解析不到 {cur}：{reason}")
     for cp, cur in absent:
         print(f"    缺     {cp}  overlay {cur}")
-    for cp, cur, reason in unavailable:
-        print(f"    无可用 {cp}  overlay {cur}  本频道解析不到 {cur}，旧版本已离开 overlay：{reason}")
+    for cp, cur, kept, reason in unavailable:
+        was = "旧版本已离开 overlay" if kept else "也没有旧版本可发布"
+        print(f"    无可用 {cp}  overlay {cur}  本频道解析不到 {cur}，{was}：{reason}")
     for cp in gone:
         moved = pending.get(cp)
         if moved:

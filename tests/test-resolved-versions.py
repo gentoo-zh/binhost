@@ -27,6 +27,7 @@ VISIBLE = {
     "app-misc/current": "2.0",
     "app-misc/upgradable": "3.0",
     "app-misc/never-built": "1.0",
+    "app-misc/refused": "1.0",
 }
 INSTALLED = {
     "app-i18n/fcitx-skk": "5.1.7-r2",
@@ -36,6 +37,8 @@ INSTALLED = {
 PRETEND = {
     "app-i18n/fcitx-skk-5.1.11": (1, MASKED),
     "app-misc/upgradable-3.0": (0, "[ebuild  U ] app-misc/upgradable-3.0\n"),
+    "app-misc/never-built-1.0": (0, "[ebuild  N ] app-misc/never-built-1.0\n"),
+    "app-misc/refused-1.0": (1, MASKED),
 }
 
 asked = []
@@ -64,22 +67,38 @@ with tempfile.TemporaryDirectory() as tmp:
     d = pathlib.Path(tmp)
     (d / "packages.txt").write_text(
         "# comment\napp-i18n/fcitx-skk\napp-misc/current\n"
-        "app-misc/upgradable\napp-misc/never-built\n\n")
+        "app-misc/upgradable\napp-misc/never-built\napp-misc/refused\n\n")
     out = io.StringIO()
     with contextlib.redirect_stdout(out):
         module.main(str(d / "packages.txt"), str(d / "resolved.txt"))
     rows = [line.split("\t") for line in
             (d / "resolved.txt").read_text().splitlines()]
 
-check("只对已装版本落后于可见版本的软件包问解析器",
-      sorted(asked) == ["app-i18n/fcitx-skk-5.1.11", "app-misc/upgradable-3.0"],
+REASON = ('!!! All ebuilds that could satisfy ">=app-i18n/fcitx-5.1.22:5" '
+          "have been masked.；- app-i18n/fcitx-5.1.22::gentoo "
+          "(masked by: ~amd64 keyword)")
+
+check("已装版本与可见版本相同的不问解析器",
+      "app-misc/current-2.0" not in asked, str(asked))
+check("已装版本落后的和没装过的都问解析器",
+      sorted(asked) == ["app-i18n/fcitx-skk-5.1.11", "app-misc/never-built-1.0",
+                        "app-misc/refused-1.0", "app-misc/upgradable-3.0"],
       str(asked))
 check("解析器拒绝的软件包连原因一起写出",
-      rows == [["app-i18n/fcitx-skk", "5.1.7-r2", "5.1.11",
-                '!!! All ebuilds that could satisfy ">=app-i18n/fcitx-5.1.22:5" '
-                "have been masked.；- app-i18n/fcitx-5.1.22::gentoo "
-                "(masked by: ~amd64 keyword)"]],
+      rows == [["app-i18n/fcitx-skk", "5.1.7-r2", "5.1.11", REASON],
+               ["app-misc/refused", "", "1.0", REASON]],
       str(rows))
+# The base image no longer carries the version the resolver kept last time,
+# so there is nothing installed; the refusal still has to be recorded or the
+# version check reads the package as a build that went missing.
+check("没装过旧版但解析器拒绝的也写出，已装栏留空",
+      ["app-misc/refused", "", "1.0", REASON] in rows, str(rows))
+check("没装过且解析器能装的不写出，只在日志里点名",
+      "!! app-misc/never-built-1.0 可解析却未安装" in out.getvalue(),
+      out.getvalue())
+check("没装过的在日志里说明没有旧版本可保留",
+      ">>> 本频道解析不到 app-misc/refused-1.0，没有旧版本可保留：" in out.getvalue(),
+      out.getvalue())
 check("解析器能装却没装的不写出，只在日志里点名",
       "!! app-misc/upgradable-3.0 可解析却未安装，已装 2.9" in out.getvalue(),
       out.getvalue())

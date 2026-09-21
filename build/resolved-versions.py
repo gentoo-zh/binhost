@@ -69,15 +69,22 @@ def reason_of(output):
 def resolve(cps):
     """[(cp, installed, visible, reason)] for the packages held back by the
     resolver; packages the resolver could have upgraded are reported on stdout
-    and left out, so the version check still treats them as behind."""
+    and left out, so the version check still treats them as behind.
+
+    A package with nothing installed is asked about too: when the resolver
+    refuses its newest version the channel has nothing to publish for it, and
+    that is a refusal to record, not a build that went missing. installed is
+    empty in that row.
+    """
     held = []
     for cp in cps:
         visible, installed = visible_of(cp), installed_of(cp)
-        if not visible or not installed or not newer(visible, installed):
+        if not visible or (installed and not newer(visible, installed)):
             continue
         rc, output = pretend(f"{cp}-{visible}")
         if rc == 0:
-            print(f"!! {cp}-{visible} 可解析却未安装，已装 {installed}")
+            have = f"，已装 {installed}" if installed else ""
+            print(f"!! {cp}-{visible} 可解析却未安装{have}")
             continue
         held.append((cp, installed, visible, reason_of(output)))
     return held
@@ -86,7 +93,8 @@ def resolve(cps):
 def main(listfile, output):
     held = resolve(read_list(listfile))
     for cp, installed, visible, reason in held:
-        print(f">>> 本频道解析不到 {cp}-{visible}，保留 {installed}：{reason}")
+        kept = f"保留 {installed}" if installed else "没有旧版本可保留"
+        print(f">>> 本频道解析不到 {cp}-{visible}，{kept}：{reason}")
     pathlib.Path(output).write_text(
         "".join(f"{cp}\t{installed}\t{visible}\t{reason}\n"
                 for cp, installed, visible, reason in held))
