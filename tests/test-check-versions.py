@@ -156,6 +156,8 @@ for name, resolved, expect, want_rc in HELD_CASES:
 UNAVAILABLE_CASES = [
     ("解析不到最新版且旧版已离开 overlay，放行",
      [(PKG, "0.9", NOW, REASON)], "无可用", 0),
+    ("解析不到最新版且从没装过旧版，放行",
+     [(PKG, "", NOW, REASON)], "无可用", 0),
     ("索引未收录且解析器没有记录，仍算缺",
      None, "缺", 1),
     ("解析器拒绝的不是 overlay 最新版，仍算缺",
@@ -167,7 +169,9 @@ for name, resolved, expect, want_rc in UNAVAILABLE_CASES:
     got = hit[0].split()[0] if hit else "无问题"
     ok = got == expect and rc == want_rc
     if expect == "无可用":
-        ok = ok and REASON in hit[0] and "旧版本已离开 overlay" in hit[0]
+        kept = resolved[0][1]
+        was = "旧版本已离开 overlay" if kept else "也没有旧版本可发布"
+        ok = ok and REASON in hit[0] and was in hit[0]
     print(f"  {'✓' if ok else '✗'} {name:<22} {expect:<8} {got}  (退出码 {rc}，应为 {want_rc})")
     if not ok:
         bad += 1
