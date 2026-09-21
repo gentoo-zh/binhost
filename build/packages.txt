@@ -157,6 +157,7 @@ net-proxy/daed
 net-proxy/hysteria
 net-proxy/juicity
 net-proxy/mihomo
+net-proxy/queqiao
 net-proxy/qv2ray
 net-proxy/qvplugin-command
 net-proxy/qvplugin-ss
