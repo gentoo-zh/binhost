@@ -191,6 +191,7 @@ www-servers/dufs
 www-servers/miniserve
 x11-libs/glbinding
 x11-misc/9menu
+x11-misc/agent-workspace-linux
 x11-misc/extramaus
 x11-misc/flatpak-xdg-utils
 x11-misc/picom-jonaburg
