@@ -153,10 +153,17 @@ fi
 
 if [[ -s ${LOGDIR}/failed.txt ]]; then
     n=$(wc -l < "${LOGDIR}/failed.txt")
-    report=$(python3 ./build/classify-failures.py "${LOGDIR}")
+    report_rc=0
+    report=$(RESOLVED_VERSIONS="${LOGDIR}/resolved.txt" \
+        python3 ./build/classify-failures.py "${LOGDIR}") || report_rc=$?
     echo "${report}"
-    alert "binhost 构建失败 ${n} 个（$(hostname) ${CHANNEL}）:
+    # Exit 2: every failure is a version this channel cannot resolve, which
+    # nobody can act on. It stays in the log; sending it would train the
+    # reader to ignore the alerts that do need them.
+    if (( report_rc != 2 )); then
+        alert "binhost 构建失败 ${n} 个（$(hostname) ${CHANNEL}）:
 ${report}"
+    fi
 fi
 
 echo "=== $(date '+%F %T') 结束 ==="

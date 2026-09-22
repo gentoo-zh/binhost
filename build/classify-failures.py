@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import pathlib
 import re
 import sys
@@ -26,6 +27,25 @@ RULES = [
 ]
 
 USE_REQ = re.compile(r"^(>=?[a-z0-9-]+/\S+)\s+([a-z0-9_ -]+)$", re.M)
+
+# A package the resolver refused in this channel is not a broken ebuild: the
+# version the overlay offers needs something this channel cannot install, and
+# the channel is what decides that. Naming it as "ebuild 需要修", and offering
+# it for build/excluded.txt, sends someone after a package that is fine.
+UNRESOLVED = "本频道解析不到最新版"
+ATOM = re.compile(r"^[a-z0-9-]+/[A-Za-z0-9._+-]+$")
+
+
+def read_resolved(path):
+    """{cp: reason} written by resolved-versions.py inside the container."""
+    out = {}
+    if not path or not os.path.isfile(path):
+        return out
+    for raw in pathlib.Path(path).read_text(errors="replace").splitlines():
+        parts = raw.rstrip("\n").split("\t", 3)
+        if len(parts) == 4 and ATOM.match(parts[0]):
+            out[parts[0]] = (parts[2], parts[3])
+    return out
 
 
 def evidence(text, kind):
@@ -88,10 +108,17 @@ def main(logdir):
         print(f"{d} 未产生日志")
         return 0
 
+    resolved = read_resolved(os.environ.get("RESOLVED_VERSIONS"))
+
     groups = {}
     for p in logs:
         text = p.read_text(errors="replace")
         atom = p.stem.replace("_", "/", 1)
+        if atom in resolved:
+            visible, reason = resolved[atom]
+            groups.setdefault((False, UNRESOLVED), []).append(
+                (atom, [f"overlay {visible}：{reason}"]))
+            continue
         kind, is_ebuild = classify(text, atom)
         groups.setdefault((is_ebuild, kind), []).append((atom, evidence(text, kind)))
 
@@ -105,7 +132,10 @@ def main(logdir):
         for (e, kind), items in sorted(groups.items()):
             if e != is_ebuild:
                 continue
-            tag = "ebuild 需要修" if is_ebuild else "构建环境，不是 ebuild 的问题"
+            if kind == UNRESOLVED:
+                tag = "频道的可见性决定，不是 ebuild 的问题"
+            else:
+                tag = "ebuild 需要修" if is_ebuild else "构建环境，不是 ebuild 的问题"
             print(f"## {kind}（{len(items)} 个）— {tag}")
             for atom, ev in items:
                 print(f"  {atom}")
@@ -124,6 +154,10 @@ def main(logdir):
         for line in lines:
             print(f"  {line}")
         print()
+    # Exit 2 when nothing here needs anyone: the caller sends no alert, and the
+    # report is still printed and kept, so the round can be read back later.
+    if groups and set(groups) == {(False, UNRESOLVED)}:
+        return 2
     return 0
 
 
