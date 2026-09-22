@@ -462,7 +462,12 @@ if [[ -s ${STAGE}/publish-blocked.txt ]]; then
 fi
 
 if [[ -s ${LOGDIR}/failed.txt ]]; then
-    python3 "$(dirname "$0")/classify-failures.py" "${LOGDIR}" | tee "${LOGDIR}/report.txt"
+    # Exit 2 means every failure was the channel's own visibility, which is not
+    # a fault here; the report is written either way.
+    RESOLVED_VERSIONS="${LOGDIR}/resolved.txt" \
+        python3 "$(dirname "$0")/classify-failures.py" "${LOGDIR}" \
+        > "${LOGDIR}/report.txt" || (( $? == 2 ))
+    cat "${LOGDIR}/report.txt"
 else
     rm -f "${LOGDIR}/report.txt"
 fi
