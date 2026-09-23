@@ -82,6 +82,7 @@ dev-python/nvchecker
 dev-python/okonomiyaki
 dev-python/pure-protobuf
 dev-python/pycosat
+dev-python/pygls
 dev-python/pypinyin
 dev-python/pyqt6-charts
 dev-python/pyrime
