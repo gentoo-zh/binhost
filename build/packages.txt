@@ -104,6 +104,7 @@ dev-util/pacstrap
 dev-util/patchelf-liblol
 dev-util/redpanda-cpp
 dev-util/tailspin
+dev-util/termux-language-server
 dev-util/vcpkg-tool
 dev-util/vfox
 dev-vcs/gitoxide
