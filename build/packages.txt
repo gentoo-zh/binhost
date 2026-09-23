@@ -73,6 +73,7 @@ dev-python/fuo-qqmusic
 dev-python/fuo-ytmusic
 dev-python/fusesoc
 dev-python/janus
+dev-python/lsp-tree-sitter
 dev-python/menuinst
 dev-python/microfs2
 dev-python/microrepl
