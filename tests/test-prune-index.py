@@ -95,7 +95,7 @@ tmp, d, generation, p, before = run([PATHS[1]])
 text = (d / "Packages").read_text()
 check("退出码为零", p.returncode == 0, p.stderr)
 check("报出移除了几条", p.stdout.strip() == "1", p.stdout)
-check("被点名的不在了", PATHS[1] not in text)
+check("指定路径已从索引移除", PATHS[1] not in text)
 check("其余两条都保留", all(x in text for x in (PATHS[0], PATHS[2])))
 check("头部数量改成 2",
       re.search(r"^PACKAGES: (\d+)$", text, re.M).group(1) == "2")

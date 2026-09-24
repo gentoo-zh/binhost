@@ -31,13 +31,13 @@ def main():
             if len(uris) != len(set(uris)):
                 bad.append(f"{f.name}: 选择器 {n} 有重复的镜像")
             if not uris:
-                bad.append(f"{f.name}: 选择器 {n} 一个镜像都没有")
+                bad.append(f"{f.name}: 选择器 {n} 未配置镜像")
 
         for name, attrs in SLOT.findall(text):
             if name not in picks:
-                bad.append(f"{f.name}: 槽位 {name} 没有对应的选择器")
+                bad.append(f"{f.name}: slot {name} 没有对应的选择器")
             if "data-src-list" in attrs and "data-src-suffix" in attrs:
-                bad.append(f"{f.name}: 槽位 {name} 同时要列表和后缀")
+                bad.append(f"{f.name}: slot {name} 同时设置了列表和后缀")
         for name in CHIP.findall(text):
             if name not in picks:
                 bad.append(f"{f.name}: 复制按钮 {name} 没有对应的选择器")

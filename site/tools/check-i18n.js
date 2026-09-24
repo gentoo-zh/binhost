@@ -85,17 +85,13 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
     if (!hadOwn[lang]) {
       console.error(`!!! ${f}: 缺少 ${lang} 的表`);
       bad++;
-      continue;
     }
   }
-  {
-    const cn = T['zh-cn'] || {};
-    const miss = [...new Set(keysInScript.map(x => x[1]))]
-      .filter(k => !(k in cn) && !(k in (COMMON['zh-cn'] || {})));
-    if (miss.length) {
-      console.error(`!!! ${f} [zh-cn] 脚本可取得但表中缺少： ${miss.join(', ')}`);
-      bad++;
-    }
+  const cn = T['zh-cn'] || {};
+  const missCn = [...new Set(keysInScript.map(x => x[1]))].filter(k => !(k in cn));
+  if (missCn.length) {
+    console.error(`!!! ${f} [zh-cn] 脚本可取得但表中缺少： ${missCn.join(', ')}`);
+    bad++;
   }
   for (const lang of Object.keys(T).filter(l => l !== 'zh-cn')) {
     const miss = [...keys].filter(k => !(k in T[lang]));

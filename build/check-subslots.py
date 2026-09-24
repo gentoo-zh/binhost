@@ -156,7 +156,7 @@ def main():
         for cp, recorded, current in stale:
             findings.append((cpv, cp, recorded, current))
 
-    print(f">>> 子槽检查：{len(stanzas)} 个包，{len(findings)} 处依赖子槽已过期")
+    print(f">>> subslot 检查：{len(stanzas)} 个包，{len(findings)} 处依赖 subslot 已过期")
     if args.exclude:
         pathlib.Path(args.exclude).write_text(
             "".join(f"{cp}\n" for cp in not_reusable(checked)), encoding="utf-8")
@@ -166,14 +166,14 @@ def main():
         return 0
 
     lines = [
-        f"{cpv} 依赖 {cp}，记录 {recorded}，树里现在是 {current}"
+        f"{cpv} 依赖 {cp}，记录的 slot 是 {recorded}，当前树中为 {current}"
         for cpv, cp, recorded, current in sorted(findings)
     ]
     for line in lines:
         print(f"    {line}")
     if args.alert:
         pathlib.Path(args.alert).write_text(
-            "这些包在树已经更新的系统上不适用，portage 会改为从源码构建：\n"
+            "这些二进制包在已同步最新树的系统上不会被采用，portage 会改为从源码构建：\n"
             + "\n".join(lines) + "\n",
             encoding="utf-8",
         )

@@ -104,7 +104,6 @@ else
     exit 1
 fi
 
-
 # shellcheck disable=SC2029  # tmp is meant to expand locally
 ssh "${REMOTE}" "set -euo pipefail
 cd '${tmp}'
@@ -174,8 +173,6 @@ sudo install -m644 rsyncd.conf /etc/rsyncd.conf
 
 sudo install -dm755 /srv/pub
 sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/pub/binpkgs /srv/pub/distfiles /srv/pub/gigos /srv/pub/gentoo-cjk-kernel /srv/pub/gentoo-cjk-livecd
-# mirror-common.inc serves the ACME challenge from here, and certbot renews
-# through that path.
 sudo install -dm755 /var/www/acme/.well-known/acme-challenge
 sudo install -dm755 /etc/nginx/conf.d
 sudo install -m644 nginx.conf                          /etc/nginx/nginx.conf

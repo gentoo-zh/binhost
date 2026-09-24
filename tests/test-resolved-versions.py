@@ -93,13 +93,13 @@ check("解析器拒绝的软件包连原因一起写出",
 # version check reads the package as a build that went missing.
 check("没装过旧版但解析器拒绝的也写出，已装栏留空",
       ["app-misc/refused", "", "1.0", REASON] in rows, str(rows))
-check("没装过且解析器能装的不写出，只在日志里点名",
+check("未安装但可解析的软件包只记录在日志中",
       "!! app-misc/never-built-1.0 可解析却未安装" in out.getvalue(),
       out.getvalue())
 check("没装过的在日志里说明没有旧版本可保留",
       ">>> 本频道解析不到 app-misc/refused-1.0，没有旧版本可保留：" in out.getvalue(),
       out.getvalue())
-check("解析器能装却没装的不写出，只在日志里点名",
+check("可解析但未安装的软件包只记录在日志中",
       "!! app-misc/upgradable-3.0 可解析却未安装，已装 2.9" in out.getvalue(),
       out.getvalue())
 check("保留的软件包在日志里带原因",

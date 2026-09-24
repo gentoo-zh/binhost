@@ -34,7 +34,7 @@ def manifest_entry(manifest, filename):
         if len(digest_fields) % 2:
             raise ValueError
         digests = dict(zip(digest_fields[::2], digest_fields[1::2]))
-    except (ValueError, TypeError) as exc:
+    except ValueError as exc:
         raise ManifestError(f"invalid Manifest entry for {filename}") from exc
     for algorithm in ("SHA512", "BLAKE2B"):
         digest = digests.get(algorithm)

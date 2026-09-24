@@ -41,8 +41,8 @@ out, _, rc = run({"failed.txt": "app-misc/aichat\n",
               "app-misc_aichat.log": MASKED,
               "whole.log": MASKED})
 check("whole.log 不算一个包", "whole" not in out, out)
-check("失败数不把它算进去", "失败 1 个" in out, out)
-check("真的那个还在", "app-misc/aichat" in out, out)
+check("失败数不包含整体日志", "失败 1 个" in out, out)
+check("失败的软件包仍列在结果中", "app-misc/aichat" in out, out)
 
 out, _, rc = run({"app-misc_aichat.log": MASKED, "whole.log": MASKED})
 check("没有 failed.txt 时同样不算", "whole" not in out, out)

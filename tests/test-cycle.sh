@@ -232,7 +232,7 @@ IFS='|' read -r late rc message progress sudo_calls fetches classify_env out <<<
 ok "锁被占住时以 0 结束" "${rc}" "0"
 ok "并且不发通知" "$([[ -z ${message// /} ]] && echo yes)" "yes"
 ok "并且说明这个频道刚发布过" \
-   "$([[ ${out} == *"跳过不算故障"* ]] && echo yes)" "yes"
+   "$([[ ${out} == *"不记为故障"* ]] && echo yes)" "yes"
 
 # A channel that keeps standing aside until it stops publishing does need
 # someone to look.

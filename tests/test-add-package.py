@@ -59,10 +59,10 @@ check("大写不被按字节排到前面",
       out.index("net-proxy/Yray") > out.index("net-proxy/bore"), out)
 
 rc, out, _ = run(BASE, "zzz-last/pkg")
-check("排在最后的也接得上", out[-2] == "zzz-last/pkg", out)
+check("可以插入清单末尾", out[-2] == "zzz-last/pkg", out)
 
 rc, out, _ = run(BASE, "aaa-first/pkg")
-check("排在最前的也接得上", out[0] == "aaa-first/pkg", out)
+check("可以插入清单开头", out[0] == "aaa-first/pkg", out)
 
 rc, out, _ = run(BASE, "net-misc/zzz")
 check("末尾只有一个换行", out[-1] == "" and out[-2] != "", repr(out[-3:]))

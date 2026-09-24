@@ -164,7 +164,7 @@ case("文件名带问号时不误伤同名模式匹配到的文件", lambda: (
        {"pkg-?.tar.gz": "x", "pkg-1.tar.gz": "keep"},
        seen={"pkg-?.tar.gz": OLD})))
 
-case("文件名带星号同理", lambda: (
+case("文件名带星号时按字面匹配", lambda: (
     lambda r: r[0] == ["pkg-*.tar.gz"] and r[1] == ["pkg-9.tar.gz"]
 )(reap(["pkg-*.tar.gz"],
        {"pkg-*.tar.gz": "x", "pkg-9.tar.gz": "keep"},
@@ -279,7 +279,7 @@ case("overlay 无法读取内容时拒绝清理", lambda: (
     lambda r: r[0] == 1 and len(r[1]) == 5 and r[2] == []
 )(run_main({}, ["a.tar.gz", "b.tar.xz", "c.zip", "d.tar.bz2", "e.crate"])))
 
-case("真实的大批 treeclean 不该被拒绝", lambda: (
+case("大量 treeclean 文件不应被拒绝", lambda: (
     lambda r: r[0] == 0 and len(r[2]) == 138
 )(run_main({f"app-misc/p{i}": {"1": [f"p{i}.tar.gz"]} for i in range(1086)},
            [f"p{i}.tar.gz" for i in range(1086)] + [f"old{i}.tar.gz" for i in range(138)])))

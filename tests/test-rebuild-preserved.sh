@@ -72,7 +72,7 @@ echo "== 保留库的使用者必须从源码重建"
 
 IFS='|' read -r rc no_usepkg no_getbinpkg changed_use called noted <<< "$(probe no)"
 ok "没有使用者时退出码 0" "${rc}" "0"
-ok "呼叫了 @preserved-rebuild" "${called}" "1"
+ok "调用了 @preserved-rebuild" "${called}" "1"
 ok "不重用本地二进位包" "${no_usepkg}" "1"
 # FEATURES carries getbinpkg, so without this the rebuild fetches the very
 # binary package that is linked against the library being replaced.

@@ -9,8 +9,6 @@ FPR_FILE="${FPR_FILE:-/etc/binhost/signing-key.fpr}"
 [[ -d ${SRC} ]] || { echo "!! ${SRC} 不存在" >&2; exit 1; }
 [[ -r ${SRC}/gentoo-zh-binhost.asc ]] ||
     { echo "!! ${SRC} 未包含 gentoo-zh-binhost.asc" >&2; exit 1; }
-# A wrong source directory would otherwise publish a generation without pages
-# and take the site down in one rename.
 [[ -r ${SRC}/index.html ]] ||
     { echo "!! ${SRC} 未包含 index.html" >&2; exit 1; }
 
@@ -37,15 +35,8 @@ fi
 RUN_ID="${RUN_ID:-$$-$(date +%s)}"
 GEN=".site-${RUN_ID}"
 
-# The pages carry fingerprinted asset URLs, so a page from one publication and
-# an asset from another is a broken site. Everything the site owns is therefore
-# a link into .site/, and .site is a link to the directory this run built:
-# replacing all of it is the one rename at the end.
-#
-# DEST is not itself a generation directory because the daily jobs write
-# packages.json, deps.txt and the status files straight into it. One list
-# decides both what is copied and what may be deleted, and none of those job
-# outputs can match it.
+# Owned names link into .site, one rename switches them together. DEST also
+# holds the daily jobs' output, so only OWNED is copied or deleted.
 OWNED=('/assets/***' '/gentoo-zh-binhost.asc' '/*.html' '/robots.txt')
 
 owns() {
@@ -78,8 +69,6 @@ if [[ -e .site && ! -L .site ]]; then
     exit 1
 fi
 
-# Conversion runs before the transfer, so a transfer that dies leaves a tree
-# that is already linked and still serving exactly what it served before.
 mapfile -t names < <(owned_names "${SRC}")
 relink=0
 for name in "${names[@]}"; do
@@ -94,10 +83,7 @@ if (( relink )); then
     done
     ln -sfn "${seed}" ".switch-${RUN_ID}" && mv -Tf ".switch-${RUN_ID}" .site || exit 1
     for name in "${names[@]}"; do
-        # rename(2) refuses to put a symlink where a directory is, so assets has
-        # to move aside first. Those two renames are the only moment this design
-        # is not atomic, they happen once, and the seed already serves the same
-        # bytes on either side of them.
+        # rename(2) cannot replace a directory with a symlink.
         if [[ -d ${name} && ! -L ${name} ]]; then
             mv -T "${name}" ".replaced-${RUN_ID}-${name}" || exit 1
         fi
@@ -114,7 +100,6 @@ rsync -a --checksum --safe-links \
 ln -sfn "${GEN}" ".switch-${RUN_ID}" || exit 1
 mv -Tf ".switch-${RUN_ID}" .site || { rm -f ".switch-${RUN_ID}"; exit 1; }
 
-# A page the repository dropped goes with it, the same as the old --delete did.
 for name in *; do
     owns "${name}" || continue
     [[ -e ${GEN}/${name} ]] || rm -rf "${name}"

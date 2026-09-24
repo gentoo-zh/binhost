@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
-<link rel="stylesheet" href="/assets/site.css?v=acdcc707">
+<link rel="stylesheet" href="/assets/site.css?v=fe4984c7">
 <script src="/assets/early.js?v=0888406a"></script>
 <meta property="og:site_name" content="distfiles.gentoozh.org">
 <meta property="og:type" content="website">
@@ -666,9 +666,6 @@ function renderDeps(data) {
   deps = data.deps || [];
   const count = document.getElementById("depsCount");
   const rows = document.getElementById("depRows");
-  // schema 1 has no deps field at all. Saying zero would read as "none
-  // published" when the truth is that this data generator has not been
-  // deployed yet.
   if ((data.schema || 1) < 2) {
     count.textContent = t("depsStale");
     rows.innerHTML = "";

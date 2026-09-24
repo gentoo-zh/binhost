@@ -4,15 +4,13 @@ import json
 import pathlib
 import re
 import sys
+from html.parser import HTMLParser
 
 VOCAB = json.loads((pathlib.Path(__file__).with_name("copy-words.json")).read_text())
 
 PHRASES = [tuple(x) for x in VOCAB["phrases"]]
 WORDS = VOCAB["words"]
 FILLER = [tuple(x) for x in VOCAB["filler"]]
-
-
-from html.parser import HTMLParser                        # noqa: E402
 
 VISIBLE_ATTRS = {"title", "aria-label", "placeholder", "alt", "content", "value"}
 SKIP_TAGS = {"script", "style"}
@@ -69,11 +67,7 @@ class Visible(HTMLParser):
 
 
 def visible_text(html):
-    """Every run of text a reader can see: body, attributes, i18n tables.
-
-    An earlier version stripped title, pre, table.spec and rule-dont with a
-    regex and never looked at attributes, so none of those were ever checked.
-    """
+    """Every run of text a reader can see: body, attributes, i18n tables."""
     v = Visible()
     v.feed(html)
     tables = "\n".join(re.findall(r"window\.MIRROR_I18N = \{[\s\S]*?\n\};", html))
@@ -172,10 +166,7 @@ QUOTED_SPAN = re.compile(
 
 
 def mask_strings(line):
-    """Blank out string contents. A comment marker inside a string is not one:
-
-    ${#paths[@]} and print(f"  # {kind}") both match a per-line #(.*)$.
-    """
+    """Blank out string contents so a marker inside a string is not a comment."""
     line = re.sub(r"\$\{#", "$${", line)
     return QUOTED_SPAN.sub(lambda m: " " * len(m.group(0)), line)
 
@@ -211,11 +202,6 @@ FENCE_COMMENT = {
 
 
 def fenced_comments(text):
-    """Comments inside Markdown code fences.
-
-    A fence carries commands a reader may paste, so its comments are code
-    comments and follow the same rule as the rest of the tree.
-    """
     out = []
     for m in FENCE.finditer(text):
         pat = FENCE_COMMENT.get(m.group(1).lower())

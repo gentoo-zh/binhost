@@ -42,8 +42,7 @@ if ! ssh-keygen -F "${host}" -f "${KNOWN_HOSTS}" >/dev/null 2>&1; then
     fi
 
     mkdir -p "$(dirname "${KNOWN_HOSTS}")"
-    # Only the key that passed out-of-band verification, plus the [host]:port
-    # form OpenSSH looks up once sshd moves off port 22.
+    # Also the [host]:port form OpenSSH looks up once sshd leaves port 22.
     printf '%s\n' "${matched}" >> "${KNOWN_HOSTS}"
     printf '[%s]:%s %s\n' "${host}" "${SSH_PORT}" \
         "$(cut -d' ' -f2- <<< "${matched}")" >> "${KNOWN_HOSTS}"
@@ -51,7 +50,7 @@ if ! ssh-keygen -F "${host}" -f "${KNOWN_HOSTS}" >/dev/null 2>&1; then
 fi
 
 say "现状"
-# shellcheck disable=SC2016  # single quotes are deliberate: these expand on the
+# shellcheck disable=SC2016  # expands on the remote
 on 'echo "  $(uname -sr)"; echo "  init: $(ps -p1 -o comm=)"; echo "  $(df -h / | awk "NR==2{print \$2\" 盘，已用 \"\$3}")"; echo "  $(free -h | awk "/^Mem/{print \$2\" 内存\"}")"'
 
 say "管理员与密钥"
@@ -88,7 +87,7 @@ on 'iface=$(ip -o -4 route show default | awk "{print \$5}" | head -1)
     fi'
 
 say "内核网络调优"
-# shellcheck disable=SC2016  # the heredoc is written out verbatim, no local
+# shellcheck disable=SC2016  # expands on the remote
 on 'cat > /etc/sysctl.d/99-mirror.conf <<EOF
 net.core.default_qdisc = fq
 net.ipv4.tcp_congestion_control = bbr

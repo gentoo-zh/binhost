@@ -51,32 +51,32 @@ def stale(rdepend, mapping, **kw):
                           FakeTree(mapping))
 
 
-case("子槽变化时报出", lambda: (
+case("subslot 变化时报出", lambda: (
     stale("media-libs/libavif:0/16.3=", {"media-libs/libavif": "16.4"})
     == [("media-libs/libavif", "0/16.3", "16.4")]))
 
-case("子槽没变就不报", lambda: (
+case("subslot 没变就不报", lambda: (
     stale("media-libs/libavif:0/16.3=", {"media-libs/libavif": "16.3"}) == []))
 
 case("树里查不到这个包时不报", lambda: (
     stale("media-libs/libavif:0/16.3=", {}) == []))
 
-case("没有 = 的依赖不看子槽", lambda: (
+case("没有 = 的依赖不看 subslot", lambda: (
     stale("dev-libs/glib:2", {"dev-libs/glib": "9"}) == []))
 
-case("查询时带上被钉住的槽", lambda: (
+case("查询时带上依赖指定的 slot", lambda: (
     check.atom_for("net-libs/mbedtls", "0") == "net-libs/mbedtls:0"))
 
-case("没有写槽时按整个包查询", lambda: (
+case("没有写 slot 时按整个包查询", lambda: (
     check.atom_for("net-libs/mbedtls", "") == "net-libs/mbedtls"))
 
-case("同一个槽里子槽变了才报", lambda: (
+case("同一个 slot 里 subslot 变了才报", lambda: (
     stale("net-libs/mbedtls:0/7.14.1=", {"net-libs/mbedtls:0": "8.0.0"})
     == [("net-libs/mbedtls", "0/7.14.1", "8.0.0")]))
 
 # A := dependency pins the slot too, so a newer major version living in another
 # slot has not moved for this consumer.
-case("别的槽里有新版本不算过期", lambda: (
+case("别的 slot 里有新版本不算过期", lambda: (
     stale("net-libs/mbedtls:0/7.14.1=",
           {"net-libs/mbedtls:0": "7.14.1", "net-libs/mbedtls": "16.21.7"}) == []))
 
@@ -88,16 +88,16 @@ case("带 use 条件的写法也能认出来", lambda: (
     stale("media-libs/harfbuzz:0/6.0.0=[icu(+)]", {"media-libs/harfbuzz": "7.0.0"})
     == [("media-libs/harfbuzz", "0/6.0.0", "7.0.0")]))
 
-case("取反的依赖同样按子槽判断", lambda: (
+case("取反的依赖同样按 subslot 判断", lambda: (
     stale("!!dev-libs/icu:0/78=", {"dev-libs/icu": "79"})
     == [("dev-libs/icu", "0/78", "79")]))
 
 # A build-time subslot change does not affect the built package, so reporting
 # it would only add noise.
-case("DEPEND 里的子槽不报", lambda: (
+case("DEPEND 里的 subslot 不报", lambda: (
     stale("", {"dev-lang/go": "1.27.0"}, depend="dev-lang/go:0/1.26.7=") == []))
 
-case("BDEPEND 里的子槽不报", lambda: (
+case("BDEPEND 里的 subslot 不报", lambda: (
     stale("", {"dev-lang/go": "1.27.0"}, bdepend="dev-lang/go:0/1.26.7=") == []))
 
 

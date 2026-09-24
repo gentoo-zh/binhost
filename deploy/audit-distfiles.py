@@ -23,13 +23,6 @@ class LedgerError(Exception):
 
 @contextlib.contextmanager
 def locked(path):
-    """Hold an exclusive lock beside path for a whole read-modify-write.
-
-    daily.sh already serialises the scheduled run, so this is what keeps a
-    hand-run of this script from racing it and losing a reservation. Without
-    the lock two runs can each read the same ledger and each spend the whole
-    budget, so failing to take it has to stop the round rather than proceed.
-    """
     lock = pathlib.Path(f"{path}.lock")
     try:
         lock.parent.mkdir(parents=True, exist_ok=True)
@@ -55,21 +48,7 @@ def write_atomic(path, text):
 
 
 def carriable_names(uri_map, restrict):
-    """(names we may carry, whether RESTRICT took any URI away), or None.
-
-    Same rules as portage's _emirrordist: RESTRICT is reduced with the same
-    flat, matchnone arguments, so only unconditional restrictions apply and
-    demo? ( mirror ) does not stop us carrying the file. fetch restriction
-    implies mirror restriction, a mirror+ URI lifts both for itself, fetch+
-    lifts only the fetch one, and a file stays carriable while any one of its
-    URIs survives. Portage's mirror:// exemption list is not configured on
-    this host, so it is not applied here either.
-
-    The second value separates the two ways a name can end up with no usable
-    URI. A restriction means we must not carry it. No URI at all, as a bare
-    SRC_URI name declares, means nobody can fetch it, which is not a reason to
-    take anything down.
-    """
+    """(names we may carry, whether RESTRICT applies), or None; mirrors _emirrordist."""
     try:
         tokens = frozenset(use_reduce(restrict, flat=True, matchnone=True))
     except PortageException:
@@ -91,15 +70,7 @@ def carriable_names(uri_map, restrict):
 
 
 def portage_aux(overlay, tree=None):
-    """cp -> [(cpv, {distfile: [uri]}, RESTRICT)] from Portage's own metadata.
-
-    The fetch map is what keeps each URI attached to the name it writes, which
-    is what the per-URI fetch+ and mirror+ prefixes act on.
-
-    Every query names the overlay. Three packages currently exist in both
-    trees, and without the tree an ebuild from ::gentoo decides what happens
-    to a file the overlay's Manifest declared.
-    """
+    """cp -> [(cpv, {distfile: [uri]}, RESTRICT)], queried in the overlay's tree only."""
     db = pinned_portdbapi(overlay, tree) if tree else pinned_portdbapi(overlay)
     tree = str(overlay)
 
@@ -116,13 +87,7 @@ def portage_aux(overlay, tree=None):
 
 
 def scan(overlay, aux=None):
-    """distfile -> [(cp, blocked)], the undecided ones and the unfetchable ones.
-
-    Attribution comes from each CPV's fetch map, so a shared file, a renamed
-    download or a name without a version in it all land on the right package.
-    When Portage metadata cannot be read the file goes into the undecided set
-    and nothing will delete it.
-    """
+    """distfile -> [(cp, blocked)], plus the undecided and unfetchable names."""
     users = {}
     unsure = set()
     unfetchable = set()
@@ -170,20 +135,13 @@ def scan(overlay, aux=None):
 
 GRACE_SECONDS = 7 * 24 * 3600
 STATE = os.environ.get("ORPHAN_STATE", "/var/lib/emirrordist/orphans.json")
-
 RECYCLE = os.environ.get("RECYCLE", "/var/lib/emirrordist/recycle")
-
 RECYCLE_RETENTION_SECONDS = 14 * 24 * 3600
-
 MAX_REAP_SHARE = 1 / 3
-
 MIN_RESTRICTED_TO_DOUBT = 20
-
 MIN_REAP_BUDGET = 5
-
 LEDGER = os.environ.get("LEDGER", "/var/lib/emirrordist/reaped.json")
 WINDOW_HOURS = 24
-
 MARKERS = {"layout.conf", "README.txt"}
 
 
@@ -218,7 +176,6 @@ def write_deletion_rows(path, rows):
 
 
 def apply_deletion_budget(limit, want, action, now=None):
-    """Reserve, spend and reconcile one cleanup under the ledger lock."""
     now = int(time.time()) if now is None else now
     ledger = pathlib.Path(LEDGER)
     with locked(ledger):
@@ -270,7 +227,6 @@ def recycle(path):
 
 
 def expire_recycle(now=None, retention=None):
-    """Delete recycled files after their independent retention period."""
     now = int(time.time()) if now is None else now
     retention = RECYCLE_RETENTION_SECONDS if retention is None else retention
     root = pathlib.Path(RECYCLE)
@@ -296,12 +252,6 @@ def expire_recycle(now=None, retention=None):
 
 
 def reap(orphan, paths, grace=None, budget=None):
-    """Recycle orphans past the grace period, holding the state file's lock.
-
-    The whole read, recycle and write is one transaction. Two runs that each
-    read the same state would write back stale timestamps, and a file that
-    reappears under the same name would then skip the grace period entirely.
-    """
     grace = GRACE_SECONDS if grace is None else grace
     state = pathlib.Path(STATE)
     with locked(state):
@@ -357,8 +307,6 @@ def main(overlay, dest, aux=None):
     paths = {p.name: p for p in dest.rglob("*") if p.is_file() and p.name not in MARKERS}
     have = set(paths)
 
-    # One consumer forbidding it is enough: attribution is exact, so the
-    # aggregate has to be the conservative one.
     mirrorable = {f for f, us in users.items()
                   if us and all(not r for _, r in us)} - unfetchable
     never = {f for f, us in users.items() if any(r for _, r in us)}
@@ -428,9 +376,6 @@ def main(overlay, dest, aux=None):
               f"本次既不清理也不当作可公开", file=sys.stderr)
         for f in sorted(unsure)[:10]:
             print(f"   无法判定 {f}  <- {[p for p, _ in users.get(f, [])]}", file=sys.stderr)
-    # Without this count, an orphan total next to a cleanup of zero reads as a
-    # stuck reaper. Usually it means the files have not aged past the grace
-    # period yet, which otherwise takes reading the state file to find out.
     waiting = ""
     if orphan:
         try:

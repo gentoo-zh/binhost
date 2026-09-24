@@ -59,7 +59,7 @@ python3 tools/validate.py /var/db/repos/gentoo-zh
 
 `site/` 为静态页面，`nginx/` 为服务器配置，`build/` 为构建与发布脚本，改动同样通过 PR 提交。
 
-页面里的资源用的是绝对路径，`file://` 打开会缺样式，预览用：
+页面资源使用绝对路径，直接通过 `file://` 打开时缺少样式。预览请运行：
 
 ```bash
 python3 -m http.server -d site 8000
@@ -106,10 +106,7 @@ check-commits.py 都会查。
 
 ### 检查
 
-CI 只检查 PR 自己带来的提交，不检查历史——这套规矩是后来才有的，为了让旧提交
-合规而改写一个已经公开的分支，代价大于收益。
-
-本地先执行一遍：
+CI 只检查 PR 自己带来的提交，不检查历史。本地先执行一遍：
 
 ```bash
 python3 tools/check-commits.py origin/master..HEAD

@@ -37,7 +37,7 @@ def main(site):
     declared = set(re.findall(r"^\s*(--[a-z0-9-]+)\s*:", css, re.M))
     used = set(re.findall(r"var\((--[a-z0-9-]+)", css)) | set(re.findall(r"(--[a-z0-9-]+)", src))
     for v in sorted(declared - used):
-        bad.append(f"变量 {v} 声明了没人用")
+        bad.append(f"变量 {v} 已声明但未使用")
 
     for v in sorted(set(re.findall(r"var\((--[a-z0-9-]+)", css)) - declared):
         bad.append(f"变量 {v} 被引用但没有声明")
@@ -72,20 +72,20 @@ def main(site):
     auto = palette(':root:not([data-theme="light"]) {')
     manual = palette('[data-theme="dark"] {')
     if auto is None:
-        bad.append('找不到跟随系统那份深色调色盘（:root:not([data-theme="light"]) {）')
+        bad.append('缺少跟随系统的深色调色盘（:root:not([data-theme="light"]) {）')
     elif not auto:
-        bad.append('跟随系统那份深色调色盘是空的')
+        bad.append('跟随系统的深色调色盘未定义颜色变量')
     if manual is None:
-        bad.append('找不到手动选择那份深色调色盘（[data-theme="dark"] {）')
+        bad.append('缺少手动选择的深色调色盘（[data-theme="dark"] {）')
     elif not manual:
-        bad.append('手动选择那份深色调色盘是空的')
+        bad.append('手动选择的深色调色盘未定义颜色变量')
     if auto is not None and manual is not None:
         for k in sorted(set(auto) | set(manual)):
             a, m = auto.get(k), manual.get(k)
             if a is None:
-                bad.append(f"深色变量 {k} 只在手动选择那份里有")
+                bad.append(f"深色变量 {k} 仅在手动选择的调色盘中定义")
             elif m is None:
-                bad.append(f"深色变量 {k} 只在跟随系统那份里有")
+                bad.append(f"深色变量 {k} 仅在跟随系统的调色盘中定义")
             elif a.strip() != m.strip():
                 bad.append(f"深色变量 {k} 两份不一致：{a.strip()} / {m.strip()}")
 
