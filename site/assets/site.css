@@ -396,11 +396,7 @@ button:active, .copy-chip:active { transform: translateY(1px); }
 
 .listing tbody tr:hover td { background: var(--hover); }
 
-/* the package name is the only column that can grow; without a width the
-   fixed-width columns get squeezed and the name draws over them */
 .deps-table { table-layout: fixed; width: 100%; }
-/* .listing td is nowrap, and wine slots carry a full version, so a fixed
-   layout would draw the text over the next column */
 .deps-table td, .deps-table th { white-space: normal; overflow-wrap: anywhere; }
 .deps-table td.slot, .deps-table th.slot { width: 4rem; }
 .deps-table td.ver, .deps-table th.ver { width: 8rem; }
@@ -417,8 +413,6 @@ button:active, .copy-chip:active { transform: translateY(1px); }
   margin-bottom: 0.35rem;
   min-height: calc(2 * 1.75 * 0.95rem + 0.7rem);
 }
-/* The row exists for narrow screens; here it hands its two cells to the grid
-   so the timestamps stay aligned down the page. */
 .facts .row { display: contents; }
 .facts .row > span { display: inline-flex; align-items: baseline; gap: 0.3em; flex-wrap: wrap; }
 .facts .part, .facts .when { display: inline-flex; align-items: baseline; gap: 0.3em;
@@ -555,13 +549,9 @@ h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0
 }
 
 @media (max-width: 34rem) {
-  /* leave the name column as much width as the other two can spare */
   .deps-table td.slot, .deps-table th.slot { width: 3.4rem; }
   .deps-table td.ver, .deps-table th.ver { width: 6.4rem; }
 
-  /* A fixed second column is too narrow for the timestamp, and giving it a
-     line of its own doubles the block. Let each row run as text so the time
-     trails the figures and only wraps when there is genuinely no room. */
   .facts { display: block; min-height: calc(4 * 1.75 * 0.95rem + 0.5rem); }
   .facts .row { display: block; }
   .facts .row > span { display: inline; }

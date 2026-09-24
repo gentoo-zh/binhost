@@ -4,27 +4,18 @@ set -euo pipefail
 
 BASE="${BASE:-https://distfiles.gentoozh.org/binpkgs/x86-64}"
 DEST="${DEST:-./x86-64}"
-# A rate limit, not a veto: what one run leaves behind the next run deletes.
-# A cap that refuses instead ratchets, because the files it declines to delete
-# still count against the following run.
 REMOVE_PER_RUN="${REMOVE_PER_RUN:-60}"
-
-# Skip removal entirely when the index that was just fetched carries less than
-# this share of the packages the previous one carried.
 REMOVE_MIN_KEEP_SHARE="${REMOVE_MIN_KEEP_SHARE:-50}"
 
 INDEX_FILES=(Packages Packages.gz)
 
 mkdir -p "${DEST}"
-# A negative limit would make the loop remove nothing and report a backlog
-# that never drains.
 [[ ${REMOVE_PER_RUN} =~ ^[0-9]+$ ]] || {
     echo "REMOVE_PER_RUN 应为非负整数，收到：${REMOVE_PER_RUN}" >&2
     exit 1
 }
 
-# Read before the new index replaces it. The file count is not the same number,
-# because it also carries whatever is still waiting to be removed.
+# Read before the new index replaces it.
 packages_before=$(awk '/^PACKAGES: /{print $2; exit}' "${DEST}/Packages" 2>/dev/null) ||
     packages_before=0
 [[ ${packages_before} =~ ^[0-9]+$ ]] || packages_before=0

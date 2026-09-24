@@ -5,7 +5,6 @@ access_log /var/log/nginx/mirror.log mirror;
 limit_conn perip 16;
 limit_req zone=reqs burst=100 nodelay;
 
-
 location ^~ /.well-known/acme-challenge/ {
 	root /var/www/acme;
 }
@@ -27,7 +26,6 @@ location ^~ /_ls/ {
 	index .no-index;
 }
 
-
 location ^~ /distfiles/ {
 	root /srv/pub;
 	include /etc/nginx/conf.d/headers-files.inc;
@@ -47,8 +45,7 @@ location ^~ /gigos/ {
 	include /etc/nginx/conf.d/headers-files.inc;
 
 	gzip off;
-	# A rebuild on the same day reuses the file name, and a cached size would
-	# let the uploader's own check see the previous one.
+	# Same-day rebuilds reuse the file name.
 	open_file_cache off;
 
 	location ~ /$ {

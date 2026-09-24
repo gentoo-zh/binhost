@@ -19,7 +19,7 @@ nginx 配置，以及构建、签名和发布 [gentoo-zh overlay](https://github
 | `nginx/` | HTTP、HTTP/3 和文件服务配置 |
 | `site/` | 静态站点与公开签名密钥 |
 | `site/tools/` | 站点数据生成与内容检查，供镜像机、本机与 CI 使用 |
-| `docs/` | 依赖闭包边界与密钥轮替手册 |
+| `docs/` | 依赖闭包边界、密钥轮替、恢复与已评估未实施的改动 |
 
 ## 发布范围
 

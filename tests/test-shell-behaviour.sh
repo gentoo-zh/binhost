@@ -253,7 +253,7 @@ ok "unstable 网页数据使用独立输出" \
 daily_list_probe() {
     local mode=$1 d
     d=$(mktemp -d)
-    sed -n '/^if step "distfiles 同步"/,/^# generation.json/p' "${ROOT}/deploy/daily.sh" |
+    sed -n '/^if step "distfiles 同步"/,/^verify_channel()/p' "${ROOT}/deploy/daily.sh" |
         sed '$d' > "${d}/block.sh"
     (
         # shellcheck disable=SC2317,SC2329  # The sourced block invokes this function.
@@ -652,7 +652,7 @@ site_lock_probe() {
 ok "同步进行中时不当作故障" "$(site_lock_probe hold)" "in-progress"
 ok "同步没在执行时不一致仍是故障" "$(site_lock_probe free)" "failed"
 
-echo "== 缓存包的依赖子槽过期时不复用"
+echo "== 缓存包的依赖 subslot 过期时不复用"
 # The block as it runs inside the container: the exclusion list is read and
 # every emerge that may take a binary package gets it, the world update too.
 stale_probe() {

@@ -10,9 +10,7 @@ STATE="${STATE:-/var/lib/emirrordist}"
 JOBS="${JOBS:-6}"
 FAILURE_LOG="${FAILURE_LOG:-/var/log/emirrordist/failures.log}"
 SUCCESS_LOG="${SUCCESS_LOG:-/var/log/emirrordist/successes.log}"
-# emirrordist renames a finished download into place, so the temporary
-# directory has to be on the same filesystem as the distfiles. Default it to
-# the mount point holding them, outside the directory nginx serves.
+# Same filesystem as DEST (emirrordist renames), outside the tree nginx serves.
 TEMP_DIR="${TEMP_DIR:-$(df -P "${DEST%/*}" | awk 'NR==2 {print $6}')/.emirrordist-tmp}"
 
 install -dm755 "${DEST}" "${STATE}" "${TEMP_DIR}" \

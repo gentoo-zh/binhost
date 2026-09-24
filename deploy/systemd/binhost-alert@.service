@@ -1,7 +1,6 @@
 [Unit]
 Description=转发 %i 的失败告警
 
-
 [Service]
 Type=oneshot
 User=adminc3b9c6

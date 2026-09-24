@@ -7,14 +7,12 @@ ARCHIVE_SCRIPT=${KERNEL_ARCHIVE_SCRIPT:-${ROOT}/build/kernel-archive.sh}
 WORK=$(mktemp -d)
 trap 'rm -rf "${WORK}"' EXIT
 
-
 mkdir -p "${WORK}/bin" "${WORK}/overlay" "${WORK}/tree" \
     "${WORK}/metadata/metadata" "${WORK}/outer/gentoo-cjk-kernel-7.1.7-1"
 REAL_PYTHON=$(command -v python3)
 NAME=gentoo-cjk-kernel-7.1.7-1.amd64.gpkg.tar
 printf 'cjk\n' > "${WORK}/metadata/metadata/USE"
-# Enough entries that `tar -tf | head -n1` reliably takes SIGPIPE. A real gpkg
-# lists tens of thousands of paths; a two-entry fixture hid that for weeks.
+# Enough entries that `tar -tf | head -n1` would take SIGPIPE.
 mkdir -p "${WORK}/outer/gentoo-cjk-kernel-7.1.7-1/image"
 for i in $(seq 1 3000); do
     : > "${WORK}/outer/gentoo-cjk-kernel-7.1.7-1/image/f${i}"
@@ -252,9 +250,6 @@ cmp "${TEST_BUILT}" "${WORK}/published/7.1/${NAME}"
 [[ ! -e ${WORK}/published/7.1/gentoo-cjk-kernel-7.1.7-1.gpkg.tar ]]
 echo "  ✓ 发布成功后按发布名保留完全相同的字节"
 
-# The -bin ebuild resolves BINPKG=${P/-bin}-1 against the directory inside the
-# gpkg. Renaming the file does not rename what is inside it, so an artifact with
-# the right file name and the wrong inner directory has to be refused.
 reset_case
 TEST_BUILT="${WORK}/wrong-inner.gpkg.tar"
 : > "${WORK}/Manifest"
@@ -301,9 +296,6 @@ run_archive 0 >/dev/null
 cmp "${TEST_BUILT}" "${WORK}/published/7.1/${CURRENT_NAME}"
 echo "  ✓ overlay 移除版本后会同时清理远端文件与本地副本"
 
-# A whole series leaving the overlay retires both sides. Without this the local
-# store keeps a directory the mirror no longer serves, and recovery would put
-# back a line the overlay dropped.
 reset_case
 printf '7.1 7.1.7\n' > "${WORK}/series"
 : > "${WORK}/Manifest"
@@ -334,8 +326,6 @@ done
 [[ ${left} -eq 1 ]]
 echo "  ✓ 超过每轮限速时清理其中一部分，并说明剩余数量"
 
-# The point of the rate limit: what one run leaves behind the next run takes,
-# instead of the same backlog blocking every run for ever.
 run_archive 0 >"${WORK}/retire2.out" 2>&1
 [[ -z $(find "${WORK}/remote/archive/7.1" -name 'old-*.gpkg.tar' -print -quit) ]]
 [[ -z $(find "${WORK}/published/7.1" -name 'old-*.gpkg.tar' -print -quit) ]]
@@ -357,9 +347,6 @@ grep -q '与 Manifest 不一致，不保留' "${WORK}/backfill.out"
 [[ -z $(find "${WORK}/published/7.1" -mindepth 1 -print -quit) ]]
 echo "  ✓ 补齐文件摘要不符时不写入并报错"
 
-# cjk32 is a different kernel image, so it is a second build under a second
-# name. The two land on the same path in PKGDIR, which is why what comes back
-# is read for the flags that were asked for and for the ones that were not.
 CJK32_NAME=gentoo-cjk-kernel-7.1.7-1.amd64.cjk32.gpkg.tar
 mkdir -p "${WORK}/meta32/metadata"
 printf 'cjk cjk32\n' > "${WORK}/meta32/metadata/USE"
@@ -373,8 +360,6 @@ cp "${WORK}/meta32.tar.zst" \
 tar --mtime=@3 -C "${WORK}/outer32" -cf "${WORK}/built-cjk32.gpkg.tar" \
     gentoo-cjk-kernel-7.1.7-1
 
-# The container command carries the package.use line, so the stub answers with
-# the variant that was actually requested.
 cat > "${WORK}/bin/docker" <<'STUB'
 #!/bin/bash
 mkdir -p "${TEST_PKGDIR}/sys-kernel/gentoo-cjk-kernel"
@@ -417,8 +402,6 @@ run_variants 0 honest > "${WORK}/out" 2>&1
 grep -q '已发布，跳过' "${WORK}/out"
 echo "  ✓ Manifest 与远端一致时两个变体都跳过构建"
 
-# A version the -bin ebuild does not name yet is being bootstrapped, and the
-# extra variant has no entry for the same reason the plain one has none.
 reset_case
 : > "${WORK}/Manifest"
 TEST_BUILT32="${WORK}/built-cjk32.gpkg.tar" TEST_ANSWER_MODE=honest \
@@ -428,8 +411,6 @@ TEST_BUILT32="${WORK}/built-cjk32.gpkg.tar" TEST_ANSWER_MODE=honest \
 [[ $(grep -c "^DIST " "${WORK}/published/pending-manifest.txt") == 2 ]]
 echo "  ✓ 版本尚未列入 -bin 时两个变体一起自举"
 
-# A version the -bin ebuild does name, without this variant, leaves it out on
-# purpose.
 reset_case
 write_manifest "${NAME}" "${WORK}/built-first.gpkg.tar"
 mkdir -p "${WORK}/remote/archive/7.1"
@@ -441,8 +422,6 @@ grep -q '\-bin 未提供这个变体，跳过' "${WORK}/out"
 [[ ! -e ${WORK}/remote/archive/7.1/${CJK32_NAME} ]]
 echo "  ✓ -bin 提供了这版却没这个变体时才跳过"
 
-# The kernel timer does not go through cycle.sh, so the overlay copy has to be
-# refreshed here or a kernel bump waits for the next channel round.
 reset_case
 : > "${WORK}/Manifest"
 run_archive 1 > "${WORK}/out" 2>&1

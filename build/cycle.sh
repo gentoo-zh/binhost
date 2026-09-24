@@ -52,7 +52,7 @@ if ! flock -n 9; then
         alert "binhost 连续被阻塞（$(hostname) ${CHANNEL}）：已 ${age} 小时没有发布"
         alert_exit
     fi
-    echo ">>> 这个频道 ${age} 小时前发布过，跳过不算故障"
+    echo ">>> 本频道 ${age} 小时前已发布，本次跳过，不记为故障"
     exit 0
 fi
 
@@ -127,7 +127,7 @@ $(cat "${LOGDIR}/smoke-alert.txt")"
 fi
 
 if [[ -s ${LOGDIR}/subslot-alert.txt ]]; then
-    alert "binhost 有包的依赖子槽已过期（$(hostname) ${CHANNEL}）：
+    alert "binhost 有包的依赖 subslot 已过期（$(hostname) ${CHANNEL}）：
 $(cat "${LOGDIR}/subslot-alert.txt")"
 fi
 

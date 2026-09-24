@@ -1,13 +1,7 @@
 #!/bin/bash
 
-# Build one prebuilt kernel per series and publish it to the archive the
-# -bin ebuild fetches from.
-#
-# virtual/dist-kernel is SLOT=0, so one root holds one distribution kernel and
-# the regular cycle can only ever produce the newest. Gentoo splits the same
-# way: their binhost carries one gentoo-kernel while every series lives under
-# pub/proj/dist-kernel/binpkg. Each series is therefore built in its own
-# container, which is what keeps the slots apart.
+# Build each kernel version in its own container, because virtual/dist-kernel
+# is SLOT=0, and publish it to the archive the -bin ebuild fetches from.
 
 set -euo pipefail
 
@@ -21,40 +15,21 @@ DISTDIR="${DISTDIR:-/var/cache/distfiles}"
 PKGDIR="${PKGDIR:-/var/cache/binhost/kernel/x86-64}"
 IMAGE="${IMAGE:-gentoo-zh/binhost-base:x86-64}"
 COMMON_PACKAGE_USE="${COMMON_PACKAGE_USE:-${SCRIPT_DIR}/package.use.common}"
-# The -bin ebuild reads paths inside the gpkg as lib/modules/${KV_FULL} and
-# usr/src/linux-${KV_FULL}, so what is packed here has to carry the same
-# suffix its KV_LOCALVERSION declares. Without it the archive holds the plain
-# variant, the two collide on disk and the -bin install finds no directory.
+# Must match KV_LOCALVERSION in the -bin ebuild.
 LOCALVERSION="${LOCALVERSION:--gentoo-cjk-dist-bin}"
 ARCH="${ARCH:-amd64}"
 REMOTE="${REMOTE:-mirror}"
 REMOTE_ROOT="${REMOTE_ROOT:-/srv/pub/gentoo-cjk-kernel/${ARCH}}"
 PUBLISHED_DIR="${PUBLISHED_DIR:-/var/lib/binhost/kernel-published}"
-# A rate limit on deletions, matching MAX_BUILDS below: what one run leaves
-# behind the next run takes. A cap that refuses instead ratchets, because the
-# files it declines to delete are still there next time. The case it used to
-# guard against, an overlay that reads as empty, is caught where the version
-# list is built, which stops the run before anything is deleted.
 RETIRE_PER_RUN="${RETIRE_PER_RUN:-2}"
 [[ ${RETIRE_PER_RUN} =~ ^[0-9]+$ ]] || {
     echo "!!! RETIRE_PER_RUN 应为非负整数，收到：${RETIRE_PER_RUN}" >&2
     exit 1
 }
 RETIRE_MIN_KEEP_SHARE="${RETIRE_MIN_KEEP_SHARE:-50}"
-# One kernel takes about twenty five minutes, so a first run over a long
-# version list would hold the machine for most of a day. What is left over
-# is picked up by the next run.
 MAX_BUILDS="${MAX_BUILDS:-10}"
-# The whole point of this kernel. IUSE has it on by default, but an upstream
-# default is not a guarantee, so it is requested here and checked afterwards.
 REQUIRED_USE_FLAG="${REQUIRED_USE_FLAG:-cjk}"
-# The 32x32 font is a separate build, not a separate package: cjk32 changes the
-# kernel image, so the two cannot share one file. EXTRA_VARIANTS lists what is
-# built beyond the plain kernel, one "suffix use-flags" per line: the suffix
-# goes into the published name, the flags are requested on top of
-# REQUIRED_USE_FLAG and read back out of the built package. The plain build
-# always runs and keeps the name the existing -bin ebuilds fetch. Setting
-# EXTRA_VARIANTS to nothing leaves only that build.
+# One "suffix use-flags" per line, built in addition to the plain kernel.
 EXTRA_VARIANTS="${EXTRA_VARIANTS-.cjk32 cjk32}"
 variants=("")
 while IFS= read -r line; do
@@ -69,7 +44,6 @@ fi
 JOBS="${JOBS:-24}"
 MAKEOPTS="${MAKEOPTS:--j$(nproc) -l$(nproc)}"
 LOCK="${LOCK:-/var/lib/binhost/stage/build.lock}"
-# How stale the overlay copy may be before a failed fetch becomes a fault.
 OVERLAY_STALE_H="${OVERLAY_STALE_H:-26}"
 
 die() { echo "!!! $*" >&2; exit 1; }
@@ -161,11 +135,6 @@ mkdir -p "$(dirname "${LOCK}")"
 exec 9>"${LOCK}"
 flock -n 9 || { echo "另一次构建正在执行（${LOCK}）"; exit 0; }
 
-# This service runs on its own timer, not through cycle.sh, so the overlay copy
-# it reads is only as new as whatever last refreshed it. A bump to the kernel
-# ebuild would otherwise wait for the next channel round before being built.
-# Same shape as cycle.sh: retry the fetch, then tolerate a copy that is only a
-# few hours old.
 fetched=0
 for attempt in 1 2 3; do
     if git -C "${OVERLAY}" fetch --quiet origin master; then
@@ -186,8 +155,6 @@ else
 fi
 echo "overlay $(git -C "${OVERLAY}" rev-parse --short HEAD)"
 
-# Every version the overlay offers, so a bump needs no edit here and a new
-# series appears on its own. The series only decides which directory holds it.
 mapfile -t wanted < <(
     OVERLAY="${OVERLAY}" TREE="${TREE}" PACKAGE="${PACKAGE}" \
         python3 "${SCRIPT_DIR}/kernel-series.py"
@@ -199,9 +166,6 @@ echo ">>> overlay 提供 ${#wanted[@]} 条内核线"
 todo=()
 for entry in "${wanted[@]}"; do
     read -r series version <<< "${entry}"
-    # Whether the -bin ebuild already names this version at all. Without it the
-    # version is being bootstrapped, and an extra variant has no entry for the
-    # same reason the plain one has none: nothing has been published yet.
     plain_name="${PACKAGE#*/}-${version}-1.${ARCH}.gpkg.tar"
     named_version=no
     manifest_has_entry "${MANIFEST}" "${plain_name}" && named_version=yes
@@ -217,10 +181,6 @@ for entry in "${wanted[@]}"; do
                 "${pending_manifest}" "${name}" 2>/dev/null); then
             manifest_source=pending
         fi
-        # Only a version the -bin ebuild already offers can be said to leave a
-        # variant out on purpose. Skipping on a missing entry alone left cjk32
-        # unable to bootstrap: it needs a digest to be built, and a build to
-        # have a digest.
         if [[ ${manifest_source} != main && -n ${extra} && ${named_version} == yes ]]; then
             echo "    ${series}  ${version}${suffix}  -bin 未提供这个变体，跳过"
             continue
@@ -241,7 +201,7 @@ for entry in "${wanted[@]}"; do
             if [[ -f ${retained} ]] && python3 "${SCRIPT_DIR}/kernel-manifest.py" verify \
                     "${verify_manifest}" "${name}" "${retained}"; then
                 echo "    ${series}  ${version}${suffix}  从保留副本恢复"
-                # shellcheck disable=SC2029  # as above
+                # shellcheck disable=SC2029
                 ssh "${REMOTE}" "install -dm755 ${REMOTE_ROOT}/${series}"
                 rsync -a "${retained}" "${REMOTE}:${REMOTE_ROOT}/${series}/${name}"
                 continue
@@ -254,11 +214,8 @@ for entry in "${wanted[@]}"; do
     done
 done
 
-# Retention and retirement still run when nothing was built: a series can be
-# dropped from the overlay in a cycle where every remaining line is current.
 if (( ${#todo[@]} == 0 )); then
     echo ">>> 每个版本都已发布，不起容器"
-    todo=()
 else
     if (( ${#todo[@]} > MAX_BUILDS )); then
         echo ">>> 本轮只建前 ${MAX_BUILDS} 个，其余 $(( ${#todo[@]} - MAX_BUILDS )) 个留到下一轮"
@@ -274,15 +231,6 @@ for entry in ${todo[@]+"${todo[@]}"}; do
     atom="=${PACKAGE}-${version}"
     use_flags="${REQUIRED_USE_FLAG}${extra:+ ${extra}}"
     echo "::: ${series} ${atom}${suffix}"
-    # --buildpkg writes the binary package and installs it in the same run, so
-    # anything built against this kernel afterwards sees the one published. -B
-    # cannot do this: it refuses unless every dependency is already merged, and
-    # a fresh container has none of them.
-    #
-    # The overlay masks virtual/dist-kernel, which every gentoo-cjk-kernel
-    # PDEPENDs on, so without the unmask below the resolve stops before it
-    # compiles anything. The container is thrown away and builds this one atom,
-    # which is the case the mask comment points at.
     ${DOCKER} run --rm -i --security-opt=no-new-privileges \
         -v "${TREE}:/var/db/repos/gentoo:ro" \
         -v "${OVERLAY}:/var/db/repos/gentoo-zh:ro" \
@@ -305,25 +253,15 @@ for entry in ${todo[@]+"${todo[@]}"}; do
             emerge --quiet-build -1 --buildpkg --usepkg '${atom}'
         " || die "${series} ${version} 构建失败"
 
-    # The build id has to be 1, which is why the old binpkgs of this version are
-    # cleared above. It is not only the file name: the directory inside the gpkg
-    # carries the id too, and the -bin ebuild resolves BINPKG=${P/-bin}-1 against
-    # exactly that name. Renaming the file does not rename what is inside it, so
-    # a -2 published as -1 unpacks to a directory the -bin install never finds.
+    # The -bin ebuild unpacks ${P/-bin}-1; the build id is also the gpkg's inner directory.
     built="${PKGDIR}/${PACKAGE}/${PACKAGE#*/}-${version}-1.gpkg.tar"
     [[ -f ${built} ]] || die "构建完成但没有 -1 产物：${built}"
 
-    # sed consumes the whole listing. head would close the pipe after the first
-    # line, tar would take SIGPIPE, and pipefail turns that into 141 with no
-    # message: the run died right after building, before publishing.
+    # Not head: tar would take SIGPIPE under pipefail.
     inner=$(tar -tf "${built}" | sed -n '1{s|/.*||;p;}')
     [[ ${inner} == "${PACKAGE#*/}-${version}-1" ]] ||
         die "${version} 包内目录是 ${inner}，不是 -1，${PACKAGE#*/}-bin 无法安装"
 
-    # A USE flag that was asked for is not proof it was applied, so the built
-    # package is read back before anything is published. The two variants land
-    # on the same path in PKGDIR, so this is also what keeps one from being
-    # published under the other one's name.
     built_use=$(tar -xOf "${built}" "$(basename "${built}" .gpkg.tar)/metadata.tar.zst" |
         zstd -dc | tar -xO metadata/USE | tr ' ' '\n')
     for flag in ${use_flags}; do
@@ -340,7 +278,7 @@ for entry in ${todo[@]+"${todo[@]}"}; do
     done
 
     name="${PACKAGE#*/}-${version}-1.${ARCH}${suffix}.gpkg.tar"
-    # shellcheck disable=SC2029  # as above
+    # shellcheck disable=SC2029
     ssh "${REMOTE}" "install -dm755 ${REMOTE_ROOT}/${series}"
     rsync -a "${built}" "${REMOTE}:${REMOTE_ROOT}/${series}/${name}"
     store_published_copy "${built}" "${series}" "${name}"
@@ -348,9 +286,6 @@ for entry in ${todo[@]+"${todo[@]}"}; do
     echo "    已发布 ${series}/${name}"
 done
 
-# Every version the overlay carries has to stay: a -bin ebuild names its file
-# by URL, so removing one an ebuild still references leaves that version
-# unfetchable. A file goes only when its version leaves the overlay.
 wanted_names=()
 for entry in "${wanted[@]}"; do
     read -r series version <<< "${entry}"
@@ -361,7 +296,7 @@ for entry in "${wanted[@]}"; do
 done
 
 mapfile -t remote_files < <(
-    # shellcheck disable=SC2029  # as above
+    # shellcheck disable=SC2029
     ssh "${REMOTE}" "cd ${REMOTE_ROOT} 2>/dev/null && ls -1 */*.gpkg.tar 2>/dev/null" || true
 )
 mapfile -t local_files < <(
@@ -386,7 +321,6 @@ for f in ${remote_files[@]+"${remote_files[@]}"} \
     [[ ${found} == yes ]] || stale+=("${f}")
 done
 
-# Sorted so a run that hits the limit takes the same first slice every time.
 if (( ${#stale[@]} )); then
     mapfile -t stale < <(printf '%s\n' "${stale[@]}" | sort)
 fi
@@ -396,11 +330,8 @@ if (( ${#stale[@]} > RETIRE_PER_RUN )); then
     stale=("${stale[@]:0:RETIRE_PER_RUN}")
 fi
 
-# A series the overlay no longer offers is retired, the same way the package
-# lists treat a package that is gone. The cap is the guard: losing the overlay
-# would otherwise look like every series was dropped at once.
 mapfile -t remote_series < <(
-    # shellcheck disable=SC2029  # as above
+    # shellcheck disable=SC2029
     ssh "${REMOTE}" "ls -1 ${REMOTE_ROOT} 2>/dev/null" || true
 )
 mapfile -t local_series < <(
@@ -425,8 +356,6 @@ for series in ${remote_series[@]+"${remote_series[@]}"} \
     [[ ${found} == yes ]] || retire+=("${series}")
 done
 
-# The same floor the other two carry: an overlay that reads as a fraction of
-# what is published makes every other line look dropped.
 if (( ${#retire[@]} && ${#remote_series[@]} > 0 )) &&
    (( ${#wanted[@]} * 100 < ${#remote_series[@]} * RETIRE_MIN_KEEP_SHARE )); then
     echo "!! overlay 提供 ${#wanted[@]} 条线，镜像上有 ${#remote_series[@]} 条，不足 ${RETIRE_MIN_KEEP_SHARE}%，未退役" >&2
@@ -444,14 +373,14 @@ fi
 
 for f in ${stale[@]+"${stale[@]}"}; do
     echo "    清理 ${f}（overlay 已不提供这个版本）"
-    # shellcheck disable=SC2029  # as above
+    # shellcheck disable=SC2029
     ssh "${REMOTE}" "rm -f ${REMOTE_ROOT}/${f}"
     rm -f -- "${PUBLISHED_DIR}/${f}"
 done
 
 for series in ${retire[@]+"${retire[@]}"}; do
     echo "    退役 ${series}（overlay 已不提供）"
-    # shellcheck disable=SC2029  # as above
+    # shellcheck disable=SC2029
     ssh "${REMOTE}" "rm -rf ${REMOTE_ROOT}/${series}"
     rm -rf -- "${PUBLISHED_DIR:?}/${series}"
 done

@@ -107,7 +107,7 @@ case("有登记但没有使用者", 0, ["仍在登记但没有使用者"],
 # The binutils-libs shape: its own preserved libs reference each other, and
 # they do belong to the installed package, so only the internal-consumer rule
 # keeps this from being reported as an uncovered rebuild.
-case("同套件的保留库不算使用者", 0, ["仍在登记但没有使用者"],
+case("同一软件包的保留库不算使用者", 0, ["仍在登记但没有使用者"],
      {CPV: [LIB, "/usr/lib64/libctf.so"]},
      {LIB: ["/usr/lib64/libctf.so"], "/usr/lib64/libctf.so": []},
      {"/usr/lib64/libctf.so": [CPV]},

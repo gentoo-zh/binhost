@@ -6,7 +6,6 @@ OUT="${OUT:-/srv/mirrors/server-status.json}"
 
 uptime_seconds=$(cut -d. -f1 /proc/uptime)
 
-# The counters reset at boot, so uptime is published alongside them.
 iface="${IFACE:-$(ip route show default 2>/dev/null | awk '{print $5; exit}')}"
 [[ -n ${iface} ]] || iface=$(awk -F: 'NR>2 && $1 !~ /lo/ {gsub(/ /,"",$1); print $1; exit}' /proc/net/dev)
 [[ -n ${iface} ]] || { echo "!! 找不到网卡，未写出 ${OUT}" >&2; exit 1; }

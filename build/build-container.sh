@@ -163,7 +163,7 @@ echo ">>> ${#atoms[@]} packages"
 EMERGE=(emerge --usepkg --changed-use --with-bdeps=y --quiet-build)
 mapfile -t stale < <(grep -E '^[a-z0-9-]+/[A-Za-z0-9._+-]+$' /tmp/stale-binpkgs.txt)
 if (( ${#stale[@]} )); then
-    echo ">>> ${#stale[@]} 个缓存包的依赖子槽已过期，本轮从源码重建：${stale[*]}"
+    echo ">>> ${#stale[@]} 个缓存包的依赖 subslot 已过期，本轮从源码重建：${stale[*]}"
     EMERGE+=(--usepkg-exclude "${stale[*]}")
 fi
 FETCH_RETRY_WAIT="${FETCH_RETRY_WAIT:-180}"
@@ -174,7 +174,7 @@ python3 /usr/local/bin/snapshot-vdb /var/db/pkg /var/log/binhost/installed.txt
 # separately into /gentoo-cjk-kernel/, outside this index. Match only
 # virtual/dist-kernel: every dist-kernel arrives through it, while
 # sys-kernel/installkernel, dracut and linux-headers belong in the container.
-echo "::: 检查清单没有拉进分发内核"
+echo "::: 检查清单不会拉入分发内核"
 # The resolver's own exit status must not decide this gate. Under pipefail a
 # failing --pretend makes the whole pipeline non-zero, so the `if` was false
 # even when the output did name virtual/dist-kernel -- and --pretend failing is
@@ -183,7 +183,7 @@ echo "::: 检查清单没有拉进分发内核"
     echo "    解析未完成，仍按已有输出检查"
 if grep -E '^\[[^]]*\] +virtual/dist-kernel' /tmp/kernel-pretend.txt \
         > /tmp/kernel-pull.txt; then
-    echo "!!! 清单会拉进分发内核，停止构建："
+    echo "!!! 清单会拉入分发内核，停止构建："
     sed 's/^/    /' /tmp/kernel-pull.txt
     exit 1
 fi

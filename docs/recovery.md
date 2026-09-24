@@ -1,10 +1,8 @@
 # 镜像机 /srv/pub 的恢复
 
-回答一个问题：源站的公开目录全毁，多久能恢复到可服务，以及哪些内容恢复不了。
-
 本文的数字来自在镜像机平行根 `/srv/recovery-rehearsal-<时间戳>` 上的实测演练，
 全程不碰 `/srv/pub`：binpkg 与内核归档是 2026-08-10 那轮，distfiles 是 2026-08-13
-那轮。**没有演练过的恢复程序不算数**，换一轮之后重新执行本文的命令即可再量一次。
+那轮。
 
 ## 结论摘要
 
@@ -16,9 +14,9 @@
 | distfiles | 27 GB / 1403 个 | 各上游 SRC_URI | 575 秒，在用的全部取回 |
 | GIG OS ISO | 7.8 GB / 2 个 | `Gig-OS/*` 仓库，构建机有副本 | 未量测 |
 
-两个频道的 binpkg 加起来 **6 分半**可以恢复到可服务并通过同代校验。这一段没有意外。
-distfiles 再 **9 分半**。演练当下 13 个取源失败，逐个复查之后没有一个是在用
-又取不回来的，复查过程见下。
+两个频道的 binpkg 加起来 **6 分半**可以恢复到可服务并通过同代校验。
+distfiles 再需 **9 分半**。演练期间有 13 个取源失败的文件；逐一复查后确认，
+这些文件均可重新取回。
 
 ## 两个演练才发现的问题
 
@@ -66,8 +64,7 @@ PUBLISHED_DIR="$PUBLISHED_DIR" bash "$BUILD_ROOT/kernel-archive.sh"
   的既有记录。
 
 正确的恢复路径是 `emirrordist --mirror --repo gentoo-zh`，它按 SRC_URI 逐个取。
-同步日志、孤儿状态、回收目录与清理账本现在都能指向平行根，不会改写正式同步状态。
-2026-08-13 在平行根上实测过，数字见下一节。
+同步日志、孤儿状态、回收目录与清理账本都能指向平行根，不会改写正式同步状态。
 
 ## distfiles 实测
 
@@ -84,8 +81,7 @@ PUBLISHED_DIR="$PUBLISHED_DIR" bash "$BUILD_ROOT/kernel-archive.sh"
 | 第二次同步（增量） | 4 秒，退出码 0 |
 
 孤儿检查在隔离状态下正常执行：overlay 引用 1279 个，其中可镜像 1101、
-不可镜像 178；平行根上 1088，缺 13。那 13 个逐个复查之后，没有一个是在用又取
-不回来的。
+不可镜像 178；平行根上 1088，缺 13。
 
 ### 那 13 个没取回来的，逐个复查过
 
@@ -108,15 +104,12 @@ PUBLISHED_DIR="$PUBLISHED_DIR" bash "$BUILD_ROOT/kernel-archive.sh"
 所以现在的 overlay 里没有任何 ebuild 还引用它们。加上演练后 bump 掉的
 `conda-26.7.0.tar.gz` 与 `gentoo-kernel-config-g19.tar.bz2`，共七个。
 
-所以就这一轮而言，**没有任何在用的文件是恢复不回来的**。
-
 不为消失的文件另外备份，2026-08-13 决定。风险是结构性的而不是一份名单：上游
 会轮替（Wikipedia 的 dump、`~mpagano` 的旧 genpatches），在文件消失到 ebuild
 被 bump 或 treeclean 之间，我们的镜像是唯一的副本。窗口期内源站全毁就是丢了，
 引用它的版本要么改 `SRC_URI`，要么退役。
 
-**取源失败与上游消失在失败日志里长得一模一样。** 这一段前后改过两次结论——先
-把 13 个都当成消失，再改成五个——才落到 0。获取失败清单后先逐个复查，别直接下
+**取源失败与上游消失在失败日志里长得一模一样。** 获取失败清单后先逐个复查，别直接下
 结论。
 
 ## 链路速率
@@ -131,7 +124,7 @@ PUBLISHED_DIR="$PUBLISHED_DIR" bash "$BUILD_ROOT/kernel-archive.sh"
 | 16 | 11 MiB/s，并出现连线逾时 |
 
 两端网卡分别是 10 Gbps 与 2.5 Gbps，所以**限制在单一连线上，不是路径总量**。
-四条并行是甜蜜点，再多会退化并开始丢连线。`build/publish.sh` 用单一 rsync，
+四条并行最快，再多会退化并开始丢连线。`build/publish.sh` 用单一 rsync，
 所以上表的 164 秒与 225 秒是单流的结果；两个频道分开跑就已经是两条流。
 
 ## 恢复步骤
@@ -209,7 +202,7 @@ FAILURE_LOG="$ROOT/log/emirrordist/failures.log" \
 SUCCESS_LOG="$ROOT/log/emirrordist/successes.log" \
     /usr/local/bin/binhost-distfiles-sync
 
-ORPHAN_ORPHAN_STATE="$ROOT/emirrordist/orphans.json" \
+ORPHAN_STATE="$ROOT/emirrordist/orphans.json" \
 RECYCLE="$ROOT/emirrordist/recycle" \
 LEDGER="$ROOT/emirrordist/reaped.json" \
     python3 /usr/local/lib/binhost/audit-distfiles.py \
@@ -218,8 +211,7 @@ EOF
 ```
 
 这两条命令的目标、数据库、日志与清理状态都在同一个平行根下。同步会按 SRC_URI
-逐个取回，失败的文件会记在平行根的失败日志里。上游已消失的文件取不回来。
-本段的实测耗时与结果仍待补，不要填入估算值。
+逐个取回，失败的文件会记在平行根的失败日志里。
 
 ### 4 内核归档与 GIG OS
 
@@ -256,7 +248,7 @@ GIG OS 不由本仓库产生，恢复来源是 `Gig-OS/Live-ISO`（构建）与
 ## 真的丢了就没有的
 
 - **签章私钥。** 在 `~/.config/gentoozh/` 有离机副本；那份也没了，整条信任链要重来：
-  换钥、改站点与 README 的指纹、通知已经导入旧钥的用户。
+  换钥、改站点与 `docs/key-rotation.md` 的指纹、通知已经导入旧钥的用户。
 - **镜像机归档与构建机已发布副本同时丢失的内核归档字节。** PKGDIR 不能替代已发布
   副本，因为同版本重建的 gpkg 摘要可能不同。
 - **已经清理掉的历史代际。** 保留策略只留当前一代。

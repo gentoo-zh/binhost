@@ -6,9 +6,9 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "build"))
 from ebuilds import (                                       # noqa: E402
-    ATOM, BUILD_ECLASS, PREBUILT_ECLASS,
+    ATOM, PREBUILT_ECLASS,
     accepts_amd64, inherits, keywords_of, newest_ebuild,
-    bindist_state, read_mask, usable_ebuilds, version_of, vercmp,
+    bindist_state, read_mask, usable_ebuilds,
 )
 from channel_packages import exclusions as channel_exclusions  # noqa: E402
 
@@ -17,7 +17,6 @@ LISTS = pathlib.Path(__file__).resolve().parent.parent / "build"
 LIST = LISTS / "packages.txt"
 EXCLUDED = LISTS / "excluded.txt"
 STABLE_EXCLUDED = LISTS / "stable-excluded.txt"
-
 
 
 def read_excluded():

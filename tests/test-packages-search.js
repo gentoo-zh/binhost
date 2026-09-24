@@ -141,7 +141,7 @@ check("发布状态、当前政策与删除过渡同时渲染",
       matrix.slice(0, 1800));
 
 const closureDependency = renderWith("app-i18n/libkkc-data");
-check("依赖闭包里的清单外套件不标成待移除",
+check("依赖闭包里的清单外软件包不标成待移除",
       closureDependency.includes("app-i18n/libkkc-data") &&
       !closureDependency.includes("why_retiring"),
       closureDependency.slice(0, 600));

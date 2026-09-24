@@ -69,9 +69,6 @@ step "unstable 包列表" env LIST="${LIB}/packages.txt" EXCLUDED="${LIB}/exclud
 
 step "服务器状态" /usr/local/bin/binhost-server-status
 
-# generation.json arrives with the first index created by the generation-aware
-# builder. Older public indexes predate this check and are skipped, while any
-# existing entry, including a broken symlink, must still pass verification.
 verify_channel() {
     local label=$1 binpkgs=$2 generation
     generation="${binpkgs}/generation.json"
