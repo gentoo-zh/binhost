@@ -132,6 +132,9 @@ jobs:
       - name: CI lints every script directory
         run: python3 tests/test-ci-covers-scripts.py
 
+      - name: A world atom without an ebuild fails the check
+        run: python3 tests/test-check-world.py
+
       - name: Source checks ignore only real comments
         run: python3 tests/test-active-source.py
 
@@ -187,7 +190,7 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Compile
-        run: python3 -m py_compile build/*.py tools/*.py deploy/*.py site/tools/*.py
+        run: python3 -m py_compile build/*.py tools/*.py deploy/*.py site/tools/*.py builders/prune-unpublishable
       - name: Classifier against real log shapes
         run: |
           d=$(mktemp -d)
@@ -270,7 +273,7 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: shellcheck
-        run: shellcheck build/*.sh ops/*.sh deploy/*.sh tests/*.sh deploy-site.sh
+        run: shellcheck build/*.sh ops/*.sh deploy/*.sh tests/*.sh deploy-site.sh builders/binhost-update builders/run-update
 
       - name: A brief upstream outage is retried once
         run: bash tests/test-fetch-retry.sh
