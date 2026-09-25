@@ -1,0 +1,11 @@
+[Unit]
+Description=构建并发布 binhost %i 频道（新构建机）
+
+OnFailure=binhost-alert@%N.service
+
+[Service]
+Type=oneshot
+Nice=10
+IOSchedulingClass=idle
+ExecStart=/var/lib/binhost/builders/binhost-update %i
+TimeoutStartSec=18h

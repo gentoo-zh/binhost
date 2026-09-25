@@ -1,0 +1,79 @@
+#!/bin/bash
+
+set -uo pipefail
+
+CHANNEL=$1
+
+REPO=${REPO:-/var/lib/binhost}
+REMOTE=${REMOTE:-mirror}
+REMOTE_ROOT=${REMOTE_ROOT:-/srv/binhost-new/${CHANNEL}}
+SIGNING_KEY=${SIGNING_KEY:-6A0726AF1476A2F382C6AC6638A0234EC16AD42E}
+SIGNING_GPG_HOME=${SIGNING_GPG_HOME:-/var/lib/binhost/gnupg}
+VERIFY_GPG_HOME=${VERIFY_GPG_HOME:-/etc/portage/gnupg}
+PASTE_URL=${PASTE_URL:-https://paste.gentoozh.org/}
+
+DATASET=binhost/machines/${CHANNEL}
+PKGDIR=/var/cache/binhost/${CHANNEL}
+LOCKFILE=/var/lib/binhost/build.lock
+TMPFILE=/var/log/binhost-update-${CHANNEL}.log
+
+exec {lock}>"${LOCKFILE}"
+if ! flock -n "${lock}"; then
+	echo "锁 ${LOCKFILE} 已被占用，退出"
+	exit 111
+fi
+
+exec > >(tee "${TMPFILE}") 2>&1
+
+failed=()
+
+echo "开始于 $(date -u)"
+
+emerge --sync -q || failed+=("emerge --sync")
+
+zfs snapshot "${DATASET}@$(date -u +%Y%m%dT%H%M%SZ)" || failed+=("zfs snapshot")
+zfs list -H -t snapshot -d 1 -o name -s creation "${DATASET}" | head -n -7 | xargs -r -n 1 zfs destroy
+
+nspawn_command=(systemd-nspawn -M "binhost-${CHANNEL}"
+	--bind /var/cache/distfiles
+	--bind "${PKGDIR}:/var/cache/binpkgs"
+	--bind /var/cache/binhost/gentoo
+	--bind-ro /var/db/repos/gentoo
+	--bind-ro /var/db/repos/gentoo-zh
+	--bind-ro "${REPO}/builders:/etc/binhost"
+	--bind "/var/tmp/portage/${CHANNEL}:/var/tmp/portage")
+
+"${nspawn_command[@]}" /etc/binhost/run-update
+ret=$?
+(( ret == 0 )) || failed+=("run-update（退出码 ${ret}）")
+
+# shellcheck disable=SC2016
+if ! "${nspawn_command[@]}" /etc/binhost/prune-unpublishable; then
+	failed+=(prune-unpublishable)
+elif systemd-run --wait --pipe -p PrivateNetwork=yes -p ProtectSystem=strict -p PrivateTmp=yes \
+	-p ReadWritePaths="${PKGDIR} ${SIGNING_GPG_HOME} /run/lock" \
+	-E BINPKG_GPG_SIGNING_KEY="${SIGNING_KEY}" \
+	-E BINPKG_GPG_SIGNING_GPG_HOME="${SIGNING_GPG_HOME}" \
+	-E BINPKG_GPG_VERIFY_GPG_HOME="${VERIFY_GPG_HOME}" \
+	sh -c 'set -o pipefail; find "$1" -name "*.gpkg.tar" -print0 | xargs -0 -r -n 1 gpkg-sign --skip-signed --allow-unsigned' sh "${PKGDIR}"; then
+	if "${nspawn_command[@]}" emaint binhost --fix; then
+		rsync --archive --delete --delete-after --omit-dir-times --delay-updates --mkpath --stats \
+			"${PKGDIR}"/* "${REMOTE}:${REMOTE_ROOT}/" || failed+=(rsync)
+	else
+		failed+=("emaint binhost --fix")
+	fi
+else
+	failed+=(gpkg-sign)
+fi
+
+(( ${#failed[@]} )) || exit 0
+
+path=$(python3 -c 'import json, sys; print(json.dumps({"text": sys.stdin.read(), "extension": "log"}))' < "${TMPFILE}" |
+	curl -fsS -H 'Content-Type: application/json' --data-binary @- "${PASTE_URL}" |
+	python3 -c 'import json, sys; print(json.load(sys.stdin)["path"])')
+
+# shellcheck source=/dev/null
+. "${REPO}/ops/alert.sh"
+alert "binhost ${CHANNEL} 频道更新失败：${failed[*]}
+日志：${PASTE_URL}${path#/}"
+alert_exit 1
