@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -e
+
+emerge -uDN --changed-deps --backtrack=100 --exclude virtual/dist-kernel @world
+
+CLEAN_DELAY=0 emerge --depclean --quiet-unmerge-warn
+eclean-pkg --unreachable
+
+mapfile -t badlibs < <(portageq list_preserved_libs /)
+
+if (( ${#badlibs[@]} > 0 )); then
+	printf '%s\n' "警告：binpkg 中有 preserved-libs！"
+	printf '  - %s\n' "${badlibs[@]}"
+	emerge -p @preserved-rebuild
+	exit 2
+fi

@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+
+import os
+
+import portage
+from portage.dep import use_reduce
+
+settings = portage.config(clone=portage.settings)
+portdb = portage.db[portage.root]["porttree"].dbapi
+bintree = portage.db[portage.root]["bintree"]
+bintree.populate(force_reindex=True)
+
+for cpv in bintree.dbapi.cpv_all():
+    if portdb.findname(cpv, myrepo=cpv.repo) is None:
+        continue
+    reasons = [reason for reason in portage.getmaskingstatus(
+        cpv, settings=settings, portdb=portdb, myrepo=cpv.repo)
+        if not reason.endswith("in RESTRICT")]
+    restrict, inherited = portdb.aux_get(cpv, ["RESTRICT", "INHERITED"], myrepo=cpv.repo)
+    use = bintree.dbapi.aux_get(cpv, ["USE"])[0].split()
+    if "bindist" in use_reduce(restrict, uselist=use, flat=True):
+        reasons.append("RESTRICT=bindist")
+    if "linux-mod" in inherited:
+        reasons.append("linux-mod")
+    if reasons:
+        os.unlink(bintree.getname(cpv))
+        print(f"删除 {cpv}：{', '.join(reasons)}")

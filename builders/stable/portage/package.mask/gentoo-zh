@@ -1,0 +1,4 @@
+# Remove once app-i18n/fcitx-5.1.22 is stable on amd64 in ::gentoo
+>=app-i18n/fcitx-skk-5.1.11
+# Remove once gui-libs/gtk-4.22 is stable on amd64 in ::gentoo
+>=media-video/tsukimi-26.9.2
