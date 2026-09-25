@@ -20,6 +20,7 @@ EXPECTED_EXECUTABLES = {
     "binhost-build.service": "/var/lib/binhost/build/cycle.sh",
     "binhost-kernel.service": "/var/lib/binhost/build/kernel-archive.sh",
     "binhost-status.service": "/usr/local/bin/binhost-status",
+    "binhost-update@.service": "/var/lib/binhost/builders/binhost-update",
 }
 
 failed = 0
