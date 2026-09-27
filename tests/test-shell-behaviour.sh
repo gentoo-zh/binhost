@@ -234,7 +234,7 @@ ok "站点传输中断时已发布的内容不变" "${old_state}" "<p>old</p>"
 ok "站点传输中断时读的是转换前那一份" "${on_seed}" "1"
 ok "半份产物不会上线" "${half}" "没上线"
 
-echo "== daily.sh 的旧代过渡"
+echo "== daily.sh 的包列表与索引验证"
 
 audit_line=$(grep -n 'step "distfiles 对账"' "${ROOT}/deploy/daily.sh" | cut -d: -f1)
 index_line=$(grep -n 'step "distfiles 索引"' "${ROOT}/deploy/daily.sh" | cut -d: -f1)
@@ -304,79 +304,46 @@ ok "stable 包列表实际读取 stable 索引" "${channel_inputs[0]}" \
 ok "unstable 包列表实际读取 unstable 索引" "${channel_inputs[1]}" \
    "/srv/mirrors/packages-unstable.json|/srv/pub/unstable/binpkgs/x86-64/Packages"
 
-daily_generation_probe() {
-    local mode="$1" d out calls
+daily_index_probe() {
+    local mode="$1" d out channel
     d=$(mktemp -d)
-    mkdir -p "${d}/stable" "${d}/unstable" "${d}/lib"
+    for channel in stable unstable; do
+        mkdir -p "${d}/${channel}/app-misc/a" "${d}/${channel}/app-misc/b"
+        : > "${d}/${channel}/app-misc/a/a-1-1.gpkg.tar"
+        : > "${d}/${channel}/app-misc/b/b-1-1.gpkg.tar"
+        printf '%s\n' 'PACKAGES: 2' 'TIMESTAMP: 1' '' 'CPV: app-misc/a-1' \
+            'PATH: app-misc/a/a-1-1.gpkg.tar' '' 'CPV: app-misc/b-1' \
+            'PATH: app-misc/b/b-1-1.gpkg.tar' > "${d}/${channel}/Packages"
+    done
+    case ${mode} in
+        stable-count) sed -i 's/^PACKAGES: 2$/PACKAGES: 3/' "${d}/stable/Packages" ;;
+        stable-missing) rm "${d}/stable/app-misc/b/b-1-1.gpkg.tar" ;;
+        stable-unparsable) printf 'garbage\n' > "${d}/stable/Packages" ;;
+    esac
     # shellcheck disable=SC2016  # Match ${FAILURES} literally in the source.
     sed -n '/^verify_channel()/,/^if \[\[ -s \${FAILURES}/p' "${ROOT}/deploy/daily.sh" |
         sed '$d' > "${d}/block.sh"
-    cat > "${d}/lib/generation.py" <<'PY'
-import os
-import pathlib
-import sys
-label = pathlib.Path(sys.argv[-1]).name
-pathlib.Path(os.environ["CALLS"]).open("a").write(f"generation:{label}\n")
-sys.exit(int(os.environ.get(f"{label.upper()}_GENERATION_RC", "0")))
-PY
-    cat > "${d}/lib/verify-deps.py" <<'PY'
-import os
-import pathlib
-import sys
-label = pathlib.Path(sys.argv[1]).parent.name
-pathlib.Path(os.environ["CALLS"]).open("a").write(f"deps:{label}\n")
-PY
-    case ${mode} in
-        valid|stable-invalid|unstable-invalid)
-            : > "${d}/stable/generation.json"
-            : > "${d}/unstable/generation.json"
-            ;;
-        unstable-broken)
-            : > "${d}/stable/generation.json"
-            ln -s missing "${d}/unstable/generation.json"
-            ;;
-    esac
     out=$(
         # shellcheck disable=SC2317,SC2329  # The sourced block invokes this function.
-        step() { shift; "$@"; }
-        export CALLS="${d}/calls" STABLE_GENERATION_RC=0 UNSTABLE_GENERATION_RC=0
-        [[ ${mode} == stable-invalid ]] && STABLE_GENERATION_RC=1
-        [[ ${mode} == unstable-invalid || ${mode} == unstable-broken ]] && \
-            UNSTABLE_GENERATION_RC=1
+        step() {
+            local name=$1; shift
+            if "$@" >/dev/null 2>&1; then echo "${name}:ok"; else echo "${name}:failed"; fi
+        }
         # shellcheck disable=SC1091  # block.sh is generated above.
-        LIB="${d}/lib" STABLE_BINPKGS="${d}/stable" \
-            UNSTABLE_BINPKGS="${d}/unstable" . "${d}/block.sh"
+        STABLE_BINPKGS="${d}/stable" UNSTABLE_BINPKGS="${d}/unstable" . "${d}/block.sh"
     )
-    if [[ -f ${d}/calls ]]; then
-        calls=$(tr '\n' ' ' < "${d}/calls")
-    else
-        calls=""
-    fi
-    out=${out//$'\n'/;}
-    printf '%s|%s\n' "${out}" "${calls% }"
     rm -rf "${d}"
+    echo "${out//$'\n'/ }"
 }
 
-IFS='|' read -r out calls <<< "$(daily_generation_probe missing)"
-ok "两个频道缺少 generation.json 时不执行验证" "${calls}" ""
-ok "旧代缺少清单时分别说明略过原因" \
-   "$([[ ${out} == *stable*尚未发布* && ${out} == *unstable*尚未发布* ]] && echo yes)" "yes"
-
-IFS='|' read -r out calls <<< "$(daily_generation_probe valid)"
-ok "两个频道的同代清单有效时都执行反向验证" "${calls}" \
-   "generation:stable deps:stable generation:unstable deps:unstable"
-
-IFS='|' read -r out calls <<< "$(daily_generation_probe stable-invalid)"
-ok "stable 清单损坏不妨碍 unstable 完成验证" "${calls}" \
-   "generation:stable generation:unstable deps:unstable"
-
-IFS='|' read -r out calls <<< "$(daily_generation_probe unstable-invalid)"
-ok "unstable 清单损坏时不执行它的反向验证" "${calls}" \
-   "generation:stable deps:stable generation:unstable"
-
-IFS='|' read -r out calls <<< "$(daily_generation_probe unstable-broken)"
-ok "unstable 的断开符号链接仍进入验证" "${calls}" \
-   "generation:stable deps:stable generation:unstable"
+ok "两个频道的索引都通过验证" "$(daily_index_probe valid)" \
+   "stable 索引验证:ok unstable 索引验证:ok"
+ok "PACKAGES 与 PATH 条数不符时 stable 失败，unstable 照常验证" \
+   "$(daily_index_probe stable-count)" "stable 索引验证:failed unstable 索引验证:ok"
+ok "PATH 指向的文件不在本地时失败" \
+   "$(daily_index_probe stable-missing)" "stable 索引验证:failed unstable 索引验证:ok"
+ok "Packages 无法解析时失败" \
+   "$(daily_index_probe stable-unparsable)" "stable 索引验证:failed unstable 索引验证:ok"
 
 echo "== build-container.sh 交回 PKGDIR 属主"
 
@@ -455,8 +422,10 @@ ok "stable 定时器实际启动 stable 服务" "${stable_timer_target}" \
    "binhost-build.service"
 ok "unstable 定时器实际启动 unstable 服务" "${unstable_timer_target}" \
    "binhost-build-unstable.service"
-ok "安装脚本同时启用两个频道的定时器" \
-   "$(grep -c 'binhost-build-unstable.timer' <<< "${installer}")" "1"
+ok "安装脚本停用两个频道的旧构建定时器" \
+   "$(grep -c '^sudo systemctl disable --now binhost-build.timer binhost-build-unstable.timer$' <<< "${installer}")" "1"
+ok "安装脚本不再启用旧构建定时器" \
+   "$(grep '^sudo systemctl enable' <<< "${installer}" | grep -c 'binhost-build')" "0"
 
 shared_lock=$(grep -c "LOCK=\"\${LOCK:-/var/lib/binhost/stage/build.lock}\"" \
     "${ROOT}/build/build-container.sh")

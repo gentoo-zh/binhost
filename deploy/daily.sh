@@ -70,16 +70,22 @@ step "unstable 包列表" env LIST="${LIB}/packages.txt" EXCLUDED="${LIB}/exclud
 step "服务器状态" /usr/local/bin/binhost-server-status
 
 verify_channel() {
-    local label=$1 binpkgs=$2 generation
-    generation="${binpkgs}/generation.json"
-    if [[ ! -e ${generation} && ! -L ${generation} ]]; then
-        echo "跳过 ${label} 同代清单与依赖反向验证：${generation} 尚未发布"
-    elif step "${label} 同代清单验证" \
-              python3 "${LIB}/generation.py" verify "${binpkgs}"; then
-        step "${label} 依赖反向验证" python3 "${LIB}/verify-deps.py" \
-            "${binpkgs}/Packages" --installed "${binpkgs}/installed.txt" \
-            --available "${binpkgs}/official.txt" --source "${binpkgs}/source.txt"
-    fi
+    local label=$1 binpkgs=$2
+    step "${label} 索引验证" python3 - "${binpkgs}" <<'PY'
+import pathlib
+import sys
+
+root = pathlib.Path(sys.argv[1])
+header, *entries = [dict(line.partition(": ")[::2] for line in block.splitlines())
+                    for block in (root / "Packages").read_text().strip().split("\n\n")]
+paths = [entry["PATH"] for entry in entries if "PATH" in entry]
+missing = [path for path in paths if not (root / path).is_file()]
+if header.get("PACKAGES") != str(len(paths)):
+    sys.exit(f"PACKAGES 为 {header.get('PACKAGES', '缺失')}，PATH 有 {len(paths)} 条")
+if missing:
+    sys.exit(f"{len(missing)} 个 PATH 在本地不存在：" + " ".join(missing[:20]))
+print(f"{len(paths)} 个包，PATH 都在本地")
+PY
 }
 
 verify_channel stable "${STABLE_BINPKGS:-/srv/pub/binpkgs/x86-64}"
