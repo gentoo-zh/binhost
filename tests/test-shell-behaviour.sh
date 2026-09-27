@@ -889,6 +889,10 @@ ok "旧格式没有 progress_at 时退回看 generated" \
    "$(build_status_probe "{\"state\":\"running\",\"generated\":${NOW}}")" \
    "passed"
 ok "完成状态仍然正常" "$(build_status_probe "${DONE_JSON}")" "passed"
+ok "上次完成在 30 小时前仍在一轮构建的时限内" \
+   "$(build_status_probe "{\"state\":\"done\",\"generated\":$(( NOW - 30 * 3600 ))}")" "passed"
+ok "上次完成超过 44 小时判为故障" \
+   "$(build_status_probe "{\"state\":\"done\",\"generated\":$(( NOW - 45 * 3600 ))}")" "failed"
 ok "未知状态直接判为无法解析" \
    "$(build_status_probe "{\"state\":\"garbage\",\"generated\":${NOW}}")" \
    "failed"
@@ -920,14 +924,10 @@ PATH: app-misc/example/example-1.gpkg.tar
 CPV: app-misc/missing-2
 PATH: app-misc/missing/missing-2.gpkg.tar
 EOF
-        printf 'compressed\n' > "${root}/Packages.gz"
-        printf 'installed\n' > "${root}/installed.txt"
-        printf 'official\n' > "${root}/official.txt"
-        printf 'source\n' > "${root}/source.txt"
-        python3 "${ROOT}/build/generation.py" create "${root}"
+        [[ ${mode} != count ]] || sed -i 's/^PACKAGES: 2$/PACKAGES: 3/' "${root}/Packages"
+        gzip -c "${root}/Packages" > "${root}/Packages.gz"
     done
-    [[ ${mode} != mixed ]] || printf 'changed\n' >> \
-        "${d}/site/binpkgs/x86-64/official.txt"
+    [[ ${mode} != stale-gz ]] || printf '\n' >> "${d}/site/binpkgs/x86-64/Packages"
 
     cat > "${d}/bin/curl" <<EOF
 #!/bin/bash
@@ -969,15 +969,19 @@ EOF
     printf '%s\n' "${out}"
 }
 
-echo "== status.sh 验证同代清单并轮替抽查"
+echo "== status.sh 核对索引并轮替抽查"
 out=$(index_health_probe healthy)
-ok "两个频道的同代清单都通过" \
-   "$(grep -c '同代清单.*验证通过' <<< "${out}")" "2"
+ok "两个频道的索引都通过" "$(grep -c '索引.*2 个包' <<< "${out}")" "2"
+ok "索引正常时不报故障" "$(grep -c '索引.*<--' <<< "${out}")" "0"
 ok "两个频道都明确标出抽查数量" \
    "$(grep -c '取包抽查.*2 个均可下载' <<< "${out}")" "2"
-out=$(index_health_probe mixed)
-ok "快照与 generation.json 混代时判为故障" \
-   "$([[ $(grep 'stable 同代清单' <<< "${out}") == *'<--'* ]] && echo failed)" \
+out=$(index_health_probe stale-gz)
+ok "Packages.gz 与 Packages 不一致时判为故障" \
+   "$([[ $(grep 'stable 索引' <<< "${out}") == *'Packages.gz'*'<--'* ]] && echo failed)" \
+   "failed"
+out=$(index_health_probe count)
+ok "PACKAGES 与 PATH 条数不符时判为故障" \
+   "$([[ $(grep 'stable 索引' <<< "${out}") == *'PATH 有 2 条'*'<--'* ]] && echo failed)" \
    "failed"
 out=$(index_health_probe missing)
 ok "第二个 PATH 返回 404 时抽查会发现" \
