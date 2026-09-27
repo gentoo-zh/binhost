@@ -111,13 +111,14 @@ jobs:
 
             git checkout -q -B "${branch}" "${base}"
             python3 tools/add-package.py "${cp}"
+            python3 tools/gen-worlds.py
 
             if git diff --quiet -- build/packages.txt; then
               echo "  ${cp} 清单没有变化，跳过"
               continue
             fi
 
-            git commit -q -m "build: add ${cp}" -- build/packages.txt
+            git commit -q -m "build: add ${cp}" -- build/packages.txt builders/stable/world builders/unstable/world
             git push -q origin "${branch}"
 
             body=$(printf '%s\n' \

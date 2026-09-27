@@ -80,7 +80,9 @@ jobs:
 
             git checkout -q -B "${branch}" "${base}"
             python3 tools/move-package.py "${source}" "${target}"
-            git commit -q -m "build: move ${source} to ${target}" -- build/packages.txt
+            python3 tools/gen-worlds.py
+            git commit -q -m "build: move ${source} to ${target}" -- build/packages.txt \
+              build/stable-excluded.txt builders/stable/world builders/unstable/world
             git push -q origin "${branch}"
 
             body=$(printf '%s\n' \
