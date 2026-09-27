@@ -84,9 +84,9 @@ case "${command}" in
 esac
 EOF
 
-cat > "${WORK}/bin/docker" <<'EOF'
+cat > "${WORK}/bin/systemd-nspawn" <<'EOF'
 #!/bin/bash
-printf '%s\n' docker >> "${DOCKER_CALLS}"
+printf '%s\n' "${*//$'\n'/ }" >> "${NSPAWN_CALLS}"
 mkdir -p "${TEST_PKGDIR}/sys-kernel/gentoo-cjk-kernel"
 cp "${TEST_BUILT}" \
     "${TEST_PKGDIR}/sys-kernel/gentoo-cjk-kernel/gentoo-cjk-kernel-7.1.7-1.gpkg.tar"
@@ -107,6 +107,11 @@ case "${source}" in
         cp "${source}" "${TEST_REMOTE}${path}"
         ;;
 esac
+EOF
+cat > "${WORK}/bin/curl" <<'EOF'
+#!/bin/bash
+cat > /dev/null
+printf '%s\n' "$*" >> "${CURL_CALLS}"
 EOF
 cat > "${WORK}/bin/git" <<'EOF'
 #!/bin/bash
@@ -129,7 +134,7 @@ write_manifest() {
 
 reset_case() {
     rm -rf "${WORK}/pkgdir" "${WORK}/published" "${WORK}/remote" \
-        "${WORK}/docker.calls" "${WORK}/git.calls" "${WORK}/overlay/.git"
+        "${WORK}/nspawn.calls" "${WORK}/curl.calls" "${WORK}/git.calls" "${WORK}/overlay/.git"
     mkdir -p "${WORK}/pkgdir/sys-kernel/gentoo-cjk-kernel" \
         "${WORK}/published" "${WORK}/remote/archive"
     printf '7.1 7.1.7\n' > "${WORK}/series"
@@ -146,15 +151,16 @@ run_archive() {
     PATH="${WORK}/bin:${PATH}" OVERLAY="${WORK}/overlay" TREE="${WORK}/tree" \
         PKGDIR="${WORK}/pkgdir" PUBLISHED_DIR="${WORK}/published" \
         MANIFEST="${WORK}/Manifest" LOCK="${WORK}/lock" \
-        REMOTE=test REMOTE_ROOT=/archive DOCKER=docker MAX_BUILDS="$1" \
+        REMOTE=test REMOTE_ROOT=/archive MAX_BUILDS="$1" \
+        REPO="${ROOT}" ALERT_CONF="${ALERT_CONF:-/nonexistent}" \
         RETIRE_PER_RUN="${RETIRE_PER_RUN}" REMOTE_CHECK_MODE="${REMOTE_CHECK_MODE}" \
         FAKE_SIZE="${FAKE_SIZE:-}" FAKE_DIGEST="${FAKE_DIGEST:-}" \
         RSYNC_FAIL="${RSYNC_FAIL}" DOWNLOAD_SOURCE="${DOWNLOAD_SOURCE}" \
         TEST_REMOTE="${WORK}/remote" TEST_REMOTE_ROOT=/archive \
         TEST_REMOTE_NAME=test TEST_PKGDIR="${WORK}/pkgdir" \
-        DOCKER_CALLS="${WORK}/docker.calls" \
+        NSPAWN_CALLS="${WORK}/nspawn.calls" CURL_CALLS="${WORK}/curl.calls" \
         GIT_CALLS="${WORK}/git.calls" GIT_FETCH_RC="${GIT_FETCH_RC}" \
-        OVERLAY_FETCH_WAIT=0 \
+        OVERLAY_FETCH_WAIT=0 BUILD_WINDOW_S="${BUILD_WINDOW_S:-14400}" \
         EXTRA_VARIANTS="${EXTRA_VARIANTS-}" \
         TEST_BUILT="${TEST_BUILT}" bash "${ARCHIVE_SCRIPT}"
 }
@@ -177,7 +183,7 @@ if run_archive 0 >"${WORK}/corrupt.out" 2>&1; then
     exit 1
 fi
 grep -q "${NAME}" "${WORK}/corrupt.out"
-[[ ! -s ${WORK}/docker.calls ]]
+[[ ! -s ${WORK}/nspawn.calls ]]
 echo "  ✓ 远端与保留副本都损坏时不重建也不发布"
 
 reset_case
@@ -192,16 +198,21 @@ read -r pending_size pending_algorithm pending_digest < "${WORK}/pending.entry"
 [[ ${pending_algorithm} == SHA512 ]]
 [[ ${pending_digest} == "$(sha512sum "${TEST_BUILT}" | awk '{print $1}')" ]]
 echo "  ✓ Manifest 没有普通变体时构建发布并记录待加入条目"
+grep -q -- '--volatile=overlay -M binhost-unstable ' "${WORK}/nspawn.calls"
+grep -qF -- "--bind ${WORK}/pkgdir:/var/cache/binpkgs " "${WORK}/nspawn.calls"
+grep -qF "'sys-kernel/gentoo-cjk-kernel' 'cjk'" "${WORK}/nspawn.calls"
+grep -qF '>> /etc/portage/profile/package.use' "${WORK}/nspawn.calls"
+echo "  ✓ 在 binhost-unstable 的临时副本里构建，产物写入 PKGDIR"
 
 run_archive 1 >/dev/null
 [[ $(grep -c "^DIST ${NAME} " "${WORK}/published/pending-manifest.txt") == 1 ]]
-[[ $(wc -l < "${WORK}/docker.calls") == 1 ]]
+[[ $(wc -l < "${WORK}/nspawn.calls") == 1 ]]
 echo "  ✓ 待加入 Manifest 条目会去重"
 
 printf X | dd of="${WORK}/remote/archive/7.1/${NAME}" bs=1 seek=512 conv=notrunc status=none
 recovered_pending=$(run_archive 1)
 grep -q '从保留副本恢复' <<< "${recovered_pending}"
-[[ $(wc -l < "${WORK}/docker.calls") == 1 ]]
+[[ $(wc -l < "${WORK}/nspawn.calls") == 1 ]]
 cmp "${WORK}/built-first.gpkg.tar" "${WORK}/remote/archive/7.1/${NAME}"
 echo "  ✓ pending 条目对应的远端损坏时从保留副本恢复且不重建"
 
@@ -217,7 +228,7 @@ python3 "${ROOT}/build/kernel-manifest.py" entry \
 read -r _ _ updated_digest < "${WORK}/pending.entry"
 [[ ${updated_digest} == "$(sha512sum "${TEST_BUILT}" | awk '{print $1}')" ]]
 [[ ${updated_digest} != "$(sha512sum "${WORK}/built-first.gpkg.tar" | awk '{print $1}')" ]]
-[[ $(wc -l < "${WORK}/docker.calls") == 2 ]]
+[[ $(wc -l < "${WORK}/nspawn.calls") == 2 ]]
 echo "  ✓ pending 条目两侧损坏时重建并更新摘要"
 
 reset_case
@@ -227,7 +238,7 @@ cp "${TEST_BUILT}" "${WORK}/published/7.1/${NAME}"
 recovered=$(run_archive 0)
 grep -q "从保留副本恢复" <<< "${recovered}"
 cmp "${TEST_BUILT}" "${WORK}/remote/archive/7.1/${NAME}"
-[[ ! -s ${WORK}/docker.calls ]]
+[[ ! -s ${WORK}/nspawn.calls ]]
 echo "  ✓ 远端损坏时会从正确的保留副本恢复且不起容器"
 
 reset_case
@@ -308,6 +319,20 @@ run_archive 0 >/dev/null
 echo "  ✓ overlay 移除整条线后远端与本地副本一起退役"
 
 reset_case
+: > "${WORK}/Manifest"
+mkdir -p "${WORK}/remote/archive/6.18" "${WORK}/published/6.18"
+cp "${TEST_BUILT}" "${WORK}/remote/archive/6.18/gentoo-cjk-kernel-6.18.43-1.amd64.gpkg.tar"
+cp "${TEST_BUILT}" "${WORK}/published/6.18/gentoo-cjk-kernel-6.18.43-1.amd64.gpkg.tar"
+BUILD_WINDOW_S=0 run_archive 1 > "${WORK}/out" 2>&1
+grep -q '已达构建时限 0 秒，其余 1 个留到下一轮' "${WORK}/out"
+[[ ! -s ${WORK}/nspawn.calls ]]
+[[ ! -e ${WORK}/remote/archive/7.1/${NAME} ]]
+[[ ! -e ${WORK}/remote/archive/6.18 ]]
+run_archive 1 >/dev/null
+[[ -e ${WORK}/remote/archive/7.1/${NAME} ]]
+echo "  ✓ 超过构建时限后不再开始构建，照常退役，未建的版本下一轮再建"
+
+reset_case
 mkdir -p "${WORK}/remote/archive/7.1" "${WORK}/published/7.1"
 cp "${TEST_BUILT}" "${WORK}/remote/archive/7.1/${NAME}"
 cp "${TEST_BUILT}" "${WORK}/published/7.1/${NAME}"
@@ -360,7 +385,7 @@ cp "${WORK}/meta32.tar.zst" \
 tar --mtime=@3 -C "${WORK}/outer32" -cf "${WORK}/built-cjk32.gpkg.tar" \
     gentoo-cjk-kernel-7.1.7-1
 
-cat > "${WORK}/bin/docker" <<'STUB'
+cat > "${WORK}/bin/systemd-nspawn" <<'STUB'
 #!/bin/bash
 mkdir -p "${TEST_PKGDIR}/sys-kernel/gentoo-cjk-kernel"
 built="${TEST_BUILT}"
@@ -374,7 +399,7 @@ fi
 cp "${built}" \
     "${TEST_PKGDIR}/sys-kernel/gentoo-cjk-kernel/gentoo-cjk-kernel-7.1.7-1.gpkg.tar"
 STUB
-chmod +x "${WORK}/bin/docker"
+chmod +x "${WORK}/bin/systemd-nspawn"
 
 write_manifest_both() {
     write_manifest "${NAME}" "${WORK}/built-first.gpkg.tar"
@@ -456,5 +481,15 @@ if run_archive 1 > "${WORK}/out" 2>&1; then
 fi
 grep -q '本地副本已 30 小时未更新' "${WORK}/out"
 [[ ! -e ${WORK}/remote/archive/7.1/${NAME} ]]
-[[ ! -s ${WORK}/docker.calls ]]
+[[ ! -s ${WORK}/nspawn.calls ]]
 echo "  ✓ overlay 副本过期且无法取得时不构建"
+
+reset_case
+: > "${WORK}/Manifest"
+TEST_BUILT="${WORK}/wrong-inner.gpkg.tar"
+printf 'TELEGRAM_TOKEN=t\nTELEGRAM_CHAT=c\n' > "${WORK}/alert.conf"
+rc=0
+ALERT_CONF="${WORK}/alert.conf" run_archive 1 > "${WORK}/out" 2>&1 || rc=$?
+[[ ${rc} == 10 ]]
+grep -q 'gentoo-cjk-kernel 归档失败' "${WORK}/curl.calls"
+echo "  ✓ 失败时发出告警并以已告警的退出码结束"

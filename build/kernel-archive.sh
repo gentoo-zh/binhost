@@ -9,12 +9,12 @@ main() {
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 PACKAGE="${PACKAGE:-sys-kernel/gentoo-cjk-kernel}"
-OVERLAY="${OVERLAY:-/var/lib/binhost/overlay}"
+OVERLAY="${OVERLAY:-/var/db/repos/gentoo-zh}"
 TREE="${TREE:-/var/db/repos/gentoo}"
 DISTDIR="${DISTDIR:-/var/cache/distfiles}"
 PKGDIR="${PKGDIR:-/var/cache/binhost/kernel/x86-64}"
-IMAGE="${IMAGE:-gentoo-zh/binhost-base:x86-64}"
-COMMON_PACKAGE_USE="${COMMON_PACKAGE_USE:-${SCRIPT_DIR}/package.use.common}"
+MACHINE="${MACHINE:-binhost-unstable}"
+REPO="${REPO:-/var/lib/binhost}"
 # Must match KV_LOCALVERSION in the -bin ebuild.
 LOCALVERSION="${LOCALVERSION:--gentoo-cjk-dist-bin}"
 ARCH="${ARCH:-amd64}"
@@ -27,7 +27,9 @@ RETIRE_PER_RUN="${RETIRE_PER_RUN:-2}"
     exit 1
 }
 RETIRE_MIN_KEEP_SHARE="${RETIRE_MIN_KEEP_SHARE:-50}"
-MAX_BUILDS="${MAX_BUILDS:-10}"
+MAX_BUILDS="${MAX_BUILDS:-4}"
+# binhost-update skips its run while this job holds the shared lock.
+BUILD_WINDOW_S="${BUILD_WINDOW_S:-14400}"
 REQUIRED_USE_FLAG="${REQUIRED_USE_FLAG:-cjk}"
 # One "suffix use-flags" per line, built in addition to the plain kernel.
 EXTRA_VARIANTS="${EXTRA_VARIANTS-.cjk32 cjk32}"
@@ -37,16 +39,16 @@ while IFS= read -r line; do
 done <<< "${EXTRA_VARIANTS}"
 BIN_PACKAGE="${BIN_PACKAGE:-${PACKAGE}-bin}"
 MANIFEST="${MANIFEST:-${OVERLAY}/${BIN_PACKAGE}/Manifest}"
-if [[ -z ${DOCKER:-} ]]; then
-    DOCKER="docker"
-    docker info >/dev/null 2>&1 || DOCKER="sudo docker"
-fi
-JOBS="${JOBS:-24}"
-MAKEOPTS="${MAKEOPTS:--j$(nproc) -l$(nproc)}"
-LOCK="${LOCK:-/var/lib/binhost/stage/build.lock}"
+LOCK="${LOCK:-/var/lib/binhost/build.lock}"
 OVERLAY_STALE_H="${OVERLAY_STALE_H:-26}"
 
-die() { echo "!!! $*" >&2; exit 1; }
+die() {
+    echo "!!! $*" >&2
+    # shellcheck source=/dev/null
+    . "${REPO}/ops/alert.sh"
+    alert "gentoo-cjk-kernel 归档失败（$(hostname)）：$*"
+    alert_exit 1
+}
 
 store_published_copy() {
     local source="$1" series="$2" name="$3" directory destination temporary
@@ -155,8 +157,9 @@ else
 fi
 echo "overlay $(git -C "${OVERLAY}" rev-parse --short HEAD)"
 
+# The -bin kernels are ~arch only; a stable host would otherwise list none.
 mapfile -t wanted < <(
-    OVERLAY="${OVERLAY}" TREE="${TREE}" PACKAGE="${PACKAGE}" \
+    OVERLAY="${OVERLAY}" TREE="${TREE}" PACKAGE="${PACKAGE}" ACCEPT_KEYWORDS="~${ARCH}" \
         python3 "${SCRIPT_DIR}/kernel-series.py"
 )
 [[ ${#wanted[@]} -gt 0 ]] || die "overlay 未提供 ${PACKAGE} 的任何版本"
@@ -224,30 +227,36 @@ else
     install -dm755 "${PKGDIR}"
 fi
 
-for entry in ${todo[@]+"${todo[@]}"}; do
-    read -r series version suffix extra manifest_source <<< "${entry}"
+for i in "${!todo[@]}"; do
+    if (( SECONDS >= BUILD_WINDOW_S )); then
+        echo ">>> 已达构建时限 ${BUILD_WINDOW_S} 秒，其余 $(( ${#todo[@]} - i )) 个留到下一轮"
+        break
+    fi
+    read -r series version suffix extra manifest_source <<< "${todo[i]}"
     [[ ${suffix} == _ ]] && suffix=""
     [[ ${extra} == _ ]] && extra=""
     atom="=${PACKAGE}-${version}"
     use_flags="${REQUIRED_USE_FLAG}${extra:+ ${extra}}"
     echo "::: ${series} ${atom}${suffix}"
-    ${DOCKER} run --rm -i --security-opt=no-new-privileges \
-        -v "${TREE}:/var/db/repos/gentoo:ro" \
-        -v "${OVERLAY}:/var/db/repos/gentoo-zh:ro" \
-        -v "${DISTDIR}:/var/cache/distfiles" \
-        -v "${PKGDIR}:/var/cache/binpkgs" \
-        -v "${COMMON_PACKAGE_USE}:/tmp/package.use.common:ro" \
-        -e "MAKEOPTS=${MAKEOPTS}" -e "JOBS=${JOBS}" \
-        "${IMAGE}" /bin/bash -euo pipefail -c "
-            mkdir -p /etc/portage/package.use /etc/portage/package.unmask \
+    # --ephemeral copies the whole machine on ZFS (no snapshot) and fails; a tmpfs
+    # overlay leaves the machine untouched and is discarded after each build.
+    systemd-nspawn --volatile=overlay -M "${MACHINE}" \
+        --bind "${DISTDIR}:/var/cache/distfiles" \
+        --bind "${PKGDIR}:/var/cache/binpkgs" \
+        --bind /var/cache/binhost/gentoo \
+        --bind-ro "${TREE}:/var/db/repos/gentoo" \
+        --bind-ro "${OVERLAY}:/var/db/repos/gentoo-zh" \
+        --bind-ro "${REPO}/builders:/etc/binhost" \
+        --bind /var/tmp/portage/kernel:/var/tmp/portage \
+        /bin/bash -euo pipefail -c "
+            mkdir -p /etc/portage/profile /etc/portage/package.unmask \
                 /etc/kernel/config.d
-            cat /tmp/package.use.common > /etc/portage/package.use/binhost-deps
             printf 'virtual/dist-kernel\n' \
                 > /etc/portage/package.unmask/binhost-dist-kernel
             printf 'CONFIG_LOCALVERSION=\"%s\"\n' '${LOCALVERSION}' \
                 > /etc/kernel/config.d/90-binpkg-localversion.config
             printf '%s %s\n' '${PACKAGE}' '${use_flags}' \
-                >> /etc/portage/package.use/binhost-deps
+                >> /etc/portage/profile/package.use
             rm -f /var/cache/binpkgs/${PACKAGE}/${PACKAGE#*/}-${version}-[0-9]*.gpkg.tar
             emaint binhost --fix >/dev/null
             emerge --quiet-build -1 --buildpkg --usepkg '${atom}'

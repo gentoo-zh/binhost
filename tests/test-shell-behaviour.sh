@@ -431,9 +431,10 @@ shared_lock=$(grep -c "LOCK=\"\${LOCK:-/var/lib/binhost/stage/build.lock}\"" \
     "${ROOT}/build/build-container.sh")
 ok "两个频道共用全局构建锁" "${shared_lock}" "1"
 
-archive_lock=$(grep -c "LOCK=\"\${LOCK:-/var/lib/binhost/stage/build.lock}\"" \
-    "${ROOT}/build/kernel-archive.sh")
-ok "内核归档与一般构建共用全局锁" "${archive_lock}" "1"
+update_lock=$(sed -n 's/^LOCKFILE=//p' "${ROOT}/builders/binhost-update")
+# shellcheck disable=SC2016  # we match the literal ${LOCK:-...}, not its value
+archive_lock=$(sed -n 's/^LOCK="\${LOCK:-\(.*\)}"$/\1/p' "${ROOT}/build/kernel-archive.sh")
+ok "内核归档与新构建机的频道更新共用构建锁" "${archive_lock:-无}" "${update_lock:-缺}"
 
 for script in base-image.sh build-container.sh cycle.sh run-full.sh publish.sh; do
     sourced=$(grep -c 'source=build/channel.sh' "${ROOT}/build/${script}")
@@ -684,7 +685,7 @@ ok "常规构建容器不解开它" \
 
 echo "== kernel-archive 的每轮上限与 USE 要求"
 ok "超过上限时说明留了几个" \
-   "$(grep -c '留到下一轮' "${ROOT}/build/kernel-archive.sh")" "1"
+   "$(grep -cF -- '- MAX_BUILDS )) 个留到下一轮' "${ROOT}/build/kernel-archive.sh")" "1"
 ok "发布前回读产物的 USE" \
    "$(grep -c 'tar -xO metadata/USE' "${ROOT}/build/kernel-archive.sh")" "1"
 
