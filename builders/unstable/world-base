@@ -1,0 +1,2 @@
+# Provides eclean-pkg for run-update, as in the official builders; not an overlay package.
+app-portage/gentoolkit
