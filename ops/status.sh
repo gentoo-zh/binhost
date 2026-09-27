@@ -32,12 +32,13 @@ INDEX_SAMPLE_COUNT="${INDEX_SAMPLE_COUNT:-3}"
 [[ ${INDEX_SAMPLE_COUNT} =~ ^[1-9][0-9]*$ ]] || INDEX_SAMPLE_COUNT=3
 KERNEL_PACKAGE="${KERNEL_PACKAGE:-sys-kernel/gentoo-cjk-kernel}"
 KERNEL_ARCH="${KERNEL_ARCH:-amd64}"
-KERNEL_OVERLAY="${KERNEL_OVERLAY:-/var/lib/binhost/overlay}"
+KERNEL_OVERLAY="${KERNEL_OVERLAY:-/var/db/repos/gentoo-zh}"
 KERNEL_TREE="${KERNEL_TREE:-/var/db/repos/gentoo}"
 KERNEL_SERIES_TOOL="${KERNEL_SERIES_TOOL:-/var/lib/binhost/build/kernel-series.py}"
-# cycle.sh, kernel-archive.sh and build-container.sh all take this lock, so
-# holding it means some build is mid-flight and the archive is still catching up.
-BUILD_LOCK="${BUILD_LOCK:-/var/lib/binhost/stage/build.lock}"
+# binhost-update and kernel-archive.sh both take this lock, so holding it
+# means some build is mid-flight and the archive is still catching up.
+BUILD_LOCK="${BUILD_LOCK:-/var/lib/binhost/build.lock}"
+BINHOST_UPDATE="${BINHOST_UPDATE:-/var/lib/binhost/builders/binhost-update}"
 
 problems=0
 failures=()
@@ -94,7 +95,7 @@ check_kernel_archive() {
     fi
 
     output=$(OVERLAY="${KERNEL_OVERLAY}" TREE="${KERNEL_TREE}" \
-        PACKAGE="${KERNEL_PACKAGE}" python3 "${KERNEL_SERIES_TOOL}" 2>&1)
+        PACKAGE="${KERNEL_PACKAGE}" ACCEPT_KEYWORDS="~${KERNEL_ARCH}" python3 "${KERNEL_SERIES_TOOL}" 2>&1)
     rc=$?
     if (( rc != 0 )); then
         bad "内核归档" "无法取得 overlay 版本：${output:-无输出}"
@@ -228,10 +229,18 @@ if [[ -d ${SIGNING_GNUPGHOME} ]]; then
         SIGNING_KEY=$(sed -n 's/^Environment=SIGNING_KEY=//p' \
             /etc/systemd/system/binhost-build.service 2>/dev/null | tail -1)
     fi
+    # The new builder keeps the fingerprint in binhost-update, not in a unit.
+    if [[ -z ${SIGNING_KEY:-} ]]; then
+        # shellcheck disable=SC2016  # we match the literal ${SIGNING_KEY:-...}
+        SIGNING_KEY=$(sed -n 's/^SIGNING_KEY=\${SIGNING_KEY:-\(.*\)}$/\1/p' \
+            "${BINHOST_UPDATE}" 2>/dev/null)
+    fi
     if [[ -z ${SIGNING_KEY:-} ]]; then
         bad "签名密钥" "无法确定应使用的密钥指纹，SIGNING_KEY 未设置"
     else
-        secret=$(sudo gpg --homedir "${SIGNING_GNUPGHOME}" --with-colons \
+        gpg_cmd=(sudo gpg)
+        (( EUID == 0 )) && gpg_cmd=(gpg)
+        secret=$("${gpg_cmd[@]}" --homedir "${SIGNING_GNUPGHOME}" --with-colons \
                  --list-secret-keys "${SIGNING_KEY}" 2>/dev/null)
         gpg_rc=$?
         caps=$(awk -F: '/^sec:/{print $12; exit}' <<< "${secret}")

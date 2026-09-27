@@ -422,10 +422,10 @@ ok "stable 定时器实际启动 stable 服务" "${stable_timer_target}" \
    "binhost-build.service"
 ok "unstable 定时器实际启动 unstable 服务" "${unstable_timer_target}" \
    "binhost-build-unstable.service"
-ok "安装脚本停用两个频道的旧构建定时器与内核定时器" \
-   "$(grep -c '^sudo systemctl disable --now binhost-build.timer binhost-build-unstable.timer binhost-kernel.timer$' <<< "${installer}")" "1"
-ok "安装脚本不再启用旧构建定时器与内核定时器" \
-   "$(grep '^sudo systemctl enable' <<< "${installer}" | grep -c 'binhost-build\|binhost-kernel')" "0"
+ok "安装脚本停用旧构建机的构建、内核与健康检查定时器" \
+   "$(grep -c '^sudo systemctl disable --now binhost-build.timer binhost-build-unstable.timer binhost-kernel.timer binhost-status.timer$' <<< "${installer}")" "1"
+ok "安装脚本不再在旧构建机启用任何定时器" \
+   "$(grep -c '^sudo systemctl enable' <<< "${installer}")" "0"
 
 shared_lock=$(grep -c "LOCK=\"\${LOCK:-/var/lib/binhost/stage/build.lock}\"" \
     "${ROOT}/build/build-container.sh")
@@ -435,6 +435,9 @@ update_lock=$(sed -n 's/^LOCKFILE=//p' "${ROOT}/builders/binhost-update")
 # shellcheck disable=SC2016  # we match the literal ${LOCK:-...}, not its value
 archive_lock=$(sed -n 's/^LOCK="\${LOCK:-\(.*\)}"$/\1/p' "${ROOT}/build/kernel-archive.sh")
 ok "内核归档与新构建机的频道更新共用构建锁" "${archive_lock:-无}" "${update_lock:-缺}"
+# shellcheck disable=SC2016  # we match the literal ${BUILD_LOCK:-...}, not its value
+status_lock=$(sed -n 's/^BUILD_LOCK="\${BUILD_LOCK:-\(.*\)}"$/\1/p' "${ROOT}/ops/status.sh")
+ok "健康检查按新构建机的构建锁判断内核归档是否在执行" "${status_lock:-无}" "${update_lock:-缺}"
 
 for script in base-image.sh build-container.sh cycle.sh run-full.sh publish.sh; do
     sourced=$(grep -c 'source=build/channel.sh' "${ROOT}/build/${script}")
@@ -591,6 +594,25 @@ ok "无法获取目标版本时算故障，不再当成通过" "$(version_probe 
 ok "版本一致时才算通过" "$(version_probe "${SHA40}" "${SAME}")" "passed"
 ok "只修改 generation.py 时镜像机仍判定部署落后" \
    "$(version_probe "${SHA40}" "${NEW}" "${GENERATION_CHANGED}")" "failed"
+
+d=$(mktemp -d); mkdir -p "${d}/bin" "${d}/gnupg"
+# shellcheck disable=SC2016  # binhost-update carries the literal ${SIGNING_KEY:-...}
+printf 'SIGNING_KEY=${SIGNING_KEY:-%s}\n' "${SHA40}" > "${d}/binhost-update"
+printf '#!/bin/bash\nexec "$@"\n' > "${d}/bin/sudo"
+printf '#!/bin/bash\necho "$*" > "%s/gpg.args"\necho sec:u:255:22:K:1:::u:::scESC:\n' \
+    "${d}" > "${d}/bin/gpg"
+printf '#!/bin/bash\nexit 22\n' > "${d}/bin/curl"
+printf '#!/bin/bash\nexit 1\n' > "${d}/bin/openssl"
+chmod +x "${d}/bin"/*
+key_out=$( cd "${ROOT}" && env -u SIGNING_KEY PATH="${d}/bin:${PATH}" ALERT_CONF=/nonexistent \
+    STATE_FILE="${d}/state" VERSION_FILE="${d}/VERSION" SIGNING_GNUPGHOME="${d}/gnupg" \
+    BINHOST_UPDATE="${d}/binhost-update" DISK_PATH="${d}/nodisk" \
+    HEARTBEAT="${d}/nowhere/.health" SITE_WORK="${d}/nowork" SITE_DEST="${d}/nodest" \
+    MONITORS_FILE="${d}/nomon" COMPONENT=mirror bash ops/status.sh 2>&1 | grep '签名密钥' )
+ok "没有 binhost-build.service 时从 binhost-update 取得签名密钥指纹" \
+   "$([[ ${key_out} == *"${SHA40:0:8}，无过期时间"* && ${key_out} != *'<--'* ]] &&
+      grep -c -- "--list-secret-keys ${SHA40}" "${d}/gpg.args")" "1"
+rm -rf "${d}"
 
 site_lock_probe() {
     local d hold out
