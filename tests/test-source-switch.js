@@ -96,6 +96,7 @@ function selected() {
 
 const cernet = "https://mirrors.cernet.edu.cn/gentoo-zh";
 const origin = "https://distfiles.gentoozh.org";
+const osuosl = "https://ftp2.osuosl.org/pub/gentoo-zh";
 const nju = "https://mirror.nju.edu.cn/gentoo-zh";
 
 check("首页包含三组镜像选择器", groups.length === 3, String(groups.length));
@@ -131,8 +132,8 @@ check("繁体中文默认选择源站",
 
 root.setAttribute("data-lang", "en");
 listeners.langchange();
-check("英文默认选择源站",
-      selected().every(function (uri) { return uri === origin; }),
+check("英文默认选择 OSUOSL",
+      selected().every(function (uri) { return uri === osuosl; }),
       JSON.stringify(selected()));
 
 groups[0].opts.find(function (option) {
