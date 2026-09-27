@@ -6,7 +6,12 @@ CHANNEL=$1
 
 REPO=${REPO:-/var/lib/binhost}
 REMOTE=${REMOTE:-mirror}
-REMOTE_ROOT=${REMOTE_ROOT:-/srv/binhost-new/${CHANNEL}}
+case ${CHANNEL} in
+stable) REMOTE_ROOT=${REMOTE_ROOT:-/srv/pub/binpkgs/x86-64} BUILD_STATUS=build-status.json ;;
+unstable) REMOTE_ROOT=${REMOTE_ROOT:-/srv/pub/unstable/binpkgs/x86-64} BUILD_STATUS=build-status-unstable.json ;;
+*) echo "用法：$0 stable|unstable" >&2; exit 2 ;;
+esac
+SITE_ROOT=${SITE_ROOT:-/srv/mirrors}
 SIGNING_KEY=${SIGNING_KEY:-6A0726AF1476A2F382C6AC6638A0234EC16AD42E}
 SIGNING_GPG_HOME=${SIGNING_GPG_HOME:-/var/lib/binhost/gnupg}
 VERIFY_GPG_HOME=${VERIFY_GPG_HOME:-/etc/portage/gnupg}
@@ -19,13 +24,20 @@ TMPFILE=/var/log/binhost-update-${CHANNEL}.log
 
 exec {lock}>"${LOCKFILE}"
 if ! flock -n "${lock}"; then
-	echo "锁 ${LOCKFILE} 已被占用，退出"
-	exit 111
+	echo "锁 ${LOCKFILE} 已被占用，本次跳过"
+	exit 0
 fi
 
 exec > >(tee "${TMPFILE}") 2>&1
 
 failed=()
+publish_failed=0
+
+# The site reads these files while they are replaced; the rename keeps a half-written one out of sight.
+push() {
+	# shellcheck disable=SC2029
+	ssh "${REMOTE}" "cat > $1.new && mv -f $1.new $1" || echo "!! 未能写入 ${REMOTE}:$1"
+}
 
 echo "开始于 $(date -u)"
 
@@ -43,13 +55,14 @@ nspawn_command=(systemd-nspawn -M "binhost-${CHANNEL}"
 	--bind-ro "${REPO}/builders:/etc/binhost"
 	--bind "/var/tmp/portage/${CHANNEL}:/var/tmp/portage")
 
+started=$(date +%s)
 "${nspawn_command[@]}" /etc/binhost/run-update
 ret=$?
 (( ret == 0 )) || failed+=("run-update（退出码 ${ret}）")
 
 # shellcheck disable=SC2016
 if ! "${nspawn_command[@]}" /etc/binhost/prune-unpublishable; then
-	failed+=(prune-unpublishable)
+	failed+=(prune-unpublishable); publish_failed=1
 elif systemd-run --wait --pipe -p PrivateNetwork=yes -p ProtectSystem=strict -p PrivateTmp=yes \
 	-p ReadWritePaths="${PKGDIR} ${SIGNING_GPG_HOME} /run/lock" \
 	-E BINPKG_GPG_SIGNING_KEY="${SIGNING_KEY}" \
@@ -58,13 +71,24 @@ elif systemd-run --wait --pipe -p PrivateNetwork=yes -p ProtectSystem=strict -p 
 	sh -c 'set -o pipefail; find "$1" -name "*.gpkg.tar" -print0 | xargs -0 -r -n 1 gpkg-sign --skip-signed --allow-unsigned' sh "${PKGDIR}"; then
 	if "${nspawn_command[@]}" emaint binhost --fix; then
 		rsync --archive --delete --delete-after --omit-dir-times --delay-updates --mkpath --stats \
-			"${PKGDIR}"/* "${REMOTE}:${REMOTE_ROOT}/" || failed+=(rsync)
+			"${PKGDIR}"/* "${REMOTE}:${REMOTE_ROOT}/" || { failed+=(rsync); publish_failed=1; }
 	else
-		failed+=("emaint binhost --fix")
+		failed+=("emaint binhost --fix"); publish_failed=1
 	fi
 else
-	failed+=(gpkg-sign)
+	failed+=(gpkg-sign); publish_failed=1
 fi
+if (( ! publish_failed )); then
+	awk '/^PACKAGES: /{n=$2} /^TIMESTAMP: /{ts=$2} $1 == "REPO:" && $2 == "gentoo-zh" {o++}
+		END{printf "{\"packages\":%d,\"overlay\":%d,\"deps\":%d,\"generated\":%d}\n", n, o, n-o, ts}' \
+		"${PKGDIR}/Packages" | push "${REMOTE_ROOT}/status.json"
+fi
+state="done"
+(( ${#failed[@]} )) && state=failed
+finished=$(date +%s)
+printf '{"state":"%s","phase":"%s","started":%d,"finished":%d,"duration":%d,"progress_at":%d,"generated":%d}\n' \
+	"${state}" "${state}" "${started}" "${finished}" $((finished - started)) "${finished}" "${finished}" |
+	push "${SITE_ROOT}/${BUILD_STATUS}"
 
 (( ${#failed[@]} )) || exit 0
 
