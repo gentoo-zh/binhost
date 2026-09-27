@@ -2,7 +2,7 @@
 Description=每日检查发行版内核是否有新版本
 
 [Timer]
-OnCalendar=*-*-* 10:00:00 Asia/Shanghai
+OnCalendar=*-*-* 02:00:00 UTC
 Persistent=true
 RandomizedDelaySec=15m
 
