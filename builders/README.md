@@ -18,6 +18,6 @@ $N --bind-ro <签名公钥文件>:/tmp/binhost.asc sh -c 'getuto && gpg --homedi
 $N emerge -pvuDN @world > /tmp/world-stable.txt
 ```
 
-宿主机的 `/etc/portage/gnupg` 用于 `gpkg-sign --skip-signed` 以 nobody 身份校验已签名的包。两台机器的 `emerge -pvuDN @world` 输出交给维护者，确认没有冲突后再安装单元并启用 timer：`mkdir -p /var/cache/binhost/kernel/x86-64 /var/tmp/portage/kernel && cp /var/lib/binhost/deploy/systemd/binhost-{alert@.service,update@.service,update-*.timer,kernel.service,kernel.timer} /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now binhost-update-{stable,unstable}.timer binhost-kernel.timer`。内核归档由 `binhost-kernel.service` 在 `binhost-unstable` 的临时副本中构建，因此不需要第三台机器。
+宿主机的 `/etc/portage/gnupg` 用于 `gpkg-sign --skip-signed` 以 nobody 身份校验已签名的包。两台机器的 `emerge -pvuDN @world` 输出交给维护者，确认没有冲突后再安装单元并启用 timer：`mkdir -p /var/cache/binhost/kernel/x86-64 /var/tmp/portage/kernel && cp /var/lib/binhost/deploy/systemd/binhost-{alert@.service,update@.service,update-*.timer,kernel.service,kernel.timer,status.service,status.timer} /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now binhost-update-{stable,unstable}.timer binhost-kernel.timer binhost-status.timer`。`binhost-status` 核对内核归档与签名密钥，并按 `/var/lib/binhost/build/VERSION` 核对部署版本，因此每次同步仓库后须写入所部署的提交号。内核归档由 `binhost-kernel.service` 在 `binhost-unstable` 的临时副本中构建，因此不需要第三台机器。
 
 `binhost-update` 每轮更新前给机器建快照，保留最近 7 个。更新损坏机器时回滚：`zfs rollback -r binhost/machines/stable@<时间>`，并从 PKGDIR 删除造成损坏的 binpkg。

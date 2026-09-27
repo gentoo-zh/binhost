@@ -19,7 +19,7 @@ EXPECTED_EXECUTABLES = {
     "binhost-build-unstable.service": "/var/lib/binhost/build/cycle.sh",
     "binhost-build.service": "/var/lib/binhost/build/cycle.sh",
     "binhost-kernel.service": "/var/lib/binhost/build/kernel-archive.sh",
-    "binhost-status.service": "/usr/local/bin/binhost-status",
+    "binhost-status.service": "/var/lib/binhost/ops/status.sh",
     "binhost-update@.service": "/var/lib/binhost/builders/binhost-update",
 }
 

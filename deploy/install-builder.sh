@@ -83,8 +83,7 @@ done
 sudo sed -i -e 's|^User=.*|User=${BUILD_USER}|' -e 's|^Group=.*|Group=${BUILD_USER}|' \
     /etc/systemd/system/binhost-*.service
 sudo systemctl daemon-reload
-sudo systemctl disable --now binhost-build.timer binhost-build-unstable.timer binhost-kernel.timer
-sudo systemctl enable --now binhost-status.timer
+sudo systemctl disable --now binhost-build.timer binhost-build-unstable.timer binhost-kernel.timer binhost-status.timer
 printf %s '${COMMIT}' | sudo install -m644 /dev/stdin '${ROOT}/build/VERSION'
 systemctl list-timers --all --no-pager | grep binhost || true
 "
