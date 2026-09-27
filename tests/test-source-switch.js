@@ -103,7 +103,7 @@ const mirrorUris = [...new Set(groups[0].opts.map(function (option) {
   return option.getAttribute("data-uri");
 }))];
 check("FAQ 列出设置页的全部镜像",
-      mirrorUris.length === 5 && mirrorUris.every(function (uri) {
+      mirrorUris.length === 6 && mirrorUris.every(function (uri) {
         return faq.includes('href="' + uri + '"') || uri === origin;
       }), JSON.stringify(mirrorUris));
 check("简体中文默认选择教育网联合镜像站",
