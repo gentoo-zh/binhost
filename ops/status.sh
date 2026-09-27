@@ -26,6 +26,8 @@ SITE_LOCK="${SITE_LOCK:-${SITE_WORK}.lock}"
 SITE_STALE_H="${SITE_STALE_H:-2}"
 SITE_DEST="${SITE_DEST:-/srv/mirrors}"
 BUILD_STALE_H="${BUILD_STALE_H:-3}"
+# A 24 h cycle, the 18 h TimeoutStartSec, the 15 min timer delay and a margin.
+BUILD_MAX_AGE_H="${BUILD_MAX_AGE_H:-44}"
 INDEX_SAMPLE_COUNT="${INDEX_SAMPLE_COUNT:-3}"
 [[ ${INDEX_SAMPLE_COUNT} =~ ^[1-9][0-9]*$ ]] || INDEX_SAMPLE_COUNT=3
 KERNEL_PACKAGE="${KERNEL_PACKAGE:-sys-kernel/gentoo-cjk-kernel}"
@@ -36,15 +38,6 @@ KERNEL_SERIES_TOOL="${KERNEL_SERIES_TOOL:-/var/lib/binhost/build/kernel-series.p
 # cycle.sh, kernel-archive.sh and build-container.sh all take this lock, so
 # holding it means some build is mid-flight and the archive is still catching up.
 BUILD_LOCK="${BUILD_LOCK:-/var/lib/binhost/stage/build.lock}"
-
-STATUS_DIR=$(cd "$(dirname "$0")" && pwd)
-GENERATION_TOOL="${GENERATION_TOOL:-}"
-if [[ -z ${GENERATION_TOOL} ]]; then
-    for candidate in /usr/local/lib/binhost/generation.py \
-        /var/lib/binhost/build/generation.py "${STATUS_DIR}/../build/generation.py"; do
-        [[ -r ${candidate} ]] && { GENERATION_TOOL="${candidate}"; break; }
-    done
-fi
 
 problems=0
 failures=()
@@ -294,21 +287,19 @@ check_channel_index() {
     local -a paths
 
     tmp=$(mktemp -d)
-    for name in Packages Packages.gz installed.txt official.txt source.txt generation.json; do
+    for name in Packages Packages.gz; do
         if ! curl -fsS --max-time 20 "${SITE}${root}/${name}" \
             > "${tmp}/${name}" 2>/dev/null; then
-            bad "${label} 同代清单" "无法获取 ${name}"
+            bad "${label} 索引" "无法获取 ${name}"
             rm -rf "${tmp}"
             return
         fi
     done
-    if [[ -z ${GENERATION_TOOL} ]] ||
-       ! python3 "${GENERATION_TOOL}" verify "${tmp}" >/dev/null 2>&1; then
-        bad "${label} 同代清单" "generation.json 与索引或快照不一致"
+    if ! gzip -dc "${tmp}/Packages.gz" 2>/dev/null | cmp -s - "${tmp}/Packages"; then
+        bad "${label} 索引" "Packages.gz 与 Packages 不一致"
         rm -rf "${tmp}"
         return
     fi
-    note "${label} 同代清单" "验证通过"
 
     ts=$(awk '/^TIMESTAMP: /{print $2; exit}' "${tmp}/Packages")
     n=$(awk '/^PACKAGES: /{print $2; exit}' "${tmp}/Packages")
@@ -331,10 +322,13 @@ check_channel_index() {
         rm -rf "${tmp}"
         return
     fi
+    if [[ ${n} != "${#paths[@]}" ]]; then
+        bad "${label} 索引" "PACKAGES 为 ${n:-缺失}，PATH 有 ${#paths[@]} 条"
+    fi
 
     checks=${INDEX_SAMPLE_COUNT}
     (( checks > ${#paths[@]} )) && checks=${#paths[@]}
-    hash=$(sha256sum "${tmp}/generation.json" | cut -c1-8)
+    hash=$(sha256sum "${tmp}/Packages" | cut -c1-8)
     start=$(( 16#${hash} % ${#paths[@]} ))
     for ((i = 0; i < checks; i++)); do
         index=$(( (start + i * ${#paths[@]} / checks) % ${#paths[@]} ))
@@ -434,8 +428,8 @@ check_build_status() {
         bad "${label} 构建状态" "${jphase:-未知} 阶段已 ${page} 小时没有进展"
     elif [[ ${jstate} == running ]] && (( jage >= BUILD_STALE_H )); then
         bad "${label} 构建状态" "进度状态已 ${jage} 小时未更新"
-    elif (( jage >= HEARTBEAT_MAX_H )); then
-        bad "${label} 构建状态" "${jage} 小时未更新（阈值 ${HEARTBEAT_MAX_H}h）"
+    elif (( jage >= BUILD_MAX_AGE_H )); then
+        bad "${label} 构建状态" "${jage} 小时未更新（阈值 ${BUILD_MAX_AGE_H}h）"
     else
         note "${label} 构建状态" "${jstate:-未知}，${jage} 小时前"
     fi
