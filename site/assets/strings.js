@@ -3,6 +3,7 @@ window.MIRROR_I18N_COMMON = {
     brand: 'distfiles.gentoozh.org',
     navIso: 'Live ISO', navSetup: '設定', navPkgs: '套件列表', navFiles: '檔案',
     fSrc: '原始碼', fKey: '簽章公鑰', fDesign: '設計語言', fCommunity: 'Gentoo 中文社群',
+    fSponsor: '建置機由 OSUOSL 贊助',
     fCommunityUrl: 'https://gentoozh.org/zh-tw/',
     skip: '跳到正文',
     copy: '複製'
@@ -11,6 +12,7 @@ window.MIRROR_I18N_COMMON = {
     brand: 'distfiles.gentoozh.org',
     navIso: 'Live ISO', navSetup: 'Setup', navPkgs: 'Packages', navFiles: 'Files',
     fSrc: 'Source', fKey: 'Signing key', fDesign: 'Design', fCommunity: 'Gentoo Chinese Community',
+    fSponsor: 'Build server sponsored by OSUOSL',
     fCommunityUrl: 'https://gentoozh.org/en/',
     skip: 'Skip to content',
     copy: 'Copy'
