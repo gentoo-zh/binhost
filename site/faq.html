@@ -201,8 +201,10 @@
       <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a>
       、南阳理工学院
       <a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a>
-      与河南教育网
+      、河南教育网
       <a href="https://mirrors.ha.edu.cn/gentoo-zh">mirrors.ha.edu.cn/gentoo-zh</a>
+      与美国俄勒冈州立大学开源实验室
+      <a href="https://ftp2.osuosl.org/pub/gentoo-zh">ftp2.osuosl.org/pub/gentoo-zh</a>
       均提供二进制包与 distfiles。可在<a href="/">配置</a>页按网络情况切换。
       镜像同步本站已签名的产物；切换不改变签名验证要求。
     </p>
@@ -332,7 +334,7 @@ window.MIRROR_I18N = {
     q6: '如何停用？',
     a6: '刪除 <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code>。已安裝的套件不受影響。',
     q8: '有哪些鏡像？',
-    a8: '來源站 <a href="/">distfiles.gentoozh.org</a>、教育網聯合鏡像站 <a href="https://mirrors.cernet.edu.cn/gentoo-zh">mirrors.cernet.edu.cn/gentoo-zh</a>、南京大學 <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a>、南陽理工學院 <a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a> 與河南教育網 <a href="https://mirrors.ha.edu.cn/gentoo-zh">mirrors.ha.edu.cn/gentoo-zh</a> 均提供二進位套件與 distfiles。可在<a href="/">設定</a>頁依網路情況切換。鏡像同步本站已簽章的產物；切換不改變簽章驗證要求。',
+    a8: '來源站 <a href="/">distfiles.gentoozh.org</a>、教育網聯合鏡像站 <a href="https://mirrors.cernet.edu.cn/gentoo-zh">mirrors.cernet.edu.cn/gentoo-zh</a>、南京大學 <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a>、南陽理工學院 <a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a>、河南教育網 <a href="https://mirrors.ha.edu.cn/gentoo-zh">mirrors.ha.edu.cn/gentoo-zh</a> 與美國奧勒岡州立大學開放原始碼實驗室 <a href="https://ftp2.osuosl.org/pub/gentoo-zh">ftp2.osuosl.org/pub/gentoo-zh</a> 均提供二進位套件與 distfiles。可在<a href="/">設定</a>頁依網路情況切換。鏡像同步本站已簽章的產物；切換不改變簽章驗證要求。',
     q14: '如何避免自動鏡像某個套件的 distfile？',
     a14: '不希望自動鏡像某個套件的 distfile 時，在 ebuild 的既有 <code>RESTRICT</code> 值中加入 <code>mirror</code>；沒有該變數時可設定 <code>RESTRICT="mirror"</code>。<code>RESTRICT</code> 中含 <code>fetch</code> 時，也會阻止同步流程自動取得和鏡像檔案。',
     q9: '如何自行建立鏡像？',
@@ -388,7 +390,7 @@ window.MIRROR_I18N = {
     q6: 'How do I stop using it?',
     a6: 'Delete <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code>. Packages that are already installed are unaffected.',
     q8: 'Which mirrors are there?',
-    a8: 'The origin at <a href="/">distfiles.gentoozh.org</a>, CERNET at <a href="https://mirrors.cernet.edu.cn/gentoo-zh">mirrors.cernet.edu.cn/gentoo-zh</a>, Nanjing University at <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a>, NYIST at <a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a>, and HERNET at <a href="https://mirrors.ha.edu.cn/gentoo-zh">mirrors.ha.edu.cn/gentoo-zh</a> carry binary packages and distfiles. Choose among them on the <a href="/">setup</a> page according to network conditions. Mirrors synchronize the signed artifacts from this host; switching does not change the verification requirement.',
+    a8: 'The origin at <a href="/">distfiles.gentoozh.org</a>, CERNET at <a href="https://mirrors.cernet.edu.cn/gentoo-zh">mirrors.cernet.edu.cn/gentoo-zh</a>, Nanjing University at <a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a>, NYIST at <a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a>, HERNET at <a href="https://mirrors.ha.edu.cn/gentoo-zh">mirrors.ha.edu.cn/gentoo-zh</a>, and the Oregon State University Open Source Lab (USA) at <a href="https://ftp2.osuosl.org/pub/gentoo-zh">ftp2.osuosl.org/pub/gentoo-zh</a> carry binary packages and distfiles. Choose among them on the <a href="/">setup</a> page according to network conditions. Mirrors synchronize the signed artifacts from this host; switching does not change the verification requirement.',
     q14: 'How do I prevent automatic mirroring of a package\'s distfile?',
     a14: 'To exclude a package\'s distfiles from automatic mirroring, add <code>mirror</code> to the ebuild\'s existing <code>RESTRICT</code> value; use <code>RESTRICT="mirror"</code> when the variable is absent. A <code>RESTRICT</code> value containing <code>fetch</code> also prevents the sync process from fetching and mirroring the files automatically.',
     q9: 'How do I set up a mirror of my own?',

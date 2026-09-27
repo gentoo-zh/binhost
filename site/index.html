@@ -128,6 +128,8 @@
             data-uri="https://mirror.nyist.edu.cn/gentoo-zh">南阳理工</button>
     <button type="button" class="src-opt" data-i18n="srcHernet"
             data-uri="https://mirrors.ha.edu.cn/gentoo-zh">河南教育网</button>
+    <button type="button" class="src-opt" data-i18n="srcOsuosl"
+            data-uri="https://ftp2.osuosl.org/pub/gentoo-zh">俄勒冈州立大学</button>
     <button type="button" class="src-opt" data-i18n="srcOrigin" data-src-default="zh-tw en"
             data-uri="https://distfiles.gentoozh.org">源站</button>
   </div>
@@ -213,6 +215,8 @@
               data-uri="https://mirror.nyist.edu.cn/gentoo-zh">南阳理工</button>
       <button type="button" class="src-opt" data-i18n="srcHernet"
               data-uri="https://mirrors.ha.edu.cn/gentoo-zh">河南教育网</button>
+      <button type="button" class="src-opt" data-i18n="srcOsuosl"
+              data-uri="https://ftp2.osuosl.org/pub/gentoo-zh">俄勒冈州立大学</button>
       <button type="button" class="src-opt" data-i18n="srcOrigin" data-src-default="zh-tw en"
               data-uri="https://distfiles.gentoozh.org">源站</button>
     </div>
@@ -293,6 +297,8 @@
               data-uri="https://mirror.nyist.edu.cn/gentoo-zh">南阳理工</button>
       <button type="button" class="src-opt" data-i18n="srcHernet"
               data-uri="https://mirrors.ha.edu.cn/gentoo-zh">河南教育网</button>
+      <button type="button" class="src-opt" data-i18n="srcOsuosl"
+              data-uri="https://ftp2.osuosl.org/pub/gentoo-zh">俄勒冈州立大学</button>
       <button type="button" class="src-opt" data-i18n="srcOrigin" data-src-default="zh-tw en"
               data-uri="https://distfiles.gentoozh.org">源站</button>
     </div>
@@ -376,7 +382,7 @@ window.MIRROR_I18N = {
     onceNote: '不修改 <code>make.conf</code> 時，可以只在這一次安裝中取用二進位套件：',
     guideNote: '沒有合適的二進位套件時，Portage 照常從原始碼建置。',
     sigNote: '全域的 <code>FEATURES=binpkg-request-signature</code> 會覆蓋此處設定；其他條件見 <a href="/faq">FAQ</a>。',
-    srcLabel: '鏡像', srcLabelFirst: '優先', srcCernet: '教育網聯合鏡像站', srcNju: '南京大學', srcNyist: '南陽理工', srcHernet: '河南教育網', srcOrigin: '來源站',
+    srcLabel: '鏡像', srcLabelFirst: '優先', srcCernet: '教育網聯合鏡像站', srcNju: '南京大學', srcNyist: '南陽理工', srcHernet: '河南教育網', srcOsuosl: '奧勒岡州立大學', srcOrigin: '來源站',
     channelLabel: '頻道', channelStable: 'stable', channelUnstable: 'unstable',
     channelStableNote: 'stable 使用 Gentoo 主倉庫穩定套件，只對 <code>::gentoo-zh</code> 接受 <code>~amd64</code>，適合主倉庫保持穩定的系統。頻道差異見 <a href="/faq#binpkg-channel">FAQ</a>。',
     channelUnstableNote: 'unstable 全域使用 <code>~amd64</code>，只適合已設定 <code>ACCEPT_KEYWORDS="~amd64"</code> 的系統。切換前請閱讀 Gentoo Wiki 的 <a href="https://wiki.gentoo.org/wiki//etc/portage/package.accept_keywords#.7EARCH_system-wide">~ARCH system-wide</a> 說明；頻道差異見 <a href="/faq#binpkg-channel">FAQ</a>。',
@@ -408,7 +414,7 @@ window.MIRROR_I18N = {
     onceNote: 'To use binary packages for a single install without editing <code>make.conf</code>:',
     guideNote: 'Portage builds from source as usual when no suitable binary package exists.',
     sigNote: 'Global <code>FEATURES=binpkg-request-signature</code> overrides this setting; see the <a href="/faq">FAQ</a> for other requirements.',
-    srcLabel: 'Mirror', srcLabelFirst: 'First', srcCernet: 'CERNET', srcNju: 'Nanjing University', srcNyist: 'NYIST', srcHernet: 'HERNET', srcOrigin: 'Origin',
+    srcLabel: 'Mirror', srcLabelFirst: 'First', srcCernet: 'CERNET', srcNju: 'Nanjing University', srcNyist: 'NYIST', srcHernet: 'HERNET', srcOsuosl: 'OSUOSL', srcOrigin: 'Origin',
     channelLabel: 'Channel', channelStable: 'stable', channelUnstable: 'unstable',
     channelStableNote: 'stable uses stable packages from the Gentoo repository and accepts <code>~amd64</code> only for <code>::gentoo-zh</code>. Use it when the main repository remains stable. See the <a href="/faq#binpkg-channel">FAQ</a> for a channel comparison.',
     channelUnstableNote: 'unstable uses <code>~amd64</code> globally. Use it only on systems with <code>ACCEPT_KEYWORDS="~amd64"</code>. Read Gentoo Wiki\'s <a href="https://wiki.gentoo.org/wiki//etc/portage/package.accept_keywords#.7EARCH_system-wide">~ARCH system-wide</a> guidance before switching, and see the <a href="/faq#binpkg-channel">FAQ</a> for a channel comparison.',
