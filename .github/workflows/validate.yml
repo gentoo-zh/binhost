@@ -135,6 +135,12 @@ jobs:
       - name: A world atom without an ebuild fails the check
         run: python3 tests/test-check-world.py
 
+      - name: The builder worlds match the package lists
+        run: python3 tools/gen-worlds.py --check
+
+      - name: World generation detects drift
+        run: python3 tests/test-gen-worlds.py
+
       - name: Source checks ignore only real comments
         run: python3 tests/test-active-source.py
 
@@ -283,6 +289,9 @@ jobs:
 
       - name: Delete budgets, DONE markers and index consistency
         run: bash tests/test-shell-behaviour.sh
+
+      - name: binhost-update records each outcome and skips a held lock
+        run: bash tests/test-binhost-update.sh
 
       - name: Kernel archive rejects damaged payloads
         run: bash tests/test-kernel-archive-integrity.sh
