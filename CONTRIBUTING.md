@@ -7,7 +7,8 @@
 - [站点设计与文案规范](site/design.html)
 - [提交信息](#提交信息)
 
-在 [`build/packages.txt`](build/packages.txt) 中添加一行 `category/package`，按字母序排列。
+在 [`build/packages.txt`](build/packages.txt) 中添加一行 `category/package`，按字母序排列，
+再执行 `python3 tools/gen-worlds.py` 重新生成两个频道的 world。
 
 ```diff
  app-i18n/fcitx-libthai
@@ -21,8 +22,9 @@
 python3 tools/validate.py /var/db/repos/gentoo-zh
 ```
 
-只需提交 `build/packages.txt`。镜像机每日按 overlay 为 stable 与 unstable 分别生成
-站点包列表，生成结果不入版本库。
+提交 `build/packages.txt` 与生成的 `builders/stable/world`、`builders/unstable/world`；
+CI 执行 `tools/gen-worlds.py --check`，world 与清单不一致时失败。镜像机每日按 overlay 为
+stable 与 unstable 分别生成站点包列表，生成结果不入版本库。
 
 ## 适合收录的包
 
@@ -42,18 +44,17 @@ python3 tools/validate.py /var/db/repos/gentoo-zh
 
 - **`RESTRICT=bindist`**：上游不允许再分发 binpkg，CI 会直接拒绝。
 - **许可证不允许再分发**：构建时 `ACCEPT_LICENSE="-* @BINARY-REDISTRIBUTABLE"` 会拦截；提交 PR 时应说明该限制。
-- **不属于本 overlay 的包**：收录清单只接受 gentoo-zh overlay 自身的包。已收录包所需的 `::gentoo` 运行期依赖会随之一并发布，其他 `::gentoo` 包请使用[官方 binhost](https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart)。
+- **不属于本 overlay 的包**：收录清单只接受 gentoo-zh overlay 自身的包。构建已收录包时从源码编译的 `::gentoo` 依赖会随之一并发布，其他 `::gentoo` 包请使用[官方 binhost](https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart)。
 
 ## 合并之后
 
-合并不等于立即可用。stable 由 `binhost-build.timer` 在每日 16:00
-（Asia/Shanghai）触发，unstable 由 `binhost-build-unstable.timer` 在每日 04:00
+合并不等于立即可用。stable 由 `binhost-update-stable.timer` 在每日 16:00
+（Asia/Shanghai）触发，unstable 由 `binhost-update-unstable.timer` 在每日 04:00
 触发；两者各有最多 15 分钟的随机延迟。包会在符合对应频道边界的下一次构建中产出，
 签名后分别发布。
 
-清单决定直接构建目标。构建软件包时会同时构建其依赖；其中属于本 overlay 的依赖和
-`::gentoo` 运行期依赖会随之一并发布，因此实际发布数多于清单条数。仅用于构建的依赖
-不会发布。
+清单决定直接构建目标。构建软件包时会同时构建其依赖；构建机发布整个 PKGDIR，
+从源码编译的依赖（运行期与构建期）都随之一并发布，因此实际发布数多于清单条数。
 
 ## 站点与脚本
 

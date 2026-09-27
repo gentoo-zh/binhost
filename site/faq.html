@@ -109,7 +109,7 @@
     <h2 id="binpkg-channel" data-i18n="q13">stable 与 unstable 有什么区别？</h2>
     <p data-i18n-html="a13">
       请选择与系统 Gentoo 主树关键字相同的频道。两个频道都接受 gentoo-zh overlay 的
-      <code>~amd64</code> 软件包，区别是构建运行期依赖时采用稳定还是测试关键字。
+      <code>~amd64</code> 软件包，区别是构建依赖时采用稳定还是测试关键字。
     </p>
     <table class="status-guide channel-guide">
       <thead><tr><th data-i18n="chName">频道</th><th data-i18n="chMain">Gentoo 主树</th><th data-i18n="chOverlay">gentoo-zh overlay</th><th data-i18n="chUri">sync-uri 路径</th></tr></thead>
@@ -145,7 +145,7 @@
 
     <h2 data-i18n="q3">OpenRC 和 systemd 都能使用吗？</h2>
     <p data-i18n-html="a3">
-      本站只使用一个 profile 构建，不分别生成 OpenRC 与 systemd 产物。
+      本站只使用 <code>default/linux/amd64/23.0/desktop/systemd</code> profile 构建，不分别生成 OpenRC 与 systemd 产物。
       Portage 会按当前 USE 与依赖判断二进制包是否适用；不适用时改为从源码构建。
     </p>
 
@@ -241,15 +241,13 @@
 
     <h2 data-i18n="q7">都收录了哪些包？</h2>
     <p data-i18n-html="a7">
-      主体是 gentoo-zh/overlay 的收录清单。除此之外，本站也发布这些包所需、允许
-      再分发的那部分 <code>::gentoo</code> 运行期依赖，两者在同一份索引里，用
+      主体是 gentoo-zh/overlay 的收录清单。构建这些包时从源码编译的 <code>::gentoo</code>
+      依赖（运行期与构建期）随构建结果一并发布，两者在同一份索引里，用
       <code>REPO</code> 字段区分。二进制包的许可证必须属于
       <code>@BINARY-REDISTRIBUTABLE</code>，且 <code>RESTRICT</code> 不得包含 <code>bindist</code>。
-      <code>acct-group/&#42;</code>、<code>acct-user/&#42;</code> 与 <code>virtual/&#42;</code> 在用户
-      系统本地安装。<code>RESTRICT</code> 中的 <code>bindist</code> 只限制二进制包；
+      <code>RESTRICT</code> 中的 <code>bindist</code> 只限制二进制包；
       distfiles 是否镜像由 <code>mirror</code>、<code>fetch</code> 与每项
-      <code>SRC_URI</code> 独立决定。附带内容仅包含
-      这些包的运行期依赖，不替代
+      <code>SRC_URI</code> 独立决定。附带的 <code>::gentoo</code> 包由构建需要决定，不替代
       <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">Gentoo
       官方 binhost</a>。
       清单见 <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>。
@@ -267,7 +265,7 @@
         <tr><td data-i18n-html="stPending"><code>待构建</code></td><td data-i18n-html="sdPending">该包是直接构建目标，但公开索引尚无 binpkg。它可能尚未完成首次构建，也可能最近一次未成功发布；该状态只表示目前没有公开产物。</td></tr>
         <tr><td data-i18n-html="stExcluded"><code>不构建</code></td><td data-i18n-html="sdExcluded">维护清单明确排除该包。常见原因包括无法构建、缺少支持或需要进一步核对再分发条件；标签提示中会显示记录的具体原因。</td></tr>
         <tr><td data-i18n-html="stChannelExcluded"><code>本频道不构建</code></td><td data-i18n-html="sdChannelExcluded">该包仍在共用收录清单中，但不符合当前频道的依赖或构建条件，因此本频道不直接构建。另一个频道仍可能发布该包；当前频道尚有旧产物时会同时显示 <code>待移除</code>。</td></tr>
-        <tr><td data-i18n-html="stOffList"><code>清单外</code></td><td data-i18n-html="sdOffList">该包不是直接构建目标。上游已经提供预编译内容或构建收益较低时通常不会直接收录，但运行期依赖闭包仍可能将它作为依赖发布；包名含 <code>-bin</code> 不会自动决定该状态。</td></tr>
+        <tr><td data-i18n-html="stOffList"><code>清单外</code></td><td data-i18n-html="sdOffList">该包不是直接构建目标。上游已经提供预编译内容或构建收益较低时通常不会直接收录，但仍可能作为依赖随包发布；包名含 <code>-bin</code> 不会自动决定该状态。</td></tr>
         <tr><td data-i18n-html="stBindist"><code>不提供 binpkg</code></td><td data-i18n-html="sdBindist">当前 ebuild 的 <code>RESTRICT</code> 包含 <code>bindist</code>，因此本站不发布该包的 binpkg。源码包和上游预编译包都可能设置这项限制，常见原因是许可证、上游发布条款或预编译内容的再分发条件不允许本站分发二进制产物；包名含 <code>-bin</code> 本身不是判定依据。distfiles 是否镜像仍按 <code>RESTRICT</code> 中的 <code>mirror</code>、<code>fetch</code> 与每项 <code>SRC_URI</code> 单独判断。</td></tr>
         <tr><td data-i18n-html="stLicense"><code>许可证限制</code></td><td data-i18n-html="sdLicense">当前 ebuild 的 <code>LICENSE</code> 表达式不属于本站固定的 <code>@BINARY-REDISTRIBUTABLE</code>。许可证可能允许附带条件的再分发，但本站不会据此发布 binpkg；该状态与 <code>RESTRICT=bindist</code> 分开判定。</td></tr>
         <tr><td data-i18n-html="stLocal"><code>本地安装</code></td><td data-i18n-html="sdLocal"><code>acct-group</code> 与 <code>acct-user</code> 由 Portage 在用户系统创建账号，<code>virtual</code> 由 Portage 选择实际实现。这些包无需本站预编译。</td></tr>
@@ -318,14 +316,14 @@ window.MIRROR_I18N = {
     q1: '設定好之後為何 emerge 不使用二進位套件，仍然編譯？',
     a1: 'Portage 不會直接比較 profile 名稱，而是依照目前設定檢查二進位套件 metadata。profile 變更可能改變 USE 與依賴選擇，使現有二進位套件不再適用；此時 Portage 會改為編譯原始碼。用 <code>emerge -pv</code> 檢查，前綴為 <code>[binary]</code> 才表示採用了二進位套件。',
     q13: 'stable 與 unstable 有什麼差別？',
-    a13: '請選擇與系統 Gentoo 主倉庫關鍵字相同的頻道。兩個頻道都接受 gentoo-zh overlay 的 <code>~amd64</code> 套件，差別是建置執行期依賴時採用穩定或測試關鍵字。',
+    a13: '請選擇與系統 Gentoo 主倉庫關鍵字相同的頻道。兩個頻道都接受 gentoo-zh overlay 的 <code>~amd64</code> 套件，差別是建置依賴時採用穩定或測試關鍵字。',
     chName: '頻道', chMain: 'Gentoo 主倉庫', chOverlay: 'gentoo-zh overlay', chUri: 'sync-uri 路徑',
     chStable: 'stable（預設）',
     a13b: 'stable 系統只需在 <code>package.accept_keywords</code> 中對 <code>*&#47;*::gentoo-zh</code> 接受 <code>~amd64</code>；unstable 適用於全域設定 <code>ACCEPT_KEYWORDS="~amd64"</code> 的系統。切換前請閱讀 Gentoo Wiki 的 <a href="https://wiki.gentoo.org/wiki//etc/portage/package.accept_keywords#.7EARCH_system-wide">~ARCH system-wide</a> 說明。Portage 會拒絕相依性、USE 或 ABI 不適用的 binpkg，並改為從原始碼建置。選擇相符的頻道可以提高 binpkg 的適用率。',
     q2: '為什麼要用 binrepos.conf，不能直接設 PORTAGE_BINHOST？',
     a2: '因為 <code>PORTAGE_BINHOST</code> 產生的是隱含儲存庫，無法單獨設定 <code>verify-signature</code>。若為使用本站的套件而關閉驗簽，官方 binhost 的驗簽會一併關閉。',
     q3: 'OpenRC 和 systemd 都能使用嗎？',
-    a3: '本站只使用一個 profile 建置，不分別產生 OpenRC 與 systemd 產物。Portage 會依目前 USE 與相依性判斷二進位套件是否適用；不適用時改為從原始碼建置。',
+    a3: '本站只使用 <code>default/linux/amd64/23.0/desktop/systemd</code> profile 建置，不分別產生 OpenRC 與 systemd 產物。Portage 會依目前 USE 與相依性判斷二進位套件是否適用；不適用時改為從原始碼建置。',
     q4: '二進位套件是否可能無法在我的 CPU 上執行？',
     a4: '建置環境使用 <code>CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"</code>，不使用 <code>-march=native</code>。該設定不能約束 ebuild 附帶的上游預先編譯物件或程式庫；Portage 接受二進位套件時也不比較 <code>CFLAGS</code>，因此仍可能存在例外。',
     q5: '如何驗證下載的二進位套件來自本站且內容未被修改？',
@@ -343,7 +341,7 @@ window.MIRROR_I18N = {
     q7: '都收錄了哪些套件？',
     q10: '如何在 w3m、lynx 或 curl 中瀏覽？',
     a10: '套件資料表與互動式檔案瀏覽需要指令碼；頁面標題、說明與連結仍可讀。純文字清單供腳本與終端介面查閱：stable 使用 <a href="/packages.txt">/packages.txt</a> 與 <a href="/deps.txt">/deps.txt</a>，unstable 使用 <a href="/packages-unstable.txt">/packages-unstable.txt</a> 與 <a href="/deps-unstable.txt">/deps-unstable.txt</a>。Portage 不讀取這些清單，頻道應透過設定中的 <code>sync-uri</code> 選擇。套件清單第二欄 <code>bin+src</code> 表示兩者都有、<code>bin</code> 表示只有二進位套件、<code>src</code> 表示只有 distfiles。目錄瀏覽用 <a href="/_raw/">/_raw/</a>，那是由 nginx 生成的清單，不需要指令碼。其餘各頁的正文都寫在 HTML 裡，文字瀏覽器直接可讀。',
-    a7: '主體是 gentoo-zh/overlay 的收錄清單。除此之外，本站也發布這些套件所需、允許再散布的那部分 <code>::gentoo</code> 執行期依賴，兩者在同一份索引裡，用 <code>REPO</code> 欄位區分。二進位套件的授權條款必須屬於 <code>@BINARY-REDISTRIBUTABLE</code>，且 <code>RESTRICT</code> 不得包含 <code>bindist</code>。<code>acct-group/&#42;</code>、<code>acct-user/&#42;</code> 與 <code>virtual/&#42;</code> 在使用者系統本機安裝。<code>RESTRICT</code> 中的 <code>bindist</code> 只限制二進位套件；distfiles 是否鏡像由 <code>mirror</code>、<code>fetch</code> 與每個 <code>SRC_URI</code> 項目另行判定。附帶內容僅包含這些套件的執行期依賴，不取代 <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">Gentoo 官方 binhost</a>。清單見 <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>。',
+    a7: '主體是 gentoo-zh/overlay 的收錄清單。建置這些套件時從原始碼編譯的 <code>::gentoo</code> 依賴（執行期與建置期）隨建置結果一併發布，兩者在同一份索引裡，用 <code>REPO</code> 欄位區分。二進位套件的授權條款必須屬於 <code>@BINARY-REDISTRIBUTABLE</code>，且 <code>RESTRICT</code> 不得包含 <code>bindist</code>。<code>RESTRICT</code> 中的 <code>bindist</code> 只限制二進位套件；distfiles 是否鏡像由 <code>mirror</code>、<code>fetch</code> 與每個 <code>SRC_URI</code> 項目另行判定。附帶的 <code>::gentoo</code> 套件由建置需要決定，不取代 <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">Gentoo 官方 binhost</a>。清單見 <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>。',
     q12: '如何閱讀套件頁狀態？',
     a12: '套件頁分開顯示公開索引、直接建置清單、目前發布政策與 distfiles 鏡像狀態。同一列可以同時出現多個狀態，因為它們說明不同事實。',
     stStatus: '狀態', stMeaning: '觸發條件與常見原因',
@@ -356,7 +354,7 @@ window.MIRROR_I18N = {
     stChannelExcluded: '<code>本頻道不建置</code>',
     sdChannelExcluded: '該套件仍在共用收錄清單中，但不符合目前頻道的相依套件或建置條件，因此本頻道不直接建置。另一個頻道仍可能發布該套件；目前頻道仍有舊產物時會同時顯示 <code>待移除</code>。',
     stOffList: '<code>清單外</code>',
-    sdOffList: '該套件不是直接建置目標。上游已提供預先編譯內容或建置收益較低時通常不會直接收錄，但執行期依賴閉包仍可能將它作為依賴發布；套件名含 <code>-bin</code> 不會自動決定該狀態。',
+    sdOffList: '該套件不是直接建置目標。上游已提供預先編譯內容或建置收益較低時通常不會直接收錄，但仍可能作為依賴隨套件發布；套件名含 <code>-bin</code> 不會自動決定該狀態。',
     stBindist: '<code>不提供 binpkg</code>',
     sdBindist: '目前 ebuild 的 <code>RESTRICT</code> 包含 <code>bindist</code>，因此本站不發布該套件的 binpkg。原始碼套件和上游預先編譯套件都可能設定這項限制，常見原因是授權條款、上游發布條款或預先編譯內容的再散布條件不允許本站散布二進位產物；套件名含 <code>-bin</code> 本身不是判定依據。distfiles 是否鏡像仍依 <code>RESTRICT</code> 中的 <code>mirror</code>、<code>fetch</code> 與每個 <code>SRC_URI</code> 項目分別判定。',
     stLicense: '<code>授權限制</code>',
@@ -374,14 +372,14 @@ window.MIRROR_I18N = {
     q1: 'Why does emerge still compile after I have configured it?',
     a1: 'Portage does not compare profile names directly; it checks binary package metadata against the current configuration. A profile change can alter USE and dependency choices and make an existing binary package unsuitable, in which case Portage builds from source. Run <code>emerge -pv</code> to check: a <code>[binary]</code> prefix means Portage selected a binary package.',
     q13: 'What is the difference between stable and unstable?',
-    a13: 'Choose the channel that matches the keywords used by your system for the Gentoo repository. Both channels accept <code>~amd64</code> packages from the gentoo-zh overlay. They differ in whether runtime dependencies are built with stable or testing keywords.',
+    a13: 'Choose the channel that matches the keywords used by your system for the Gentoo repository. Both channels accept <code>~amd64</code> packages from the gentoo-zh overlay. They differ in whether dependencies are built with stable or testing keywords.',
     chName: 'Channel', chMain: 'Gentoo repository', chOverlay: 'gentoo-zh overlay', chUri: 'sync-uri path',
     chStable: 'stable (default)',
     a13b: 'A stable system only needs <code>*&#47;*::gentoo-zh ~amd64</code> in <code>package.accept_keywords</code>. unstable is for systems with global <code>ACCEPT_KEYWORDS="~amd64"</code>. Read Gentoo Wiki\'s <a href="https://wiki.gentoo.org/wiki//etc/portage/package.accept_keywords#.7EARCH_system-wide">~ARCH system-wide</a> guidance before switching. Portage rejects a binpkg when its dependencies, USE flags or ABI do not apply and builds from source instead. Matching the channel to the system makes more binpkgs applicable.',
     q2: 'Why binrepos.conf rather than PORTAGE_BINHOST?',
     a2: 'Because <code>PORTAGE_BINHOST</code> creates an implicit repository that cannot carry its own <code>verify-signature</code>. If you turn verification off to install from here, you turn it off for the official Gentoo binhost as well.',
     q3: 'Does it work on both OpenRC and systemd?',
-    a3: 'This host builds with one profile rather than producing separate OpenRC and systemd artifacts. Portage checks each binary package against the current USE flags and dependencies; when it is not applicable, Portage builds from source.',
+    a3: 'This host builds with the <code>default/linux/amd64/23.0/desktop/systemd</code> profile only rather than producing separate OpenRC and systemd artifacts. Portage checks each binary package against the current USE flags and dependencies; when it is not applicable, Portage builds from source.',
     q4: 'Could a binary package fail to run on my CPU?',
     a4: 'The build environment uses <code>CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"</code> and does not use <code>-march=native</code>. This setting cannot constrain upstream prebuilt objects or libraries bundled by an ebuild, and Portage does not compare <code>CFLAGS</code> when accepting a binary package, so exceptions remain possible.',
     q5: 'How do I verify that a downloaded binary package came from this host unchanged?',
@@ -399,7 +397,7 @@ window.MIRROR_I18N = {
     q7: 'Which packages are included?',
     q10: 'How do I browse this in w3m, lynx or curl?',
     a10: 'The package data table and interactive file browser require scripts; their headings, descriptions and links remain readable without scripts. The plain-text lists are for scripts and terminal interfaces: stable uses <a href="/packages.txt">/packages.txt</a> and <a href="/deps.txt">/deps.txt</a>, while unstable uses <a href="/packages-unstable.txt">/packages-unstable.txt</a> and <a href="/deps-unstable.txt">/deps-unstable.txt</a>. Portage does not read these lists; select a channel with <code>sync-uri</code> in its configuration. The package list uses <code>bin+src</code> for both, <code>bin</code> for a binary package only, and <code>src</code> for distfiles only. For directory browsing use <a href="/_raw/">/_raw/</a>, which nginx generates and needs no script. Every other page has its text in the HTML and reads fine in a text browser.',
-    a7: 'Mainly the gentoo-zh/overlay build list. This host also publishes the redistributable part of the <code>::gentoo</code> runtime dependencies those packages need; both live in one index and are told apart by the <code>REPO</code> field. A binary package must use licences in <code>@BINARY-REDISTRIBUTABLE</code>, and its <code>RESTRICT</code> must not include <code>bindist</code>. <code>acct-group/&#42;</code>, <code>acct-user/&#42;</code> and <code>virtual/&#42;</code> are installed locally on the user system. The <code>bindist</code> value in <code>RESTRICT</code> applies only to binary packages; distfile mirroring is governed separately by <code>mirror</code>, <code>fetch</code> and each <code>SRC_URI</code> entry. The scope of the bundled dependencies stops at those runtime dependencies; this is not a replacement for the <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">official Gentoo binhost</a>. The list is in <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>.',
+    a7: 'Mainly the gentoo-zh/overlay build list. The <code>::gentoo</code> dependencies compiled from source while building them, runtime and build-time alike, are published with the build output; both live in one index and are told apart by the <code>REPO</code> field. A binary package must use licences in <code>@BINARY-REDISTRIBUTABLE</code>, and its <code>RESTRICT</code> must not include <code>bindist</code>. The <code>bindist</code> value in <code>RESTRICT</code> applies only to binary packages; distfile mirroring is governed separately by <code>mirror</code>, <code>fetch</code> and each <code>SRC_URI</code> entry. The bundled <code>::gentoo</code> packages follow what the build needs; they do not replace the <a href="https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart">official Gentoo binhost</a>. The list is in <a href="https://github.com/gentoo-zh/binhost">gentoo-zh/binhost</a>.',
     q12: 'How do I read the package statuses?',
     a12: 'The packages page shows the public index, direct build list, current publication policy and distfile mirror state separately. Several statuses can appear on one row because they describe different facts.',
     stStatus: 'Status', stMeaning: 'Trigger and common causes',
@@ -412,7 +410,7 @@ window.MIRROR_I18N = {
     stChannelExcluded: '<code>not in this channel</code>',
     sdChannelExcluded: 'The package remains on the shared build list, but this channel cannot satisfy its dependency or build conditions, so this channel does not build it directly. Another channel may still publish it. If this channel retains an older artifact, <code>pending removal</code> appears too.',
     stOffList: '<code>off-list</code>',
-    sdOffList: 'The package is not a direct build target. Packages with upstream prebuilt content or little build benefit are often left off the list, but the runtime dependency closure may still publish them as dependencies. A <code>-bin</code> name does not determine this status.',
+    sdOffList: 'The package is not a direct build target. Packages with upstream prebuilt content or little build benefit are often left off the list, but they may still be published as dependencies. A <code>-bin</code> name does not determine this status.',
     stBindist: '<code>no binpkg</code>',
     sdBindist: 'The current ebuild\'s <code>RESTRICT</code> includes <code>bindist</code>, so this host does not publish a binpkg for the package. Source and upstream-prebuilt packages can both carry this restriction, commonly because a licence, upstream release terms or redistribution conditions for prebuilt content prohibit this host from distributing binary artifacts. A <code>-bin</code> name is not evidence by itself. Distfile mirroring is evaluated separately from the <code>mirror</code> and <code>fetch</code> values in <code>RESTRICT</code> and each <code>SRC_URI</code> entry.',
     stLicense: '<code>licence restricted</code>',

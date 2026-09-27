@@ -74,8 +74,8 @@
   <h1 class="title" data-i18n="title">配置</h1>
 
   <p class="lead" data-i18n-html="lead">
-    gentoo-zh overlay 的二进制包与 distfiles 镜像，二者独立配置。二进制包仅附带其所需的部分
-    ::gentoo 运行期依赖，不替代 Gentoo 官方 binhost；::gentoo 的 distfiles 使用 <a href="https://gentoozh.org/mirrorlist/">社区镜像列表</a>中的节点。
+    gentoo-zh overlay 的二进制包与 distfiles 镜像，二者独立配置。二进制包还附带构建时从源码编译的
+    ::gentoo 依赖，不替代 Gentoo 官方 binhost；::gentoo 的 distfiles 使用 <a href="https://gentoozh.org/mirrorlist/">社区镜像列表</a>中的节点。
   </p>
 
   <p class="note" data-i18n-html="prereq">
@@ -376,7 +376,7 @@ window.MIRROR_I18N = {
     modeQuick: '快速設定',
     quickNote: '快速設定會執行全部四個設定步驟；手動設定會分別顯示每一步的內容。',
     title: '設定',
-    lead: 'gentoo-zh overlay 的二進位套件與 distfiles 鏡像，二者獨立設定。二進位套件僅附帶其所需的部分 ::gentoo 執行期相依套件，不取代 Gentoo 官方 binhost；::gentoo 的 distfiles 使用 <a href="https://gentoozh.org/zh-tw/mirrorlist/">社群鏡像列表</a>中的節點。',
+    lead: 'gentoo-zh overlay 的二進位套件與 distfiles 鏡像，二者獨立設定。二進位套件另附帶建置時從原始碼編譯的 ::gentoo 相依套件，不取代 Gentoo 官方 binhost；::gentoo 的 distfiles 使用 <a href="https://gentoozh.org/zh-tw/mirrorlist/">社群鏡像列表</a>中的節點。',
     prereq: '先決條件：先加入 gentoo-zh overlay 並接受它的測試關鍵字，見 <a href="https://gentoozh.org/zh-tw/overlay/">Overlay 指南</a>。',
     h2bin: '二進位套件', h2dist: 'Distfiles',
     onceNote: '不修改 <code>make.conf</code> 時，可以只在這一次安裝中取用二進位套件：',
@@ -408,7 +408,7 @@ window.MIRROR_I18N = {
     modeQuick: 'Quick setup',
     quickNote: 'Quick setup performs all four configuration steps; step-by-step setup shows each step separately.',
     title: 'Setup',
-    lead: 'Binary package and distfiles mirrors for the gentoo-zh overlay, configured independently. Binary packages include only the ::gentoo runtime dependencies they need and do not replace the official Gentoo binhost; use a node from the <a href="https://gentoozh.org/en/mirrorlist/">community mirror list</a> for ::gentoo distfiles.',
+    lead: 'Binary package and distfiles mirrors for the gentoo-zh overlay, configured independently. Binary packages also include the ::gentoo dependencies compiled from source during the build and do not replace the official Gentoo binhost; use a node from the <a href="https://gentoozh.org/en/mirrorlist/">community mirror list</a> for ::gentoo distfiles.',
     prereq: 'Prerequisite: add the gentoo-zh overlay and accept its testing keywords first; see the <a href="https://gentoozh.org/en/overlay/">overlay guide</a>.',
     h2bin: 'Binary packages', h2dist: 'Distfiles',
     onceNote: 'To use binary packages for a single install without editing <code>make.conf</code>:',
