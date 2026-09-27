@@ -1,0 +1,4 @@
+# Provides eclean-pkg for run-update, as in the official builders; not an overlay package.
+app-portage/gentoolkit
+# ::gentoo net-libs/grpc pkg_setup needs python 3.11-3.13, which stable does not install by default.
+dev-lang/python:3.13
