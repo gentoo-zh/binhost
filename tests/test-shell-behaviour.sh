@@ -422,10 +422,10 @@ ok "stable 定时器实际启动 stable 服务" "${stable_timer_target}" \
    "binhost-build.service"
 ok "unstable 定时器实际启动 unstable 服务" "${unstable_timer_target}" \
    "binhost-build-unstable.service"
-ok "安装脚本停用两个频道的旧构建定时器" \
-   "$(grep -c '^sudo systemctl disable --now binhost-build.timer binhost-build-unstable.timer$' <<< "${installer}")" "1"
-ok "安装脚本不再启用旧构建定时器" \
-   "$(grep '^sudo systemctl enable' <<< "${installer}" | grep -c 'binhost-build')" "0"
+ok "安装脚本停用两个频道的旧构建定时器与内核定时器" \
+   "$(grep -c '^sudo systemctl disable --now binhost-build.timer binhost-build-unstable.timer binhost-kernel.timer$' <<< "${installer}")" "1"
+ok "安装脚本不再启用旧构建定时器与内核定时器" \
+   "$(grep '^sudo systemctl enable' <<< "${installer}" | grep -c 'binhost-build\|binhost-kernel')" "0"
 
 shared_lock=$(grep -c "LOCK=\"\${LOCK:-/var/lib/binhost/stage/build.lock}\"" \
     "${ROOT}/build/build-container.sh")
