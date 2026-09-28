@@ -28,6 +28,7 @@ app-i18n/libkkc
 app-i18n/lunar
 app-misc/cc-switch
 app-misc/cc-switch-cli
+app-misc/fast-resume
 app-misc/gpick
 app-misc/joshuto
 app-misc/keyd
