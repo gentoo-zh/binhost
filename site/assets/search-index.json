@@ -1113,9 +1113,9 @@
     "en": "Status"
    },
    "desc": {
-    "zh-cn": "软件包与文件、服务器与构建",
-    "zh-tw": "套件與檔案、伺服器與建置",
-    "en": "Packages and files, Server and builds"
+    "zh-cn": "软件包与文件、服务器与构建、镜像同步",
+    "zh-tw": "套件與檔案、伺服器與建置、鏡像同步",
+    "en": "Packages and files, Server and builds, Mirror sync"
    },
    "keywords": [
     "status"
@@ -1155,6 +1155,24 @@
    },
    "keywords": [
     "server"
+   ]
+  },
+  {
+   "url": "/status#mirrors",
+   "group": "about",
+   "kind": "section",
+   "title": {
+    "zh-cn": "镜像同步",
+    "zh-tw": "鏡像同步",
+    "en": "Mirror sync"
+   },
+   "desc": {
+    "zh-cn": "状态",
+    "zh-tw": "狀態",
+    "en": "Status"
+   },
+   "keywords": [
+    "mirrors"
    ]
   },
   {

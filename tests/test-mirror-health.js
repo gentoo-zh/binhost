@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // mirror-health.js reads the public status API once and marks each mirror picker option whose mirror is
 // down or more than six hours behind, matching entries by the host of the option's data-uri. A failed
-// request leaves the page as it was.
+// request leaves the page as it was. On the status page it also writes one row per mirror into
+// #mirror-facts, or the fallback line when the answer is missing or stale.
 
 const fs = require("fs");
 const path = require("path");
@@ -44,14 +45,30 @@ const API = { updated: NOW, overall: "ok", sites: [], events: [], mirrors: { upd
   { host: "ftp2.osuosl.org", key: "osuosl", up: true, trees: [tree("stable", 21000), tree("unstable", 600)] },
 ] } };
 
-// Runs the script against a page of options and cells; fetchImpl answers the one request.
-function run(fetchImpl, lang) {
+// The status page's mirror names, as i18n.js would return them for the current language.
+const NAMES = {
+  "zh-CN": { mNju: "南京大学", mHernet: "河南教育网", mOsuosl: "俄勒冈州立大学开源实验室" },
+  en: { mNju: "Nanjing University", mHernet: "HERNET", mOsuosl: "Oregon State University Open Source Lab" },
+};
+
+// Runs the script against a page of options and cells, plus the status page's section when status is
+// set; fetchImpl answers the one request.
+function run(fetchImpl, lang, status) {
   const opts = Object.keys(HOSTS).map((k) => el({ "data-uri": HOSTS[k] }));
   const cells = ["mirrors.ha.edu.cn", "mirror.nju.edu.cn", "unlisted.example"].map((h) => el({ "data-mirror-host": h }));
   cells.forEach((c) => { c.textContent = "—"; });
   const listeners = {}, events = [], asked = [];
+  const ids = {};
+  if (status) {
+    ids["mirror-facts"] = el({ "aria-busy": "true" });
+    ids["mirror-facts"].innerHTML = "<span class=\"row\" aria-hidden=\"true\"></span>";
+    ids["mirror-more"] = el({});
+    ids["mirror-failed"] = el({});
+    ids["mirror-failed"].hidden = true;
+  }
   const document = {
     documentElement: { lang: lang || "zh-CN" },
+    getElementById(id) { return ids[id] || null; },
     querySelectorAll(sel) {
       if (sel === ".src-opt[data-uri]") return opts;
       if (sel === "[data-mirror-host]") return cells;
@@ -60,14 +77,19 @@ function run(fetchImpl, lang) {
     addEventListener(type, fn) { listeners[type] = fn; },
     dispatchEvent(e) { events.push(e.type); },
   };
+  const window = {};
+  if (status) {
+    window.MIRROR_T = (k) => NAMES[document.documentElement.lang][k];
+    window.MirrorStatus = { age: () => document.documentElement.lang === "en" ? "3 minutes ago" : "3 分钟前" };
+  }
   const ctx = {
-    document, window: {},
+    document, window,
     CustomEvent: function (type) { this.type = type; },
     setTimeout: () => 0, clearTimeout: () => {},
     fetch: (url, init) => { asked.push(url); return fetchImpl(url, init); },
   };
   vm.runInNewContext(src, ctx);
-  return { opts, cells, listeners, events, asked, document, api: ctx.window.MirrorHealth };
+  return { opts, cells, ids, listeners, events, asked, document, api: ctx.window.MirrorHealth };
 }
 const byKey = (page) => Object.fromEntries(Object.keys(HOSTS).map((k, i) => [k, page.opts[i]]));
 const settle = () => new Promise((r) => setImmediate(r));
@@ -126,6 +148,62 @@ const answer = (j) => () => Promise.resolve({ ok: true, json: () => Promise.reso
           bad.opts.every((x) => !x.hasAttribute("data-behind") && !x.hasAttribute("data-down")) &&
           bad.cells.every((c) => c.textContent === "—") && bad.events.length === 0,
           JSON.stringify(bad.opts.map((x) => x.attrs)));
+  }
+
+  // The status page: one row per mirror in the API's order, the origin left out.
+  const rowsOf = (html) => html.split('<span class="row">').slice(1);
+  const part = (tree, word) => '<span class="sub">' + tree + '</span> <b class="num">' + word + "</b>";
+  let pending;
+  const st = run(() => new Promise((r) => { pending = r; }), "zh-CN", true);
+  st.listeners.langchange();
+  check("状态页：结果到达前保留骨架屏",
+        st.ids["mirror-facts"].innerHTML.includes("aria-hidden") &&
+        st.ids["mirror-facts"].getAttribute("aria-busy") === "true", st.ids["mirror-facts"].innerHTML);
+  pending({ ok: true, json: () => Promise.resolve(API) });
+  await settle();
+  const box = st.ids["mirror-facts"], rows = rowsOf(box.innerHTML);
+  check("状态页：每个下游镜像一行，跳过源站，顺序同 API",
+        rows.length === 3 && rows[0].includes("南京大学") && rows[1].includes("河南教育网") &&
+        rows[2].includes("俄勒冈州立大学开源实验室") && !box.innerHTML.includes("distfiles.gentoozh.org"),
+        box.innerHTML);
+  check("状态页：南京大学 stable 落后、unstable 已同步",
+        rows[0].includes(part("stable", "落后约 24 小时")) && rows[0].includes(part("unstable", "已同步")),
+        rows[0]);
+  check("状态页：河南教育网 unstable 无法连接",
+        rows[1].includes(part("stable", "已同步")) && rows[1].includes(part("unstable", "无法连接")), rows[1]);
+  check("状态页：6 小时内的延迟算已同步", rows[2].includes(part("stable", "已同步")), rows[2]);
+  check("状态页：时间列写检查时间", rows[0].includes('<span class="when">检查于 <b>3 分钟前</b>'), rows[0]);
+  check("状态页：清除忙碌状态，显示说明行，隐藏失败提示",
+        box.getAttribute("aria-busy") === "false" && !box.hidden && !st.ids["mirror-more"].hidden &&
+        st.ids["mirror-failed"].hidden);
+  st.document.documentElement.lang = "en";
+  st.listeners.langchange();
+  const en = rowsOf(box.innerHTML);
+  check("状态页：切换到英文后重新渲染",
+        en[0].includes("Nanjing University") && en[0].includes(part("stable", "About 24 hours behind")) &&
+        en[1].includes(part("unstable", "Unreachable")) && en[2].includes(part("unstable", "In sync")) &&
+        en[0].includes("Checked <b>3 minutes ago</b>"), box.innerHTML);
+
+  const down = JSON.parse(JSON.stringify(API));
+  down.mirrors.list[3].up = false;
+  const off = run(answer(down), "zh-CN", true);
+  await settle();
+  const offRows = rowsOf(off.ids["mirror-facts"].innerHTML);
+  check("状态页：镜像本身不可达时两棵树都写无法连接",
+        offRows[2].includes(part("stable", "无法连接")) && offRows[2].includes(part("unstable", "无法连接")),
+        offRows[2]);
+
+  for (const [name, impl] of [
+    ["请求失败", () => Promise.reject(new Error("offline"))],
+    ["镜像检查已超过两小时未更新", answer(Object.assign({}, API, { mirrors: Object.assign({}, API.mirrors, { updated: NOW - 3 * 3600 }) }))],
+  ]) {
+    const bad = run(impl, "zh-CN", true);
+    await settle();
+    const b = bad.ids["mirror-facts"];
+    check("状态页" + name + "：移除骨架屏，只显示失败提示",
+          b.innerHTML === "" && b.hidden && b.getAttribute("aria-busy") === "false" &&
+          bad.ids["mirror-more"].hidden && !bad.ids["mirror-failed"].hidden && bad.events.length === 0,
+          JSON.stringify([b.innerHTML, b.hidden, bad.ids["mirror-failed"].hidden]));
   }
 
   check("hostOf 取 data-uri 的主机名", page.api.hostOf("https://Mirrors.HA.edu.cn/gentoo-zh") === "mirrors.ha.edu.cn");

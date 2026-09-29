@@ -217,9 +217,19 @@
     <span class="row" aria-hidden="true"><span class="who"><span class="skel"></span></span><span class="val"><span class="skel"></span></span><span class="when"><span class="skel"></span></span></span>
   </p>
 
+  <h2 id="mirrors" data-i18n="h2mirrors">镜像同步</h2>
+
+  <p class="facts" id="mirror-facts" aria-busy="true">
+    <span class="row" aria-hidden="true"><span class="who"><span class="skel"></span></span><span class="val"><span class="skel"></span></span><span class="when"><span class="skel"></span></span></span>
+    <span class="row" aria-hidden="true"><span class="who"><span class="skel"></span></span><span class="val"><span class="skel"></span></span><span class="when"><span class="skel"></span></span></span>
+    <span class="row" aria-hidden="true"><span class="who"><span class="skel"></span></span><span class="val"><span class="skel"></span></span><span class="when"><span class="skel"></span></span></span>
+  </p>
+  <p class="note" id="mirror-more" data-i18n-html="mirrorMore">完整记录与 90 天可用率见 <a href="https://status.gentoozh.org/">status.gentoozh.org</a>。</p>
+  <p class="note" id="mirror-failed" data-i18n-html="mirrorFailed" hidden>暂时无法获取镜像状态，请到 <a href="https://status.gentoozh.org/">status.gentoozh.org</a> 查看。</p>
+
   <noscript>
     <p class="note">状态由脚本读取后显示。原始数据：
-      <a href="/binpkgs/x86-64/status.json">stable 索引</a>、<a href="/unstable/binpkgs/x86-64/status.json">unstable 索引</a>、<a href="/distfiles-status.json">distfiles</a>、<a href="/build-status.json">stable 构建</a>、<a href="/build-status-unstable.json">unstable 构建</a>、<a href="/server-status.json">服务器</a>。</p>
+      <a href="/binpkgs/x86-64/status.json">stable 索引</a>、<a href="/unstable/binpkgs/x86-64/status.json">unstable 索引</a>、<a href="/distfiles-status.json">distfiles</a>、<a href="/build-status.json">stable 构建</a>、<a href="/build-status-unstable.json">unstable 构建</a>、<a href="/server-status.json">服务器</a>；镜像同步见 <a href="https://status.gentoozh.org/">status.gentoozh.org</a>。</p>
   </noscript>
 
   <!-- chrome:pager -->
@@ -246,19 +256,43 @@
 <script src="/assets/strings.js?v=a45bdd00"></script>
 <script>
 window.MIRROR_I18N = {
+  'zh-cn': {
+    mCernet: '教育网联合镜像站',
+    mNju: '南京大学',
+    mNyist: '南阳理工学院',
+    mHernet: '河南教育网',
+    mOsuosl: '俄勒冈州立大学开源实验室'
+  },
   'zh-tw': {
     title: '狀態',
     h2pkgs: '套件與檔案',
-    h2server: '伺服器與建置'
+    h2server: '伺服器與建置',
+    h2mirrors: '鏡像同步',
+    mirrorMore: '完整紀錄與 90 天可用率見 <a href="https://status.gentoozh.org/">status.gentoozh.org</a>。',
+    mirrorFailed: '暫時無法取得鏡像狀態，請至 <a href="https://status.gentoozh.org/">status.gentoozh.org</a> 查看。',
+    mCernet: '教育網聯合鏡像站',
+    mNju: '南京大學',
+    mNyist: '南陽理工學院',
+    mHernet: '河南教育網',
+    mOsuosl: '奧勒岡州立大學開放原始碼實驗室'
   },
   'en': {
     title: 'Status',
     h2pkgs: 'Packages and files',
-    h2server: 'Server and builds'
+    h2server: 'Server and builds',
+    h2mirrors: 'Mirror sync',
+    mirrorMore: 'Full history and 90-day availability are on <a href="https://status.gentoozh.org/">status.gentoozh.org</a>.',
+    mirrorFailed: 'Mirror status is unavailable right now; see <a href="https://status.gentoozh.org/">status.gentoozh.org</a>.',
+    mCernet: 'CERNET',
+    mNju: 'Nanjing University',
+    mNyist: 'NYIST',
+    mHernet: 'HERNET',
+    mOsuosl: 'Oregon State University Open Source Lab'
   }
 };
 </script>
 <script src="/assets/i18n.js?v=da677fcb"></script>
 <script src="/assets/status-data.js?v=09338ba6"></script>
+<script src="/assets/mirror-health.js?v=d3ec16a3"></script>
 </body>
 </html>
