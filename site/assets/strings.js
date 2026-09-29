@@ -13,7 +13,7 @@ window.MIRROR_I18N_COMMON = {
     sdLoading: '正在載入…', sdFailed: '無法載入搜尋索引。', sdRetry: '重試', sdNone: '沒有符合「{q}」的結果。',
     sdPkgHint: '輸入至少 2 個字元以搜尋套件。', sdPkgFailed: '無法載入套件清單。',
     sdPkgMore: '共 {n} 個符合的套件，此處顯示前 {m} 個。',
-    fMaint: '本站由 Gentoo 中文社区維護，建置機由 <a href="/thanks">OSUOSL</a> 提供。'
+    fMaint: '本站由 <a href="https://gentoozh.org/">Gentoo 中文社区</a>維護，建置機由 <a href="/thanks">OSUOSL</a> 提供。'
   },
   'en': {
     brand: 'Gentoo-zh Downloads',
@@ -30,6 +30,6 @@ window.MIRROR_I18N_COMMON = {
     sdPkgs: 'Packages', sdLoading: 'Loading…', sdFailed: 'Could not load the search index.', sdRetry: 'Retry',
     sdNone: 'No results for “{q}”.', sdPkgHint: 'Type at least 2 characters to search packages.',
     sdPkgFailed: 'Could not load the package list.', sdPkgMore: '{n} packages match; the first {m} are shown.',
-    fMaint: 'Maintained by the Gentoo-zh Community; the build server is provided by <a href="/thanks">OSUOSL</a>.'
+    fMaint: 'Maintained by the <a href="https://gentoozh.org/">Gentoo-zh Community</a>; the build server is provided by <a href="/thanks">OSUOSL</a>.'
   }
 };
