@@ -36,7 +36,8 @@ const HOSTS = {
 };
 
 const tree = (key, lagSec, up) => ({ key, name: key, up: up !== false, code: 200, lagSec });
-const API = { updated: 1, overall: "ok", sites: [], events: [], mirrors: { updated: 1, published: 1, list: [
+const NOW = Math.floor(Date.now() / 1000);
+const API = { updated: NOW, overall: "ok", sites: [], events: [], mirrors: { updated: NOW, published: 1, list: [
   { host: "distfiles.gentoozh.org", key: "src", origin: true, up: true, trees: [tree("stable", 0), tree("unstable", 0)] },
   { host: "mirror.nju.edu.cn", key: "nju", up: true, trees: [tree("stable", 84715), tree("unstable", 3600)] },
   { host: "mirrors.ha.edu.cn", key: "ha", up: true, trees: [tree("stable", 0), tree("unstable", 0, false)] },
@@ -116,6 +117,8 @@ const answer = (j) => () => Promise.resolve({ ok: true, json: () => Promise.reso
     ["请求失败", () => Promise.reject(new Error("offline"))],
     ["非 2xx 响应", () => Promise.resolve({ ok: false, json: () => Promise.resolve(API) })],
     ["响应缺少镜像列表", answer({ updated: 1 })],
+    ["镜像检查已超过两小时未更新", answer(Object.assign({}, API, { mirrors: Object.assign({}, API.mirrors, { updated: NOW - 3 * 3600 }) }))],
+    ["镜像检查时间缺失", answer(Object.assign({}, API, { mirrors: Object.assign({}, API.mirrors, { updated: undefined }) }))],
   ]) {
     const bad = run(impl);
     await settle();

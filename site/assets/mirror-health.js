@@ -3,12 +3,14 @@
 // data-uri, since the site and the API name some mirrors differently (hernet here, ha there). A mirror that
 // is down, or whose larger tree lag exceeds LAG seconds, gets data-behind and a tooltip on its option, and
 // a down one also data-down, which keeps the file browser's links on the origin. Cells marked
-// data-mirror-host (the mirrors page) show each mirror's state. A failed or slow request changes nothing.
+// data-mirror-host (the mirrors page) show each mirror's state. A failed or slow request changes nothing, and
+// neither does an answer whose mirror check is older than STALE seconds, since its marks may no longer hold.
 (function () {
   'use strict';
   var API = 'https://status.gentoozh.org/api/status';
   var LAG = 6 * 3600;
   var WAIT = 8000;
+  var STALE = 2 * 3600;
   var TEXT = {
     'zh-cn': { behind: '落后约 {h} 小时', down: '上次检查时无法连接', ok: '已同步', gone: '无法连接' },
     'zh-tw': { behind: '落後約 {h} 小時', down: '上次檢查時無法連線', ok: '已同步', gone: '無法連線' },
@@ -39,6 +41,8 @@
   function parse(j) {
     var list = j && j.mirrors && j.mirrors.list, out = {};
     if (!Array.isArray(list)) return null;
+    var at = j.mirrors.updated;
+    if (typeof at !== 'number' || Date.now() / 1000 - at > STALE) return null;
     list.forEach(function (m) { if (m && m.host) out[String(m.host).toLowerCase()] = state(m); });
     return out;
   }
@@ -90,6 +94,6 @@
   }
 
   document.addEventListener('langchange', apply);
-  window.MirrorHealth = { parse: parse, state: state, hostOf: hostOf, apply: apply, LAG: LAG };
+  window.MirrorHealth = { parse: parse, state: state, hostOf: hostOf, apply: apply, LAG: LAG, STALE: STALE };
   load();
 })();
