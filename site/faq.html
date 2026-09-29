@@ -261,15 +261,13 @@
     <table class="status-guide">
       <thead><tr><th data-i18n="stStatus">状态</th><th data-i18n="stMeaning">触发条件与常见原因</th></tr></thead>
       <tbody>
-        <tr><td data-i18n-html="stBuilt"><code>✓</code></td><td data-i18n-html="sdBuilt">公开 binpkg 索引已有该包，可以从本站下载。它不表示该包仍在直接构建清单；同时出现 <code>待移除</code> 时，勾号只表示旧产物暂时仍可用。</td></tr>
+        <tr><td data-i18n-html="stBuilt"><code>✓</code></td><td data-i18n-html="sdBuilt">公开 binpkg 索引已有该包，可以从本站下载。它不表示该包仍在直接构建清单。包名旁同时出现发布政策时，该政策针对当前 ebuild；公开的 binpkg 在发布前已按其版本与构建时的 USE 通过发布检查。</td></tr>
         <tr><td data-i18n-html="stPending"><code>待构建</code></td><td data-i18n-html="sdPending">该包是直接构建目标，但公开索引尚无 binpkg。它可能尚未完成首次构建，也可能最近一次未成功发布；该状态只表示目前没有公开产物。</td></tr>
         <tr><td data-i18n-html="stExcluded"><code>不构建</code></td><td data-i18n-html="sdExcluded">维护清单明确排除该包。常见原因包括无法构建、缺少支持或需要进一步核对再分发条件；标签提示中会显示记录的具体原因。</td></tr>
-        <tr><td data-i18n-html="stChannelExcluded"><code>本频道不构建</code></td><td data-i18n-html="sdChannelExcluded">该包仍在共用收录清单中，但不符合当前频道的依赖或构建条件，因此本频道不直接构建。另一个频道仍可能发布该包；当前频道尚有旧产物时会同时显示 <code>待移除</code>。</td></tr>
+        <tr><td data-i18n-html="stChannelExcluded"><code>本频道不构建</code></td><td data-i18n-html="sdChannelExcluded">该包仍在共用收录清单中，但不符合当前频道的依赖或构建条件，因此本频道不直接构建。另一个频道仍可能发布该包。</td></tr>
         <tr><td data-i18n-html="stOffList"><code>清单外</code></td><td data-i18n-html="sdOffList">该包不是直接构建目标。上游已经提供预编译内容或构建收益较低时通常不会直接收录，但仍可能作为依赖随包发布；包名含 <code>-bin</code> 不会自动决定该状态。</td></tr>
         <tr><td data-i18n-html="stBindist"><code>不提供 binpkg</code></td><td data-i18n-html="sdBindist">当前 ebuild 的 <code>RESTRICT</code> 包含 <code>bindist</code>，因此本站不发布该包的 binpkg。源码包和上游预编译包都可能设置这项限制，常见原因是许可证、上游发布条款或预编译内容的再分发条件不允许本站分发二进制产物；包名含 <code>-bin</code> 本身不是判定依据。distfiles 是否镜像仍按 <code>RESTRICT</code> 中的 <code>mirror</code>、<code>fetch</code> 与每项 <code>SRC_URI</code> 单独判断。</td></tr>
         <tr><td data-i18n-html="stLicense"><code>许可证限制</code></td><td data-i18n-html="sdLicense">当前 ebuild 的 <code>LICENSE</code> 表达式不属于本站固定的 <code>@BINARY-REDISTRIBUTABLE</code>。许可证可能允许附带条件的再分发，但本站不会据此发布 binpkg；该状态与 <code>RESTRICT=bindist</code> 分开判定。</td></tr>
-        <tr><td data-i18n-html="stLocal"><code>本地安装</code></td><td data-i18n-html="sdLocal"><code>acct-group</code> 与 <code>acct-user</code> 由 Portage 在用户系统创建账号，<code>virtual</code> 由 Portage 选择实际实现。这些包无需本站预编译。</td></tr>
-        <tr><td data-i18n-html="stRetiring"><code>待移除</code></td><td data-i18n-html="sdRetiring">公开索引仍有旧 binpkg，但当前 overlay、清单或发布政策已不再提供它。旧产物在新一代索引发布成功后开始移除，每轮移除一部分，避免旧索引指向已删除文件；该状态可以与勾号同时出现。</td></tr>
         <tr><td data-i18n-html="stDist"><code>Distfiles —</code></td><td data-i18n-html="sdDist">该包没有声明 distfile、<code>RESTRICT</code> 包含 <code>mirror</code> 或 <code>fetch</code>，或声明的文件尚未全部进入镜像。破折号提示会区分没有文件与不可用；该状态不表示 binpkg 不可用。</td></tr>
       </tbody>
     </table>
@@ -347,23 +345,19 @@ window.MIRROR_I18N = {
     a12: '套件頁分開顯示公開索引、直接建置清單、目前發布政策與 distfiles 鏡像狀態。同一列可以同時出現多個狀態，因為它們說明不同事實。',
     stStatus: '狀態', stMeaning: '觸發條件與常見原因',
     stBuilt: '<code>✓</code>',
-    sdBuilt: '公開 binpkg 索引已有該套件，可從本站下載。這不表示該套件仍在直接建置清單；同時出現 <code>待移除</code> 時，勾號只表示舊產物暫時仍可用。',
+    sdBuilt: '公開 binpkg 索引已有該套件，可從本站下載。這不表示該套件仍在直接建置清單。套件名旁同時出現發布政策時，該政策針對目前 ebuild；公開的 binpkg 在發布前已依其版本與建置時的 USE 通過發布檢查。',
     stPending: '<code>待建置</code>',
     sdPending: '該套件是直接建置目標，但公開索引尚無 binpkg。它可能尚未完成首次建置，也可能沒有在最近一次成功發布；該狀態只表示目前沒有公開產物。',
     stExcluded: '<code>不建置</code>',
     sdExcluded: '維護清單明確排除該套件。常見原因包括無法建置、缺少支援或需要進一步核對再散布條件；標籤提示中會顯示記錄的具體原因。',
     stChannelExcluded: '<code>本頻道不建置</code>',
-    sdChannelExcluded: '該套件仍在共用收錄清單中，但不符合目前頻道的相依套件或建置條件，因此本頻道不直接建置。另一個頻道仍可能發布該套件；目前頻道仍有舊產物時會同時顯示 <code>待移除</code>。',
+    sdChannelExcluded: '該套件仍在共用收錄清單中，但不符合目前頻道的相依套件或建置條件，因此本頻道不直接建置。另一個頻道仍可能發布該套件。',
     stOffList: '<code>清單外</code>',
     sdOffList: '該套件不是直接建置目標。上游已提供預先編譯內容或建置收益較低時通常不會直接收錄，但仍可能作為依賴隨套件發布；套件名含 <code>-bin</code> 不會自動決定該狀態。',
     stBindist: '<code>不提供 binpkg</code>',
     sdBindist: '目前 ebuild 的 <code>RESTRICT</code> 包含 <code>bindist</code>，因此本站不發布該套件的 binpkg。原始碼套件和上游預先編譯套件都可能設定這項限制，常見原因是授權條款、上游發布條款或預先編譯內容的再散布條件不允許本站散布二進位產物；套件名含 <code>-bin</code> 本身不是判定依據。distfiles 是否鏡像仍依 <code>RESTRICT</code> 中的 <code>mirror</code>、<code>fetch</code> 與每個 <code>SRC_URI</code> 項目分別判定。',
     stLicense: '<code>授權限制</code>',
     sdLicense: '目前 ebuild 的 <code>LICENSE</code> 表達式不屬於本站固定的 <code>@BINARY-REDISTRIBUTABLE</code>。授權條款可能允許附帶條件的再散布，但本站不會據此發布 binpkg；該狀態與 <code>RESTRICT=bindist</code> 分開判定。',
-    stLocal: '<code>本機安裝</code>',
-    sdLocal: '<code>acct-group</code> 與 <code>acct-user</code> 由 Portage 在使用者系統建立帳號，<code>virtual</code> 由 Portage 選擇實際實作。這些套件無須本站預先編譯。',
-    stRetiring: '<code>待移除</code>',
-    sdRetiring: '公開索引仍有舊 binpkg，但目前 overlay、清單或發布政策已不再提供它。舊產物在新一代索引發布成功後開始移除，每輪移除一部分，避免舊索引指向已刪除檔案；該狀態可以與勾號同時出現。',
     stDist: '<code>Distfiles —</code>',
     sdDist: '該套件沒有宣告 distfile、<code>RESTRICT</code> 包含 <code>mirror</code> 或 <code>fetch</code>，或宣告的檔案尚未全部進入鏡像。破折號提示會區分沒有檔案與不可用；該狀態不表示 binpkg 不可用。'
   },
@@ -403,23 +397,19 @@ window.MIRROR_I18N = {
     a12: 'The packages page shows the public index, direct build list, current publication policy and distfile mirror state separately. Several statuses can appear on one row because they describe different facts.',
     stStatus: 'Status', stMeaning: 'Trigger and common causes',
     stBuilt: '<code>✓</code>',
-    sdBuilt: 'The public binpkg index contains this package, so it can be downloaded from this host. This does not mean the package remains a direct build target; when <code>pending removal</code> also appears, the tick only means the old artifact is temporarily available.',
+    sdBuilt: 'The public binpkg index contains this package, so it can be downloaded from this host. This does not mean the package remains a direct build target. When a publication policy also appears beside the package name, it applies to the current ebuild; the published binpkg passed the publication checks for its own version and build-time USE.',
     stPending: '<code>pending</code>',
     sdPending: 'The package is a direct build target, but the public index has no binpkg. Its first build may not have completed, or the latest cycle may not have published it; this status only says that no public artifact is currently available.',
     stExcluded: '<code>excluded</code>',
     sdExcluded: 'The maintenance list explicitly excludes the package. Common reasons include build failure, missing support or a redistribution condition that needs review; the label tooltip shows the recorded reason.',
     stChannelExcluded: '<code>not in this channel</code>',
-    sdChannelExcluded: 'The package remains on the shared build list, but this channel cannot satisfy its dependency or build conditions, so this channel does not build it directly. Another channel may still publish it. If this channel retains an older artifact, <code>pending removal</code> appears too.',
+    sdChannelExcluded: 'The package remains on the shared build list, but this channel cannot satisfy its dependency or build conditions, so this channel does not build it directly. Another channel may still publish it.',
     stOffList: '<code>off-list</code>',
     sdOffList: 'The package is not a direct build target. Packages with upstream prebuilt content or little build benefit are often left off the list, but they may still be published as dependencies. A <code>-bin</code> name does not determine this status.',
     stBindist: '<code>no binpkg</code>',
     sdBindist: 'The current ebuild\'s <code>RESTRICT</code> includes <code>bindist</code>, so this host does not publish a binpkg for the package. Source and upstream-prebuilt packages can both carry this restriction, commonly because a licence, upstream release terms or redistribution conditions for prebuilt content prohibit this host from distributing binary artifacts. A <code>-bin</code> name is not evidence by itself. Distfile mirroring is evaluated separately from the <code>mirror</code> and <code>fetch</code> values in <code>RESTRICT</code> and each <code>SRC_URI</code> entry.',
     stLicense: '<code>licence restricted</code>',
     sdLicense: 'The current ebuild\'s <code>LICENSE</code> expression is outside this host\'s fixed <code>@BINARY-REDISTRIBUTABLE</code> set. The licence may permit redistribution under conditions, but this host does not publish a binpkg under that policy. This is evaluated separately from <code>RESTRICT=bindist</code>.',
-    stLocal: '<code>local install</code>',
-    sdLocal: 'Portage creates the accounts from <code>acct-group</code> and <code>acct-user</code> on the user system, while <code>virtual</code> lets Portage select the actual implementation. These packages do not need to be prebuilt by this host.',
-    stRetiring: '<code>pending removal</code>',
-    sdRetiring: 'The public index still contains an old binpkg, but the current overlay, list or publication policy no longer provides it. Removal starts once a new index generation publishes successfully and takes a share each publish, preventing the old index from pointing to a deleted file. This status can appear with a tick.',
     stDist: '<code>Distfiles —</code>',
     sdDist: 'The package declares no distfile, its <code>RESTRICT</code> includes <code>mirror</code> or <code>fetch</code>, or not every declared file has reached the mirror. The dash tooltip distinguishes no file from unavailable data. This status does not imply that the binpkg is unavailable.'
   }
