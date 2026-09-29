@@ -79,8 +79,7 @@ const app = read("site/_app.html");
 const appHead = headScript(app, "preload");
 for (const p of ["/files/", "/distfiles/", "/binpkgs/x86-64/app-i18n/", "/distfiles/%E4%B8%AD%E6%96%87/"]) {
   const links = preloads(appHead, p);
-  // The mirror status is a second, optional request that the head does not preload.
-  const fetched = mainFetches(app, p, null, []).filter(function (u) { return u !== "/mirror-status.json"; });
+  const fetched = mainFetches(app, p, null, []);
   check(`文件浏览器 ${p}：head 预载的就是脚本请求的列表`,
         links.length === 1 && links[0].rel === "preload" && links[0].as === "fetch" &&
         links[0].crossOrigin === "anonymous" && fetched.length === 1 && links[0].href === fetched[0],

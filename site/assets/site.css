@@ -1168,8 +1168,7 @@ main.wide ~ .foot { max-width: none; }
   font-family: var(--sans); font-size: var(--fs-small); line-height: var(--lh-label); white-space: normal;
 }
 .badge[data-variant="neutral"] { background: var(--neutral-subtle); color: var(--fg-body); }
-/* The file browser: a row a mirror has not synced yet, and the notice dot on that mirror's option. */
-.listing td.name .badge { margin-inline-start: var(--sp-1); }
+/* The notice dot on a mirror's option: the status API finds that mirror behind or unreachable. */
 .src-opt[data-behind]::after, .menu-item[data-behind] .menu-label::after {
   content: ""; display: inline-block; width: var(--sp-1); height: var(--sp-1); border-radius: var(--r-full);
   margin-inline-start: var(--sp-1); vertical-align: middle; background: var(--notice);

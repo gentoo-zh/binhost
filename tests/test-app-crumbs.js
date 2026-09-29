@@ -146,7 +146,7 @@ check("中文目录名按相同规则编码",
                    { name: "binpkgs", type: "directory", mtime: "Mon, 10 Aug 2026 16:56:06 GMT" }];
   const asked = [];
   const ok = load("/files/", (url) => {
-    if (url !== "/mirror-status.json") asked.push(url);
+    asked.push(url);
     return Promise.resolve({ ok: true, json: () => Promise.resolve(ROOT_LS) });
   });
   await settle();
@@ -199,27 +199,6 @@ check("中文目录名按相同规则编码",
   check("文件的镜像路径经过属性转义，并保持地址栏的百分号编码",
         amp.nodes.rows.innerHTML.includes('data-src-path="/distfiles/a&amp;amp;b%20c%25/x%26y.iso"'),
         amp.nodes.rows.innerHTML);
-
-  // An unreachable mirror keeps every link on the origin, not only the probed ones.
-  const now = Math.floor(Date.now() / 1000);
-  const down = load("/distfiles/", (url) => Promise.resolve({ ok: true, json: () => Promise.resolve(
-    url === "/mirror-status.json"
-      ? { generated: now, mirrors: {
-          gone: { base: "https://gone.example/gentoo-zh", checked: now, reachable: false, ok: false, missing: ["/x"] },
-          late: { base: "https://late.example/gentoo-zh", checked: now, reachable: true, ok: false, missing: ["/y"] } } }
-      : []) }));
-  await settle();
-  const mm = global.window.MIRROR_MISSING || {};
-  check("无法连接的镜像：全部链接留在源站；其余镜像按清单",
-        mm["https://gone.example/gentoo-zh"] === true &&
-        JSON.stringify(mm["https://late.example/gentoo-zh"]) === '["/y"]', JSON.stringify(mm));
-  void down;
-
-  // n is the number of probed sentinel files that lag, a lower bound on the real backlog.
-  check("未同步数量写成下限（三种语言）",
-        html.includes("srcMissing: '至少 {n} 个文件尚未同步（检查于 {t}）'") &&
-        html.includes("srcMissing: '至少 {n} 個檔案尚未同步（檢查於 {t}）'") &&
-        html.includes("srcMissing: 'At least {n} files not yet synced (checked {t})'"));
 
   // An empty directory keeps the header and shows one message row in the body, as the package list's
   // no-match state does (reusing its .empty-row markup and CSS), instead of leaving the body blank.

@@ -17,7 +17,7 @@
 <link rel="icon" href="/assets/logo.webp">
 <link rel="preload" href="/assets/fonts/source-sans-3.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/tokens.css?v=1e90dbb8">
-<link rel="stylesheet" href="/assets/site.css?v=4f99deea">
+<link rel="stylesheet" href="/assets/site.css?v=d463d022">
 <script src="/assets/early.js?v=e170b3a5"></script>
 <script src="/assets/docs.js?v=7bf4e48d" defer></script>
 <script src="/assets/indicator.js?v=d209281f" defer></script>
@@ -270,8 +270,6 @@ window.MIRROR_I18N = {
     navFiles: '文件',
     metaItems: '条目', metaSize: '文件总大小', metaLatest: '最近修改',
     aMirror: '下载文件使用的镜像', srcLabel: '镜像',
-    srcBehind: '镜像未同步', srcBehindLong: '此镜像尚未同步这个文件，链接指向源站。',
-    srcMissing: '至少 {n} 个文件尚未同步（检查于 {t}）', srcDown: '上次检查时无法连接（{t}）',
     dirEmpty: '此目录为空',
     noJs: '此列表需要脚本。不使用脚本时，请通过 <a href="/_raw/">/_raw/</a> 浏览目录。'
   },
@@ -282,8 +280,6 @@ window.MIRROR_I18N = {
     timeout: '未能在 20 秒內讀取目錄清單，請重新整理頁面再試。',
     metaItems: '項目', metaSize: '檔案總大小', metaLatest: '最近修改',
     aMirror: '下載檔案使用的鏡像', srcLabel: '鏡像',
-    srcBehind: '鏡像未同步', srcBehindLong: '此鏡像尚未同步這個檔案，連結指向來源站。',
-    srcMissing: '至少 {n} 個檔案尚未同步（檢查於 {t}）', srcDown: '上次檢查時無法連線（{t}）',
     srcCernet: '教育網聯合鏡像站', srcNju: '南京大學', srcNyist: '南陽理工', srcHernet: '河南教育網',
     srcOsuosl: '奧勒岡州立大學', srcOrigin: '來源站',
     dirEmpty: '此目錄為空',
@@ -296,8 +292,6 @@ window.MIRROR_I18N = {
     timeout: 'Could not load the directory listing within 20 seconds. Reload the page to try again.',
     metaItems: 'Entries', metaSize: 'Total file size', metaLatest: 'Last modified',
     aMirror: 'Mirror for downloads', srcLabel: 'Mirror',
-    srcBehind: 'Not on mirror yet', srcBehindLong: 'This mirror has not synced this file yet; the link points to the origin.',
-    srcMissing: 'At least {n} files not yet synced (checked {t})', srcDown: 'Unreachable at the last check ({t})',
     srcCernet: 'CERNET', srcNju: 'NJU', srcNyist: 'NYIST', srcHernet: 'HERNET',
     srcOsuosl: 'OSUOSL', srcOrigin: 'Origin',
     dirEmpty: 'This directory is empty',
@@ -306,7 +300,7 @@ window.MIRROR_I18N = {
 };
 </script>
 <script src="/assets/i18n.js?v=da677fcb"></script>
-<script src="/assets/source-switch.js?v=4b48c941"></script>
+<script src="/assets/source-switch.js?v=a74c8ca7"></script>
 
 <script>
 
@@ -498,44 +492,7 @@ fetch("/_ls" + (atRoot ? "/" : location.pathname), abort ? { signal: abort.signa
     fail(e);
   });
 
-// /mirror-status.json, written on the origin each hour by deploy/mirror-status.py, names the files each
-// mirror has not synced yet among a sample of the newest ones. Those rows keep the origin link
-// (source-switch.js reads MIRROR_MISSING), and every row does for a mirror that was unreachable. A mirror
-// that is behind or was unreachable gets a notice dot with the check time in its tooltip. A
-// missing or unreadable file, or one older than STATUS_AGE seconds, leaves the page as it was.
-const STATUS_AGE = 6 * 3600;
-let mirrorStatus = null;
-function markMirrors() {
-  if (!mirrorStatus) return;
-  document.querySelectorAll('.src-pick[data-src-switch="files"] .src-opt[data-uri]').forEach(function (b) {
-    const s = mirrorStatus[b.getAttribute('data-uri')];
-    if (!s || s.ok) { b.removeAttribute('data-behind'); b.removeAttribute('title'); return; }
-    b.setAttribute('data-behind', '');
-    b.title = (s.reachable ? t('srcMissing').replace('{n}', (s.missing || []).length) : t('srcDown'))
-      .replace('{t}', stampOf(s.checked * 1000));
-  });
-}
-fetch('/mirror-status.json', { cache: 'no-cache' })
-  .then(function (r) { return r.ok ? r.json() : null; })
-  .then(function (j) {
-    if (!j || !j.mirrors || !(Date.now() / 1000 - j.generated < STATUS_AGE)) return;
-    const byUri = {}, missing = {};
-    Object.keys(j.mirrors).forEach(function (id) {
-      const s = j.mirrors[id];
-      if (!s || !s.base) return;
-      byUri[s.base] = s;
-      // true: the mirror was unreachable, so every link stays on the origin, not only the probed ones.
-      if (s.reachable === false) missing[s.base] = true;
-      else if (Array.isArray(s.missing)) missing[s.base] = s.missing;
-    });
-    mirrorStatus = byUri;
-    window.MIRROR_MISSING = missing;
-    markMirrors();
-    document.dispatchEvent(new CustomEvent('sourcechange'));
-  })
-  .catch(function () {});
 document.addEventListener('langchange', function () {
-  markMirrors();
   fixHead();
   crumbs();
   if (Array.isArray(loaded)) render(loaded);
