@@ -1,0 +1,5 @@
+gentoo-zh/binhost
+The repository is licensed as stated in LICENSE. The site in site/ also
+carries third-party material, listed in site/assets/NOTICE.txt; that file and
+the Apache License 2.0 text (site/assets/LICENSE-Apache-2.0.txt) are
+published with the site under /assets/.

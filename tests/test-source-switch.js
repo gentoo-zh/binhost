@@ -1,11 +1,15 @@
 #!/usr/bin/env node
+// Mirror pickers on the two setup pages and in the file browser: the language default, the addresses
+// and download links they write, and the mirror choice carried from one page to the next through
+// localStorage.
 
 const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
-const html = fs.readFileSync(path.join(ROOT, "site/index.html"), "utf8");
-const faq = fs.readFileSync(path.join(ROOT, "site/faq.html"), "utf8");
+const read = (name) => fs.readFileSync(path.join(ROOT, "site", name), "utf8");
+const script = fs.readFileSync(path.join(ROOT, "site/assets/source-switch.js"), "utf8");
+const mirrorsPage = read("mirrors.html");
 
 let failed = 0;
 function check(name, condition, detail) {
@@ -33,117 +37,211 @@ function element(attributes, className) {
       },
     },
     getAttribute(name) { return attrs[name] === undefined ? null : attrs[name]; },
+    hasAttribute(name) { return attrs[name] !== undefined && attrs[name] !== null; },
     setAttribute(name, value) { attrs[name] = String(value); },
     addEventListener(name, listener) { listeners[name] = listener; },
     click() { listeners.click(); },
   };
 }
 
-const groups = [...html.matchAll(
-  /<div class="src-pick"([^>]*)data-src-switch="([^"]+)"([^>]*)>([\s\S]*?)<\/div>/g
-)].map(function (match) {
-  const groupAttrs = match[1] + match[3];
-  const opts = [...match[4].matchAll(/<button\b([^>]*)>[\s\S]*?<\/button>/g)]
-    .filter(function (button) { return /\bsrc-opt\b/.test(attr(button[1], "class") || ""); })
-    .map(function (button) {
-      const attrs = button[1];
-      return element({
-        "data-uri": attr(attrs, "data-uri"),
-        "data-src-default": attr(attrs, "data-src-default") || "",
-      }, attr(attrs, "class"));
-    });
-  const group = element({
-    "data-src-switch": match[2],
-    "data-src-group": attr(groupAttrs, "data-src-group") || "",
-    "data-src-list": attr(groupAttrs, "data-src-list"),
-  });
-  group.opts = opts;
-  group.querySelectorAll = function (selector) {
-    return selector === ".src-opt" ? opts : [];
+function storage(initial, broken) {
+  const data = Object.assign({}, initial);
+  return {
+    data,
+    getItem(key) { if (broken) throw new Error("denied"); return key in data ? data[key] : null; },
+    setItem(key, value) { if (broken) throw new Error("denied"); data[key] = String(value); },
   };
-  return group;
-});
+}
 
-const root = element({ "data-lang": "zh-cn" });
-const listeners = {};
-const topValue = element({ "data-src-suffix": "/binpkgs/x86-64" });
-const topCopy = element({ "data-src-suffix": "/binpkgs/x86-64" });
-const distList = /data-src-switch="dist"[^>]*data-src-list='([^']+)'/.exec(html);
-const distValue = element({ "data-src-list": distList ? distList[1] : "" });
-global.document = {
-  documentElement: root,
-  querySelectorAll(selector) {
-    if (selector === "[data-src-switch]") return groups;
-    if (selector === '[data-src-slot="top"]') return [topValue];
-    if (selector === '[data-src-slot="dist"]') return [distValue];
-    if (selector === '.copy-chip[data-src-copy="top"]') return [topCopy];
-    return [];
-  },
-  addEventListener(name, listener) { listeners[name] = listener; },
-};
-
-(0, eval)(fs.readFileSync(
-  path.join(ROOT, "site/assets/source-switch.js"), "utf8"));
-
-function selected() {
-  return groups.map(function (group) {
-    const option = group.opts.find(function (item) {
-      return item.classList.contains("on");
+// Loads one page's pickers into a stub document and runs source-switch.js over them.
+function load(page, lang, store, links) {
+  const html = read(page);
+  const groups = [...html.matchAll(
+    /<div class="src-pick"([^>]*)data-src-switch="([^"]+)"([^>]*)>([\s\S]*?)<\/div>/g
+  )].map(function (match) {
+    const groupAttrs = match[1] + match[3];
+    const opts = [...match[4].matchAll(/<button\b([^>]*)>[\s\S]*?<\/button>/g)]
+      .filter((button) => /\bsrc-opt\b/.test(attr(button[1], "class") || ""))
+      .map((button) => element({
+        "data-uri": attr(button[1], "data-uri"),
+        "data-src-default": attr(button[1], "data-src-default") || "",
+        "data-src-here": /\sdata-src-here\b/.test(button[1]) ? "" : null,
+      }, attr(button[1], "class")));
+    const group = element({
+      "data-src-switch": match[2],
+      "data-src-group": attr(groupAttrs, "data-src-group") || "",
+      "data-src-list": (/data-src-list='([^']*)'/.exec(groupAttrs) || [])[1] || null,
     });
-    return option && option.getAttribute("data-uri");
+    group.opts = opts;
+    group.querySelectorAll = (selector) => (selector === ".src-opt" ? opts : []);
+    return group;
   });
+  const slots = {};
+  for (const m of html.matchAll(/data-src-slot="(\w+)"([^>]*)>/g)) {
+    slots[m[1]] = slots[m[1]] || element({ "data-src-suffix": attr(m[2], "data-src-suffix") || "" });
+  }
+  const copies = {};
+  for (const m of html.matchAll(/data-src-copy="(\w+)"([^>]*)>/g)) {
+    copies[m[1]] = copies[m[1]] || element({ "data-src-suffix": attr(m[2], "data-src-suffix") || "" });
+  }
+  const root = element({ "data-lang": lang });
+  const listeners = {};
+  const winListeners = {};
+  global.document = {
+    documentElement: root,
+    querySelectorAll(selector) {
+      if (selector === "[data-src-switch]") return groups;
+      let m = /^\[data-src-slot="(\w+)"\]$/.exec(selector);
+      if (m) return slots[m[1]] ? [slots[m[1]]] : [];
+      m = /^\.copy-chip\[data-src-copy="(\w+)"\]$/.exec(selector);
+      if (m) return copies[m[1]] ? [copies[m[1]]] : [];
+      m = /^a\[data-src-link="(\w+)"\]$/.exec(selector);
+      if (m) return (links || []).filter((a) => a.getAttribute("data-src-link") === m[1]);
+      return [];
+    },
+    addEventListener(name, listener) { listeners[name] = listener; },
+  };
+  global.window = { addEventListener(name, listener) { winListeners[name] = listener; } };
+  global.localStorage = store;
+  (0, eval)(script);
+  const selected = () => groups
+    .filter((g) => (g.getAttribute("data-src-group") || "mirror") === "mirror")
+    .map((g) => { const o = g.opts.find((i) => i.classList.contains("on")); return o && o.getAttribute("data-uri"); });
+  const choose = (uri) => groups[0].opts.find((o) => o.getAttribute("data-uri") === uri).click();
+  return { groups, slots, copies, root, listeners, winListeners, selected, choose };
 }
 
 const cernet = "https://mirrors.cernet.edu.cn/gentoo-zh";
 const origin = "https://distfiles.gentoozh.org";
 const osuosl = "https://ftp2.osuosl.org/pub/gentoo-zh";
 const nju = "https://mirror.nju.edu.cn/gentoo-zh";
+const all = (list, uri) => list.length > 0 && list.every((u) => u === uri);
 
-check("首页包含三组镜像选择器", groups.length === 3, String(groups.length));
-const mirrorUris = [...new Set(groups[0].opts.map(function (option) {
-  return option.getAttribute("data-uri");
-}))];
-check("FAQ 列出设置页的全部镜像",
-      mirrorUris.length === 6 && mirrorUris.every(function (uri) {
-        return faq.includes('href="' + uri + '"') || uri === origin;
-      }), JSON.stringify(mirrorUris));
-check("简体中文默认选择教育网联合镜像站",
-      selected().every(function (uri) { return uri === cernet; }),
-      JSON.stringify(selected()));
+// Binary package setup: two pickers (top and step 2) moving together.
+const bin = load("binpkg-setup.html", "zh-cn", storage());
+check("binpkg 配置页包含两组镜像选择器", bin.groups.length === 2, String(bin.groups.length));
+const uris = bin.groups[0].opts.map((o) => o.getAttribute("data-uri"));
+check("镜像页列出配置页的全部镜像",
+      uris.length === 6 && uris.every((u) => mirrorsPage.includes('href="' + u + '"') || u === origin),
+      JSON.stringify(uris));
+check("简体中文默认选择教育网联合镜像站", all(bin.selected(), cernet), JSON.stringify(bin.selected()));
 check("镜像选择器会写出完整 binpkg 地址",
-      topValue.textContent === cernet + "/binpkgs/x86-64" &&
-      topCopy.getAttribute("data-copy") === cernet + "/binpkgs/x86-64");
-check("GENTOO_MIRRORS 保留选择项以外的回退镜像",
-      distValue.textContent === '"${GENTOO_MIRRORS} ' + mirrorUris.join(" ") + '"',
-      distValue.textContent);
-
-topValue.setAttribute("data-src-suffix", "/unstable/binpkgs/x86-64");
-topCopy.setAttribute("data-src-suffix", "/unstable/binpkgs/x86-64");
-listeners.sourcechange();
+      bin.slots.top.textContent === cernet + "/binpkgs/x86-64" &&
+      bin.copies.top.getAttribute("data-copy") === cernet + "/binpkgs/x86-64");
+bin.slots.top.setAttribute("data-src-suffix", "/unstable/binpkgs/x86-64");
+bin.listeners.sourcechange();
 check("频道改变后镜像选择器会重算地址",
-      topValue.textContent === cernet + "/unstable/binpkgs/x86-64" &&
-      topCopy.getAttribute("data-copy") === cernet + "/unstable/binpkgs/x86-64");
+      bin.slots.top.textContent === cernet + "/unstable/binpkgs/x86-64");
+bin.root.setAttribute("data-lang", "zh-tw");
+bin.listeners.langchange();
+check("繁体中文默认选择源站", all(bin.selected(), origin), JSON.stringify(bin.selected()));
+bin.root.setAttribute("data-lang", "en");
+bin.listeners.langchange();
+check("英文默认选择 OSUOSL", all(bin.selected(), osuosl), JSON.stringify(bin.selected()));
 
-root.setAttribute("data-lang", "zh-tw");
-listeners.langchange();
-check("繁体中文默认选择源站",
-      selected().every(function (uri) { return uri === origin; }),
-      JSON.stringify(selected()));
+// A choice is stored, survives a language change, and is the choice on the next page.
+const shared = storage();
+const first = load("binpkg-setup.html", "zh-cn", shared);
+check("未选择时不写入存储", !("mirror-source" in shared.data), JSON.stringify(shared.data));
+first.choose(nju);
+first.root.setAttribute("data-lang", "en");
+first.listeners.langchange();
+check("手动选择在语言切换后保持不变", all(first.selected(), nju), JSON.stringify(first.selected()));
+check("手动选择写入 mirror-source", shared.data["mirror-source"] === nju, JSON.stringify(shared.data));
 
-root.setAttribute("data-lang", "en");
-listeners.langchange();
-check("英文默认选择 OSUOSL",
-      selected().every(function (uri) { return uri === osuosl; }),
-      JSON.stringify(selected()));
+const next = load("distfiles-setup.html", "en", shared);
+check("distfiles 配置页沿用上一页选择的镜像，优先于语言默认值",
+      all(next.selected(), nju), JSON.stringify(next.selected()));
+check("GENTOO_MIRRORS 以所选镜像开头并保留其余回退镜像",
+      next.slots.dist.textContent === '"${GENTOO_MIRRORS} ' +
+        [nju].concat(uris.filter((u) => u !== nju)).join(" ") + '"', next.slots.dist.textContent);
+next.root.setAttribute("data-lang", "zh-tw");
+next.listeners.langchange();
+check("沿用的选择在语言切换后保持不变", all(next.selected(), nju), JSON.stringify(next.selected()));
 
-groups[0].opts.find(function (option) {
-  return option.getAttribute("data-uri") === nju;
-}).click();
-root.setAttribute("data-lang", "zh-cn");
-listeners.langchange();
-check("手动选择在语言切换后保持不变",
-      selected().every(function (uri) { return uri === nju; }),
-      JSON.stringify(selected()));
+// Back to the first page from the back-forward cache after the second page changed the choice.
+next.choose(osuosl);
+const back = load("binpkg-setup.html", "zh-cn", shared);
+shared.data["mirror-source"] = cernet;
+back.winListeners.pageshow({ persisted: true });
+check("从往返缓存返回时重新读取存储的选择", all(back.selected(), cernet), JSON.stringify(back.selected()));
 
-console.log(failed ? `\n  ${failed} 项不通过` : "\n  镜像默认值与语言切换：全部通过");
+const unknown = load("binpkg-setup.html", "zh-tw", storage({ "mirror-source": "https://gone.example/x" }));
+check("存储的镜像已不在列表中时使用语言默认值", all(unknown.selected(), origin),
+      JSON.stringify(unknown.selected()));
+const blocked = load("distfiles-setup.html", "en", storage({}, true));
+blocked.choose(nju);
+check("存储不可用时使用语言默认值，选择仍然生效",
+      all(blocked.selected(), nju), JSON.stringify(blocked.selected()));
+const blockedFresh = load("binpkg-setup.html", "en", storage({}, true));
+check("存储不可用的新页面使用语言默认值", all(blockedFresh.selected(), osuosl),
+      JSON.stringify(blockedFresh.selected()));
+
+// The file browser: the same mirror list, the origin by default in every language, and file links
+// rewritten to the chosen mirror; the listing itself stays on this host.
+const filePath = "/gigos/2026/gig%20os.iso";
+const fileLink = () => element({ href: "gig%20os.iso", "data-src-link": "files", "data-src-path": filePath });
+for (const lang of ["zh-cn", "zh-tw", "en"]) {
+  const link = fileLink();
+  const fresh = load("_app.html", lang, storage(), [link]);
+  check(`文件浏览器（${lang}）默认使用源站，下载链接留在本站`,
+        all(fresh.selected(), origin) && link.getAttribute("href") === filePath,
+        JSON.stringify([fresh.selected(), link.getAttribute("href")]));
+}
+const appUris = load("_app.html", "zh-cn", storage()).groups[0].opts.map((o) => o.getAttribute("data-uri"));
+check("文件浏览器的镜像清单与配置页一致", JSON.stringify(appUris) === JSON.stringify(uris),
+      JSON.stringify(appUris));
+const browse = storage();
+const link = fileLink();
+const app = load("_app.html", "zh-cn", browse, [link]);
+for (const uri of uris.filter((u) => u !== origin)) {
+  app.choose(uri);
+  check(`选择 ${uri} 后下载链接指向该镜像`, link.getAttribute("href") === uri + filePath,
+        link.getAttribute("href"));
+}
+app.choose(origin);
+check("改回源站后下载链接回到本站", link.getAttribute("href") === filePath, link.getAttribute("href"));
+app.choose(osuosl);
+check("文件浏览器的选择写入 mirror-source", browse.data["mirror-source"] === osuosl,
+      JSON.stringify(browse.data));
+const again = fileLink();
+load("_app.html", "zh-tw", browse, [again]);
+check("再次打开文件浏览器时沿用存储的镜像", again.getAttribute("href") === osuosl + filePath,
+      again.getAttribute("href"));
+const setup = load("binpkg-setup.html", "zh-cn", browse);
+check("配置页沿用文件浏览器选择的镜像", all(setup.selected(), osuosl), JSON.stringify(setup.selected()));
+setup.choose(nju);
+const fromSetup = fileLink();
+load("_app.html", "en", browse, [fromSetup]);
+check("文件浏览器沿用配置页选择的镜像", fromSetup.getAttribute("href") === nju + filePath,
+      fromSetup.getAttribute("href"));
+const lateLink = fileLink();
+const lateApp = load("_app.html", "zh-cn", storage({ "mirror-source": cernet }), [lateLink]);
+lateApp.listeners.sourcechange();
+check("列表晚于选择器到达时，sourcechange 仍会改写新链接", lateLink.getAttribute("href") === cernet + filePath,
+      lateLink.getAttribute("href"));
+
+
+// /mirror-status.json: a listed file keeps the origin link, compared decoded against the decoded path;
+// an unreachable mirror (listed as true) keeps every link there; other links get the encoded path as is.
+const oddPath = "/distfiles/a&b%20c%25/x%26y.iso";
+const oddLink = () => element({ href: "x%26y.iso", "data-src-link": "files", "data-src-path": oddPath });
+const [listed, other, dead] = [oddLink(), fileLink(), oddLink()];
+const synced = load("_app.html", "zh-cn", storage({ "mirror-source": cernet }), [listed, other]);
+global.window.MIRROR_MISSING = { [cernet]: ["/distfiles/a&b c%/x&y.iso"] };
+synced.listeners.sourcechange();
+check("镜像缺少的文件按解码后的路径比对，链接留在源站",
+      listed.getAttribute("href") === oddPath && other.getAttribute("href") === cernet + filePath,
+      JSON.stringify([listed.getAttribute("href"), other.getAttribute("href")]));
+const deadApp = load("_app.html", "zh-cn", storage({ "mirror-source": nju }), [dead]);
+global.window.MIRROR_MISSING = { [nju]: true };
+deadApp.listeners.sourcechange();
+check("无法连接的镜像：下载链接留在源站", dead.getAttribute("href") === oddPath, dead.getAttribute("href"));
+const fine = oddLink();
+const fineApp = load("_app.html", "zh-cn", storage({ "mirror-source": nju }), [fine]);
+fineApp.listeners.sourcechange();
+check("镜像链接直接拼接编码后的路径，不二次解码", fine.getAttribute("href") === nju + oddPath,
+      fine.getAttribute("href"));
+
+console.log(failed ? `\n  ${failed} 项不通过` : "\n  镜像默认值、语言切换、跨页选择与下载链接：全部通过");
 process.exit(failed ? 1 : 0);

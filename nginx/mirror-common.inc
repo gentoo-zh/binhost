@@ -196,7 +196,7 @@ location ~ ^/~([a-z][a-z0-9_-]*)(/.*)?$ {
 location = /index.html { return 301 /; }
 location ~ ^/(.+)\.html$ { return 301 /$1; }
 
-location = /mirror { return 301 /faq; }
+location = /mirror { return 301 /mirrors; }
 
 location = /favicon.ico { return 301 /assets/logo.webp; }
 

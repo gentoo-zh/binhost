@@ -31,6 +31,18 @@
   [
    "[。！？]\\s*(其实|說白了|说白了|坦白讲)",
    "口语开头"
+  ],
+  [
+   "(?i:Gentoo\\s+Chinese\\s+community|Chinese\\s+Gentoo\\s+community)",
+   "社区英文名写法错误，应为 Gentoo-zh Community"
+  ],
+  [
+   "中国(?!大陆)|中國(?!大陸)|国内|國內",
+   "地区名称含糊，应写中国大陆/中國大陸/Mainland China"
+  ],
+  [
+   "(?i:(?<!-)(?<!mainland )\\bchina\\b)",
+   "地区名称含糊，应写 mainland China"
   ]
  ],
  "words": [

@@ -256,38 +256,45 @@ def check_comments(root):
     return bad
 
 
+def scan_hits(text):
+    """The word/phrase/typography checks shared by page markup and the standalone i18n tables in
+    site/assets/strings.js."""
+    hits = []
+
+    for pat, why in PHRASES:
+        for m in re.finditer(pat, text):
+            hits.append(f"{why}: {m.group(0).strip()[:26]}")
+    for w in WORDS:
+        if w in text:
+            hits.append(f"禁止词： {w}")
+    for pat, why in FILLER:
+        for m in re.finditer(pat, text):
+            hits.append(f"{why}: {m.group(0)[:20]}")
+    for m in BARE_RUN.finditer(text):
+        hits.append(f"应写成执行或运行，不用单字： {text[max(0, m.start() - 6):m.start() + 6]}")
+
+    chars = len(re.sub(r"\s", "", text))
+    dashes = text.count("——")
+    if chars and dashes > max(1, chars // 1000):
+        hits.append(f"破折号 {dashes} 处，{chars} 字，超过每千字 1 次")
+    for line in text.split("\n"):
+        line = line.replace(" — Gentoo-zh 下载", "")
+        if re.search(r"[\u4e00-\u9fff]", line) and re.search(r"\S — \S", line):
+            hits.append("中文里出现 em dash 加空格，改用全角——")
+            break
+    if "..." in text:
+        hits.append("省略号写成了三个点，改用……")
+    if re.search(r"[\U0001F300-\U0001FAFF✨❤]", text):
+        hits.append("出现 emoji")
+    return hits
+
+
 def main(dirname):
     bad = 0
-    for f in sorted(pathlib.Path(dirname).glob("*.html")):
+    for f in sorted(pathlib.Path(dirname).glob("*.html")) + sorted(pathlib.Path(dirname).glob("internal/*.html")):
         html = f.read_text()
         text = visible_text(html)
-        hits = []
-
-        for pat, why in PHRASES:
-            for m in re.finditer(pat, text):
-                hits.append(f"{why}: {m.group(0).strip()[:26]}")
-        for w in WORDS:
-            if w in text:
-                hits.append(f"禁止词： {w}")
-        for pat, why in FILLER:
-            for m in re.finditer(pat, text):
-                hits.append(f"{why}: {m.group(0)[:20]}")
-        for m in BARE_RUN.finditer(text):
-            hits.append(f"应写成执行或运行，不用单字： {text[max(0, m.start() - 6):m.start() + 6]}")
-
-        chars = len(re.sub(r"\s", "", text))
-        dashes = text.count("——")
-        if chars and dashes > max(1, chars // 1000):
-            hits.append(f"破折号 {dashes} 处，{chars} 字，超过每千字 1 次")
-        for line in text.split("\n"):
-            line = line.replace(" — distfiles.gentoozh.org", "")
-            if re.search(r"[\u4e00-\u9fff]", line) and re.search(r"\S — \S", line):
-                hits.append("中文里出现 em dash 加空格，改用全角——")
-                break
-        if "..." in text:
-            hits.append("省略号写成了三个点，改用……")
-        if re.search(r"[\U0001F300-\U0001FAFF✨❤]", text):
-            hits.append("出现 emoji")
+        hits = scan_hits(text)
 
         if hits:
             bad += 1
@@ -296,6 +303,19 @@ def main(dirname):
                 print(f"      {h}")
         else:
             print(f"  {f.name}: ok")
+
+    strings_js = pathlib.Path(dirname) / "assets" / "strings.js"
+    if strings_js.exists():
+        tables = "\n".join(re.findall(r"window\.MIRROR_I18N_COMMON = \{[\s\S]*?\n\};",
+                                       strings_js.read_text()))
+        hits = scan_hits(tables)
+        if hits:
+            bad += 1
+            print(f"!!! {strings_js.name}")
+            for h in sorted(set(hits)):
+                print(f"      {h}")
+        else:
+            print(f"  {strings_js.name}: ok")
 
     bad += check_comments(pathlib.Path(dirname).parent)
     bad += check_emitted(pathlib.Path(dirname).parent)

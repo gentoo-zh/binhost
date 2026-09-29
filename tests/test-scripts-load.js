@@ -86,7 +86,12 @@ function scriptsOf(text) {
 }
 
 const site = path.join(DIR, "..");
-const pages = fs.readdirSync(site).filter((f) => f.endsWith(".html")).sort();
+// site/internal/ holds maintainer pages that are never published but load the same scripts.
+const internal = path.join(site, "internal");
+const pages = fs.readdirSync(site).filter((f) => f.endsWith(".html")).sort().concat(
+  fs.existsSync(internal)
+    ? fs.readdirSync(internal).filter((f) => f.endsWith(".html")).sort().map((f) => "internal/" + f)
+    : []);
 const referenced = new Set();
 let loaded = 0;
 
@@ -110,7 +115,7 @@ for (const page of pages) {
   }
   if (names.includes("i18n.js") &&
       (typeof context.MIRROR_T !== "function" ||
-       context.MIRROR_T("brand") !== "distfiles.gentoozh.org")) {
+       context.MIRROR_T("brand") !== "Gentoo-zh Downloads")) {
     console.error(`!!! ${page} 的 i18n.js 没有取得先载入的共用字串`);
     process.exit(1);
   }

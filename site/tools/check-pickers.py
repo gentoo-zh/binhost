@@ -13,7 +13,9 @@ CHIP = re.compile(r'data-src-copy="(\w+)"')
 
 def main():
     bad = []
-    for f in sorted((ROOT / "site").glob("*.html")):
+    # The mirror choice is stored by URI and carried across pages, so every page offers the same list.
+    lists = {}
+    for f in sorted((ROOT / "site").glob("*.html")) + sorted((ROOT / "site").glob("internal/*.html")):
         picks, kinds = {}, {}
         for pre, n, body in PICK.findall(f.read_text()):
             picks[n] = URI.findall(body + pre)
@@ -28,6 +30,8 @@ def main():
             if len(set(sets.values())) > 1:
                 bad.append(f"{f.name}: {kind} 类各选择器的清单不一致 {sets}")
         for n, uris in picks.items():
+            if kinds[n] == "mirror":
+                lists.setdefault(tuple(uris), []).append(f"{f.name}:{n}")
             if len(uris) != len(set(uris)):
                 bad.append(f"{f.name}: 选择器 {n} 有重复的镜像")
             if not uris:
@@ -45,6 +49,10 @@ def main():
         for m in re.finditer(r"data-src-list='([^']*)'", text):
             if "%s" not in m.group(1):
                 bad.append(f"{f.name}: data-src-list 未包含 %s：{m.group(1)}")
+
+    if len(lists) > 1:
+        bad.append("各页的镜像清单不一致：" + "；".join(
+            f"{'、'.join(where)} → {len(uris)} 个" for uris, where in lists.items()))
 
     for b in bad:
         print("!!! " + b, file=sys.stderr)

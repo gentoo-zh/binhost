@@ -57,6 +57,15 @@ for name, rel, body, kind in CASES:
                  contextlib.redirect_stderr(io.StringIO()):
                 n = cc.main(str(site))
             out = ""
+        elif kind == "strings":
+            site = pathlib.Path(base) / "site"
+            (site / "assets").mkdir(parents=True, exist_ok=True)
+            (site / "assets" / "strings.js").write_text(
+                "window.MIRROR_I18N_COMMON = {\n  'en': {\n    " + body + "\n  }\n};\n")
+            with contextlib.redirect_stdout(io.StringIO()), \
+                 contextlib.redirect_stderr(io.StringIO()):
+                n = cc.main(str(site))
+            out = ""
         else:
             n, out = run(base)
         if n:

@@ -4,7 +4,7 @@
 
 - [发布范围与构建频道](README.md#发布范围)
 - [依赖闭包边界](docs/dependency-closure.md)
-- [站点设计与文案规范](site/design.html)
+- [站点设计与文案规范](site/internal/design.html)
 - [提交信息](#提交信息)
 
 在 [`build/packages.txt`](build/packages.txt) 中添加一行 `category/package`，按字母序排列，

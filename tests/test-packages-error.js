@@ -14,7 +14,7 @@ function list(items) {
 function element(id) {
   return {
     id, innerHTML: "", textContent: "", hidden: false, value: "",
-    dataset: {}, style: {}, parentElement: { hidden: false },
+    dataset: {}, style: {}, parentElement: { hidden: false, setAttribute() {}, removeAttribute() {} },
     classList: { toggle() {} },
     addEventListener() {},
     setAttribute() {},

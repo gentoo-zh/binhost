@@ -121,6 +121,20 @@ ok "连断掉的链接都不剩" \
    "$(find "${d}/dest" -maxdepth 1 -name 'faq.html' | wc -l)" "0"
 ok "其余页面照常" "$(marks "${d}")" "C"
 ok "数据档仍然没被动" "$(cat "${d}/dest/packages.json")" '{"packages":1}'
+
+echo
+echo "== site/internal/ 的维护者页面不发布，原先发布的副本会下线"
+printf 'design\n' > "${d}/src/design.html"
+publish "${d}" >/dev/null
+ok "顶层页面照常发布" "$(cat "${d}/dest/design.html" 2>/dev/null)" "design"
+mkdir -p "${d}/src/internal"
+mv "${d}/src/design.html" "${d}/src/internal/design.html"
+publish "${d}" >/dev/null
+ok "移到 internal/ 后旧副本下线" \
+   "$(test -e "${d}/dest/design.html" && echo 在 || echo 不在)" "不在"
+ok "internal/ 不发布" \
+   "$(find "${d}/dest" -path '*internal*' | wc -l)" "0"
+ok "其余页面照常" "$(marks "${d}")" "C"
 rm -rf "${d}"
 
 echo

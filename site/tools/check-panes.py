@@ -28,19 +28,19 @@ def panes(t):
 
 
 def sudo_btns(name, t, bad):
-    for m in re.finditer(r'<div class="code"[^>]*>(.*?)</pre>', t, re.S):
+    for m in re.finditer(r'<div class="code(?: cmd)?"[^>]*>(.*?</pre>(?:\s*<button[^>]*>[^<]*</button>)*)', t, re.S):
         block = m.group(1)
-        has_cmd = 'class="sudo"' in block
+        has_cmd = re.search(r'class="sudo[ "]', block) is not None
         has_btn = 'sudo-btn' in block
         if has_cmd and not has_btn:
-            bad.append(f"{name}: 有 root 命令的代码块，标题栏缺少 sudo 开关")
+            bad.append(f"{name}: 有 root 命令的代码块，缺少 sudo 开关")
         if has_btn and not has_cmd:
             bad.append(f"{name}: 代码块不含 root 命令，却设置了 sudo 开关")
 
 
 def main():
     bad = []
-    for f in sorted((ROOT / "site").glob("*.html")):
+    for f in sorted((ROOT / "site").glob("*.html")) + sorted((ROOT / "site").glob("internal/*.html")):
         t = f.read_text()
         p = panes(t)
         if not p["quick"]:

@@ -1,593 +1,1416 @@
+/* Components. Every value comes from tokens.css; no colour literals here. The layout follows the
+   React Spectrum docs as measured on 2026-09-29 (see the design page): a panel on a grey ground, the
+   page list on the left, the article in the middle and "On this page" on the right on wide screens. */
+
 [hidden] { display: none !important; }
-
-:root,
-[data-theme="light"] {
-  color-scheme: light dark;
-
-  --accent: #5b43a3;
-  --accent-dim: #6f5f9b;
-  --accent-weak: #f3f0f9;
-  --ok: #2f7d4f;
-
-  --bg: #fcfcfd;
-  --surface: #ffffff;
-  --border: #e1e0e6;
-  --fg: #1c1a23;
-  --fg-body: #494653;
-  --fg-soft: #726e7c;
-  --hover: rgba(28,26,35,0.04);
-  --chip: rgba(28,26,35,0.05);
-
-  --sans: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans CJK SC","Microsoft YaHei",sans-serif;
-  --mono: ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
-
-  --primary: var(--accent);
-  --card: var(--surface);
-  --panel: var(--surface);
-  --panel-head: var(--bg);
-  --c-sec: var(--accent);
-  --c-key: var(--fg);
-  --c-val: var(--accent);
-  --c-flag: var(--fg-soft);
-  --c-prompt: var(--accent-dim);
-  --shadow: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-
-    --accent: #9d88dd;
-    --accent-dim: #9182c4;
-    --accent-weak: #231d35;
-    --ok: #6cc08b;
-
-    --bg: #111113;
-    --surface: #1b1b1d;
-    --border: #313036;
-    --fg: #f2f1f3;
-    --fg-body: #c5c4ca;
-    --fg-soft: #918d9a;
-    --hover: rgba(255,255,255,0.05);
-    --chip: rgba(255,255,255,0.07);
-
-    --primary: var(--accent);
-    --card: var(--surface);
-    --panel: var(--surface);
-    --panel-head: #17171a;
-    --c-sec: var(--accent); --c-key: var(--fg); --c-val: var(--accent);
-    --c-flag: var(--fg-soft); --c-prompt: var(--accent-dim);
-    --shadow: none;
-  }
-}
-[data-theme="dark"] {
-  color-scheme: dark;
-
-  --accent: #9d88dd;
-  --accent-dim: #9182c4;
-  --accent-weak: #231d35;
-  --ok: #6cc08b;
-
-  --bg: #111113;
-  --surface: #1b1b1d;
-  --border: #313036;
-  --fg: #f2f1f3;
-  --fg-body: #c5c4ca;
-  --fg-soft: #918d9a;
-  --hover: rgba(255,255,255,0.05);
-  --chip: rgba(255,255,255,0.07);
-
-  --primary: var(--accent);
-  --card: var(--surface);
-  --panel: var(--surface);
-  --panel-head: #17171a;
-  --c-sec: var(--accent); --c-key: var(--fg); --c-val: var(--accent);
-  --c-flag: var(--fg-soft); --c-prompt: var(--accent-dim);
-  --shadow: none;
-}
 
 * { box-sizing: border-box; }
 
+html { max-width: 100%; overflow-x: clip; scroll-padding-top: calc(var(--nav-h) + var(--sp-4)); background: var(--bg); }
+
 body {
-  margin: 0; background: var(--bg); color: var(--fg-body); line-height: 1.75;
-  font-family: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+  margin: 0 auto; min-height: 100dvh; max-width: calc(var(--shell-w) + 2 * var(--sp-3));
+  color: var(--fg-body); overflow-x: clip;
+  font-family: var(--sans); font-size: var(--fs-body); line-height: var(--lh-body);
   -webkit-font-smoothing: antialiased;
+  display: grid;
+  grid-template-columns: var(--side-w) minmax(0, 1fr) var(--toc-w);
+  grid-template-rows: var(--top-h) 1fr auto;
+  grid-template-areas: "top top top" "side main toc" "side foot toc";
 }
 
+/* The panel behind main, the footer and the outline is body::before, so pages need no wrapper. On the docs
+   the panel never moves: from 1024px up the page itself does not scroll, main is a scroller of the viewport's
+   height less the 72px bar, so its rounded top corners stay in view (measured 2026-09-29 at 1440 and 1024;
+   below 1024 the document scrolls and there is no panel). Here the page keeps scrolling, so anchors, the
+   outline's scroll spy and keyboard scrolling work as usual, and the panel is one viewport tall and sticks
+   below the bar: the content passes under the bar, the corners stay. z-index -1 keeps a sticky box under the
+   article, which is not positioned. */
+body::before {
+  content: ""; grid-row: 2 / 4; grid-column: 2 / 4; align-self: start;
+  position: sticky; top: var(--top-h); z-index: -1; height: calc(100dvh - var(--top-h));
+  background: var(--surface); border-radius: var(--r-xl) var(--r-xl) 0 0;
+  box-shadow: var(--shadow-elevated); margin-inline-end: var(--sp-3);
+}
+@media print {
+  body::before { position: static; align-self: stretch; height: auto; }
+}
 
 html.lang-swap body { visibility: hidden; }
 
-:root {
-  --nav-h: 3.2rem;
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
 }
+
+.icon { width: var(--icon); height: var(--icon); flex: none; display: block; }
+/* Workflow icons are 20px beside 14px text (S2 size M); 16px (size S) inline in small text. */
+.icon-sm { width: var(--icon-sm); height: var(--icon-sm); }
+
+/* Links take S2 Link's colours (Link.tsx:67-108): the accent colour, the next accent step on hover, gray-800
+   in the footer. Unlike S2, no link is underlined, at rest or on hover: the maintainer asked for no underlines
+   anywhere (2026-09-29). Keyboard focus shows the site's focus ring. :visited is never styled. */
+a { color: var(--accent); text-decoration: none; }
+
+:focus-visible { outline: var(--bw-2) solid var(--accent); outline-offset: var(--bw-2); border-radius: var(--r-sm); }
+
+button { font: inherit; color: inherit; }
+button:not(:disabled) { cursor: pointer; }
 
 .skip {
-  position: absolute; left: -9999px; top: 0; z-index: 60;
-  background: var(--surface); color: var(--fg);
-  border: 1px solid var(--border); border-radius: 0.3rem;
-  padding: 0.5rem 0.9rem; font-size: 0.88rem; text-decoration: none;
+  position: absolute; inset-inline-start: var(--sp-2); top: -100vh; z-index: 60;
+  background: var(--raised); color: var(--fg); box-shadow: var(--shadow-elevated);
+  border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-ui);
 }
-.skip:focus { left: 0.5rem; top: 0.5rem; }
+.skip:focus { top: var(--sp-2); }
 
+/* Top bar: brand and search, then the Files link, GitHub, a divider, language and theme. */
 .nav {
-  position: sticky; top: 0; z-index: 40; border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  -webkit-backdrop-filter: blur(12px) saturate(180%); backdrop-filter: blur(12px) saturate(180%);
+  grid-area: top; position: sticky; top: 0; z-index: 40;
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-6); background: var(--bg);
 }
-.nav-inner {
-  max-width: 1100px; margin: 0 auto; padding: 0.5rem 1.25rem;
-  display: flex; align-items: center; gap: 0.25rem 1rem;
+.nav-brand {
+  display: inline-flex; align-items: center; gap: var(--sp-3); min-width: 0; min-height: var(--control-h);
+  border-radius: var(--r-md); color: var(--fg); text-decoration: none;
 }
-.nav-brand { display: inline-flex; align-items: center; gap: 0.55rem; text-decoration: none; color: var(--fg); min-width: 0; }
-.nav-brand img { height: 26px; width: auto; }
-.nav-title { font-weight: 700; font-size: 0.95rem; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.nav-links {
-  display: flex; align-items: center; gap: 0.1rem;
-  flex: 0 1 auto; margin-left: auto;
-  min-width: 0; overflow-x: auto; scrollbar-width: none;
-}
-.nav-links::-webkit-scrollbar { display: none; }
-.nav-tools { display: flex; align-items: center; gap: 0.2rem; flex: none; }
-.nav-link {
-  color: var(--fg-soft); text-decoration: none; font-size: 0.86rem; font-weight: 600;
-  padding: 0.32rem 0.5rem; border-radius: 4px; white-space: nowrap;
-}
-.nav-link:hover { background: var(--hover); color: var(--fg); }
-
-.lang { display: inline-flex; align-items: center; }
-.lang-btn {
-  border: none; background: transparent; color: var(--fg-soft); font: inherit;
-  font-size: 0.88rem; font-weight: 600; padding: 0.32rem 0.46rem;
-  border-radius: 4px; cursor: pointer; line-height: 1;
-}
-.lang-btn:hover { background: var(--hover); color: var(--fg); }
-[data-lang="zh-cn"] .lang-btn[data-lang="zh-cn"],
-[data-lang="zh-tw"] .lang-btn[data-lang="zh-tw"],
-[data-lang="en"] .lang-btn[data-lang="en"] { color: var(--primary); }
+.nav-brand img { width: var(--logo); height: var(--logo); flex: none; object-fit: contain; }
+.nav-title { font-weight: 800; font-size: var(--fs-brand); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The docs' top bar: 32px quiet buttons 4px apart on one centre line, the last one ending at the panel's
+   edge. Each menu's wrapper is a flex box, so it is exactly its button's height rather than a line box
+   whose strut pushed the button 2px up. */
+.nav-tools { display: flex; align-items: center; gap: var(--sp-1); margin-inline-start: auto; flex: none; }
+.nav-tools > .menu-wrap { display: flex; }
+/* The docs keep quiet text links (Docs, Releases, Blog) before the icon links; the Files link here is an
+   icon-only ActionButton (.icon-btn) with an S2 Folder icon, as the maintainer asked (2026-09-29). A 2px by
+   24px rounded gray-200 divider sets the links apart from the settings. Below 1024px the link and the divider
+   leave the bar, and the Files link shows in the sidebar below the overview instead. */
+.bar-divider { flex: none; width: var(--bw-2); height: var(--sp-6); border-radius: var(--r-full); background: var(--fill-hover); }
+.sidebar .bar-mirror { display: none; }
 
 .icon-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 34px; height: 34px; border: none; border-radius: 4px;
-  background: transparent; color: var(--fg-soft); cursor: pointer;
+  display: inline-grid; place-items: center; flex: none;
+  width: var(--control-h); height: var(--control-h); padding: 0;
+  border: 0; border-radius: var(--r-lg); background: transparent; color: var(--fg-body); list-style: none;
 }
-.icon-btn:hover { background: var(--hover); color: var(--fg); }
+.icon-btn::-webkit-details-marker { display: none; }
+.nav-toggle { display: none; }
+/* Language is a quiet icon-only ActionButton opening a Spectrum Menu and theme a quiet toggle button, as the
+   React Spectrum docs' top bar carries quiet 32px buttons with a 20px icon and radius 10 (measured
+   2026-09-29). The language button shows only the globe; its name says the language in force ("Language:
+   English"). The ActionButton docs give icon-only buttons an aria-label and no tooltip, so there is none.
+   Both need scripts, so without them they are hidden: the language links sit in a <details> instead and the
+   theme follows the system. */
+:root:not([data-js]) .js-only { display: none; }
+.menu-trigger[aria-expanded="true"], .lang-static[open] > .icon-btn { background: var(--hover); color: var(--fg); }
 
+/* The Menu: a popover with 8px padding and radius 10, 32px items with the checkmark first, as S2 Menu
+   lays out a single-selection menu. */
 .menu-wrap { position: relative; }
 .menu {
-  position: absolute; right: 0; top: calc(100% + 6px); min-width: 138px;
-  background: var(--card); border: 1px solid var(--border); border-radius: 4px;
-  padding: 0.3rem; display: flex; flex-direction: column; gap: 0.1rem; z-index: 50;
+  position: absolute; inset-inline-end: 0; top: calc(100% + var(--sp-1)); z-index: 50; min-width: var(--menu-min);
+  display: grid; padding: var(--sp-2);
+  background: var(--raised); border-radius: var(--r-lg); box-shadow: var(--shadow-elevated);
+  outline: 1px solid var(--menu-outline);
 }
 .menu-item {
-  display: flex; align-items: center; gap: 0.55rem; width: 100%; border: none;
-  background: transparent; color: var(--fg-body); font: inherit; font-size: 0.86rem;
-  padding: 0.42rem 0.6rem; border-radius: 4px; cursor: pointer; text-align: left;
+  display: flex; align-items: center; gap: var(--sp-2); width: 100%;
+  min-height: var(--control-h); padding: 0 var(--sp-3);
+  border: 0; border-radius: var(--r-md); background: transparent;
+  color: var(--fg-body); font-size: var(--fs-ui); text-align: start; text-decoration: none; white-space: nowrap;
 }
-.menu-item:hover { background: var(--hover); }
-[data-theme-mode="light"] .menu-item[data-mode="light"],
-[data-theme-mode="dark"] .menu-item[data-mode="dark"],
-[data-theme-mode="system"] .menu-item[data-mode="system"] { color: var(--primary); font-weight: 600; }
+/* Hover and keyboard focus take gray-200 with gray-900 text (measured on /Menu 2026-09-29). */
+.menu-item:focus-visible { background: var(--fill-hover); color: var(--fg); outline-offset: calc(-1 * var(--bw-2)); }
+.menu-check { visibility: hidden; }
+.menu-item[aria-checked="true"] .menu-check { visibility: visible; }
+.lang-static .menu-item[aria-current] { font-weight: 700; }
+/* The theme button is a toggle, as in the React Spectrum docs: from following the system a press forces
+   the other theme, and a second press follows the system again. It shows the theme a press switches to:
+   Contrast while light is in effect, Lighten while dark is. The theme in effect is data-theme when one is
+   forced, else the system's, so the icon is right from the first frame (early.js sets data-theme before
+   paint) and follows a change of the system setting without a script. Both icons share one cell; the one
+   not shown is transparent at half size, Lighten turned 90 degrees and Contrast -90, as the docs draw it,
+   so that with motion allowed a press turns one out and the other in. */
+.theme-btn .ico { grid-area: 1 / 1; display: grid; }
+.theme-btn .ico-lighten { opacity: 0; transform: rotate(90deg) scale(0.5); }
+.theme-btn .ico-contrast { opacity: 1; transform: none; }
+:root[data-theme="dark"] .theme-btn .ico-lighten { opacity: 1; transform: none; }
+:root[data-theme="dark"] .theme-btn .ico-contrast { opacity: 0; transform: rotate(-90deg) scale(0.5); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .theme-btn .ico-lighten { opacity: 1; transform: none; }
+  :root:not([data-theme]) .theme-btn .ico-contrast { opacity: 0; transform: rotate(-90deg) scale(0.5); }
+}
 
-.theme-btn .ico { display: none; }
-[data-theme-mode="light"] .theme-btn .ico-light,
-[data-theme-mode="dark"] .theme-btn .ico-dark,
-[data-theme-mode="system"] .theme-btn .ico-system { display: inline-flex; }
-.menu-item svg { flex: none; }
+/* Sidebar: the docs' SideNav (measured 2026-09-29, /scratch/ssd/bh-site-ref/measurements.md). A small grey
+   label (12/16, weight 500, 6px in) names the first section and sits 8px above its rows; the next section
+   starts 24px lower. Rows are 32px and 6px apart, the text 12px into the row, 14px regular in the secondary
+   grey. A product group's title is a row like any other: same size, weight and colour, ending in the S2
+   chevron (UI icon Chevron, size 100) 9px before the row's end, which turns a quarter to point down when the
+   group is open; its pages sit 16px further in. The current page is bold in the body colour with a 2x18
+   neutral bar 4px into its row; hovering a row shows the bar in a lighter grey at once (the bar has no
+   transition) and turns the chevron gray-800. States measured on /getting-started 2026-09-29, light and dark:
+   pressing a row sinks it with S2 pressScale (perspective a third of the 200px row), keyboard focus draws the
+   2px ring 2px inside the row at radius 8, and the expand button turns over 150ms on the default curve, the
+   child rows appearing and going at once. */
+.sidebar {
+  grid-area: side; position: sticky; top: var(--top-h); align-self: start;
+  max-height: calc(100dvh - var(--top-h)); overflow-y: auto;
+  padding: 0 var(--sp-3) var(--sp-6) var(--sp-6);
+}
+.nav-label {
+  margin: 0 0 var(--sp-2); padding-inline-start: var(--edge-visual);
+  color: var(--fg-muted); font-size: var(--fs-small); line-height: var(--lh-label); font-weight: 500;
+}
+.pages { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--side-gap); }
+.toc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+.sidebar > .pages { margin-bottom: var(--sp-6); }
+.nav-group + .nav-group, .nav-group > .pages { margin-top: var(--side-gap); }
+.nav-group-title {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2);
+  min-height: var(--control-h); padding-inline-start: var(--sp-3); border-radius: var(--r-md);
+  color: var(--fg-soft); font-size: var(--fs-ui); line-height: var(--lh-ui);
+  list-style: none; cursor: pointer;
+}
+.nav-group-title::-webkit-details-marker { display: none; }
+.chevron {
+  display: block; flex: none; box-sizing: content-box; width: var(--chevron); height: var(--chevron);
+  padding: calc((var(--control-h) - var(--chevron)) / 2) calc((var(--chevron-box) - var(--chevron)) / 2);
+  color: var(--fg-soft);
+}
+.nav-group[open] > .nav-group-title .chevron { rotate: 90deg; }
+.nav-group-title:focus-visible { outline-offset: calc(-1 * var(--bw-2)); }
+.nav-link, .toc-link {
+  position: relative; display: flex; align-items: center; gap: var(--sp-2); min-height: var(--control-h); padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-md); color: var(--fg-soft); text-decoration: none;
+  font-size: var(--fs-ui); line-height: var(--lh-ui);
+}
+.nav-link, .nav-group-title { border-radius: var(--r-md); }
+.nav-group .nav-link { padding-inline-start: calc(var(--sp-3) + var(--sp-4)); }
+.nav-link::before, .toc-link::before, .nav-group-title::before {
+  content: ""; position: absolute; inset-inline-start: var(--sp-1); top: var(--sp-2); bottom: var(--sp-2);
+  width: var(--bw-2); border-radius: var(--r-full);
+}
+.nav-link::before, .nav-group-title::before {
+  top: calc(50% - var(--bar-h) / 2); bottom: auto; height: var(--bar-h); border-radius: var(--r-full);
+}
+.nav-group .nav-link::before { inset-inline-start: calc(var(--sp-1) + var(--sp-4)); }
+.nav-link[aria-current="page"], .toc-link[aria-current] { font-weight: 700; color: var(--fg-body); }
+.nav-link[aria-current="page"]::before, .toc-link[aria-current]::before { background: var(--fg-body); }
+.nav-link:focus-visible, .toc-link:focus-visible { outline-offset: calc(-1 * var(--bw-2)); }
 
+/* "On this page": a column at the panel's right edge from 1024px up, as the docs keep it down to 1024 (measured
+   2026-09-29 at 1440, 1280, 1100 and 1024: 180px wide, 40px inside the panel). The page's sections appear only
+   here and in the picker below, never in the sidebar. */
+.toc {
+  grid-area: toc; position: sticky; top: var(--top-h); align-self: start;
+  max-height: calc(100dvh - var(--top-h) - var(--sp-10)); overflow-y: auto;
+  padding: calc(var(--sp-16) + var(--sp-2)) calc(var(--sp-10) + var(--sp-3)) 0 0;
+}
+.toc-title {
+  display: flex; align-items: center; min-height: var(--control-h); margin: 0 0 var(--sp-1); padding: 0 var(--sp-3);
+  color: var(--fg); font-size: var(--fs-value); line-height: 1.25; font-weight: 700;
+}
+.toc-link { color: var(--fg-body); }
 
-.wrap.wide { max-width: 1100px; }
-.wrap { max-width: 780px; margin: 0 auto; padding: 2.75rem 1.25rem 3rem; position: relative; }
-.title { font-size: 1.6rem; line-height: 1.35; letter-spacing: -0.01em; font-weight: 600; color: var(--fg); margin: 0 0 0.35rem; }
+/* Below 1024px the docs' section picker (measured on /getting-started and /Tabs at 768 and 390, 2026-09-29):
+   centred in the top bar, a quiet 40px button in 16px gray-800 text naming the section being read, then the
+   S2 Chevron turned down; hover darkens the text to gray-900 without a fill. It opens a popover of 40px rows,
+   the section being read focused with the gray-200 fill; row text starts 3/8 of the row height in, the S2
+   Menu edge-to-text ratio (15px, measured). docs.js builds it only on pages with an outline. */
+.toc-pick { display: none; }
+.toc-pick-btn {
+  display: flex; align-items: center; gap: var(--sp-2); max-width: 100%; height: var(--control-h); padding: 0;
+  border: 0; border-radius: var(--r-md); background: transparent;
+  color: var(--fg-body); font-size: var(--fs-value); line-height: var(--lh-ui);
+}
+.toc-pick-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toc-pick-chevron { flex: none; width: var(--chevron-l); height: var(--chevron-l); rotate: 90deg; }
+.toc-menu {
+  inset-inline-end: auto; left: 50%; transform: translateX(-50%);
+  min-width: calc(var(--menu-min) + 2 * var(--sp-2)); max-height: calc(100dvh - var(--top-h) - var(--sp-4));
+  margin: 0; overflow-y: auto; list-style: none;
+}
+.toc-menu .menu-item { padding-inline: calc(var(--control-h) * 3 / 8); font-size: var(--fs-value); line-height: var(--lh-ui); }
+.toc-menu .menu-item:focus { background: var(--fill-hover); color: var(--fg); }
 
-.lead { font-size: 0.95rem; line-height: 1.8; color: var(--fg-soft); margin: 0 0 1.75rem; max-width: 42em; }
+/* The article at reading width; the package list (main.wide) takes the whole panel. The file browser
+   stays in the article column with its title, as a Spectrum component page keeps its tables there. */
+main {
+  grid-area: main; container: main / inline-size;
+  width: 100%; max-width: calc(var(--measure) + 2 * var(--sp-10)); justify-self: center;
+  padding: var(--sp-10) var(--sp-10) 0; overflow-wrap: break-word;
+}
+main.wide { max-width: none; }
+
+/* Headings: 800 throughout, 48 above and 24 below an h2, 36 / 24 around an h3. */
+.title {
+  margin: 0 0 var(--sp-6); color: var(--fg);
+  font-size: var(--fs-title); line-height: var(--lh-title); font-weight: 800; letter-spacing: -0.01em;
+}
+.lead { margin: 0 0 var(--sp-6); color: var(--fg-body); font-size: var(--fs-lead); line-height: var(--lh-body); }
 
 h2 {
-  font-size: 0.9rem; font-weight: 600; color: var(--fg); letter-spacing: 0;
-  margin: 2.75rem 0 1.1rem; padding-top: 1.1rem; border-top: 1px solid var(--border);
+  margin: var(--sp-12) 0 var(--sp-6); color: var(--fg);
+  font-size: var(--fs-h2); line-height: var(--lh-h2); font-weight: 800;
 }
-h2:first-of-type { margin-top: 2rem; }
-main > h2:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
-main > .title:not(:first-child) {
-  margin-top: 2.75rem; padding-top: 1.1rem; border-top: 1px solid var(--border);
+h3 { margin: calc(var(--sp-8) + var(--sp-1)) 0 var(--sp-4); color: var(--fg); font-size: var(--fs-h3); line-height: var(--lh-h3); font-weight: 800; }
+main p { margin: 0 0 var(--sp-6); }
+main ul, main ol { margin: 0 0 var(--sp-6); padding-inline-start: var(--sp-6); }
+main li + li { margin-top: var(--sp-2); }
+.stats > li + li { margin-top: 0; }
+
+.note { margin: 0 0 var(--sp-6); color: var(--fg-body); font-size: var(--fs-body); line-height: var(--lh-body); }
+:not(pre) > code, .note code {
+  padding: 1px var(--sp-1); border: 1px solid var(--border-subtle); border-radius: var(--r-sm);
+  background: var(--code-bg); color: var(--fg-body);
+  font-family: var(--mono); font-size: 0.8em; overflow-wrap: anywhere;
 }
 
-.uri {
-  display: flex; align-items: stretch; margin: 0 0 0.7rem;
-  border: 1px solid var(--border); border-radius: 4px; overflow: hidden;
-  background: var(--card); box-shadow: var(--shadow);
+/* Callouts are S2 InlineAlerts with the default fillStyle, border (InlineAlert.tsx:28-95; as the docs set
+   them in prose, measured on /TableView and /InlineAlert 2026-09-29): the panel fill, a 2px border all
+   round, radius 10, 24px inside, body-sm text in the body colour. Neutral borders in gray-700 and has no
+   icon; notice borders in notice-700 and floats the AlertDiamond icon, in the notice colour, at the end
+   (InlineAlert.tsx:164-167, 184-205). Nothing marks one edge only. */
+.callout {
+  margin: 0 0 var(--sp-6); padding: var(--sp-6);
+  border: var(--bw-2) solid var(--fg-soft); border-radius: var(--r-lg); background: var(--surface);
+  color: var(--fg-body); font-size: var(--fs-ui); line-height: var(--lh-code);
 }
-.uri .k {
-  flex: none; display: flex; align-items: center; padding: 0.6rem 0.8rem;
-  background: var(--panel-head); color: var(--primary); font-weight: 600;
-  font-family: var(--mono); font-size: 0.74rem; letter-spacing: 0.02em;
-  border-right: 1px solid var(--border);
-}
-.uri code {
-  flex: 1; min-width: 0; display: flex; align-items: center;
-  overflow-x: auto; white-space: nowrap; padding: 0.6rem 0.8rem;
-  font-family: var(--mono); font-size: 0.82rem; color: var(--fg); background: none;
-}
-.uri .copy-chip {
-  flex: none; border: 0; border-left: 1px solid var(--border);
-  background: transparent; color: var(--fg-soft); cursor: pointer;
-  font: inherit; font-size: 0.74rem; padding: 0 0.85rem;
-}
-.uri .copy-chip:hover { background: var(--chip); color: var(--fg); }
-
-
-.step { margin-top: 1.4rem; }
-.step:first-of-type { margin-top: 0; }
-.step-title {
-  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
-  margin: 0 0 0.45rem; font-size: 0.9rem; font-weight: 600; color: var(--fg);
-}
-.step-title .n {
-  flex: none; min-width: 1.35em;
-  border-radius: 4px; text-align: center;
-  background: var(--accent-weak); color: var(--accent);
-  font: 600 0.74rem/1 var(--mono);
-  padding: 0.44em 0.3em 0.24em;
+.callout[data-tone="notice"] { border-color: var(--notice-border); }
+.callout[data-tone="notice"]::before {
+  content: ""; float: inline-end; width: var(--icon); height: var(--icon); margin-inline-start: var(--sp-3);
+  background: var(--notice);
+  -webkit-mask: var(--icon-notice) center / contain no-repeat; mask: var(--icon-notice) center / contain no-repeat;
 }
 
-.code {
-  border: 1px solid var(--border); border-radius: 4px; overflow: hidden;
+/* Pickers. Mirrors, the channel and the package filters are one S2 SegmentedControl (@react-spectrum/s2
+   1.7.1 SegmentedControl.tsx:62-145; measured on /SegmentedControl 2026-09-29): a gray-100 track (radius 8,
+   items 4px apart), 32px items 12px in, gray-700 text that turns gray-800 on hover and when selected. The
+   selection is one gray-25 pill with a 2px gray-900 border and radius 10 that slides to the chosen item,
+   moving and resizing over 200ms on the S2 "out" curve (indicator.js). Without scripts the selected item
+   paints the same pill itself. The setup mode switches whole panes, so it is tabs. */
+.src-pick { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); margin: 0 0 var(--sp-4); }
+.src-label { color: var(--fg-soft); font-size: var(--fs-ui); }
+.seg {
+  position: relative; display: inline-flex; flex-wrap: wrap; gap: var(--sp-1); max-width: 100%;
+  background: var(--track); border-radius: var(--r-md);
 }
-.code-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
-  padding: 0.42rem 0.5rem 0.42rem 0.85rem;
-  background: var(--panel-head); border-bottom: 1px solid var(--border);
+.seg > button {
+  position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-1);
+  min-height: var(--control-h); padding: 0 var(--sp-3);
+  border: 0; border-radius: var(--r-md); background: transparent;
+  color: var(--fg-soft); font-size: var(--fs-ui); white-space: nowrap; user-select: none;
 }
-.code-head .path {
-  font-family: var(--mono); font-size: 0.74rem; color: var(--fg-soft);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+.seg > button.on { color: var(--fg-body); }
+.seg:not([data-ind]) > button.on, .seg-ind {
+  background: var(--track-on); box-shadow: inset 0 0 0 var(--bw-2) var(--fg); border-radius: var(--r-lg);
 }
-.src-pick {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem;
-  margin: 0 0 0.5rem;
+.seg-ind, .tab-ind {
+  /* indicator.js writes the selected item's offset and size here. */
+  --ind-x: 0px;
+  --ind-y: 0px;
+  --ind-w: 0px;
+  --ind-h: 0px;
+  position: absolute; top: 0; left: 0; z-index: 0; pointer-events: none;
+  width: var(--ind-w); translate: var(--ind-x) var(--ind-y);
 }
-.src-pick .src-label {
-  font-size: 0.78rem; color: var(--fg-soft); margin-right: 0.15rem;
+.seg-ind { height: var(--ind-h); }
+
+/* A track whose options do not fit on one row in its container becomes an S2 Picker (seg-picker.js; S2 keeps
+   SegmentedControl to a few short options). The track stays in the page as the source of truth, laid out on
+   one row but clipped to nothing, so its options can still be measured. Picker size M (@react-spectrum/s2
+   1.7.1 Picker.tsx:176-213, style-utils.ts:42-125): a 208px field 32px high at radius 8, the gray-100 fill
+   turning gray-200 on hover and while open, gray-800 text 12px in, the value truncated before the UI Chevron
+   turned down 8px after it (Picker.tsx:277-288, 755-758). Its ListBox is the site's menu popover: 8px padding,
+   32px rows with the checkmark first (Picker.tsx:231-250, 781-848; Menu.tsx:188-275), at least the field's
+   width (Picker.tsx:476-483), 6px below it (Picker.tsx:355-359, 468) or above it when the window has no room
+   below, fading in as the menus do. */
+.seg[data-picked] {
+  position: absolute; width: 0; height: 0; overflow: hidden; visibility: hidden; flex-wrap: nowrap;
 }
-.src-opt {
-  border: 1px solid var(--border); border-radius: 0.3rem; background: transparent;
-  color: var(--fg-soft); cursor: pointer; font: inherit; font-size: 0.76rem;
-  padding: 0.16rem 0.6rem;
+.seg-pick { display: inline-flex; max-width: 100%; }
+.seg-pick-btn {
+  display: flex; align-items: center; gap: var(--sp-2); width: calc(13 * var(--sp-4)); max-width: 100%;
+  height: var(--control-h); padding: 0 var(--sp-3);
+  border: 0; border-radius: var(--r-md); background: var(--track);
+  color: var(--fg-body); font-size: var(--fs-ui); line-height: var(--lh-ui); text-align: start;
 }
-.src-opt:hover { color: var(--fg); }
-.src-opt.on { background: var(--panel-head); border-color: var(--fg-soft); color: var(--fg); }
-.code-head .copy-chip {
-  flex: none; border: 0; border-radius: 0.3rem; background: transparent;
-  color: var(--fg-soft); cursor: pointer; font: inherit; font-size: 0.72rem;
-  padding: 0.16rem 0.5rem;
+.seg-pick-btn[aria-expanded="true"] { background: var(--fill-hover); }
+.seg-pick-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seg-pick-chevron { flex: none; width: var(--chevron); height: var(--chevron); rotate: 90deg; }
+.seg-pick-menu {
+  inset-inline: 0 auto; top: calc(100% + var(--sp-1) + var(--bw-2)); min-width: 100%;
+  max-height: calc(100dvh - 2 * var(--sp-3)); overflow-y: auto;
 }
-.code-head .copy-chip:hover { background: var(--bg); color: var(--fg); }
-.code pre {
-  margin: 0; padding: 0.9rem 1rem; overflow-x: auto; background: var(--panel);
-  font-family: var(--mono); font-size: 0.8rem; line-height: 1.8; color: var(--fg-body);
-}
-.code pre, .uri code {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-}
-.code pre::-webkit-scrollbar, .uri code::-webkit-scrollbar { height: 6px; }
-.code pre::-webkit-scrollbar-track, .uri code::-webkit-scrollbar-track { background: transparent; }
-.code pre::-webkit-scrollbar-thumb, .uri code::-webkit-scrollbar-thumb {
-  background: var(--border); border-radius: 3px;
-}
-.code pre::-webkit-scrollbar-thumb:hover, .uri code::-webkit-scrollbar-thumb:hover {
-  background: var(--fg-soft);
+.seg-pick-menu[data-placement="top"] { top: auto; bottom: calc(100% + var(--sp-1) + var(--bw-2)); }
+.seg-pick-menu[data-placement="top"][hidden] { translate: 0 var(--popover-offset); }
+.seg-pick-menu .menu-item { cursor: default; }
+.seg-pick-menu .menu-item:focus { background: var(--fill-hover); color: var(--fg); outline: none; }
+.seg-pick-menu .menu-item[aria-selected="true"] .menu-check { visibility: visible; }
+@media (hover: hover) and (pointer: fine) {
+  .seg-pick-btn:hover { background: var(--fill-hover); }
 }
 
-.code .sec { color: var(--c-sec); font-weight: 600; }
-.code .key { color: var(--c-key); }
-.code .val { color: var(--c-val); }
-.code .flag { color: var(--c-flag); }
-.code .prompt::before { content: "# "; }
-[data-sudo="on"] .code .prompt::before { content: "$ "; }
-.code .prompt.user::before { content: "$ "; }
-.code .prompt { color: var(--c-prompt); user-select: none; }
-
-.facts .job code { font-size: 0.82em; color: var(--fg-soft); }
-
+/* Tabs as on the Spectrum docs (Tabs.tsx:373-378, measured on /Tabs): no track line; gray-700 labels that
+   turn gray-800 on hover and gray-900 while pressed; the selected tab is gray-800 over a 2px gray-800 bar
+   with round ends, as wide as its label, which slides to the chosen tab like the segmented pill. */
 .mode-pick {
-  display: flex; gap: 0.25rem; margin: -0.3rem 0 1.1rem;
+  position: relative; display: flex; flex-wrap: wrap; gap: 0 var(--sp-6); margin: 0 0 var(--sp-6);
 }
 .mode {
-  border: 1px solid var(--border); border-radius: 0.35rem;
-  background: transparent; color: var(--fg-soft);
-  cursor: pointer; font: inherit; font-size: 0.78rem;
-  padding: 0.24rem 0.7rem;
+  position: relative; display: inline-flex; align-items: center; gap: var(--edge-visual);
+  min-height: var(--control-h); padding: 0; border: 0; border-radius: var(--r-sm);
+  background: transparent; color: var(--fg-soft); font-size: var(--fs-ui); font-weight: 400;
 }
-.mode:hover { color: var(--fg); }
-.mode.on { background: var(--panel-head); border-color: var(--fg-soft); color: var(--fg); }
-
-
-.code-head .head-btn {
-  margin-left: auto;
-  flex: none; border: 1px solid var(--border); border-radius: 0.3rem;
-  background: transparent;
-  color: var(--fg-soft); cursor: pointer; font-family: var(--mono);
-  font-size: 0.72rem; padding: 0.16rem 0.5rem;
+.mode:active { color: var(--fg); }
+.mode.on { color: var(--fg-body); }
+.mode-pick:not([data-ind]) > .mode.on { box-shadow: inset 0 calc(-1 * var(--bw-2)) 0 var(--fg-body); }
+.tab-ind {
+  height: var(--bw-2); margin-top: calc(var(--ind-h) - var(--bw-2));
+  border-radius: var(--r-full); background: var(--fg-body);
 }
-.code-head .head-btn:hover { border-color: var(--fg-soft); color: var(--fg); }
-.code-head .head-btn[aria-pressed="true"] {
-  background: var(--accent-weak); border-color: var(--accent); color: var(--accent);
+.channel-total {
+  display: inline-block; min-width: 5ch; color: var(--fg-soft);
+  font-size: var(--fs-small); font-variant-numeric: tabular-nums; text-align: start;
 }
 
-.note { font-size: 0.88rem; line-height: 1.8; color: var(--fg-soft); }
-.note code, p code, li code, td code {
-  font-family: var(--mono); font-size: 0.86em; background: var(--chip);
-  padding: 0.08rem 0.34rem; border-radius: 0.3rem; color: var(--fg-body);
-  overflow-wrap: anywhere;
+/* Code, as the React Spectrum docs draw it (measured 2026-09-29, /scratch/ssd/bh-site-ref/codeblock.md).
+   Three shapes share one gray-50 fill and radius 16, and none has a header bar:
+   - .code, a fenced block: the pre is padded 32 (12 below 1024px), 14/21 code (12/18), long lines scroll
+     inside it. A file name is the first line of the code, as a comment, the way the docs name src/app.tsx.
+     Copy, and sudo where the block runs root commands, sit in .code-tools at the top end corner, where the
+     docs' CodePlatter keeps its copy action (CodePlatter.tsx:488-499); the pre leaves that corner free.
+   - .cmd, the docs' Command: one command after the S2 Prompt icon, with copy right after the command, not
+     at the far end (Command.tsx, InstallCommand.tsx). sudo, a setting rather than an action, sits at the end.
+   - .install, the docs' InstallCommand: a SegmentedControl 24 in, then what it changes: a .cmd row, a .uri
+     row (a value, so no prompt) or a .code block, which drop their own fill.
+   Colours come from highlight.py, run by render-chrome.py: one t-* class per role of the docs' highlighter. */
+.code { position: relative; margin: 0 0 var(--sp-8); }
+.code pre {
+  margin: 0; padding: var(--code-pad); border-radius: var(--r-xl); background: var(--code-bg); overflow-x: auto;
+  color: var(--fg-body); font-family: var(--mono); font-size: var(--fs-pre); line-height: var(--lh-code);
+  font-variant-ligatures: none; scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
 }
-.foot { margin-top: 2.6rem; border-top: 1px solid var(--border); }
-.foot-inner {
-  max-width: 1100px; margin: 0 auto; padding: 1.2rem 1.25rem 2.6rem;
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 0.8rem 1.4rem; flex-wrap: wrap;
-  font-size: 0.82rem; color: var(--fg-soft);
+/* The corner the tools sit in: copy alone, or sudo and copy. */
+.code:has(> .code-tools) pre { padding-inline-end: calc(var(--code-pad) + var(--btn-s) + var(--sp-6)); }
+.code:has(> .code-tools .sudo-btn) pre { padding-inline-end: calc(var(--code-pad) + var(--btn-s) + var(--sp-16)); }
+.code-tools {
+  position: absolute; top: var(--sp-3); inset-inline-end: var(--sp-3); z-index: 1;
+  display: flex; align-items: center; gap: var(--sp-1);
 }
-.foot-brand { font-weight: 600; color: var(--fg-soft); }
-.foot-links { display: flex; gap: 1.1rem; flex-wrap: wrap; }
-.foot-links a { color: var(--fg-soft); }
-.foot-links a:hover { color: var(--primary); text-decoration: none; }
+/* A single long value (the GENTOO_MIRRORS list) wraps instead of running out of the block; the copied
+   text is the same either way. */
+.code pre.wrap-line { white-space: pre-wrap; overflow-wrap: anywhere; }
+.t-s { color: var(--syn-string); }
+.t-k { color: var(--syn-keyword); }
+.t-n { color: var(--syn-number); }
+.t-p { color: var(--syn-property); }
+.t-f { color: var(--syn-function); }
+.t-v { color: var(--syn-variable); }
+.t-c, .code .prompt { color: var(--syn-comment); }
+.code .prompt { user-select: none; }
+.code .prompt::before { content: "$ "; }
+/* sudo is on unless the reader turned it off (sudo-switch.js); then root commands take the root prompt. */
+[data-sudo="off"] .code .prompt:not(.user)::before { content: "# "; }
 
+.cmd {
+  display: flex; align-items: center; gap: var(--sp-3); margin: 0 0 calc(var(--sp-4) + var(--sp-1));
+  padding: calc(var(--sp-4) + var(--sp-1)); border-radius: var(--r-xl); background: var(--code-bg);
+}
+.cmd::before {
+  content: ""; flex: none; width: var(--icon); height: var(--icon); background: var(--fg);
+  -webkit-mask: var(--icon-prompt) center / contain no-repeat; mask: var(--icon-prompt) center / contain no-repeat;
+}
+.code.cmd pre {
+  flex: 0 1 auto; min-width: 0; padding: var(--sp-2) 0; border-radius: 0; background: none; white-space: pre;
+}
+.cmd .prompt { display: none; }
+.cmd .sudo-btn { margin-inline-start: auto; }
 
-.crumbs {
-  font-family: var(--mono); font-size: 0.82rem; line-height: 1.65; color: var(--fg-soft);
-  margin: 0 0 1rem; word-break: break-all; min-height: calc(1.65 * 0.82rem);
+.install {
+  display: flow-root; position: relative; margin: 0 0 calc(var(--sp-4) + var(--sp-1));
+  border-radius: var(--r-xl); background: var(--code-bg);
 }
-#where { min-height: calc(1.35 * 1.6rem); }
-#out { overflow-x: visible; }
-.listing {
-  width: 100%; table-layout: fixed; border-collapse: collapse;
-  font-family: var(--mono); font-size: 0.84rem;
+.install > .src-pick { margin: var(--install-in) var(--install-in) 0; }
+.install > .cmd { margin: 0; padding: var(--sp-6); background: none; }
+.install > .code { position: static; margin: 0; }
+.install > .code pre, .install > .code:has(> .code-tools) pre { padding: var(--sp-6); background: none; }
+/* In an install box the tools share the segmented control's row, at its end. */
+.install:has(> .code > .code-tools) > .src-pick { padding-inline-end: calc(var(--btn-s) + var(--sp-3)); }
+.install:has(> .code > .code-tools .sudo-btn) > .src-pick { padding-inline-end: calc(var(--btn-s) + var(--sp-16)); }
+.install > .code > .code-tools {
+  top: calc(var(--install-in) + (var(--control-h) - var(--btn-s)) / 2); inset-inline-end: var(--install-in);
 }
-.listing th {
-  text-align: left; font-weight: 600; color: var(--fg-soft); font-size: 0.74rem;
-  letter-spacing: 0.03em; white-space: nowrap;
-  padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border);
+.uri { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-6); }
+.uri .k { flex: none; color: var(--syn-comment); font-family: var(--mono); font-size: var(--fs-pre); }
+.uri code {
+  flex: 0 1 auto; min-width: 0; padding: var(--sp-2) 0; border: 0; background: none; color: var(--fg-body);
+  font-size: var(--fs-pre); line-height: var(--lh-code);
+  white-space: nowrap; overflow-x: auto; overflow-wrap: normal; scrollbar-width: thin;
 }
 
-.listing thead th {
-  position: sticky; top: var(--nav-h, 3.2rem); z-index: 5;
-  background: var(--bg); border-bottom: 0;
-  box-shadow: inset 0 -1px 0 var(--border);
+/* Disclosure: React Spectrum S2 Disclosure, size M, non-quiet (@react-spectrum/s2 1.7.1 Disclosure.tsx),
+   for a collapsible block of content in main; scoped to .disclosure so it never reaches the chrome's own
+   <details> (the language menu, a sidebar group, .icon-btn). The wrapper carries a 1px top and bottom
+   border in gray-200 (the disclosure() style, Disclosure.tsx:87-105). The header is a flex row --control-h
+   tall with the S2 Chevron UI icon first, pointing to the line's end at rest and turning a quarter to point
+   down when open, mirrored under RTL (chevronStyles, Disclosure.tsx:249-260); it reuses the sidebar's
+   .chevron (above) rather than a second icon, only overriding its resting colour to follow the header text.
+   The header's inline padding and its gap before the text are both --disclosure-head-pad (buttonStyles,
+   Disclosure.tsx:190-194); the text is bold and heading-coloured (Disclosure.tsx:170-179), and the header is
+   square at rest, only rounding to --r-md on keyboard focus (Disclosure.tsx:237-242, as the site-wide
+   :focus-visible rule draws elsewhere). Hover and press fill with the site's usual two steps, --hover and
+   --fill-hover, for backgroundColor isHovered/isPressed (Disclosure.tsx:229-234). The panel is 8px above and
+   16px below its content, --disclosure-panel-pad each side (panelInner, Disclosure.tsx:361-372); native
+   <details> has no JS, so unlike panelStyles' animated height (Disclosure.tsx:351-359) it opens at once,
+   and the wrapped content keeps its own look, only gaining this padding. */
+.disclosure { border-block: 1px solid var(--border); }
+.disclosure > summary {
+  display: flex; align-items: center; gap: var(--disclosure-head-pad); width: 100%;
+  min-height: var(--control-h); padding-inline: var(--disclosure-head-pad); border-radius: 0;
+  color: var(--fg); font-size: var(--fs-ui); line-height: var(--lh-ui); font-weight: 700;
+  list-style: none; cursor: pointer;
 }
-.listing td { padding: 0.36rem 0.6rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
-.listing tr:hover td { background: var(--hover); }
+.disclosure > summary::-webkit-details-marker { display: none; }
+.disclosure > summary .chevron { color: inherit; }
+.disclosure:dir(rtl) > summary .chevron { rotate: 180deg; }
+.disclosure[open] > summary .chevron { rotate: 90deg; }
+.disclosure > summary:focus-visible { border-radius: var(--r-md); outline-offset: calc(-1 * var(--bw-2)); }
+.disclosure > summary:active { background: var(--fill-hover); }
+.disclosure-panel { padding-block: var(--sp-2) var(--sp-4); padding-inline: var(--disclosure-panel-pad); }
 
+/* Numbered steps (s2-docs Step.tsx, measured on /getting-started): the step's own text at body size and
+   weight, after a gray-800 circle one line high holding the number in the ground colour. From 768px the
+   circle hangs 1lh + 8px into the gutter, so the step's text, code and install box line up under the text. */
+.step { margin: 0 0 var(--sp-8); font-size: var(--fs-body); line-height: var(--lh-body); }
+.step-title {
+  margin: 0 0 var(--sp-4); color: var(--fg-body); font-size: var(--fs-body); font-weight: 400; line-height: var(--lh-body);
+}
+.step-title .n {
+  display: inline-block; width: var(--step-dot); height: var(--step-dot); margin-inline-end: var(--sp-2);
+  border-radius: var(--r-full); background: var(--fg-body); color: var(--surface);
+  font-weight: 400; text-align: center; vertical-align: top;
+}
+@media (min-width: 48rem) {
+  .step { padding-inline-start: calc(var(--step-dot) + var(--sp-2)); }
+  .step-title .n { margin-inline-start: calc(-1 * (var(--step-dot) + var(--sp-2))); }
+}
+.fpr-box { display: inline-flex; align-items: center; gap: var(--sp-2); vertical-align: top; }
+/* The fingerprint is drawn as the copy button beside it is: one height (--btn-s), radius md and no border, so
+   the two read as one control rather than an inline-code box next to a button. */
+.fpr-box .fpr {
+  display: inline-flex; align-items: center; min-height: var(--btn-s); padding: 0 var(--sp-2);
+  border: 0; border-radius: var(--r-md); font-size: var(--fs-code); font-weight: 400; white-space: nowrap;
+}
+
+/* Buttons are S2 ActionButtons (ActionButton.tsx:109-225; measured on /ActionButton and /ToggleButton
+   2026-09-29): gray-800 text turning gray-900 on hover. Copy is the docs' CopyButton at size S (CopyButton.tsx):
+   24px, icon only, named by aria-label, a gray-100 fill beside a command and quiet in a code block's corner,
+   as CodePlatter groups it. After a copy its icon turns to CheckmarkCircle for 2s (CopyButton.tsx:54,64).
+   sudo is a ToggleButton at size S: a gray-100 fill that turns gray-200 on hover, and when selected a
+   gray-800 fill with gray-25 text, gray-900 on hover, so the state it sets reads apart from the copy action
+   beside it. Retry is a plain ActionButton at size M. */
+.copy-chip, .head-btn, .msg-retry {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--edge-visual); flex: none;
+  border: 0; border-radius: var(--r-md); background: var(--track);
+  color: var(--fg-body); font-weight: 500;
+}
+.copy-chip, .head-btn { min-height: var(--btn-s); min-width: var(--btn-s); padding: 0; font-size: var(--fs-small); line-height: 1; }
+.head-btn { padding: 0 var(--sp-2); }
+.code-tools .copy-chip { background: transparent; }
+/* A copy button that still carries a word keeps it after the icon. */
+.copy-chip:not(:empty) { padding: 0 var(--sp-2) 0 var(--sp-1); }
+.copy-chip::before {
+  content: ""; width: var(--icon-sm); height: var(--icon-sm); flex: none; background: currentColor;
+  -webkit-mask: var(--icon-copy) center / contain no-repeat; mask: var(--icon-copy) center / contain no-repeat;
+}
+.copy-chip[data-copied]::before { -webkit-mask-image: var(--icon-check); mask-image: var(--icon-check); }
+.head-btn[aria-pressed="true"] { background: var(--fg-body); color: var(--surface); }
+/* Pressed takes the hover fill on every input, since touch has no hover. */
+.copy-chip:active, .head-btn:not([aria-pressed="true"]):active, .msg-retry:active { background: var(--fill-hover); }
+
+/* Home page status, after the setup: a list of labelled values in TableView rows, label, value and
+   timestamp, with sans figures. The min-heights reserve the rows before the data arrives. */
+.facts {
+  margin: 0; font-size: var(--fs-ui); line-height: var(--lh-code); color: var(--fg-soft);
+  min-height: calc(3 * var(--fact-row));
+}
+#server-facts { min-height: calc(3 * var(--fact-row)); border-top: 1px solid var(--border); }
+.facts .row, .facts .job {
+  display: grid; grid-template-columns: var(--fact-label) minmax(0, 1fr) auto; align-items: baseline; gap: 0 var(--sp-4);
+  min-height: var(--fact-row); padding: var(--sp-2) 0; border-bottom: 1px solid var(--border);
+}
+.facts .job { display: block; }
+.facts .row > .who { color: var(--fg-body); font-weight: 700; }
+.facts .val { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.3em; }
+.facts .part { white-space: nowrap; }
+.facts .sub { color: var(--fg-soft); }
+.facts .sep { color: var(--fg-muted); margin: 0 0.2em; }
+.facts .num { color: var(--fg); font-size: var(--fs-value); font-weight: 700; font-variant-numeric: tabular-nums; margin-inline-end: 0.15em; }
+.facts .when { color: var(--fg-muted); font-size: var(--fs-small); text-align: end; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.facts .when b { font-weight: 400; color: var(--fg-soft); }
+.facts .job code { font-size: 0.85em; }
+
+/* Overview statistics: a plain row of four counts, Spectrum 2 LabeledValues with no panel, aligned to the
+   content column, four then two as the article narrows. Each figure is a subgrid of the strip's two rows,
+   so labels and values line up across the row whatever a label holds; a label that wraps sits on the
+   value's side of its row. The link to the status page is not a figure: it sits at the end of the section
+   heading, as the Spectrum docs put "View all". The latest build is not a figure either: it is a quiet
+   line under the heading, since a relative time reads heavier than the counts beside it. status-data.js
+   fills the values; until then, and without scripts, each holds a dash, and the value row keeps its
+   height. */
+.section-head {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--sp-2) var(--sp-4);
+  margin: var(--sp-12) 0 var(--sp-1);
+}
+.section-head h2 { margin: 0; }
+.section-more {
+  display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-ui); font-weight: 700;
+  text-decoration: none;
+}
+.status-build { margin: 0 0 var(--sp-4); color: var(--fg-soft); font-size: var(--fs-ui); font-weight: 400; line-height: var(--lh-ui); }
+.stats {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-6) var(--sp-4);
+  margin: 0 0 var(--sp-6); padding: 0; list-style: none;
+}
+.stat { display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: var(--sp-1); min-width: 0; }
+.stat-label { align-self: end; color: var(--fg-soft); font-size: var(--fs-ui); line-height: var(--lh-ui); }
+.stat-value {
+  color: var(--fg); font-size: var(--fs-figure); line-height: var(--lh-h2); font-weight: 800;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
+/* Previous and next at the end of the getting-started pages: the direction small over the page title, each
+   block half the row, next keeping to the end alone. The live docs no longer end a page with a pager
+   (checked 2026-09-29 on /getting-started, /styling, /collections, /forms and /Button), so each block is the
+   S2 Card a link becomes in its tertiary variant (Card.tsx:88-145): no fill, a 2px gray-100 ring drawn as a
+   shadow so it takes no space, gray-200 on hover and keyboard focus, radius lg (10px, size M), the default
+   150ms transition, and pressScale while pressed (Card.tsx:464-478). */
+.pager { display: flex; gap: var(--sp-3); margin: var(--sp-12) 0 0; }
+.pager-link {
+  display: grid; gap: var(--sp-1); flex: 0 1 50%; min-width: 0; padding: var(--sp-4);
+  border-radius: var(--r-lg); box-shadow: 0 0 0 var(--bw-2) var(--track); color: var(--fg-body); text-decoration: none;
+}
+.pager-link:focus-visible { box-shadow: 0 0 0 var(--bw-2) var(--border); }
+.pager-next { margin-inline-start: auto; text-align: end; }
+.pager-dir { color: var(--fg-soft); font-size: var(--fs-small); }
+.pager-title { color: var(--fg); font-weight: 700; }
+
+/* ==== TableView (shared). Every data table on the site — the file browser (site/_app.html), the 404
+   resource list, the package list and its dependency table (site/packages.html), and the reference
+   tables in prose (site/faq.html, site/mirrors.html, site/iso.html, site/binpkg-setup.html) — draws the
+   S2 TableView look, non-quiet, density regular: a 1px gray-300 border round the table at radius 6
+   (nearest token 8), a gray-75 header row 32px tall with bold sans labels, 40px body rows parted by 1px
+   lines, the same 16px padding in header and body (TableView.tsx:250-300 border/radius, 712-760 header
+   cell, 1121-1135 header background, 1255-1296 row height). Column widths, alignment, wrapping, sticky
+   header and other table-specific rules stay with each table below. */
+:is(.listing, .ref-table) {
+  --cell-x: var(--sp-4);
+  width: 100%; margin: 0 0 var(--sp-6);
+  border-collapse: separate; border-spacing: 0;
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  font-size: var(--fs-ui); line-height: var(--lh-ui);
+}
+:is(.listing, .ref-table) th {
+  height: var(--control-h); text-align: start; white-space: nowrap;
+  padding: 0 var(--cell-x); background: var(--bg); box-shadow: inset 0 -1px 0 var(--border);
+  color: var(--fg-body); font-family: var(--sans); font-size: var(--fs-ui); font-weight: 700;
+}
+:is(.listing, .ref-table) th:first-child { border-start-start-radius: var(--r-md); }
+:is(.listing, .ref-table) th:last-child { border-start-end-radius: var(--r-md); }
+:is(.listing, .ref-table) td { height: var(--field-h); padding: var(--sp-2) var(--cell-x); border-bottom: 1px solid var(--border); }
+:is(.listing, .ref-table) tbody tr:last-child td { border-bottom: 0; }
+:is(.listing, .ref-table) tbody tr:last-child td:first-child { border-end-start-radius: var(--r-md); }
+:is(.listing, .ref-table) tbody tr:last-child td:last-child { border-end-end-radius: var(--r-md); }
+/* A table with no header row (the 404 resource list): round the first body row instead. */
+:is(.listing, .ref-table):not(:has(thead)) tbody tr:first-child td:first-child { border-start-start-radius: var(--r-md); }
+:is(.listing, .ref-table):not(:has(thead)) tbody tr:first-child td:last-child { border-start-end-radius: var(--r-md); }
+
+.listing { table-layout: fixed; font-family: var(--mono); font-size: var(--fs-code); }
+.listing thead th { position: sticky; top: var(--nav-h); z-index: 5; }
+.listing td { white-space: nowrap; color: var(--fg-soft); }
+.listing td.desc { white-space: normal; font-family: var(--sans); }
 .listing.wrap { table-layout: auto; }
 .listing.wrap td { white-space: normal; word-break: break-all; }
 .listing td.name { white-space: normal; word-break: break-all; }
-.listing td.size, .listing td.date, .listing th.size, .listing th.date { text-align: right; color: var(--fg-soft); }
-.listing a.dir::after { content: "/"; color: var(--fg-soft); }
-.msg { color: var(--fg-soft); padding: 2rem 0; }
-.msg-retry { margin: -1.3rem 0 1.4rem; }
+.listing td.size, .listing td.date, .listing th.size, .listing th.date { text-align: end; color: var(--fg-soft); }
+.listing a { text-decoration: none; }
+.listing a.dir::after { content: "/"; color: var(--fg-muted); }
+.listing th.mark, .listing td.mark { text-align: center; white-space: nowrap; }
+.listing td.mark.yes { color: var(--ok); font-weight: 700; }
+.mark-icon { display: inline-block; vertical-align: middle; }
+.listing td.mark.no { color: var(--fg-muted); }
+/* Row links (S2 <Row href>): where a row is one destination — the file browser's file and directory rows,
+   a package row linking to its overlay page, a dependency row linking to packages.gentoo.org — the whole
+   row is the link, pure CSS. The <a> stays in the name cell; tr is the positioning context and the link's
+   ::after stretches over it, so a click anywhere in the row follows it. The row keeps the shared hover and
+   pressed backgrounds above (TableView.tsx:1901); the focus ring moves from the link's own text box to the
+   row, at the row's edge rather than outdented like the site's default ring, matching a menu item's inset
+   ring. A row with no link (a removed package's plain name) is untouched, since the selector keys on the
+   <a>. Another interactive element in the same row would need position: relative and z-index: 1 to stay
+   above the stretched link; none exists on these rows today. The mirror table (site/mirrors.html) keeps
+   its address as an ordinary link: its row holds three separate values, not one destination, so it draws
+   no <Row href> and is excluded here by only targeting .listing, never .ref-table. */
+.listing tbody tr { position: relative; }
+.listing tbody td.name > a::after { content: ""; position: absolute; inset: 0; }
+.listing tbody td.name > a:focus-visible { outline: none; }
+.listing tbody tr:has(> td.name > a:focus-visible) {
+  outline: var(--bw-2) solid var(--accent); outline-offset: calc(-1 * var(--bw-2)); border-radius: var(--r-sm);
+}
+.listing tbody tr td:not(.name) :is(a, button) { position: relative; z-index: 1; }
+/* Reference tables in prose (the FAQ channel and status guides, the mirror list): the TableView rows at
+   reading width, wrapping their prose and addresses instead of truncating (their columns hold sentences
+   and URLs, not short values), the first column bold. On phones the channel guide stacks each row as
+   field pairs. */
+.ref-table td { text-align: start; vertical-align: top; line-height: var(--lh-code); }
+.ref-table th { padding-block: var(--sp-1); vertical-align: bottom; }
+.ref-table th:first-child, .ref-table td:first-child { width: var(--col-term); }
+.ref-table td:first-child { color: var(--fg-body); font-weight: 700; white-space: nowrap; }
+.ref-table td:last-child { color: var(--fg-soft); }
+.channel-guide { table-layout: fixed; }
+.channel-guide th:first-child, .channel-guide td:first-child { width: var(--col-channel); }
+.channel-guide th:nth-child(2), .channel-guide td:nth-child(2) { width: var(--col-keyword); }
+.channel-guide th:nth-child(3), .channel-guide td:nth-child(3) { width: var(--col-overlay); }
+.channel-field { display: none; }
+
+/* Mirror cards (/thanks): one card per mirror, each an .entry-card in its compact density (no fill, a 2px
+   gray-100 ring drawn as a shadow, radius lg), holding the mirror's logo, name, location and site; the whole
+   card is the link to that site, and eases its ring and sinks on press as .entry-card does.
+   OSUOSL, which also provides the build server, sits alone under Build server and spans both columns; the mirrors fill two columns as the home entry cards do. Every logo sits in a box of
+   one height (64px, --sp-16) so the names line up; the image keeps its own aspect ratio and starts at the
+   box's start edge. Logos are the mirrors' own artwork, only resized: colours are never changed, so a logo
+   with no dark variant that cannot be read on the dark surface sits on a white tile in dark mode instead. */
+.mirror-cards {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4);
+  margin: 0 0 var(--sp-6); padding: 0; list-style: none;
+}
+.mirror-cards > li + li { margin-top: 0; }
+.mirror-card-lead { grid-column: 1 / -1; }
+.mirror-logo { display: flex; align-items: center; height: var(--sp-16); margin-block-end: var(--sp-3); }
+.mirror-logo img { width: auto; max-width: 100%; height: 100%; object-fit: contain; object-position: left center; }
+.mirror-name { color: var(--fg); font-size: var(--fs-value); font-weight: 700; overflow-wrap: anywhere; }
+.mirror-loc, .mirror-desc { color: var(--fg-soft); }
+.mirror-site { margin-block-start: auto; padding-block-start: var(--sp-2); color: var(--accent); overflow-wrap: anywhere; }
+/* The variant shown follows the theme in effect, as the theme button's icon does: data-theme when the reader
+   forced one, else the system's. A <source media> could only follow the system. */
+.logo-dark { display: none; }
+:root[data-theme="dark"] .logo-light { display: none; }
+:root[data-theme="dark"] .logo-dark { display: block; }
+:root[data-theme="dark"] .mirror-logo-tile {
+  align-self: flex-start; box-sizing: border-box; padding: var(--sp-2); border-radius: var(--r-md); background: var(--on-art);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .logo-light { display: none; }
+  :root:not([data-theme]) .logo-dark { display: block; }
+  :root:not([data-theme]) .mirror-logo-tile {
+    align-self: flex-start; box-sizing: border-box; padding: var(--sp-2); border-radius: var(--r-md); background: var(--on-art);
+  }
+}
+@container main (max-width: 36rem) {
+  .mirror-cards { grid-template-columns: minmax(0, 1fr); }
+}
 
 
+/* Shared empty state (IllustratedMessage.tsx, orientation vertical, size M): an illustration, a heading and a
+   body, centred and stacked, gap 12px (--sp-3) above the heading and 4px (--sp-1) above the body, as that
+   grid's rows read; the message is capped at --measure-message, its own max-width there. Any page's empty
+   state uses this shell, not just the 404. */
+.empty-state { display: grid; justify-items: center; max-width: var(--measure-message); margin-inline: auto; padding: var(--sp-12) 0 var(--sp-10); text-align: center; }
+.empty-state-illo { color: var(--fg-muted); margin-bottom: var(--sp-3); }
+.empty-state .title { margin: 0 0 var(--sp-1); color: var(--fg-muted); }
+.empty-state .lead { margin: 0; color: var(--fg); font-weight: 700; }
+/* The list of known paths and the help line below it centre on the same axis as the message. */
+.empty-state ~ .listing { width: auto; margin-inline: auto; }
+.empty-state ~ .note { text-align: center; }
+.msg { color: var(--fg-soft); padding: var(--sp-8) 0; }
+.msg-retry {
+  min-height: var(--control-h); margin: calc(-1 * var(--sp-6)) 0 var(--sp-6); padding: 0 var(--sp-3);
+  font-size: var(--fs-ui); line-height: var(--lh-ui);
+}
+
+/* Loading states, as S2 draws them, so nothing below a region moves when its data arrives. Where the final
+   shape is known the region shows it as a Skeleton (Skeleton.md: mock content in the real layout, its text
+   drawn as grey bars): rows of the final height, and a dash in place of each figure. Where the length is
+   unknown, a band of fixed height holds an indeterminate ProgressCircle, size M, centred, as TableView does
+   while loadingState is "loading". The bars and the circle stand still under reduced motion. */
+.skeleton-row td::before, .skel {
+  content: ""; display: inline-block; width: 60%; height: 0.75em; vertical-align: middle;
+  border-radius: var(--r-sm); background: var(--track);
+}
+.skeleton-row td.mark::before { width: 1.25em; }
+.skeleton-row td.name::before { width: 45%; }
+.skeleton-row:nth-child(3n + 2) td.name::before { width: 60%; }
+.skeleton-row:nth-child(3n) td.name::before { width: 35%; }
+.skeleton-row td.ver::before, .skeleton-row td.slot::before { width: 50%; }
+.facts .skel { width: 8em; }
+.facts .val .skel { width: 12em; }
+[aria-busy="true"] :is(.stat-value, dd, [data-stat="build"]) {
+  color: transparent;
+  background: linear-gradient(var(--track), var(--track)) left center / 100% 0.6em no-repeat;
+}
+[aria-busy="true"] .stat-value { display: inline-block; min-width: 3ch; }
+.loading-row td { height: var(--loading-band); text-align: center; vertical-align: middle; border-bottom: 0; }
+.progress-circle { display: inline-block; width: var(--progress-m); height: var(--progress-m); vertical-align: middle; }
+.progress-circle circle { fill: none; stroke-width: var(--progress-stroke); }
+.progress-circle .track { stroke: var(--track); }
+.progress-circle .fill { stroke: var(--accent); stroke-linecap: round; }
+/* The file browser's listing reaches the bottom of the first screen whatever its length, so the footer
+   never rises into view when a short directory arrives. */
+#out .listing th.size { width: var(--col-size); }
+#out .listing th.date { width: var(--col-date); }
+#out { overflow-x: visible; }
+#out.dir-list { min-height: calc(100dvh - var(--nav-h)); }
+#out[aria-busy="true"] { min-height: calc(100dvh - var(--nav-h)); }
+.jump[data-pending] { visibility: hidden; }
+
+/* The file and package detail page, laid out like a Spectrum component page: breadcrumbs, the title,
+   then labelled values (S2 LabeledValue) above the listing. Below the root the title is the directory's
+   name, which may break anywhere, and the full path follows it in small monospace. */
+.crumbs {
+  margin: 0 0 var(--sp-3); color: var(--fg-soft); word-break: break-all;
+  font-size: var(--fs-ui); line-height: var(--lh-ui); min-height: calc(var(--lh-ui) * var(--fs-ui));
+}
+/* S2 Breadcrumbs (Breadcrumbs.tsx:299-335; measured on /Breadcrumbs): gray-700 links that turn gray-800
+   on hover, without S2's underline (no link is underlined here); the current (last) item is bold gray-800. */
+.crumbs a { color: var(--fg-soft); text-decoration: none; }
+.crumbs a:last-of-type { color: var(--fg-body); font-weight: 700; }
+.crumb-sep { display: inline-block; margin: 0 var(--sp-1); vertical-align: -0.2em; color: var(--fg-muted); }
+#where { min-height: calc(var(--lh-title) * var(--fs-title)); }
+[data-files="deep"] #where { margin-bottom: var(--sp-2); overflow-wrap: anywhere; }
+.where-path {
+  margin: 0 0 var(--sp-6); color: var(--fg-soft); overflow-wrap: anywhere;
+  font-family: var(--mono); font-size: var(--fs-ui); line-height: var(--lh-ui);
+}
+/* The mirrors carry every directory below the root; the root lists only those directories. */
+[data-files="root"] [data-src-switch="files"] { display: none; }
+.meta { display: flex; flex-wrap: wrap; gap: var(--sp-4) var(--sp-10); margin: 0 0 var(--sp-8); }
+.meta dt { color: var(--fg-soft); font-size: var(--fs-ui); line-height: var(--lh-ui); }
+.meta dd { margin: var(--sp-1) 0 0; color: var(--fg); font-size: var(--fs-value); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* The search is a Spectrum SearchField: a 40px pill with a 2px border that darkens on hover and focus.
+   Spectrum's resting border colour is 1.3:1 on the panel, so the field rests on --border-strong (3.2:1). */
+.search-field { position: relative; max-width: var(--search-w); margin-bottom: var(--sp-4); }
+.search-icon { position: absolute; inset-inline-start: var(--sp-4); top: calc((var(--field-h) - var(--icon)) / 2); color: var(--fg-soft); pointer-events: none; }
+.search {
+  width: 100%; min-height: var(--field-h); padding: 0 var(--sp-4) 0 calc(var(--sp-4) + var(--icon) + var(--sp-2));
+  border: var(--bw-2) solid var(--border-strong); border-radius: var(--r-full); background: var(--surface);
+  color: var(--fg); font: inherit; font-size: var(--fs-value);
+}
+/* S2 SearchField (measured on /SearchField): the border darkens one step on hover and turns gray-900 with
+   the focus ring on focus. The clear button is the S2 Cross (size 100) in the field's end, shown while the
+   field holds text; Escape clears as well, as in SearchField. */
+.search:focus-visible { border-color: var(--fg); outline-offset: var(--bw-2); }
+.search::-webkit-search-cancel-button {
+  -webkit-appearance: none; appearance: none; width: var(--chevron); height: var(--chevron); cursor: pointer;
+  background: var(--fg-soft);
+  -webkit-mask: var(--icon-cross) center / contain no-repeat; mask: var(--icon-cross) center / contain no-repeat;
+}
+
+/* Footer. */
+/* Footer: one secondary line under a divider, as on the Spectrum docs. */
+.foot {
+  grid-area: foot; width: 100%; max-width: calc(var(--measure) + 2 * var(--sp-10)); justify-self: center;
+  margin-top: var(--sp-16); padding: 0 var(--sp-10) var(--sp-8);
+  color: var(--fg-soft); font-size: var(--fs-small); line-height: 1.5;
+}
+.foot::before { content: ""; display: block; height: 1px; margin-bottom: var(--sp-3); background: var(--border); }
+main.wide ~ .foot { max-width: none; }
+.foot-note { margin: 0; }
+.foot-note a { color: var(--fg-soft); }
+
+/* Copy result toast. */
 #copy-toast {
-  position: fixed; left: 50%; bottom: 1.6rem; transform: translateX(-50%) translateY(0.8rem);
-  background: var(--primary); color: #fff; font-size: 0.84rem; font-weight: 600;
-  padding: 0.45rem 1rem; border-radius: 4px; opacity: 0; pointer-events: none; z-index: 60;
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  position: fixed; left: 50%; bottom: var(--sp-6); z-index: 60;
+  transform: translateX(-50%) translateY(var(--sp-3)); opacity: 0; pointer-events: none;
+  padding: var(--sp-2) var(--sp-4); border-radius: var(--r-lg);
+  background: var(--fg-body); color: var(--surface); font-size: var(--fs-ui); font-weight: 600;
 }
 #copy-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-#copy-toast.failed { background: var(--surface); color: var(--fg); border: 1px solid var(--border); }
+#copy-toast.failed { background: var(--bad); color: var(--surface); }
 
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+/* Design page (site/internal/design.html, not published): colour swatches painted by their token inside
+   a grid that fixes the theme, spec tables, live demos on the code fill, and do / don't rules. */
+.sw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--swatch-min), 1fr)); gap: var(--sp-3); margin: var(--sp-3) 0 var(--sp-6); }
+.sw { border-radius: var(--r-lg); overflow: hidden; box-shadow: 0 0 0 1px var(--border); }
+.sw i { display: block; height: var(--sp-12); }
+.sw b { display: block; padding: var(--sp-2) var(--sp-3) 0; font: 600 var(--fs-small) var(--mono); color: var(--fg); }
+.sw span { display: block; padding: 0 var(--sp-3) var(--sp-2); font: 400 var(--fs-small) var(--mono); color: var(--fg-soft); }
+.spec { border-collapse: collapse; width: 100%; margin: var(--sp-2) 0 var(--sp-6); font-size: var(--fs-ui); }
+.spec td, .spec th { border-bottom: 1px solid var(--border); padding: var(--sp-2) var(--sp-4); text-align: start; vertical-align: baseline; line-height: var(--lh-code); }
+.spec th { color: var(--fg-body); font-size: var(--fs-ui); font-weight: 700; }
+.spec td:first-child { font-family: var(--mono); font-size: var(--fs-code); color: var(--accent); overflow-wrap: anywhere; }
+.spec td:last-child { color: var(--fg-soft); }
+.demo { margin: var(--sp-3) 0 var(--sp-6); padding: var(--sp-8); border-radius: var(--r-xl); background: var(--code-bg); }
+.demo .mode-pick, .demo .listing { margin-bottom: var(--sp-4); }
+.demo .listing thead th { position: static; background: var(--code-bg); }
+.demo > :last-child { margin-bottom: 0; }
+/* The sidebar group demo at the sidebar's row width: the 236px column less its 24px and 12px insets. */
+.demo .nav-group { max-width: calc(var(--side-w) - var(--sp-6) - var(--sp-3)); margin-bottom: var(--sp-4); }
+.demo-sans { font-family: var(--sans); }
+.demo-mono { font-family: var(--mono); }
+.rule-do, .rule-dont { position: relative; margin: var(--sp-1) 0; padding-inline-start: var(--sp-6); }
+.rule-do::before { content: "＋"; position: absolute; inset-inline-start: 0; color: var(--ok); }
+.rule-dont::before { content: "－"; position: absolute; inset-inline-start: 0; color: var(--fg-muted); }
+.sw-bg i { background: var(--bg); }
+.sw-surface i { background: var(--surface); }
+.sw-raised i { background: var(--raised); }
+.sw-code-bg i { background: var(--code-bg); }
+.sw-hover i { background: var(--hover); }
+.sw-track i { background: var(--track); }
+.sw-track-on i { background: var(--track-on); }
+.sw-border-subtle i { background: var(--border-subtle); }
+.sw-border i { background: var(--border); }
+.sw-border-strong i { background: var(--border-strong); }
+.sw-fg i { background: var(--fg); }
+.sw-fg-body i { background: var(--fg-body); }
+.sw-fg-soft i { background: var(--fg-soft); }
+.sw-fg-muted i { background: var(--fg-muted); }
+.sw-accent i { background: var(--accent); }
+.sw-ok i { background: var(--ok); }
+.sw-neutral-subtle i { background: var(--neutral-subtle); }
+.sw-notice i { background: var(--notice); }
+.sw-bad i { background: var(--bad); }
 
+/* A pressed table row darkens on every input, TableView non-interactive rows included (TableView.tsx:1901). */
+:is(.listing, .ref-table) tbody tr:active td { background: var(--row-press); }
 
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
-.nav-link:hover, .nav-brand:hover, .lang-btn:hover, .icon-btn:hover,
-.foot-links a:hover, .menu-item:hover { text-decoration: none; }
-
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 4px;
+/* Hover only for fine pointers, so it does not stick after a tap. */
+@media (hover: hover) and (pointer: fine) {
+  .icon-btn:hover, .code-tools .copy-chip:hover, .nav-brand:hover { background: var(--hover); color: var(--fg); }
+  .copy-chip:hover, .head-btn:hover, .msg-retry:hover, .menu-item:hover { background: var(--fill-hover); color: var(--fg); }
+  .seg > button:not(.on):hover, .mode:not(.on):hover { color: var(--fg-body); }
+  .seg > button.on:hover, .mode.on:hover { color: var(--fg); }
+  .nav-group-title:hover .chevron { color: var(--fg-body); }
+  .nav-group-title:hover::before { background: var(--bar-hover); }
+  .disclosure > summary:hover { background: var(--hover); }
+  .search:hover { border-color: var(--fg-muted); }
+  .search:focus-visible:hover { border-color: var(--fg); }
+  .nav-link:not([aria-current]):hover::before { background: var(--bar-hover); }
+  /* A row keeps its text colour on hover; only the bar shows (measured on the docs' sidebar). */
+  .nav-link:hover { color: var(--fg-soft); }
+  .nav-link[aria-current="page"]:hover, .toc-link:hover { color: var(--fg-body); }
+  .toc-pick-btn:hover { color: var(--fg); }
+  .toc-link:not([aria-current]):hover::before { background: var(--border-strong); }
+  :is(.listing, .ref-table) tbody tr:hover td { background: var(--row-hover); }
+  .crumbs a:hover { color: var(--fg-body); }
+  .pager-link:hover { box-shadow: 0 0 0 var(--bw-2) var(--border); color: var(--fg-body); }
+  .head-btn[aria-pressed="true"]:hover { background: var(--fg); color: var(--surface); }
+  a:hover { color: var(--accent-hover); }
+  .foot a:hover { color: var(--fg); }
 }
 
-button, .copy-chip, .nav-link, .lang-btn, .icon-btn, .filter {
-  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+/* Motion follows the React Spectrum docs (/scratch/ssd/bh-site-ref/motion.md) and is declared only here,
+   under no-preference, so with reduced motion every change is instant. A theme switch has no page-level
+   fade: the ground changes at once, controls ease their colours and the theme icon turns. Nothing animates
+   on first paint, because early.js sets the theme before the first style and a transition needs a change. */
+@media (prefers-reduced-motion: no-preference) {
+  /* ProgressCircle turns once a second; a Skeleton bar pulses between two greys. */
+  .progress-circle { animation: spin var(--animation-duration-spin) linear infinite; }
+  .skeleton-row td::before, .skel { animation: pulse var(--animation-duration-skeleton) var(--animation-ease-in-out) infinite; }
+  :root[data-settling] *, :root[data-settling] *::before, :root[data-settling] *::after { transition: none !important; }
+  /* Links, breadcrumbs, the search field and table rows change colour on S2's default transition
+     (spectrum-theme.ts:1395-1398), as measured on /Link, /Breadcrumbs, /SearchField. */
+  main :is(p, li, dd, td) a, .crumbs a, .foot a, .search, :is(.listing, .ref-table) td {
+    transition: color var(--animation-duration-state) var(--animation-ease-in-out),
+      background-color var(--animation-duration-state) var(--animation-ease-in-out),
+      border-color var(--animation-duration-state) var(--animation-ease-in-out);
+  }
+  .icon-btn, .menu-item, .seg > button, .mode, .copy-chip, .head-btn, .msg-retry, .nav-link, .nav-group-title, .toc-link,
+  .toc-pick-btn, .bar-link, .disclosure > summary {
+    transition: background-color var(--animation-duration-state) var(--animation-ease-in-out),
+      color var(--animation-duration-state) var(--animation-ease-in-out),
+      transform var(--animation-duration-state) var(--animation-ease-in-out);
+  }
+  /* Press: S2 pressScale sinks the control 2px into a perspective of max(height, width / 3, 24px), about
+     0.94 on a 32px button. Menu items are wide, so their perspective is a third of the 11rem menu. */
+  .icon-btn:active, .seg > button:active, .copy-chip:active, .head-btn:active, .msg-retry:active, .toc-pick-btn:active,
+  .disclosure > summary:active {
+    transform: perspective(max(var(--control-h), var(--press-min))) translate3d(0, 0, calc(-1 * var(--press-depth)));
+  }
+  .menu-item:active { transform: perspective(var(--press-menu)) translate3d(0, 0, calc(-1 * var(--press-depth))); }
+  .pager-link {
+    transition: box-shadow var(--animation-duration-state) var(--animation-ease-in-out),
+      transform var(--animation-duration-state) var(--animation-ease-in-out);
+  }
+  .pager-link:active { transform: perspective(var(--press-card)) translate3d(0, 0, calc(-1 * var(--press-depth))); }
+  .nav-link:active, .nav-group-title:active {
+    transform: perspective(max(var(--control-h), var(--press-side))) translate3d(0, 0, calc(-1 * var(--press-depth)));
+  }
+  /* An entry card eases its ring and sinks on press as S2 pressScale does, into a perspective of its height. */
+  .entry-card {
+    transition: box-shadow var(--animation-duration-state) var(--animation-ease-in-out),
+      transform var(--animation-duration-state) var(--animation-ease-in-out);
+  }
+  .entry-card:active { transform: perspective(var(--press-card)) translate3d(0, 0, calc(-1 * var(--press-depth))); }
+  /* The selection indicator slides and resizes over 200ms on the S2 out curve (SegmentedControl.tsx:129-134,
+     Tabs.tsx:373-378); its first position is placed without motion (indicator.js sets data-ind-ready after). */
+  [data-ind-ready] > .seg-ind, [data-ind-ready] > .tab-ind {
+    transition: translate var(--animation-duration-overlay) var(--animation-ease-out),
+      width var(--animation-duration-overlay) var(--animation-ease-out),
+      height var(--animation-duration-overlay) var(--animation-ease-out),
+      margin-top var(--animation-duration-overlay) var(--animation-ease-out);
+  }
+  /* The chevron turns on S2's default transition, as the SideNav's expand button does. */
+  .chevron {
+    transition: rotate var(--animation-duration-state) var(--animation-ease-in-out),
+      color var(--animation-duration-state) var(--animation-ease-in-out);
+  }
+  .theme-btn .ico {
+    transition: opacity var(--animation-duration-overlay) var(--animation-ease-out),
+      transform var(--animation-duration-overlay) var(--animation-ease-out);
+  }
+  /* S2 Popover (Popover.tsx:118-156): in from 4px towards the trigger while fading, out the same way on the
+     in curve. Entering sets no timing function, so it runs on the CSS initial value ease; measured 2026-09-29 on
+     the docs' section picker, where opacity reads 0.41, 0.71, 0.87 and 0.96 at 50, 83, 117 and 150ms after the
+     start, as ease gives. display waits for the fade, since [hidden] would otherwise remove the menu at once. */
+  .menu {
+    transition: opacity var(--animation-duration-overlay) var(--animation-ease-in),
+      translate var(--animation-duration-overlay) var(--animation-ease-in),
+      display var(--animation-duration-overlay) allow-discrete;
+  }
+  .menu[hidden] { opacity: 0; translate: 0 calc(-1 * var(--popover-offset)); pointer-events: none; }
+  .menu:not([hidden]) {
+    transition-timing-function: ease;
+    @starting-style { opacity: 0; translate: 0 calc(-1 * var(--popover-offset)); }
+  }
+  #copy-toast {
+    transition: opacity var(--animation-duration-overlay) var(--animation-ease-out),
+      transform var(--animation-duration-overlay) var(--animation-ease-out);
+  }
 }
-button:active, .copy-chip:active { transform: translateY(1px); }
-
-.listing tbody tr:hover td { background: var(--hover); }
-
-.deps-table { table-layout: fixed; width: 100%; }
-.deps-table td, .deps-table th { white-space: normal; overflow-wrap: anywhere; }
-.deps-table td.slot, .deps-table th.slot { width: 4rem; }
-.deps-table td.ver, .deps-table th.ver { width: 8rem; }
-
-.facts {
-  display: grid; grid-template-columns: auto auto;
-  justify-content: start; gap: 0.35rem 1.75rem;
-  margin: 0 0 2rem;
-  font-family: var(--mono); font-size: 0.78rem; line-height: 1.75; color: var(--fg-soft);
-  min-height: calc(3 * 1.75 * 0.95rem + 0.7rem);
-}
-
-#server-facts {
-  margin-bottom: 0.35rem;
-  min-height: calc(2 * 1.75 * 0.95rem + 0.7rem);
-}
-.facts .row { display: contents; }
-.facts .row > span { display: inline-flex; align-items: baseline; gap: 0.3em; flex-wrap: wrap; }
-.facts .part, .facts .when { display: inline-flex; align-items: baseline; gap: 0.3em;
-  white-space: nowrap; }
-.facts .sep { color: var(--fg-soft); opacity: 0.5; margin: 0 0.15em; }
-.facts .who { color: var(--fg-body); margin-right: 0.55em; white-space: nowrap; }
-.facts .num { color: var(--accent); font-size: 0.95rem; font-weight: 600; }
-.facts b { font-weight: 500; color: var(--fg-body); }
-
-.links { border-top: 1px solid var(--border); margin: 0.5rem 0 0; }
-.links div {
-  display: flex; gap: 1rem; align-items: baseline;
-  padding: 0.6rem 0; border-bottom: 1px solid var(--border);
-}
-.links dt { flex: none; width: 7rem; font-size: 0.86rem; color: var(--fg-body); }
-.links dd { margin: 0; font-family: var(--mono); font-size: 0.82rem; }
-
-
-.qa h2 {
-  font-size: 0.9rem; font-weight: 600; color: var(--fg); letter-spacing: 0;
-  margin: 2.75rem 0 1.1rem; padding-top: 1.1rem; border-top: 1px solid var(--border);
-}
-
-h3 { font-size: 0.86rem; font-weight: 600; color: var(--fg); margin: 1.75rem 0 0.6rem; }
-.qa h2:first-child { margin-top: 1.4rem; }
-.qa p { margin: 0; font-size: 0.9rem; line-height: 1.8; color: var(--fg-soft); max-width: 62ch; }
-
-
-.search-label {
-  display: block; font-size: 0.82rem; color: var(--fg-soft); margin-bottom: 0.3rem;
-}
-.search {
-  width: 100%; margin-bottom: 0.9rem;
-  border: 1px solid var(--border); border-radius: 4px; background: var(--card);
-  color: var(--fg); font: inherit; font-size: 0.9rem; padding: 0.55rem 0.85rem;
-}
-.search:focus-visible { border-color: var(--primary); }
-.count {
-  font-size: 0.82rem; color: var(--fg-soft); margin: 0 0 0.7rem;
-  white-space: pre-line; line-height: 1.65;
-}
-.channel-total {
-  display: inline-block; min-width: 5ch; margin-inline-start: 0.35rem;
-  color: var(--fg-soft); font-family: var(--mono); font-size: 0.76rem;
-  text-align: start;
-}
-#count { min-height: calc(3 * 1.65 * 0.82rem); }
-.jump { font-size: 0.82rem; margin: -0.5rem 0 1.4rem; }
-.jump a { color: var(--accent); text-decoration: none; }
-.jump a:hover { text-decoration: underline; }
-#updated { min-height: calc(2 * 1.65 * 0.82rem); }
-
-.pkgs td.name {
-  white-space: normal; word-break: normal; overflow-wrap: normal;
-  width: auto;
-}
-
-
-.pkgs td.mark .why-tag,
-.pkgs td.name .why-tag {
-  display: inline-block; white-space: nowrap;
-  color: var(--fg-soft); font-size: 0.74rem; font-style: normal; opacity: 0.75;
-}
-.pkgs td.ver, .pkgs th.ver { text-align: right; white-space: nowrap; }
-
-
-.fpr-box { margin-left: auto; display: flex; align-items: center; gap: 0.35rem; }
-.fpr {
-  font-family: var(--mono); font-size: 0.68rem;
-  color: var(--fg); background: var(--chip);
-  padding: 0.14rem 0.45rem; border-radius: 0.3rem; white-space: nowrap;
-}
-.fpr-copy {
-  flex: none; border: 1px solid var(--border); border-radius: 0.3rem;
-  background: transparent; color: var(--fg-soft); cursor: pointer;
-  font: inherit; font-size: 0.7rem; padding: 0.1rem 0.5rem;
-}
-.fpr-copy:hover { color: var(--fg); }
-
-.listing th.mark, .listing td.mark { text-align: center; white-space: nowrap; }
-.pkgs th:first-child { width: 33%; }
-.pkgs th.mark { width: 6rem; }
-.pkgs th.ver { width: 10.5rem; }
-.pkgs th.size { width: 4rem; }
-#out .listing th.size { width: 4.5rem; }
-#out .listing th.date { width: 9.5rem; }
-.listing td.mark.yes { color: var(--ok); font-weight: 600; }
-.listing td.mark.no { color: var(--fg-soft); }
-
-.filters { display: flex; gap: 0.4rem; margin: 0 0 0.6rem; flex-wrap: wrap; }
-
-.legend {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.3rem 0.7rem;
-  align-items: baseline;
-  margin: 0 0 0.9rem;
-  padding: 0.7rem 0.85rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--card);
-  font-size: 0.8rem;
-}
-.legend dt { justify-self: center; white-space: nowrap; }
-.legend dt.mark.yes { color: var(--ok); font-weight: 600; }
-.legend dt.mark.no { color: var(--fg-soft); }
-.legend dt .pend { font-size: 0.74rem; font-style: italic; color: var(--fg-soft); }
-.legend dd { margin: 0; color: var(--fg-soft); }
-.filter {
-  border: 1px solid var(--border); border-radius: 4px; background: var(--card);
-  color: var(--fg-soft); font: inherit; font-size: 0.8rem;
-  padding: 0.28rem 0.7rem; cursor: pointer;
-}
-.filter:hover { color: var(--fg); }
-.filter.on { border-color: var(--primary); color: var(--primary); font-weight: 600; }
-.listing td.mark .pend { font-size: 0.74rem; font-style: italic; }
-
-@media (min-width: 62rem) {
-  .pkgs td.name { white-space: nowrap; }
+/* The phone page list fades as the docs' navigation sheet does. */
+@media (max-width: 63.99rem) and (prefers-reduced-motion: no-preference) {
+  /* The section picker rises 12px past its own height into place and fades in over the first 24 to 64px of
+     scrolling, while the bar lifts onto the raised layer with the elevated shadow: the docs drive both from the
+     scroll position (animation-timeline: scroll(), range 24px 64px, ease; keyframes translateY(calc(100% +
+     12px)) and opacity 0 to 1). Without scroll timelines, or with reduced motion, the picker simply shows. */
+  @supports (animation-timeline: scroll()) {
+    .toc-pick {
+      animation: toc-pick-in ease both; animation-timeline: scroll(); animation-range: var(--sp-6) var(--sp-16);
+    }
+    .nav:has(.toc-pick) {
+      animation: nav-lift ease both; animation-timeline: scroll(); animation-range: var(--sp-6) var(--sp-16);
+    }
+  }
+  [data-js] .sidebar {
+    opacity: 0;
+    transition: opacity var(--animation-duration-500) var(--animation-ease-in-out),
+      display var(--animation-duration-500) allow-discrete;
+  }
+  [data-nav-open] .sidebar {
+    opacity: 1;
+    @starting-style { opacity: 0; }
+  }
 }
 
-@media (max-width: 62rem) {
-  .pkgs td.size, .pkgs th.size { display: none; }
-}
-
-@media (max-width: 52rem) {
-  .pkgs td.ver, .pkgs th.ver { display: none; }
-  .fpr-box { margin-left: 0; width: 100%; }
+/* Columns drop by the article width, not the viewport, so the sidebar needs no separate arithmetic. */
+@container main (max-width: 48rem) {
+  .fpr-box { margin-inline-start: 0; width: 100%; }
   .fpr { white-space: normal; }
 }
-
-@media (max-width: 44rem) {
+@container main (max-width: 44rem) {
+}
+@container main (max-width: 28rem) {
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container main (max-width: 40rem) {
   .listing td.date, .listing th.date { display: none; }
 }
 
-@media (max-width: 34rem) {
-  .deps-table td.slot, .deps-table th.slot { width: 3.4rem; }
-  .deps-table td.ver, .deps-table th.ver { width: 6.4rem; }
-
-  .facts { display: block; min-height: calc(4 * 1.75 * 0.95rem + 0.5rem); }
-  .facts .row { display: block; }
-  .facts .row > span { display: inline; }
-  .facts .when { margin-left: 0.6em; }
-  .wide-only { display: none; }
-
-  #server-facts {
-    min-height: calc(3 * 1.75 * 0.95rem + 0.5rem);
-  }
-  .facts .job { margin-top: 0.35rem; }
-
-  .pkgs th.mark { width: 4.5rem; }
-  .pkgs td.mark { white-space: normal; }
-  .pkgs td.name { overflow-wrap: anywhere; }
-
-  .wrap { padding: 2.25rem 1rem 2.5rem; }
-
-  .title { font-size: 1.45rem; }
-
-  .nav-inner { flex-wrap: wrap; padding: 0.7rem 1rem 0.55rem; row-gap: 0.5rem; }
-  .nav-brand { flex: 1 1 0; min-width: 0; }
-  .nav-tools { flex: none; margin-left: auto; }
-  .nav-links { flex: 1 0 100%; order: 3; gap: 0; margin: 0 -0.4rem; }
-  .nav-link { padding: 0.3rem 0.4rem; }
-
-  .step { margin-top: 1.2rem; }
-  .code pre { font-size: 0.72rem; padding: 0.7rem 0.75rem; }
-  .code-head .path { font-size: 0.68rem; }
-  .uri { flex-wrap: wrap; }
-  .uri .k {
-    width: 100%; border-right: 0; border-bottom: 1px solid var(--border);
-    padding: 0.35rem 0.7rem; font-size: 0.68rem;
-  }
-  .uri code { font-size: 0.74rem; padding: 0.5rem 0.7rem; }
-  .uri .copy-chip { padding: 0 0.7rem; }
-  .foot-inner { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+/* Pages without an outline (render-chrome.py marks the ones with one) leave no empty column: the article and
+   footer centre in the whole panel, as the docs' pages without "On this page" do, and stop where the panel
+   stops, 12px short. */
+@media (min-width: 64rem) {
+  body:not(:has(.toc[data-outline])) :is(main, .foot) { grid-column: 2 / 4; margin-inline-end: var(--sp-3); }
 }
 
-html, body { max-width: 100%; overflow-x: clip; }
+/* Below 1024px one column: the sidebar opens from the menu button, or sits above main without scripts. */
+@media (max-width: 63.99rem) {
+  body {
+    grid-template-columns: minmax(0, 1fr); grid-template-rows: var(--top-h) auto 1fr auto;
+    grid-template-areas: "top" "side" "main" "foot";
+  }
+  html { background: var(--surface); }
+  body::before { display: none; }
+  .nav { padding: var(--sp-3) var(--sp-4); background: var(--surface); }
+  .nav-toggle { display: inline-grid; margin-inline-start: calc(-1 * var(--sp-2)); }
+  .nav-brand { padding-inline: 0; }
+  .gh, .bar-link, .bar-divider { display: none; }
+  .sidebar .bar-mirror { display: list-item; }
+  .sidebar { position: static; max-height: none; padding: var(--sp-2) var(--sp-4); border-bottom: 1px solid var(--border); }
+  [data-js] .sidebar {
+    position: fixed; inset: var(--top-h) 0 auto 0; z-index: 45;
+    max-height: calc(100dvh - var(--top-h)); background: var(--surface);
+    box-shadow: var(--shadow-elevated); display: none;
+  }
+  [data-nav-open] .sidebar { display: block; }
+  /* The outline becomes the top bar's section picker. The wordmark gives way to it, as the docs' bar keeps
+     only the logo on a phone; the picker may take the bar's width less the two sides' buttons, and ellipsises. */
+  .toc { display: none; }
+  .toc-pick {
+    display: block; position: absolute; top: 50%; left: 50%; translate: -50% -50%;
+    max-width: calc(100% - 2 * (var(--sp-4) + 2 * var(--control-h) + var(--sp-3)));
+  }
+  .nav:has(.toc-pick) .nav-title {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap;
+  }
+  body :is(main, .foot) { grid-column: 1; max-width: none; margin-inline-end: 0; }
+  main, main.wide { padding: var(--sp-8) var(--sp-4) 0; }
+  .foot, main.wide ~ .foot { margin-top: var(--sp-12); padding: var(--sp-4) var(--sp-4) var(--sp-8); }
+  .msg-retry { min-height: var(--chip-h); }
+}
+
+@media (max-width: 34rem) {
+  .resource-list tr { display: block; padding: var(--sp-2) 0; border-bottom: 1px solid var(--border); }
+  .resource-list td, .resource-list td.name, .resource-list td.desc {
+    display: block; width: auto; padding: var(--sp-1) var(--sp-2); border: 0; white-space: normal;
+  }
+  .ref-table th, .ref-table td { padding: var(--sp-2); }
+  .channel-guide thead {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+  .channel-guide, .channel-guide tbody, .channel-guide tr, .channel-guide td {
+    display: block; width: auto;
+  }
+  .channel-guide tr { padding: var(--sp-2) 0; border-bottom: 1px solid var(--border); }
+  .channel-guide td, .channel-guide td:first-child, .channel-guide td:nth-child(2),
+  .channel-guide td:nth-child(3), .channel-guide td:last-child {
+    display: grid; grid-template-columns: var(--col-channel) minmax(0, 1fr); gap: var(--sp-2);
+    width: 100%; padding: var(--sp-1); border: 0; white-space: normal;
+  }
+  .channel-field {
+    display: block; color: var(--fg-soft); font-size: var(--fs-small); font-weight: 400;
+  }
+
+  .facts .row { grid-template-columns: minmax(0, 1fr) auto; }
+  .facts .val { grid-column: 1 / -1; grid-row: 2; }
+  .wide-only { display: none; }
+
+  .listing { --cell-x: var(--sp-2); }
+
+  .uri { flex-wrap: wrap; gap: 0 var(--sp-3); }
+  .uri .k { width: 100%; }
+}
+
+/* ==== Live ISO (site/iso.html): mirror tables. ==== */
+/* A mirror table's names wrap on a phone: with a location column beside them, the longest English name
+   (Oregon State University Open Source Lab) would otherwise push the table past the screen. */
+@media (max-width: 34rem) {
+  .mirror-table td:first-child { white-space: normal; }
+}
+/* ==== end of Live ISO block ==== */
+
+/* ==== Package list (site/packages.html). ==== */
+/* Laid out as a data-heavy Spectrum docs page: the title and lead, then one toolbar row over the table, all
+   on the content column's edges. The toolbar is an S2 SearchField at size M (32px tall, 208px wide; the label
+   is visually hidden and the placeholder is the hint), the filter SegmentedControl, and the count in
+   secondary text at the row's end. On phones the three stack. */
+.pkg-toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3) var(--sp-4);
+  margin: 0 0 var(--sp-4);
+}
+.pkg-search {
+  --pkg-search-w: calc(3 * var(--sp-16) + var(--sp-4));
+  flex: 0 1 var(--pkg-search-w); max-width: none; margin: 0;
+  font-size: var(--fs-ui); line-height: var(--lh-ui);
+}
+/* The Search icon is one line box tall, as SearchField sizes it (size: 1lh). */
+.pkg-search .search-icon { inset-inline-start: var(--sp-3); top: calc((var(--control-h) - 1lh) / 2); width: 1lh; height: 1lh; }
+.pkg-search .search {
+  min-height: var(--control-h); font-size: var(--fs-ui); line-height: var(--lh-ui);
+  padding: 0 var(--sp-2) 0 calc(var(--sp-3) + 1lh + var(--sp-2));
+}
+/* One ring. S2 SearchField shows focus by turning its 2px border gray-900 (Field.tsx:201-220); the site-wide
+   :focus-visible outline drew a second, purple ring outside that border, and a text field matches
+   :focus-visible on a click as well as on Tab. */
+.pkg-search .search:focus-visible { outline: none; }
+.pkg-count, .pkg-caption, .pkg-updated {
+  color: var(--fg-soft); font-size: var(--fs-ui); line-height: var(--lh-ui); font-variant-numeric: tabular-nums;
+}
+/* The count's width is reserved, so the row does not shift as the digits change. */
+.pkg-count { margin: 0; margin-inline-start: auto; min-inline-size: 8ch; text-align: end; white-space: nowrap; }
+.pkg-caption { margin: 0 0 var(--sp-3); min-height: 1lh; }
+.pkg-updated { margin: 0 0 var(--sp-6); min-height: 1lh; }
+.jump { margin: calc(-1 * var(--sp-2)) 0 var(--sp-6); font-size: var(--fs-ui); }
+
+/* The package and dependency tables use the shared TableView look above; sans text and tabular numerals
+   (the size and version columns) are specific to this data, and the sticky header comes from .listing. */
+.listing:is(.pkgs, .deps-table) {
+  font-family: var(--sans); font-size: var(--fs-ui); font-variant-numeric: tabular-nums;
+}
+.pkgs { margin-block-end: var(--sp-3); }
+.listing:is(.pkgs, .deps-table) td { color: var(--fg-body); }
+.pkgs td.name { white-space: normal; word-break: normal; overflow-wrap: anywhere; }
+.pkgs td.name .badge { margin-inline-start: var(--sp-1); }
+.pkgs td.mark { white-space: normal; }
+.pkgs td.ver, .pkgs th.ver { text-align: end; white-space: nowrap; }
+.pkgs th.mark { width: var(--col-mark); }
+.pkgs th.bin-col { width: calc(var(--col-mark) + var(--sp-8)); }
+.pkgs th.ver { width: var(--col-pkgver); }
+.pkgs th.size { width: var(--col-size); }
+.deps-table td, .deps-table th { white-space: normal; overflow-wrap: anywhere; }
+.deps-table th.slot { width: var(--col-slot); }
+.deps-table th.ver { width: var(--col-ver); }
+.deps-table td.ver, .deps-table th.ver { text-align: end; }
+/* A search or filter with no match, or an empty directory in the file browser: the message in the body
+   under the header, centred in a band of the loading height, as TableView's renderEmptyState. Shared by
+   every .listing table (the package search and the file browser), so the row does not respond to hover or
+   press either way. */
+.listing .empty-row td { height: var(--loading-band); text-align: center; vertical-align: middle; white-space: normal; color: var(--fg-soft); }
+.listing .empty-row:active td, .listing .empty-row:hover td { background: none; }
+
+/* Status words are S2 Badges at size S with the subtle fill (Badge.tsx): 24px tall, 12px text 8px in, radius
+   4, wrapping when the column is narrow. Neutral carries a reason. */
+.badge {
+  display: inline-flex; align-items: center; min-height: var(--btn-s); padding: 0 var(--sp-2);
+  border-radius: var(--r-sm); vertical-align: middle; text-align: start;
+  font-family: var(--sans); font-size: var(--fs-small); line-height: var(--lh-label); white-space: normal;
+}
+.badge[data-variant="neutral"] { background: var(--neutral-subtle); color: var(--fg-body); }
+/* The file browser: a row a mirror has not synced yet, and the notice dot on that mirror's option. */
+.listing td.name .badge { margin-inline-start: var(--sp-1); }
+.src-opt[data-behind]::after, .menu-item[data-behind] .menu-label::after {
+  content: ""; display: inline-block; width: var(--sp-1); height: var(--sp-1); border-radius: var(--r-full);
+  margin-inline-start: var(--sp-1); vertical-align: middle; background: var(--notice);
+}
+
+/* S2 ContextualHelp in the binpkg header (ContextualHelp.tsx): a quiet XS ActionButton, 20px, with the S2
+   HelpCircle icon, opening a 268px popover padded 24 at radius 10 with the elevated shadow: a bold title,
+   body text, and the link to the FAQ 16px below. The page script places it (--pop-x, --pop-y). */
+.th-help { display: inline-flex; align-items: center; gap: var(--sp-1); vertical-align: middle; }
+.ctx-help {
+  display: inline-grid; place-items: center; width: var(--icon); height: var(--icon); padding: 0;
+  border: 0; border-radius: var(--r-sm); background: transparent; color: var(--fg-soft);
+}
+.ctx-pop {
+  --ctx-w: calc(4 * var(--sp-16) + var(--sp-3));
+  --pop-x: 0px;
+  --pop-y: 0px;
+  --ctx-from: calc(-1 * var(--popover-offset));
+  position: fixed; inset: auto; top: var(--pop-y); left: var(--pop-x); margin: 0;
+  width: var(--ctx-w); max-width: calc(100vw - 2 * var(--sp-3)); padding: var(--sp-6);
+  border: 0; border-radius: var(--r-lg); background: var(--raised); color: var(--fg-body);
+  box-shadow: var(--shadow-elevated); outline: 1px solid var(--menu-outline);
+  font-size: var(--fs-ui); line-height: var(--lh-code);
+}
+.ctx-pop[data-placement="top"] { --ctx-from: var(--popover-offset); }
+.ctx-pop:focus-visible { outline: 1px solid var(--menu-outline); outline-offset: 0; }
+.ctx-title { margin: 0 0 var(--sp-2); color: var(--fg); font-size: var(--fs-value); font-weight: 700; line-height: var(--lh-ui); }
+.ctx-body { margin: 0; }
+.ctx-foot { margin: var(--sp-4) 0 0; }
+
+@media (hover: hover) and (pointer: fine) {
+  .ctx-help:hover { background: var(--hover); color: var(--fg); }
+  .pkgs .empty-row:hover td { background: none; }
+}
+/* The popover enters from 4px towards its trigger while fading, over 200ms, as the menus do. It closes at once. */
+@media (prefers-reduced-motion: no-preference) {
+  .ctx-pop:popover-open { animation: ctx-in var(--animation-duration-overlay) ease; }
+}
+@keyframes ctx-in {
+  0% { opacity: 0; translate: 0 var(--ctx-from); }
+}
+
+@container main (max-width: 58rem) {
+  .pkgs td.size, .pkgs th.size { display: none; }
+}
+@container main (max-width: 48rem) {
+  .pkgs td.ver, .pkgs th.ver { display: none; }
+}
+@container main (min-width: 58rem) {
+  .pkgs td.name a { white-space: nowrap; }
+}
+@media (max-width: 34rem) {
+  .pkg-toolbar { flex-direction: column; align-items: stretch; }
+  .pkg-search { flex: none; }
+  .pkg-toolbar .seg { align-self: flex-start; }
+  .pkg-count { margin-inline-start: 0; text-align: start; }
+}
+/* ==== end of package list block ==== */
+
+@keyframes toc-pick-in {
+  from { opacity: 0; transform: translateY(calc(100% + var(--sp-3))); }
+}
+@keyframes nav-lift {
+  to { background: var(--raised); box-shadow: var(--shadow-elevated); }
+}
+
+/* ==== Site search (search.js; the trigger and dialog are in site/tools/chrome/nav.html). ==== */
+/* After the React Spectrum docs' search as the doona docs copy it (doona-docs site/styles/search.css): a
+   500px pill in the middle of the top bar with the shortcut at its end, opening a dialog nearly as large as
+   the window. On its start side the site's name and one line about it; beside them the search field with a
+   2px dark border, a row of category chips split by dividers and ending in a link out, and the results as a
+   grid of cards, each a soft gradient panel with a large white glyph over a bold title and a line of
+   description; the close button sits in the corner. Overlay packages follow as compact rows. The pill as
+   measured on /getting-started 2026-09-29: a 2px gray-200 border that turns gray-400 on hover and the text
+   colour with focus, the icon in the soft colour, the placeholder muted, a text cursor, and a 24px keycap
+   (14px medium) on the ground colour. It is a button: a click, Enter, Space or a typed character opens the
+   dialog, the character landing in the field; focus alone does not, as on the docs, so that focus returning
+   from the dialog does not open it again. Below 1024px the docs drop the pill for a button that opens the
+   same dialog; here the trigger is an icon button and the dialog a full-screen sheet with the name on top. */
+.search-trigger {
+  position: absolute; top: 50%; left: 50%; translate: -50% -50%;
+  display: flex; align-items: center; gap: var(--sp-2);
+  width: min(var(--search-w), calc(100% - 2 * (var(--side-w) + var(--sp-16))));
+  min-height: var(--field-h); padding: 0 var(--sp-2) 0 calc(var(--sp-4) + var(--sp-1));
+  border: var(--bw-2) solid var(--border); border-radius: var(--r-full); background: var(--surface);
+  color: var(--fg-soft); font-size: var(--fs-value); line-height: var(--lh-ui); text-align: start; cursor: text;
+}
+.search-trigger-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-muted); }
+.search-trigger:focus-visible { border-color: var(--fg); border-radius: var(--r-full); }
+.search-kbd {
+  display: inline-flex; align-items: center; flex: none; min-height: var(--sp-6); padding: 0 var(--sp-2);
+  border: 1px solid var(--border); border-radius: var(--r-full);
+  background: var(--bg); color: var(--fg-muted);
+  font-family: inherit; font-size: var(--fs-ui); font-weight: 500; line-height: var(--lh-ui); white-space: nowrap;
+}
+html:has(.sd[open]) { overflow: hidden; scrollbar-gutter: stable; }
+.sd {
+  width: min(var(--shell-w), calc(100% - 2 * var(--sp-2))); max-width: none;
+  height: calc(100dvh - 2 * var(--sp-2)); max-height: none; margin: var(--sp-2) auto;
+  padding: var(--sp-6) var(--sp-8) 0 var(--sp-4);
+  border: 0; border-radius: var(--r-xl); background: var(--bg); color: var(--fg-body);
+  box-shadow: var(--shadow-elevated); overflow: hidden;
+}
+.sd[open] { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); gap: var(--sp-6); }
+.sd-brand { align-self: start; padding-inline-start: var(--sp-3); border-inline-start: var(--bw-2) solid var(--fg); }
+.sd-brand-link {
+  display: flex; align-items: center; gap: var(--sp-2); min-height: var(--logo);
+  border-radius: var(--r-sm); color: var(--fg); font-size: var(--fs-value); font-weight: 800; text-decoration: none;
+}
+.sd-brand-link img { width: var(--logo); height: var(--logo); flex: none; object-fit: contain; }
+.sd-tagline { margin: var(--sp-1) 0 0 calc(var(--logo) + var(--sp-2)); color: var(--fg-soft); font-size: var(--fs-ui); line-height: var(--lh-ui); }
+.sd-main { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.sd::backdrop { background: var(--backdrop); }
+.sd-top { display: flex; align-items: center; padding-inline-end: var(--sp-10); }
+.sd-field { flex: 1; margin: 0; }
+.sd-field .search { border-color: var(--fg); }
+.sd-close { position: absolute; top: var(--sp-4); inset-inline-end: var(--sp-6); }
+.sd-chips { display: flex; flex: none; align-items: center; gap: var(--sp-2); padding: var(--sp-4) 0 var(--sp-3); overflow-x: auto; }
+/* A chip is a toggle button: a light fill at rest, the text colour under the ground colour once chosen.
+   A divider sets All and the link out apart from the categories; the link out ends in the LinkOut icon. */
+.sd-chip {
+  display: inline-flex; align-items: center; gap: var(--sp-1);
+  flex: none; min-height: var(--control-h); padding: 0 var(--sp-3);
+  border: 0; border-radius: var(--r-md); background: var(--track); color: var(--fg-body);
+  font-size: var(--fs-ui); white-space: nowrap; text-decoration: none;
+}
+.sd-chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.sd-chip-out { width: 0.85em; height: 0.85em; flex: none; }
+.sd-divider { flex: none; align-self: stretch; width: 1px; margin-block: var(--sp-1); background: var(--border); }
+.sd-status { display: flex; align-items: center; gap: var(--sp-3); flex: none; color: var(--fg-soft); font-size: var(--fs-ui); }
+.sd-status:has(.sd-msg:empty) { display: none; }
+.sd-results { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 calc(-1 * var(--sp-4)); padding: var(--sp-2) var(--sp-4) var(--sp-8); }
+.sd-head { margin: var(--sp-4) 0 var(--sp-3); color: var(--fg-soft); font-size: var(--fs-ui); font-weight: 700; }
+.sd-group:first-child > .sd-head { margin-top: 0; }
+.sd-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-4); }
+.sd-card {
+  display: flex; flex-direction: column; overflow: hidden;
+  border-radius: var(--r-lg); background: var(--raised); box-shadow: var(--shadow-elevated);
+  color: var(--fg-body); text-decoration: none;
+}
+.sd-art {
+  display: grid; place-items: center; aspect-ratio: 1.6;
+  background: linear-gradient(125deg, var(--art-from), var(--art-to)); color: var(--on-art);
+}
+.sd-art-icon, .sd-art-logo { width: var(--art-icon); height: var(--art-icon); object-fit: contain; }
+.sd-text { display: grid; align-content: start; gap: var(--sp-1); padding: var(--sp-3); font-size: var(--fs-ui); line-height: var(--lh-ui); }
+.sd-title { color: var(--fg); font-weight: 700; overflow-wrap: anywhere; }
+/* The description is clamped to two lines; the page holds the rest. */
+.sd-desc { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; color: var(--fg-soft); }
+.sd-pkg {
+  display: flex; align-items: center; min-height: var(--control-h); padding: 0 var(--sp-3);
+  border-radius: var(--r-md); color: var(--fg-body); text-decoration: none;
+  font-family: var(--mono); font-size: var(--fs-code); overflow-wrap: anywhere;
+}
+.sd-pkg-cat { color: var(--fg-muted); }
+.sd-more { margin: var(--sp-2) 0 0; padding: 0 var(--sp-3); color: var(--fg-soft); font-size: var(--fs-ui); }
+/* The result the arrow keys picked while focus stays in the field takes a 2px border in the text colour. */
+.sd-card[aria-selected="true"], .sd-pkg[aria-selected="true"] { outline: var(--bw-2) solid var(--fg); outline-offset: 0; }
+.sd-pkg[aria-selected="true"] { background: var(--fill-hover); color: var(--fg); }
+@media (hover: hover) and (pointer: fine) {
+  .search-trigger:hover { border-color: var(--bar-hover); }
+  .search-trigger:focus-visible:hover { border-color: var(--fg); }
+  .sd-chip:not([aria-pressed="true"]):hover { background: var(--fill-hover); color: var(--fg); }
+  .sd-card:hover { box-shadow: var(--shadow-elevated), 0 0 0 var(--bw-2) var(--border-strong); }
+  .sd-pkg:hover { background: var(--fill-hover); color: var(--fg); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .search-trigger, .sd-chip, .sd-pkg {
+    transition: background-color var(--animation-duration-state) var(--animation-ease-in-out),
+      border-color var(--animation-duration-state) var(--animation-ease-in-out),
+      color var(--animation-duration-state) var(--animation-ease-in-out);
+  }
+  /* The morph between trigger and dialog runs 250ms on the UA's ease, as measured on the docs. */
+  [data-sd-morph] { view-transition-name: site-search; }
+  ::view-transition-group(site-search), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: var(--animation-duration-500); }
+  :root:not([data-sd-vt]) .sd[open], :root:not([data-sd-vt]) .sd[open]::backdrop { animation: sd-fade var(--animation-duration-500) var(--animation-ease-out); }
+}
+@keyframes sd-fade { from { opacity: 0; } }
+@media (max-width: 79.99rem) {
+  .sd-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 63.99rem) {
+  .search-trigger {
+    position: static; translate: none; justify-content: center;
+    width: var(--control-h); min-height: var(--control-h); padding: 0;
+    border: 0; border-radius: var(--r-lg); background: transparent; color: var(--fg-body); cursor: pointer;
+  }
+  .search-trigger:focus-visible { border-radius: var(--r-lg); }
+  .search-trigger-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .search-kbd { display: none; }
+  .sd { width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; padding: var(--sp-3) var(--sp-4) 0; border-radius: 0; box-shadow: none; }
+  .sd[open] { display: flex; flex-direction: column; gap: 0; }
+  .sd-brand { flex: none; padding: 0 0 var(--sp-1); border: 0; border-bottom: var(--bw-2) solid var(--fg); width: fit-content; }
+  .sd-tagline { display: none; }
+  .sd-main { flex: 1; }
+  .sd-top { margin-top: var(--sp-4); padding-inline-end: 0; }
+  .sd-close { top: var(--sp-2); inset-inline-end: var(--sp-3); }
+  .sd-chips { padding: var(--sp-3) 0; }
+  .sd-results { padding: var(--sp-2) var(--sp-4) var(--sp-6); }
+}
+@media (max-width: 34rem) {
+  .sd-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+}
+/* ==== end of site search block ==== */
+@keyframes spin { to { rotate: 1turn; } }
+@keyframes pulse { 50% { opacity: 0.5; } }
+
+/* Home page (variant A, chosen 2026-09-29): a hero with the title, a tagline at h3 size and the overlay install
+   box, the counts, then one text-first card per product with a 20px icon beside the title and the description
+   at body size. Measured on the Spectrum home and "Getting started" (/scratch/ssd/bh-site-ref/home-v3-notes.md). */
+.hero-title { margin-bottom: var(--sp-4); }
+.hero-lead { margin: 0 0 var(--sp-8); color: var(--fg-body); font-size: var(--fs-h3); line-height: var(--lh-body); }
+.hero-install { margin-bottom: var(--sp-3); }
+.hero-more { margin: 0; font-size: var(--fs-ui); font-weight: 700; }
+
+.entry-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4);
+  margin: 0 0 var(--sp-12); padding: 0; list-style: none;
+}
+.entry-grid > li + li { margin-top: 0; }
+.entry-card {
+  display: grid; align-content: start; row-gap: var(--sp-2); height: 100%; padding: var(--sp-6);
+  border-radius: var(--r-lg); box-shadow: 0 0 0 var(--bw-2) var(--border-subtle);
+  color: var(--fg-body); text-decoration: none;
+}
+/* Compact density (the mirror cards on /thanks): tighter gap and padding, and the card's own text size
+   rather than the page's, since a mirror card carries no .entry-title. */
+.entry-card[data-density="compact"] {
+  row-gap: var(--sp-1); padding: var(--sp-4); font-size: var(--fs-ui); line-height: var(--lh-ui);
+}
+.entry-head { display: flex; align-items: center; gap: var(--sp-3); color: var(--accent); }
+.entry-title { color: var(--fg); font-size: var(--fs-h3); line-height: var(--lh-h3); font-weight: 800; }
+.entry-desc { color: var(--fg-body); font-size: var(--fs-body); line-height: var(--lh-body); text-wrap: pretty; }
+
+
+
+@media (hover: hover) {
+  .entry-card:hover { box-shadow: 0 0 0 var(--bw-2) var(--fill-hover); }
+}
+@media (prefers-reduced-motion: no-preference) {
+}
+@container main (max-width: 36rem) {
+  .entry-grid { grid-template-columns: minmax(0, 1fr); }
+}

@@ -1,0 +1,1233 @@
+{
+ "langs": [
+  "zh-cn",
+  "zh-tw",
+  "en"
+ ],
+ "groups": [
+  {
+   "id": "overlay",
+   "label": {
+    "zh-cn": "overlay",
+    "zh-tw": "overlay",
+    "en": "overlay"
+   },
+   "icon": {
+    "viewBox": "0 0 20 20",
+    "paths": [
+     "M10 13.5c-.43 0-.86-.123-1.235-.37L2.729 9.166c-.635-.417-1.015-1.12-1.015-1.879 0-.76.38-1.464 1.015-1.882l6.036-3.966c.75-.492 1.72-.492 2.47 0l6.036 3.966c.636.418 1.015 1.121 1.015 1.882s-.38 1.462-1.015 1.879l-6.036 3.966c-.375.246-.805.369-1.235.369m-.412-1.623c.25.164.574.164.824 0l6.036-3.966c.215-.14.338-.369.338-.626s-.123-.485-.339-.627l-6.035-3.966c-.25-.164-.574-.164-.824 0L3.552 6.658c-.215.142-.338.37-.338.627s.123.486.338.626z",
+     "M10 19c-.43 0-.86-.123-1.235-.37l-6.036-3.965c-.577-.379-.942-.99-1.001-1.675-.06-.694.197-1.364.703-1.839.302-.282.777-.266 1.06.036s.268.777-.034 1.06c-.17.157-.254.382-.234.614.01.132.068.38.33.55l6.035 3.966c.25.164.574.164.824 0l6.036-3.966c.26-.17.319-.418.33-.55.02-.232-.066-.456-.235-.614-.302-.283-.317-.758-.034-1.06s.758-.318 1.06-.036c.507.475.763 1.145.703 1.84-.059.685-.424 1.295-1.001 1.674l-6.036 3.966C10.86 18.877 10.43 19 10 19"
+    ]
+   }
+  },
+  {
+   "id": "distfiles",
+   "label": {
+    "zh-cn": "distfiles",
+    "zh-tw": "distfiles",
+    "en": "distfiles"
+   },
+   "icon": {
+    "viewBox": "0 0 20 20",
+    "paths": [
+     "M16.75 3H3.25C2.01 3 1 4.01 1 5.25v1c0 .778.398 1.465 1 1.869v6.631C2 15.99 3.01 17 4.25 17h11.5c1.24 0 2.25-1.01 2.25-2.25V8.119c.602-.404 1-1.09 1-1.869v-1C19 4.01 17.99 3 16.75 3M2.5 5.25c0-.413.336-.75.75-.75h13.5c.414 0 .75.337.75.75v1c0 .413-.336.75-.75.75H3.25c-.414 0-.75-.337-.75-.75zM15.75 15.5H4.25c-.414 0-.75-.337-.75-.75V8.5h13v6.25c0 .413-.336.75-.75.75",
+     "M12.25 10.5h-4.5c-.414 0-.75.336-.75.75s.336.75.75.75h4.5c.414 0 .75-.336.75-.75s-.336-.75-.75-.75"
+    ]
+   }
+  },
+  {
+   "id": "binhost",
+   "label": {
+    "zh-cn": "binhost",
+    "zh-tw": "binhost",
+    "en": "binhost"
+   },
+   "icon": {
+    "viewBox": "0 0 20 20",
+    "paths": [
+     "M13.53 9.427c-.292-.292-.766-.294-1.06 0l-1.717 1.714V2.75c0-.414-.336-.75-.75-.75s-.75.336-.75.75v8.4L7.53 9.426c-.293-.293-.767-.293-1.06 0s-.293.767 0 1.06l2.998 2.998c.146.147.338.22.53.22.191 0 .384-.073.53-.22l3.002-2.998c.293-.292.293-.767 0-1.06",
+     "M15.75 18H4.25C3.01 18 2 16.99 2 15.75v-2.021c0-.415.336-.75.75-.75s.75.335.75.75v2.021c0 .413.337.75.75.75h11.5c.413 0 .75-.337.75-.75v-2.021c0-.415.336-.75.75-.75s.75.335.75.75v2.021c0 1.24-1.01 2.25-2.25 2.25"
+    ]
+   }
+  },
+  {
+   "id": "iso",
+   "label": {
+    "zh-cn": "Live ISO",
+    "zh-tw": "Live ISO",
+    "en": "Live ISO"
+   },
+   "icon": {
+    "viewBox": "0 0 20 20",
+    "paths": [
+     "M19 17.5H1c-.414 0-.75-.336-.75-.75S.586 16 1 16h18c.414 0 .75.336.75.75s-.336.75-.75.75M15.75 15H4.25C3.01 15 2 13.99 2 12.75v-7.5C2 4.01 3.01 3 4.25 3h11.5C16.99 3 18 4.01 18 5.25v7.5c0 1.24-1.01 2.25-2.25 2.25M4.25 4.5c-.413 0-.75.337-.75.75v7.5c0 .413.337.75.75.75h11.5c.413 0 .75-.337.75-.75v-7.5c0-.413-.337-.75-.75-.75z"
+    ]
+   }
+  },
+  {
+   "id": "mirrors",
+   "label": {
+    "zh-cn": "镜像",
+    "zh-tw": "鏡像",
+    "en": "Mirrors"
+   },
+   "icon": {
+    "viewBox": "0 0 20 20",
+    "paths": [
+     "M13.75 2.75c0-.414-.336-.75-.75-.75H4.25C3.01 2 2 3.01 2 4.25V13c0 .414.336.75.75.75s.75-.336.75-.75V4.25c0-.414.336-.75.75-.75H13c.414 0 .75-.336.75-.75M14.75 11.5c0 .414-.336.75-.75.75h-1.75V14c0 .414-.336.75-.75.75s-.75-.336-.75-.75v-1.75H9c-.414 0-.75-.336-.75-.75s.336-.75.75-.75h1.75V9c0-.414.336-.75.75-.75s.75.336.75.75v1.75H14c.414 0 .75.336.75.75",
+     "M15.75 5h-8.5C6.01 5 5 6.01 5 7.25v8.5C5 16.99 6.01 18 7.25 18h8.5c1.24 0 2.25-1.01 2.25-2.25v-8.5C18 6.01 16.99 5 15.75 5m.75 10.75c0 .414-.336.75-.75.75h-8.5c-.414 0-.75-.336-.75-.75v-8.5c0-.414.336-.75.75-.75h8.5c.414 0 .75.336.75.75z"
+    ]
+   }
+  },
+  {
+   "id": "help",
+   "label": {
+    "zh-cn": "帮助",
+    "zh-tw": "說明",
+    "en": "Help"
+   },
+   "icon": {
+    "viewBox": "0 0 20 20",
+    "paths": [
+     "M9.988 15.527c-.23.008-.455-.074-.627-.229-.33-.365-.33-.92 0-1.286.17-.158.395-.243.627-.235.236-.01.466.08.633.248.162.168.25.394.242.627.012.235-.07.466-.228.64-.174.165-.408.25-.647.235",
+     "M10 18.75c-4.825 0-8.75-3.925-8.75-8.75S5.175 1.25 10 1.25s8.75 3.925 8.75 8.75-3.925 8.75-8.75 8.75m0-16c-3.998 0-7.25 3.252-7.25 7.25s3.252 7.25 7.25 7.25 7.25-3.252 7.25-7.25S13.998 2.75 10 2.75",
+     "M9.992 12.706c-.414 0-.75-.336-.75-.75 0-1.022.07-1.714 1.04-2.683.784-.786.917-1.101.917-1.65 0-.21-.066-1.259-1.374-1.259-1.365 0-1.51 1.156-1.526 1.388-.027.413-.393.72-.797.7-.414-.028-.727-.385-.7-.798.064-.965.777-2.79 3.023-2.79 1.887 0 2.874 1.388 2.874 2.758 0 1.144-.457 1.81-1.357 2.712-.576.576-.6.811-.6 1.622 0 .414-.336.75-.75.75"
+    ]
+   }
+  },
+  {
+   "id": "about",
+   "label": {
+    "zh-cn": "关于",
+    "zh-tw": "關於",
+    "en": "About"
+   },
+   "icon": {
+    "viewBox": "0 0 20 20",
+    "paths": [
+     "M9.988 15.527c-.23.008-.455-.074-.627-.229-.33-.365-.33-.92 0-1.286.17-.158.395-.243.627-.235.236-.01.466.08.633.248.162.168.25.394.242.627.012.235-.07.466-.228.64-.174.165-.408.25-.647.235",
+     "M10 18.75c-4.825 0-8.75-3.925-8.75-8.75S5.175 1.25 10 1.25s8.75 3.925 8.75 8.75-3.925 8.75-8.75 8.75m0-16c-3.998 0-7.25 3.252-7.25 7.25s3.252 7.25 7.25 7.25 7.25-3.252 7.25-7.25S13.998 2.75 10 2.75",
+     "M9.992 12.706c-.414 0-.75-.336-.75-.75 0-1.022.07-1.714 1.04-2.683.784-.786.917-1.101.917-1.65 0-.21-.066-1.259-1.374-1.259-1.365 0-1.51 1.156-1.526 1.388-.027.413-.393.72-.797.7-.414-.028-.727-.385-.7-.798.064-.965.777-2.79 3.023-2.79 1.887 0 2.874 1.388 2.874 2.758 0 1.144-.457 1.81-1.357 2.712-.576.576-.6.811-.6 1.622 0 .414-.336.75-.75.75"
+    ]
+   }
+  }
+ ],
+ "entries": [
+  {
+   "url": "/",
+   "group": "",
+   "kind": "page",
+   "title": {
+    "zh-cn": "Gentoo-zh 下载",
+    "zh-tw": "Gentoo-zh 下载",
+    "en": "Gentoo-zh Downloads"
+   },
+   "desc": {
+    "zh-cn": "服务状态、开始使用",
+    "zh-tw": "服務狀態、開始使用",
+    "en": "Service status, Get started"
+   },
+   "keywords": [
+    "index"
+   ]
+  },
+  {
+   "url": "/#status-title",
+   "group": "",
+   "kind": "section",
+   "title": {
+    "zh-cn": "服务状态",
+    "zh-tw": "服務狀態",
+    "en": "Service status"
+   },
+   "desc": {
+    "zh-cn": "Gentoo-zh 下载",
+    "zh-tw": "Gentoo-zh 下载",
+    "en": "Gentoo-zh Downloads"
+   },
+   "keywords": [
+    "status-title"
+   ]
+  },
+  {
+   "url": "/#guide",
+   "group": "",
+   "kind": "section",
+   "title": {
+    "zh-cn": "开始使用",
+    "zh-tw": "開始使用",
+    "en": "Get started"
+   },
+   "desc": {
+    "zh-cn": "Gentoo-zh 下载",
+    "zh-tw": "Gentoo-zh 下载",
+    "en": "Gentoo-zh Downloads"
+   },
+   "keywords": [
+    "guide"
+   ]
+  },
+  {
+   "url": "/overlay",
+   "group": "overlay",
+   "kind": "page",
+   "title": {
+    "zh-cn": "Overlay",
+    "zh-tw": "Overlay",
+    "en": "Overlay"
+   },
+   "desc": {
+    "zh-cn": "添加 overlay、接受测试关键字、安装软件包、distfiles 镜像与 binpkg、注意事项",
+    "zh-tw": "新增 overlay、接受測試關鍵字、安裝套件、distfiles 鏡像與 binpkg、注意事項",
+    "en": "Add the overlay, Accept the testing keyword, Install a package, distfiles mirrors and binary packages, Notes"
+   },
+   "keywords": [
+    "overlay"
+   ]
+  },
+  {
+   "url": "/overlay#adding-overlay",
+   "group": "overlay",
+   "kind": "section",
+   "title": {
+    "zh-cn": "添加 overlay",
+    "zh-tw": "新增 overlay",
+    "en": "Add the overlay"
+   },
+   "desc": {
+    "zh-cn": "Overlay",
+    "zh-tw": "Overlay",
+    "en": "Overlay"
+   },
+   "keywords": [
+    "adding-overlay"
+   ]
+  },
+  {
+   "url": "/overlay#testing-keyword",
+   "group": "overlay",
+   "kind": "section",
+   "title": {
+    "zh-cn": "接受测试关键字",
+    "zh-tw": "接受測試關鍵字",
+    "en": "Accept the testing keyword"
+   },
+   "desc": {
+    "zh-cn": "Overlay",
+    "zh-tw": "Overlay",
+    "en": "Overlay"
+   },
+   "keywords": [
+    "testing-keyword"
+   ]
+  },
+  {
+   "url": "/overlay#install-package",
+   "group": "overlay",
+   "kind": "section",
+   "title": {
+    "zh-cn": "安装软件包",
+    "zh-tw": "安裝套件",
+    "en": "Install a package"
+   },
+   "desc": {
+    "zh-cn": "Overlay",
+    "zh-tw": "Overlay",
+    "en": "Overlay"
+   },
+   "keywords": [
+    "install-package"
+   ]
+  },
+  {
+   "url": "/overlay#distfiles-binpkg",
+   "group": "overlay",
+   "kind": "section",
+   "title": {
+    "zh-cn": "distfiles 镜像与 binpkg",
+    "zh-tw": "distfiles 鏡像與 binpkg",
+    "en": "distfiles mirrors and binary packages"
+   },
+   "desc": {
+    "zh-cn": "Overlay",
+    "zh-tw": "Overlay",
+    "en": "Overlay"
+   },
+   "keywords": [
+    "distfiles-binpkg"
+   ]
+  },
+  {
+   "url": "/overlay#notes",
+   "group": "overlay",
+   "kind": "section",
+   "title": {
+    "zh-cn": "注意事项",
+    "zh-tw": "注意事項",
+    "en": "Notes"
+   },
+   "desc": {
+    "zh-cn": "Overlay",
+    "zh-tw": "Overlay",
+    "en": "Overlay"
+   },
+   "keywords": [
+    "notes"
+   ]
+  },
+  {
+   "url": "/packages",
+   "group": "overlay",
+   "kind": "page",
+   "title": {
+    "zh-cn": "软件包列表",
+    "zh-tw": "套件列表",
+    "en": "Packages"
+   },
+   "desc": {
+    "zh-cn": "overlay 软件包与 ::gentoo 依赖分开显示。纯文本列表见 /packages.txt 与 /deps.txt。",
+    "zh-tw": "overlay 套件與 ::gentoo 相依套件分開顯示。純文字列表見 /packages.txt 與 /deps.txt。",
+    "en": "Overlay packages and ::gentoo dependencies are shown separately. Plain-text lists are at /packages.txt and /deps.txt."
+   },
+   "keywords": [
+    "packages"
+   ]
+  },
+  {
+   "url": "/packages#overlay",
+   "group": "overlay",
+   "kind": "section",
+   "title": {
+    "zh-cn": "overlay 软件包",
+    "zh-tw": "overlay 套件",
+    "en": "Overlay packages"
+   },
+   "desc": {
+    "zh-cn": "软件包列表",
+    "zh-tw": "套件列表",
+    "en": "Packages"
+   },
+   "keywords": [
+    "overlay"
+   ]
+  },
+  {
+   "url": "/packages#deps",
+   "group": "overlay",
+   "kind": "section",
+   "title": {
+    "zh-cn": "::gentoo 依赖",
+    "zh-tw": "::gentoo 相依套件",
+    "en": "::gentoo dependencies"
+   },
+   "desc": {
+    "zh-cn": "软件包列表",
+    "zh-tw": "套件列表",
+    "en": "Packages"
+   },
+   "keywords": [
+    "deps"
+   ]
+  },
+  {
+   "url": "/distfiles-setup",
+   "group": "distfiles",
+   "kind": "page",
+   "title": {
+    "zh-cn": "配置 distfiles",
+    "zh-tw": "設定 distfiles",
+    "en": "Set up distfiles"
+   },
+   "desc": {
+    "zh-cn": "配置",
+    "zh-tw": "設定",
+    "en": "Configure"
+   },
+   "keywords": [
+    "distfiles-setup"
+   ]
+  },
+  {
+   "url": "/distfiles-setup#setup",
+   "group": "distfiles",
+   "kind": "section",
+   "title": {
+    "zh-cn": "配置",
+    "zh-tw": "設定",
+    "en": "Configure"
+   },
+   "desc": {
+    "zh-cn": "配置 distfiles",
+    "zh-tw": "設定 distfiles",
+    "en": "Set up distfiles"
+   },
+   "keywords": [
+    "setup"
+   ]
+  },
+  {
+   "url": "/binpkg-setup",
+   "group": "binhost",
+   "kind": "page",
+   "title": {
+    "zh-cn": "配置 binpkg",
+    "zh-tw": "設定 binpkg",
+    "en": "Set up binary packages"
+   },
+   "desc": {
+    "zh-cn": "选择频道、配置、不安装 sec-keys 软件包时，如何取得签名公钥？",
+    "zh-tw": "選擇頻道、設定、不安裝 sec-keys 套件時，如何取得簽章公鑰？",
+    "en": "Choose a channel, Configure, How do I get the public signing key without installing the sec-keys package?"
+   },
+   "keywords": [
+    "binpkg-setup"
+   ]
+  },
+  {
+   "url": "/binpkg-setup#channel",
+   "group": "binhost",
+   "kind": "section",
+   "title": {
+    "zh-cn": "选择频道",
+    "zh-tw": "選擇頻道",
+    "en": "Choose a channel"
+   },
+   "desc": {
+    "zh-cn": "配置 binpkg",
+    "zh-tw": "設定 binpkg",
+    "en": "Set up binary packages"
+   },
+   "keywords": [
+    "channel"
+   ]
+  },
+  {
+   "url": "/binpkg-setup#setup",
+   "group": "binhost",
+   "kind": "section",
+   "title": {
+    "zh-cn": "配置",
+    "zh-tw": "設定",
+    "en": "Configure"
+   },
+   "desc": {
+    "zh-cn": "配置 binpkg",
+    "zh-tw": "設定 binpkg",
+    "en": "Set up binary packages"
+   },
+   "keywords": [
+    "setup"
+   ]
+  },
+  {
+   "url": "/binpkg-setup#key-download",
+   "group": "binhost",
+   "kind": "section",
+   "title": {
+    "zh-cn": "不安装 sec-keys 软件包时，如何取得签名公钥？",
+    "zh-tw": "不安裝 sec-keys 套件時，如何取得簽章公鑰？",
+    "en": "How do I get the public signing key without installing the sec-keys package?"
+   },
+   "desc": {
+    "zh-cn": "配置 binpkg",
+    "zh-tw": "設定 binpkg",
+    "en": "Set up binary packages"
+   },
+   "keywords": [
+    "key-download"
+   ]
+  },
+  {
+   "url": "/iso",
+   "group": "iso",
+   "kind": "page",
+   "title": {
+    "zh-cn": "CJK 最小安装镜像",
+    "zh-tw": "CJK 最小安裝鏡像",
+    "en": "CJK minimal installation image"
+   },
+   "desc": {
+    "zh-cn": "CJK 最小安装镜像由 Gentoo 中文社区构建和维护，适用于 amd64，每周更新一次。",
+    "zh-tw": "CJK 最小安裝鏡像由 Gentoo 中文社区建置與維護，適用於 amd64，每週更新一次。",
+    "en": "The Gentoo-zh Community builds and maintains the CJK minimal installation image for amd64, with weekly updates."
+   },
+   "keywords": [
+    "iso"
+   ]
+  },
+  {
+   "url": "/iso#minimal-mirrors",
+   "group": "iso",
+   "kind": "section",
+   "title": {
+    "zh-cn": "下载镜像",
+    "zh-tw": "下載鏡像",
+    "en": "Download images"
+   },
+   "desc": {
+    "zh-cn": "CJK 最小安装镜像",
+    "zh-tw": "CJK 最小安裝鏡像",
+    "en": "CJK minimal installation image"
+   },
+   "keywords": [
+    "minimal-mirrors"
+   ]
+  },
+  {
+   "url": "/iso#minimal-differences",
+   "group": "iso",
+   "kind": "section",
+   "title": {
+    "zh-cn": "与官方最小安装介质的差异",
+    "zh-tw": "與官方最小安裝媒體的差異",
+    "en": "Differences from the official minimal installation media"
+   },
+   "desc": {
+    "zh-cn": "CJK 最小安装镜像",
+    "zh-tw": "CJK 最小安裝鏡像",
+    "en": "CJK minimal installation image"
+   },
+   "keywords": [
+    "minimal-differences"
+   ]
+  },
+  {
+   "url": "/iso#verify",
+   "group": "iso",
+   "kind": "section",
+   "title": {
+    "zh-cn": "校验 ISO",
+    "zh-tw": "校驗 ISO",
+    "en": "Verify the ISO"
+   },
+   "desc": {
+    "zh-cn": "CJK 最小安装镜像",
+    "zh-tw": "CJK 最小安裝鏡像",
+    "en": "CJK minimal installation image"
+   },
+   "keywords": [
+    "verify"
+   ]
+  },
+  {
+   "url": "/iso#usb",
+   "group": "iso",
+   "kind": "section",
+   "title": {
+    "zh-cn": "写入 U 盘",
+    "zh-tw": "寫入 USB 隨身碟",
+    "en": "Write to USB"
+   },
+   "desc": {
+    "zh-cn": "CJK 最小安装镜像",
+    "zh-tw": "CJK 最小安裝鏡像",
+    "en": "CJK minimal installation image"
+   },
+   "keywords": [
+    "usb"
+   ]
+  },
+  {
+   "url": "/iso#desktop",
+   "group": "iso",
+   "kind": "section",
+   "title": {
+    "zh-cn": "Gig-OS",
+    "zh-tw": "Gig-OS",
+    "en": "Gig-OS"
+   },
+   "desc": {
+    "zh-cn": "CJK 最小安装镜像",
+    "zh-tw": "CJK 最小安裝鏡像",
+    "en": "CJK minimal installation image"
+   },
+   "keywords": [
+    "desktop"
+   ]
+  },
+  {
+   "url": "/mirrors",
+   "group": "mirrors",
+   "kind": "page",
+   "title": {
+    "zh-cn": "镜像",
+    "zh-tw": "鏡像",
+    "en": "Mirrors"
+   },
+   "desc": {
+    "zh-cn": "镜像列表、如何自行建立镜像？",
+    "zh-tw": "鏡像列表、如何自行建立鏡像？",
+    "en": "Mirror list, How do I set up my own mirror?"
+   },
+   "keywords": [
+    "mirrors"
+   ]
+  },
+  {
+   "url": "/mirrors#list",
+   "group": "mirrors",
+   "kind": "section",
+   "title": {
+    "zh-cn": "镜像列表",
+    "zh-tw": "鏡像列表",
+    "en": "Mirror list"
+   },
+   "desc": {
+    "zh-cn": "镜像",
+    "zh-tw": "鏡像",
+    "en": "Mirrors"
+   },
+   "keywords": [
+    "list"
+   ]
+  },
+  {
+   "url": "/mirrors#own",
+   "group": "mirrors",
+   "kind": "section",
+   "title": {
+    "zh-cn": "如何自行建立镜像？",
+    "zh-tw": "如何自行建立鏡像？",
+    "en": "How do I set up my own mirror?"
+   },
+   "desc": {
+    "zh-cn": "镜像",
+    "zh-tw": "鏡像",
+    "en": "Mirrors"
+   },
+   "keywords": [
+    "own"
+   ]
+  },
+  {
+   "url": "/faq",
+   "group": "help",
+   "kind": "page",
+   "title": {
+    "zh-cn": "FAQ",
+    "zh-tw": "FAQ",
+    "en": "FAQ"
+   },
+   "desc": {
+    "zh-cn": "overlay、distfiles、binpkg、Live ISO、镜像",
+    "zh-tw": "overlay、distfiles、binpkg、Live ISO、鏡像",
+    "en": "overlay, distfiles, binpkg, Live ISO, Mirrors"
+   },
+   "keywords": [
+    "faq"
+   ]
+  },
+  {
+   "url": "/faq#overlay",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "overlay",
+    "zh-tw": "overlay",
+    "en": "overlay"
+   },
+   "desc": {
+    "zh-cn": "FAQ",
+    "zh-tw": "FAQ",
+    "en": "FAQ"
+   },
+   "keywords": [
+    "overlay"
+   ]
+  },
+  {
+   "url": "/faq#overlay-sync",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "旧的 overlay 同步地址还可用吗？",
+    "zh-tw": "舊的 overlay 同步位址還可用嗎？",
+    "en": "Do the old overlay sync URLs still work?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · overlay",
+    "zh-tw": "FAQ · overlay",
+    "en": "FAQ · overlay"
+   },
+   "keywords": [
+    "overlay-sync"
+   ]
+  },
+  {
+   "url": "/faq#distfiles",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "distfiles",
+    "zh-tw": "distfiles",
+    "en": "distfiles"
+   },
+   "desc": {
+    "zh-cn": "FAQ",
+    "zh-tw": "FAQ",
+    "en": "FAQ"
+   },
+   "keywords": [
+    "distfiles"
+   ]
+  },
+  {
+   "url": "/faq#q14",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "如何避免自动镜像某个软件包的 distfile？",
+    "zh-tw": "如何避免自動鏡像某個套件的 distfile？",
+    "en": "How do I prevent automatic mirroring of a package's distfile?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · distfiles",
+    "zh-tw": "FAQ · distfiles",
+    "en": "FAQ · distfiles"
+   },
+   "keywords": [
+    "q14"
+   ]
+  },
+  {
+   "url": "/faq#q15",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "下载 distfile 时遇到 404，改用本站镜像能解决吗？",
+    "zh-tw": "下載 distfile 時遇到 404，改用本站鏡像能解決嗎？",
+    "en": "Can this mirror help when a distfile download returns 404?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · distfiles",
+    "zh-tw": "FAQ · distfiles",
+    "en": "FAQ · distfiles"
+   },
+   "keywords": [
+    "q15"
+   ]
+  },
+  {
+   "url": "/faq#q16",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "下载文件的大小或校验和与 Manifest 不符，怎么办？",
+    "zh-tw": "下載檔案的大小或校驗和與 Manifest 不符，怎麼辦？",
+    "en": "What if a downloaded file does not match the Manifest size or checksum?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · distfiles",
+    "zh-tw": "FAQ · distfiles",
+    "en": "FAQ · distfiles"
+   },
+   "keywords": [
+    "q16"
+   ]
+  },
+  {
+   "url": "/faq#binpkg",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "binpkg",
+    "zh-tw": "binpkg",
+    "en": "binpkg"
+   },
+   "desc": {
+    "zh-cn": "FAQ",
+    "zh-tw": "FAQ",
+    "en": "FAQ"
+   },
+   "keywords": [
+    "binpkg"
+   ]
+  },
+  {
+   "url": "/faq#binpkg-channel",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "我该选 stable 还是 unstable？",
+    "zh-tw": "我該選 stable 還是 unstable？",
+    "en": "Should I choose stable or unstable?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · binpkg",
+    "zh-tw": "FAQ · binpkg",
+    "en": "FAQ · binpkg"
+   },
+   "keywords": [
+    "binpkg-channel"
+   ]
+  },
+  {
+   "url": "/faq#q2",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "binpkg 应该配置在哪里？",
+    "zh-tw": "binpkg 應該在哪裡設定？",
+    "en": "Where do I configure binpkgs?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · binpkg",
+    "zh-tw": "FAQ · binpkg",
+    "en": "FAQ · binpkg"
+   },
+   "keywords": [
+    "q2"
+   ]
+  },
+  {
+   "url": "/faq#q3",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "OpenRC 和 systemd 都能使用吗？",
+    "zh-tw": "OpenRC 和 systemd 都能使用嗎？",
+    "en": "Does it work on both OpenRC and systemd?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · binpkg",
+    "zh-tw": "FAQ · binpkg",
+    "en": "FAQ · binpkg"
+   },
+   "keywords": [
+    "q3"
+   ]
+  },
+  {
+   "url": "/faq#q7",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "本站提供哪些 binpkg？",
+    "zh-tw": "本站提供哪些 binpkg？",
+    "en": "Which binpkgs does this host publish?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · binpkg",
+    "zh-tw": "FAQ · binpkg",
+    "en": "FAQ · binpkg"
+   },
+   "keywords": [
+    "q7"
+   ]
+  },
+  {
+   "url": "/faq#package-status",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "包列表中的状态表示什么？",
+    "zh-tw": "套件列表中的狀態表示什麼？",
+    "en": "What do the statuses in the package list mean?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · binpkg",
+    "zh-tw": "FAQ · binpkg",
+    "en": "FAQ · binpkg"
+   },
+   "keywords": [
+    "package-status"
+   ]
+  },
+  {
+   "url": "/faq#q5",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "如何验证下载的 binpkg 来自本站且内容未被修改？",
+    "zh-tw": "如何驗證下載的 binpkg 來自本站且內容未被修改？",
+    "en": "How do I verify that a downloaded binary package came from this host unchanged?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · binpkg",
+    "zh-tw": "FAQ · binpkg",
+    "en": "FAQ · binpkg"
+   },
+   "keywords": [
+    "q5"
+   ]
+  },
+  {
+   "url": "/faq#key-download",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "不安装 sec-keys 软件包时，如何取得签名公钥？",
+    "zh-tw": "不安裝 sec-keys 套件時，如何取得簽章公鑰？",
+    "en": "How do I get the public signing key without installing the sec-keys package?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · binpkg",
+    "zh-tw": "FAQ · binpkg",
+    "en": "FAQ · binpkg"
+   },
+   "keywords": [
+    "key-download"
+   ]
+  },
+  {
+   "url": "/faq#binpkg-keyring",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "导入公钥时出现 no writable keyring found，怎么办？",
+    "zh-tw": "匯入公鑰時出現 no writable keyring found，怎麼辦？",
+    "en": "How do I fix no writable keyring found when importing the key?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · binpkg",
+    "zh-tw": "FAQ · binpkg",
+    "en": "FAQ · binpkg"
+   },
+   "keywords": [
+    "binpkg-keyring"
+   ]
+  },
+  {
+   "url": "/faq#q1",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "配置之后 emerge 为何仍然从源码编译？",
+    "zh-tw": "設定後，emerge 為何仍然從原始碼編譯？",
+    "en": "Why does emerge still compile from source after binpkg setup?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · binpkg",
+    "zh-tw": "FAQ · binpkg",
+    "en": "FAQ · binpkg"
+   },
+   "keywords": [
+    "q1"
+   ]
+  },
+  {
+   "url": "/faq#q4",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "binpkg 是否可能无法在我的 CPU 上运行？",
+    "zh-tw": "binpkg 是否可能無法在我的 CPU 上執行？",
+    "en": "Could a binpkg fail to run on my CPU?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · binpkg",
+    "zh-tw": "FAQ · binpkg",
+    "en": "FAQ · binpkg"
+   },
+   "keywords": [
+    "q4"
+   ]
+  },
+  {
+   "url": "/faq#live-iso",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "Live ISO",
+    "zh-tw": "Live ISO",
+    "en": "Live ISO"
+   },
+   "desc": {
+    "zh-cn": "FAQ",
+    "zh-tw": "FAQ",
+    "en": "FAQ"
+   },
+   "keywords": [
+    "live-iso"
+   ]
+  },
+  {
+   "url": "/faq#gigos",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "Gig-OS 的使用说明在哪里？",
+    "zh-tw": "Gig-OS 的使用說明在哪裡？",
+    "en": "Where is the Gig-OS documentation?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · Live ISO",
+    "zh-tw": "FAQ · Live ISO",
+    "en": "FAQ · Live ISO"
+   },
+   "keywords": [
+    "gigos"
+   ]
+  },
+  {
+   "url": "/faq#mirrors",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "镜像",
+    "zh-tw": "鏡像",
+    "en": "Mirrors"
+   },
+   "desc": {
+    "zh-cn": "FAQ",
+    "zh-tw": "FAQ",
+    "en": "FAQ"
+   },
+   "keywords": [
+    "mirrors"
+   ]
+  },
+  {
+   "url": "/faq#q8",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "中国大陆有哪些镜像，分别怎么配置？",
+    "zh-tw": "中國大陸有哪些鏡像，分別怎麼設定？",
+    "en": "Which mirrors are available in mainland China, and how do I configure them?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · 镜像",
+    "zh-tw": "FAQ · 鏡像",
+    "en": "FAQ · Mirrors"
+   },
+   "keywords": [
+    "q8"
+   ]
+  },
+  {
+   "url": "/faq#cernet-redirect",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "使用教育网联合镜像站时，为什么 Git 提示重定向？",
+    "zh-tw": "使用教育網聯合鏡像站時，為什麼 Git 提示重新導向？",
+    "en": "Why does Git report a redirect when using CERNET?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · 镜像",
+    "zh-tw": "FAQ · 鏡像",
+    "en": "FAQ · Mirrors"
+   },
+   "keywords": [
+    "cernet-redirect"
+   ]
+  },
+  {
+   "url": "/faq#mirror-sync",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "为什么各镜像的版本不一致？",
+    "zh-tw": "為什麼各鏡像的版本不一致？",
+    "en": "Why do mirrors have different versions?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · 镜像",
+    "zh-tw": "FAQ · 鏡像",
+    "en": "FAQ · Mirrors"
+   },
+   "keywords": [
+    "mirror-sync"
+   ]
+  },
+  {
+   "url": "/faq#q9",
+   "group": "help",
+   "kind": "section",
+   "title": {
+    "zh-cn": "如何自行建立镜像？",
+    "zh-tw": "如何自行建立鏡像？",
+    "en": "How do I set up my own mirror?"
+   },
+   "desc": {
+    "zh-cn": "FAQ · 镜像",
+    "zh-tw": "FAQ · 鏡像",
+    "en": "FAQ · Mirrors"
+   },
+   "keywords": [
+    "q9"
+   ]
+  },
+  {
+   "url": "/about",
+   "group": "about",
+   "kind": "page",
+   "title": {
+    "zh-cn": "关于本站",
+    "zh-tw": "關於本站",
+    "en": "About this site"
+   },
+   "desc": {
+    "zh-cn": "联系、相关链接",
+    "zh-tw": "聯絡、相關連結",
+    "en": "Contact, Related links"
+   },
+   "keywords": [
+    "about"
+   ]
+  },
+  {
+   "url": "/about#contact",
+   "group": "about",
+   "kind": "section",
+   "title": {
+    "zh-cn": "联系",
+    "zh-tw": "聯絡",
+    "en": "Contact"
+   },
+   "desc": {
+    "zh-cn": "关于本站",
+    "zh-tw": "關於本站",
+    "en": "About this site"
+   },
+   "keywords": [
+    "contact"
+   ]
+  },
+  {
+   "url": "/about#links",
+   "group": "about",
+   "kind": "section",
+   "title": {
+    "zh-cn": "相关链接",
+    "zh-tw": "相關連結",
+    "en": "Related links"
+   },
+   "desc": {
+    "zh-cn": "关于本站",
+    "zh-tw": "關於本站",
+    "en": "About this site"
+   },
+   "keywords": [
+    "links"
+   ]
+  },
+  {
+   "url": "/status",
+   "group": "about",
+   "kind": "page",
+   "title": {
+    "zh-cn": "状态",
+    "zh-tw": "狀態",
+    "en": "Status"
+   },
+   "desc": {
+    "zh-cn": "软件包与文件、服务器与构建",
+    "zh-tw": "套件與檔案、伺服器與建置",
+    "en": "Packages and files, Server and builds"
+   },
+   "keywords": [
+    "status"
+   ]
+  },
+  {
+   "url": "/status#packages",
+   "group": "about",
+   "kind": "section",
+   "title": {
+    "zh-cn": "软件包与文件",
+    "zh-tw": "套件與檔案",
+    "en": "Packages and files"
+   },
+   "desc": {
+    "zh-cn": "状态",
+    "zh-tw": "狀態",
+    "en": "Status"
+   },
+   "keywords": [
+    "packages"
+   ]
+  },
+  {
+   "url": "/status#server",
+   "group": "about",
+   "kind": "section",
+   "title": {
+    "zh-cn": "服务器与构建",
+    "zh-tw": "伺服器與建置",
+    "en": "Server and builds"
+   },
+   "desc": {
+    "zh-cn": "状态",
+    "zh-tw": "狀態",
+    "en": "Status"
+   },
+   "keywords": [
+    "server"
+   ]
+  },
+  {
+   "url": "/thanks",
+   "group": "about",
+   "kind": "page",
+   "title": {
+    "zh-cn": "致谢",
+    "zh-tw": "致謝",
+    "en": "Acknowledgments"
+   },
+   "desc": {
+    "zh-cn": "感谢下列机构为 gentoo-zh 提供构建机与镜像。",
+    "zh-tw": "感謝下列機構為 gentoo-zh 提供建置機與鏡像。",
+    "en": "Thanks to the organizations below for hosting the gentoo-zh build server and mirrors."
+   },
+   "keywords": [
+    "thanks"
+   ]
+  },
+  {
+   "url": "/thanks#builder",
+   "group": "about",
+   "kind": "section",
+   "title": {
+    "zh-cn": "构建机",
+    "zh-tw": "建置機",
+    "en": "Build server"
+   },
+   "desc": {
+    "zh-cn": "致谢",
+    "zh-tw": "致謝",
+    "en": "Acknowledgments"
+   },
+   "keywords": [
+    "builder"
+   ]
+  },
+  {
+   "url": "/thanks#mirrors",
+   "group": "about",
+   "kind": "section",
+   "title": {
+    "zh-cn": "镜像",
+    "zh-tw": "鏡像",
+    "en": "Mirrors"
+   },
+   "desc": {
+    "zh-cn": "致谢",
+    "zh-tw": "致謝",
+    "en": "Acknowledgments"
+   },
+   "keywords": [
+    "mirrors"
+   ]
+  },
+  {
+   "url": "/thanks#credits",
+   "group": "about",
+   "kind": "section",
+   "title": {
+    "zh-cn": "来源与许可",
+    "zh-tw": "來源與授權",
+    "en": "Credits and licenses"
+   },
+   "desc": {
+    "zh-cn": "致谢",
+    "zh-tw": "致謝",
+    "en": "Acknowledgments"
+   },
+   "keywords": [
+    "credits"
+   ]
+  }
+ ]
+}

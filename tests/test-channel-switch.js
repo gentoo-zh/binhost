@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
-const html = fs.readFileSync(path.join(ROOT, "site/index.html"), "utf8");
+const html = fs.readFileSync(path.join(ROOT, "site/binpkg-setup.html"), "utf8");
 const packagesHtml = fs.readFileSync(path.join(ROOT, "site/packages.html"), "utf8");
 
 let failed = 0;
@@ -107,7 +107,7 @@ const unstable = options.find(function (option) {
   return option.getAttribute("data-channel") === "unstable";
 });
 
-check("首页包含 stable 与 unstable 两个频道", options.length === 2 && stable && unstable,
+check("binpkg 配置页包含 stable 与 unstable 两个频道", options.length === 2 && stable && unstable,
       String(options.length));
 check("stable 默认使用原有路径和默认状态文件",
       stable && stable.getAttribute("aria-pressed") === "true" &&
@@ -199,7 +199,7 @@ function loadPageWithStorage(source, saved, unavailable) {
 }
 
 const restored = loadPageWithStorage(packagesHtml, "unstable", false);
-check("包列表会恢复首页保存的 unstable 频道",
+check("包列表会恢复配置页保存的 unstable 频道",
       restored.find(function (option) {
         return option.getAttribute("data-channel") === "unstable";
       }).getAttribute("aria-pressed") === "true");
@@ -217,7 +217,7 @@ check("浏览器存储不可用时仍回退 stable",
       }).getAttribute("aria-pressed") === "true");
 
 setImmediate(function () {
-  check("首页分别显示两个频道的收录数",
+  check("配置页分别显示两个频道的收录数",
         stable.count.textContent === "(188)" && unstable.count.textContent === "(196)",
         stable.count.textContent + " / " + unstable.count.textContent);
   console.log(failed ? `\n  ${failed} 项不通过` : "\n  频道切换：全部通过");

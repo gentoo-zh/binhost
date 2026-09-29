@@ -6,6 +6,7 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 const html = fs.readFileSync(path.join(ROOT, "site/packages.html"), "utf8");
 const faq = fs.readFileSync(path.join(ROOT, "site/faq.html"), "utf8");
+const css = fs.readFileSync(path.join(ROOT, "site/assets/site.css"), "utf8");
 
 let failed = 0;
 function check(name, cond, detail) {
@@ -17,7 +18,7 @@ function check(name, cond, detail) {
 function el(id) {
   const e = {
     id, innerHTML: "", textContent: "", className: "", hidden: false,
-    dataset: {}, style: {}, value: "", parentElement: { hidden: false },
+    dataset: {}, style: {}, value: "", parentElement: { hidden: false, setAttribute() {}, removeAttribute() {} },
     classList: { toggle() {} },
     addEventListener() {},
     setAttribute() {},
@@ -79,7 +80,18 @@ check("包名搜索保留匹配行",
       byName.slice(0, 400));
 
 const byDescription = renderWith("browser");
-check("说明字段不参与搜索", !byDescription, byDescription.slice(0, 400));
+check("说明字段不参与搜索，无匹配时表体显示空状态",
+      !/firefox-zh|foobar/.test(byDescription) &&
+      /^<tr class="empty-row"><td colspan="5">none<\/td><\/tr>$/.test(byDescription),
+      byDescription.slice(0, 400));
+window.MIRROR_T = (k) => ({ countAll: "{n} 个包", countSome: "{m} / {n}" })[k];
+renderWith("firefox");
+check("筛选后的计数显示命中数与总数", document.getElementById("count").textContent === "1 / 2",
+      document.getElementById("count").textContent);
+renderWith("");
+check("未筛选时计数只显示总数", document.getElementById("count").textContent === "2 个包",
+      document.getElementById("count").textContent);
+delete window.MIRROR_T;
 
 setRows([{ cp: "media-sound/open-orpheus-bin", desc: "Orpheus", binhost: false,
            excluded: "", ver: "", size: 0, declaresDist: true, dist: true,
@@ -102,7 +114,7 @@ const packages = [
   "CPV: app-misc/other-2\nREPO: gentoo-zh\nSIZE: 20",
 ].join("\n");
 const overlayBuilt = globalThis.__t.parsePackages(packages, "gentoo-zh");
-check("只把 gentoo-zh stanza 算作 overlay 二进制包",
+check("只把 gentoo-zh stanza 算作 overlay binpkg",
       overlayBuilt["app-misc/same"].ver === "1" &&
       overlayBuilt["app-misc/other"].ver === "2",
       JSON.stringify(overlayBuilt));
@@ -131,10 +143,9 @@ setRows([
     channelExcluded: true },
 ]);
 const matrix = renderWith("");
-check("公开索引已有 binpkg 的行不显示待移除",
+check("状态矩阵的勾号与已移除包的链接",
       (matrix.match(/class="mark yes"/g) || []).length === 10 &&
       (matrix.match(/class="mark no"/g) || []).length === 10 &&
-      !matrix.includes("why_retiring") &&
       !matrix.includes('href="https://github.com/gentoo-zh/overlay/tree/master/app-misc/removed"'),
       matrix.slice(0, 1800));
 
@@ -160,15 +171,24 @@ const exclusionPublished = renderWith("app-misc/excluded-published") +
 check("排除清单与频道排除的包已有 binpkg 时只显示勾号，原因在勾号提示中",
       exclusionPublished.includes("app-misc/excluded-published") &&
       exclusionPublished.includes("app-misc/channel-only") &&
-      !exclusionPublished.includes("why-tag") &&
+      !exclusionPublished.includes('class="badge"') &&
       exclusionPublished.includes('<td class="mark yes" title="manual exclusion">') &&
       exclusionPublished.includes('<td class="mark yes" title="whyLong_channelExcluded">'),
       exclusionPublished.slice(0, 900));
 
+check("FAQ 分别说明发布、清单与政策状态",
+      ["sdBuilt", "sdPending", "sdExcluded", "sdChannelExcluded", "sdOffList",
+       "sdRemoved", "sdDist", "sdBindist", "sdLicense"]
+        .every((key) => faq.includes(`data-i18n-html="${key}"`)));
+
+check("FAQ 状态说明中的代码标记按富文本渲染",
+      ["sdBindist", "sdLicense"].every((key) =>
+        faq.includes(`data-i18n-html="${key}"`)));
+
 const acct = renderWith("acct-group/aptly");
 check("已发布的 acct 包按普通包显示",
       acct.includes("acct-group/aptly") &&
-      !acct.includes("why-tag") &&
+      !acct.includes('class="badge"') &&
       /<\/a><\/td><td class="mark yes">/.test(acct),
       acct.slice(0, 600));
 
@@ -185,23 +205,27 @@ const bindistPublished = renderWith("");
 check("已发布包旁的 bindist 标签不写成不提供 binpkg",
       (bindistPublished.match(/>policyTag_bindist<\/span>/g) || []).length === 1 &&
       !bindistPublished.includes(">why_bindist<") &&
-      /class="mark yes"[^>]*>\u2713/.test(bindistPublished),
+      /class="mark yes"[^>]*><svg class="icon mark-icon"/.test(bindistPublished),
       bindistPublished.slice(0, 600));
 
-check("图例分别说明发布、清单与政策状态",
-      ["lgBuilt", "lgPending", "lgExcluded", "lgChannelExcluded", "lgDashBin",
-       "lgRemoved", "lgDashDist"]
-        .every((key) => html.includes(`data-i18n="${key}"`)) &&
-      ["lgBindist", "lgLicense"]
-        .every((key) => html.includes(`data-i18n-html="${key}"`)));
+check("状态说明在 binpkg 表头的 ContextualHelp 里，并链接到 FAQ",
+      /<th class="mark bin-col">[\s\S]*?popovertarget="status-help"[\s\S]*?<\/th>/.test(html) &&
+      /<div class="ctx-pop" id="status-help" popover role="dialog"[\s\S]*?href="\/faq#package-status" data-i18n="lgMore"/.test(html) &&
+      !html.includes('class="legend"'));
 
-check("图例中的代码标记按富文本渲染",
-      ["lgBindist", "lgLicense"].every((key) =>
-        html.includes(`data-i18n-html="${key}"`)));
+check("搜索框只有一个焦点环：包列表去掉全站的 outline，由边框表示焦点",
+      /\.pkg-search \.search:focus-visible \{ outline: none; \}/.test(css) &&
+      /\.search:focus-visible \{ border-color: var\(--fg\);/.test(css));
 
-check("图例链接到 FAQ 的状态说明",
-      html.includes('href="/faq#package-status"') &&
-      html.includes('data-i18n="lgMore"'));
+// /packages?q=fcitx opens with the search filled in.
+{
+  const saved = global.location;
+  global.location = { pathname: "/packages", hash: "", search: "?q=fcitx&lang=en" };
+  nodes.q = el("q");
+  (0, eval)(script);
+  check("?q= 预填搜索框", nodes.q.value === "fcitx", nodes.q.value);
+  global.location = saved;
+}
 
 check("FAQ 说明 bindist 的常见原因与判定边界",
       faq.includes("源码包和上游预编译包都可能设置这项限制") &&

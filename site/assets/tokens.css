@@ -1,0 +1,407 @@
+/* Design tokens: colour, type, size, spacing, radius, motion. Components name these, never values.
+   Neutral and status colours are Adobe's Spectrum 2 tokens, @adobe/spectrum-tokens 15.4.1:
+   gray-25..gray-900 and green/orange/red/blue-900 from src/color-palette.json;
+   drop-shadow-color from src/color-aliases.json.
+   The accent is Gentoo's official purple: $gentoo-purple #54487A and $gentoo-purple-light #61538D in
+   tyrian-theme f4a3dc8 (2023-12-26) src/scss/_variables.scss:2-3, as listed on the Gentoo wiki's
+   Project:Artwork/Colors. Dark mode keeps the brand hue (OKLCH h 293.8) and raises only lightness,
+   to 4.5:1 for text and 3:1 for controls. The site uses no other accent hue.
+   Surfaces keep the same gray step in both modes, as the React Spectrum docs do (measured 2026-09-29):
+   ground gray-50, panel gray-25, code gray-50, track gray-100. The dark ramp inverts, so the dark panel
+   (#111111) sits below the ground (#1b1b1b) and code is recessed into it, never raised above it.
+   The light palette also sits on [data-theme="light"] so the design page can read both palettes;
+   on :root alone it would read the theme in force. */
+
+@font-face {
+  font-family: "Source Sans 3";
+  src: url("/assets/fonts/source-sans-3.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Source Code Pro";
+  src: url("/assets/fonts/source-code-pro.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root, [data-theme="light"] {
+  color-scheme: light dark;
+
+  --bg: #f8f8f8;
+  --surface: #ffffff;
+  --raised: #ffffff;
+  --code-bg: #f8f8f8;
+  --hover: #e9e9e9;
+  /* gray-200: a filled ActionButton on hover and press (measured on /ActionButton). */
+  --fill-hover: #e1e1e1;
+  --track: #e9e9e9;
+  --track-on: #ffffff;
+  --border-subtle: #e9e9e9;
+  --border: #e1e1e1;
+  --border-strong: #8f8f8f;
+  /* gray-400: the bar a sidebar row shows on hover. */
+  --bar-hover: #c6c6c6;
+
+  --fg: #131313;
+  --fg-body: #292929;
+  --fg-soft: #505050;
+  --fg-muted: #717171;
+
+  /* Code colours, one per role of the React Spectrum docs' highlighter (s2-docs src/Code.tsx:11-24), measured
+     on /getting-started and /styling 2026-09-29: string green-1000, keyword magenta-1000, number pink-1000,
+     property indigo-1000, function and tag red-1000, variable fuchsia-1000. Comments are gray-700 (--fg-soft);
+     punctuation keeps the body colour. */
+  --syn-string: #036e45;
+  --syn-keyword: #ba1650;
+  --syn-number: #b01f7b;
+  --syn-property: #6338ee;
+  --syn-function: #b72818;
+  --syn-variable: #9c28af;
+
+  --accent: #54487a;
+  --accent-hover: #61538d;
+
+  --ok: #05834e;
+  --notice: #c24e00;
+  /* notice-700: the 2px border of a notice InlineAlert (measured on /TableView 2026-09-29). */
+  --notice-border: #e86a00;
+  --bad: #d73220;
+  --neutral-subtle: #e9e9e9;
+  /* Guide card preview: the brand hue (OKLCH h 293.5-293.8) from #6e56af, L 0.52, to the brand purple. */
+
+  --shadow-color: rgba(0, 0, 0, 0.08);
+  --shadow-soft: rgba(0, 0, 0, 0.04);
+  /* Menu popover outline: S2 draws it only in dark (gray-200). */
+  --menu-outline: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg: #1b1b1b;
+    --surface: #111111;
+    --raised: #222222;
+    --code-bg: #1b1b1b;
+    --hover: #2c2c2c;
+    --fill-hover: #323232;
+    --track: #2c2c2c;
+    --track-on: #111111;
+    --border-subtle: #2c2c2c;
+    --border: #393939;
+    --border-strong: #6d6d6d;
+    --bar-hover: #444444;
+
+    --fg: #f2f2f2;
+    --fg-body: #dbdbdb;
+    --fg-soft: #afafaf;
+    --fg-muted: #8a8a8a;
+    --syn-string: #0eaf62;
+    --syn-keyword: #ff6095;
+    --syn-number: #fb5ac4;
+    --syn-property: #8b8dfe;
+    --syn-function: #ff6756;
+    --syn-variable: #e85bfd;
+
+    --accent: #a897e3;
+    --accent-hover: #b8a7f4;
+
+    --ok: #099d59;
+    --notice: #e06400;
+    --notice-border: #b94900;
+    --bad: #fc432e;
+    --neutral-subtle: #2c2c2c;
+    /* Dark: one step down, from the brand purple to the same hue at L 0.33, so the panel stays calm. */
+
+    --shadow-color: rgba(0, 0, 0, 0.24);
+    --shadow-soft: rgba(0, 0, 0, 0.12);
+    --menu-outline: #393939;
+  }
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #1b1b1b;
+  --surface: #111111;
+  --raised: #222222;
+  --code-bg: #1b1b1b;
+  --hover: #2c2c2c;
+  --fill-hover: #323232;
+  --track: #2c2c2c;
+  --track-on: #111111;
+  --border-subtle: #2c2c2c;
+  --border: #393939;
+  --border-strong: #6d6d6d;
+  --bar-hover: #444444;
+
+  --fg: #f2f2f2;
+  --fg-body: #dbdbdb;
+  --fg-soft: #afafaf;
+  --fg-muted: #8a8a8a;
+  --syn-string: #0eaf62;
+  --syn-keyword: #ff6095;
+  --syn-number: #fb5ac4;
+  --syn-property: #8b8dfe;
+  --syn-function: #ff6756;
+  --syn-variable: #e85bfd;
+
+  --accent: #a897e3;
+  --accent-hover: #b8a7f4;
+
+  --ok: #099d59;
+  --notice: #e06400;
+  --notice-border: #b94900;
+  --bad: #fc432e;
+  --neutral-subtle: #2c2c2c;
+
+  --shadow-color: rgba(0, 0, 0, 0.24);
+  --shadow-soft: rgba(0, 0, 0, 0.12);
+  --menu-outline: #393939;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* Mode-independent tokens: declared once on :root, never in a dark block. */
+:root {
+  /* Comments and the shell prompt in code: gray-700, as the docs colour comments. */
+  --syn-comment: var(--fg-soft);
+
+  /* Shadow only for raised surfaces (the panel, menus); the layout separates with lines. The three layers are
+     the React Spectrum docs panel's, measured; dark mode raises only the alphas. */
+  --shadow-elevated: 0 2px 8px var(--shadow-color), 0 1px 4px var(--shadow-soft), 0 0 1px var(--shadow-color);
+
+  /* Source Sans 3 stands in for Adobe Clean. It holds Latin glyphs only; Chinese falls to the system sans. */
+  --sans: "Source Sans 3", "Noto Sans CJK SC", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --mono: "Source Code Pro", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Reading sizes measured on the React Spectrum docs (2026-09-29): h1 58/66, h2 28/32, h3 22/26, body and
+     lead 18/27, controls 14/18, code 14/21, fine print 12. Chinese takes a step down with taller lines. */
+  --fs-title: 3.625rem;
+  --lh-title: 1.14;
+  --fs-h2: 1.75rem;
+  --lh-h2: 1.15;
+  --fs-h3: 1.375rem;
+  --lh-h3: 1.2;
+  --fs-lead: 1.125rem;
+  --fs-body: 1.125rem;
+  --lh-body: 1.5;
+  --fs-ui: 0.875rem;
+  --lh-ui: 1.3;
+  --fs-small: 0.75rem;
+  /* The sidebar section label: 12px on a 16px line. */
+  --lh-label: 1.3333;
+  --fs-code: 0.875rem;
+  --lh-code: 1.5;
+  /* Code in a block: 14/21, and 12/18 below 1024px, as the docs' code-sm and code-xs (CodePlatter.tsx:270-275). */
+  --fs-pre: 0.875rem;
+  /* Overview figures: 24px, a step under h2, so the widest count keeps to one line in a quarter of
+     the article; Chinese takes the zh h2 size. */
+  --fs-figure: 1.5rem;
+
+  /* Spacing: Spectrum 2 spacing-75..800. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* Radii: the S2 style macro's radius scale (@react-spectrum/s2 1.7.1 style/spectrum-theme.ts:523-531,
+     corner-radius-small/medium/large/extra-large-default and full). Every border-radius is one of these;
+     check-css rejects anything else.
+     sm   4px: inline code, badges, the focus ring, sidebar rows and tabs (measured on the docs).
+     md   8px: 32px controls: buttons, segmented tracks and items, menu items, outline links (control()
+          radius at size M, style-utils.ts:244-262), and the skip link and a guide card's icon square.
+     lg  10px: surfaces at control scale: InlineAlert, Card, the menu popover, the toast (InlineAlert.tsx,
+          Card.tsx:80-86, Popover.tsx:91, Toast.tsx:209), the selected segment, the docs' top-bar buttons.
+     xl  16px: code blocks, the install box, the panel and demo blocks (measured on the docs).
+     full: pills and round ends: bars, the tab indicator, the step number, the search field (SearchField.tsx:145). */
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 10px;
+  --r-xl: 16px;
+  --r-full: 9999px;
+
+  /* Control height: S2 component-height-100, 40px on touch layouts. */
+  --control-h: 32px;
+  --field-h: 40px;
+  /* One home-page status row: 40px, taller on phones where the value wraps under the label. */
+  --fact-row: 2.5rem;
+  /* White on the purple art panels of the search results and the mirror logo tiles, in both modes. */
+  --on-art: #ffffff;
+
+  /* Component sizes: S2 workflow icons M and S, the brand mark in the top bar, the numbered step circle,
+     and floors for the menu, the status label column and the search field. */
+  --icon: 20px;
+  --icon-sm: 16px;
+  --logo: 28px;
+  /* The numbered step circle is one line of the step's text high (s2-docs Step.tsx: height 1lh). */
+  --step-dot: 1lh;
+  /* Code blocks, measured on the docs 2026-09-29: a fenced block is padded 32 (12 below 1024px); the install
+     box sets its SegmentedControl 24 in (12 below 1024px) and its command row 24 in (16 + 8); a Command box
+     without a switcher 20 in (16 + 4). Copy and sudo there are S2 ActionButtons at size S: 24px. */
+  --code-pad: var(--sp-8);
+  --install-in: var(--sp-6);
+  --btn-s: 24px;
+  /* Loading: S2 ProgressCircle size M (32px, 3px stroke), and the band of a table body that holds it
+     while a listing of unknown length loads. */
+  --progress-m: 32px;
+  --progress-stroke: 3px;
+  --loading-band: 10rem;
+  /* The docs' page list: rows 6px apart; the 10px chevron centred in its 27.5px-wide expand button at the
+     row's end; the 18px current-page bar. */
+  --side-gap: 6px;
+  --chevron: 10px;
+  --chevron-box: 27.5px;
+  --bar-h: 18px;
+  --chevron-l: 12px;     /* the section picker's chevron: 12x12, measured on the docs at 768 and 390 */
+  /* In-content Disclosure (@react-spectrum/s2 1.7.1 Disclosure.tsx), size M, regular density: the header's
+     inline padding and the gap before its text are both calc(minHeight * 3/8 - 1px), 11px at minHeight 32
+     (Disclosure.tsx:192,194); the panel's inline padding is space(9) = 9px (panelInner, Disclosure.tsx:369). */
+  --disclosure-head-pad: 11px;
+  --disclosure-panel-pad: 9px;
+  --menu-min: 11rem;
+  --fact-label: 11rem;
+  --search-w: 32rem;
+  --swatch-min: 10rem;
+  /* Strokes: 2px for the focus ring, the selected segment, the current-page and tab bars, the search field
+     and an InlineAlert's border. 1px hairlines are written as they are. */
+  --bw-2: 2px;
+  /* S2 edge-to-visual: 6px from a button edge to its icon, also a badge's side padding. */
+  --edge-visual: 6px;
+  /* The brand name at 20px and figures or field text at 16px, between the UI and body sizes. */
+  --fs-brand: 1.25rem;
+  --fs-value: 1rem;
+  /* Table columns sized to what they hold. */
+  --col-term: 8.5rem;     /* guide tables: the term column */
+  --col-channel: 7rem;    /* channel guide: the channel */
+  --col-keyword: 7.5rem;  /* channel guide: the Gentoo repository keyword */
+  --col-overlay: 9rem;    /* channel guide: the overlay keyword */
+  --col-size: 4.5rem;     /* file and package sizes */
+  --col-date: 9.5rem;     /* file dates */
+  --col-slot: 4rem;       /* dependency slots */
+  --col-ver: 8rem;        /* dependency versions */
+  --col-mark: 6rem;       /* package list: the status mark */
+  --col-pkgver: 10.5rem;  /* package list: versions */
+  /* Motion distances: S2 pressScale sinks a pressed control 2px into a perspective of at least 24px, a
+     third of the 11rem menu for its wide items and of the 200px sidebar row (66.7px, measured on the docs'
+     SideNav) or the half-width pager card; a popover travels 4px towards its trigger. */
+  --press-depth: 2px;
+  --press-min: 24px;
+  --press-menu: 3.5rem;
+  --press-side: calc((var(--side-w) - var(--sp-6) - var(--sp-3)) / 3);
+  --press-card: calc(var(--measure) / 6);
+  --popover-offset: 4px;
+
+  /* Site search (search.js). A result card's art panel is a soft gradient under a large white glyph in both
+     modes, as the React Spectrum docs' search draws it, kept to Gentoo's purple: gentoo-purple-light mixed
+     halfway to white in OKLab, then gentoo-purple-light itself. The glyph is 64px, the doona docs' card
+     (a copy of Adobe's). The backdrop dims the page under the dialog in both modes. */
+  --art-from: color-mix(in oklab, #61538d 50%, #ffffff);
+  --art-to: #61538d;
+  --on-art: #ffffff;
+  --art-icon: 64px;
+  --backdrop: rgba(0, 0, 0, 0.4);
+  /* Motion, measured on the React Spectrum docs 2026-09-29 (/scratch/ssd/bh-site-ref/motion.md).
+     @adobe/spectrum-tokens 15.4.1 has no motion tokens. The curves are Spectrum's animation-ease-* from
+     @spectrum-css/tokens 16.0.2 custom/global-vars.css:35-37, the same curves as the S2 style macro's
+     default, in and out (@react-spectrum/s2 1.7.1 style/spectrum-theme.ts:569-575). S2 components write
+     their durations as literals, so the two below carry S2's numbers; the third is animation-duration-500
+     from the same global-vars.css:23. Every use sits inside prefers-reduced-motion: no-preference. */
+  --animation-ease-in-out: cubic-bezier(0.45, 0, 0.4, 1); /* state changes: colour, press */
+  --animation-ease-in: cubic-bezier(0.5, 0, 1, 1);        /* leaving: a menu closing */
+  --animation-ease-out: cubic-bezier(0, 0, 0.4, 1);       /* arriving: a menu opening, the theme icon turning */
+  /* Hover, press and colour on every control: spectrum-theme.ts:1397. */
+  --animation-duration-state: 150ms;
+  /* Menus, the theme icon, the segmented and tab indicators: Popover.tsx:150, SegmentedControl.tsx:131,
+     measured on the docs' theme button. */
+  --animation-duration-overlay: 200ms;
+  /* The phone page list, as the docs' navigation sheet fades in 250ms. */
+  --animation-duration-500: 250ms;
+  /* Loading: one turn of the indeterminate ProgressCircle, one pulse of a Skeleton bar. */
+  --animation-duration-spin: 1000ms;
+  --animation-duration-skeleton: 2000ms;
+
+  /* The S2 Prompt workflow icon (@react-spectrum/s2 1.7.1 s2wf-icons/S2_Icon_Prompt_20_N.svg), geometry
+     unchanged, Apache-2.0 (NOTICE): the install box and Command draw it before a one-line command. */
+  --icon-prompt: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='m4.7501,14c-.18359,0-.36719-.06641-.51172-.20117-.30273-.28223-.31934-.75684-.03711-1.06055l2.57617-2.76465-2.57617-2.76465c-.28223-.30371-.26562-.77832.03711-1.06055s.7793-.26562,1.06055.03711l3.05273,3.27637c.26855.28809.26855.73535,0,1.02344l-3.05273,3.27637c-.14746.1582-.34863.23828-.54883.23828Z'/%3E%3Cpath d='m16.75,17H3.25c-1.24023,0-2.25-1.00977-2.25-2.25V5.25c0-1.24023,1.00977-2.25,2.25-2.25h13.5c1.24023,0,2.25,1.00977,2.25,2.25v9.5c0,1.24023-1.00977,2.25-2.25,2.25ZM3.25,4.5c-.41309,0-.75.33691-.75.75v9.5c0,.41309.33691.75.75.75h13.5c.41309,0,.75-.33691.75-.75V5.25c0-.41309-.33691-.75-.75-.75H3.25Z'/%3E%3Cpath d='m15.25,14h-5.5c-.41406,0-.75-.33594-.75-.75s.33594-.75.75-.75h5.5c.41406,0,.75.33594.75.75s-.33594.75-.75.75Z'/%3E%3C/svg%3E");
+  /* The Spectrum 2 Copy icon from @react-spectrum/s2 1.7.1 icons/Copy, geometry unchanged, Apache-2.0 (NOTICE). */
+  --icon-copy: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M11.75 18h-7.5C3.01 18 2 16.99 2 15.75v-7.5C2 7.01 3.01 6 4.25 6c.414 0 .75.336.75.75s-.336.75-.75.75c-.413 0-.75.337-.75.75v7.5c0 .413.337.75.75.75h7.5c.413 0 .75-.337.75-.75 0-.414.336-.75.75-.75s.75.336.75.75c0 1.24-1.01 2.25-2.25 2.25M6.75 5C6.336 5 6 4.664 6 4.25 6 3.01 7.01 2 8.25 2c.414 0 .75.336.75.75s-.336.75-.75.75c-.413 0-.75.337-.75.75 0 .414-.336.75-.75.75M13 3.5h-2c-.414 0-.75-.336-.75-.75S10.586 2 11 2h2c.414 0 .75.336.75.75s-.336.75-.75.75'/%3E%3Cpath d='M13 14h-2c-.414 0-.75-.336-.75-.75s.336-.75.75-.75h2c.414 0 .75.336.75.75s-.336.75-.75.75M15.75 14c-.414 0-.75-.336-.75-.75s.336-.75.75-.75c.413 0 .75-.337.75-.75 0-.414.336-.75.75-.75s.75.336.75.75c0 1.24-1.01 2.25-2.25 2.25M17.25 5c-.414 0-.75-.336-.75-.75 0-.413-.337-.75-.75-.75-.414 0-.75-.336-.75-.75s.336-.75.75-.75C16.99 2 18 3.01 18 4.25c0 .414-.336.75-.75.75M17.25 9.75c-.414 0-.75-.336-.75-.75V7c0-.414.336-.75.75-.75s.75.336.75.75v2c0 .414-.336.75-.75.75M6.75 9.75C6.336 9.75 6 9.414 6 9V7c0-.414.336-.75.75-.75s.75.336.75.75v2c0 .414-.336.75-.75.75M8.25 14C7.01 14 6 12.99 6 11.75c0-.414.336-.75.75-.75s.75.336.75.75c0 .413.337.75.75.75.414 0 .75.336.75.75s-.336.75-.75.75'/%3E%3C/svg%3E");
+
+  /* The Spectrum 2 CheckmarkCircle icon (icons/CheckmarkCircle), shown for 2s after a copy as the docs'
+     CopyButton does (s2-docs src/CopyButton.tsx:54,64). Same package and licence as Copy. */
+  --icon-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 18.75c-4.825 0-8.75-3.925-8.75-8.75S5.175 1.25 10 1.25s8.75 3.925 8.75 8.75-3.925 8.75-8.75 8.75m0-16c-3.998 0-7.25 3.252-7.25 7.25s3.252 7.25 7.25 7.25 7.25-3.252 7.25-7.25S13.998 2.75 10 2.75'/%3E%3Cpath d='M9.223 13.5c-.212 0-.415-.09-.558-.248l-2.51-2.792c-.278-.309-.253-.782.055-1.06s.781-.252 1.06.056l1.893 2.107 3.487-4.756c.244-.334.711-.41 1.048-.161.334.244.406.713.161 1.047l-4.032 5.5c-.133.183-.342.295-.567.306z'/%3E%3C/svg%3E");
+
+  /* S2 TableView row hover and press: gray-25 with 7% and 10% gray-900 (TableView.tsx:1900-1901). */
+  --row-hover: color-mix(in srgb, var(--fg) 7%, var(--surface));
+  --row-press: color-mix(in srgb, var(--fg) 10%, var(--surface));
+  /* The S2 UI icon Cross at size 100, the clear button of SearchField (ClearButton.tsx:15,75;
+     dist/private/S2_CrossSize100.mjs). Same package and licence as Copy. */
+  --icon-cross: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='m5.238 4 2.456-2.456A.876.876 0 0 0 6.457.306L4 2.762 1.543.306A.875.875 0 1 0 .306 1.544L2.762 4 .306 6.456a.876.876 0 0 0 1.237 1.238L4 5.238l2.457 2.456a.871.871 0 0 0 1.237 0 .876.876 0 0 0 0-1.238z'/%3E%3C/svg%3E");
+  /* The Spectrum 2 AlertDiamond icon (icons/AlertDiamond), which S2 InlineAlert shows for notice
+     (InlineAlert.tsx:25,166). Same package and licence as Copy. */
+  --icon-notice: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 18.795c-.601 0-1.166-.234-1.591-.66l-6.545-6.544c-.876-.877-.876-2.305 0-3.182l6.545-6.545c.849-.85 2.333-.85 3.182 0l6.545 6.545c.876.877.876 2.305 0 3.182l-6.545 6.545c-.425.425-.99.659-1.591.659m0-16.09c-.2 0-.389.078-.53.22L2.925 9.47c-.292.292-.292.768 0 1.06l6.545 6.545c.283.283.778.283 1.06 0l6.545-6.545c.292-.292.292-.768 0-1.06L10.53 2.925c-.141-.142-.33-.22-.53-.22'/%3E%3Cpath d='M10 14.998c-.231.008-.456-.073-.627-.228-.33-.365-.33-.92 0-1.285.17-.158.395-.242.626-.234.237-.01.466.08.633.247.162.168.25.394.242.627.012.235-.07.465-.228.639-.174.164-.408.25-.647.234M10 11.625c-.414 0-.75-.336-.75-.75v-5c0-.414.336-.75.75-.75s.75.336.75.75v5c0 .414-.336.75-.75.75'/%3E%3C/svg%3E");
+
+  /* Shell geometry of the React Spectrum docs at 1440: a 48px top bar inset 12px, the page list in a 236px
+     column, the panel inset 12px on the right, a 768px article and a 180px outline 40px inside the panel edge.
+     util.js writes the measured top bar height to --nav-h; this is the value before it runs.
+     Wider than 1464px the shell stops growing and centres: the docs cap it at 1440px inside a 12px gutter
+     (measured at 1440, 1920 and 2560: the top bar and panel end at the same edges, 240 and 560px in). */
+  --shell-w: 1440px;
+  --nav-h: 72px;
+  --top-h: 72px;
+  --side-w: 236px;
+  --toc-w: 232px;
+  --measure: 768px;
+  --measure-message: 380px; /* IllustratedMessage.tsx: the vertical orientation's own max-width */
+}
+:root:lang(zh) {
+  --fs-title: 3rem;
+  --lh-title: 1.25;
+  --fs-h2: 1.625rem;
+  --lh-h2: 1.35;
+  --fs-h3: 1.25rem;
+  --lh-h3: 1.4;
+  --fs-lead: 1.0625rem;
+  --fs-body: 1.0625rem;
+  --lh-body: 1.8;
+  --fs-figure: 1.625rem;
+}
+:root:lang(zh-TW) {
+  --sans: "Source Sans 3", "Noto Sans CJK TC", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+}
+
+/* Touch layouts below 1024px: 40px controls and 36px code buttons, a 64px top bar, a smaller brand. */
+@media (max-width: 63.99rem) {
+  :root {
+    --control-h: 40px;
+    --top-h: 64px;
+    --logo: 24px;
+    --fs-brand: 1.125rem;
+    --chip-h: 36px;
+    --code-pad: var(--sp-3);
+    --install-in: var(--sp-3);
+    --fs-pre: 0.75rem;
+  }
+}
+
+/* Phones: the title shrinks, status rows wrap under their label, table columns narrow. */
+@media (max-width: 34rem) {
+  :root, :root:lang(zh) { --fs-title: 2.5rem; }
+  :root {
+    --fact-row: 4rem;
+    --col-term: 6.8rem;
+    --col-slot: 3.4rem;
+    --col-ver: 6.4rem;
+    --col-mark: 4.5rem;
+  }
+}

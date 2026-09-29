@@ -4,7 +4,8 @@
 nginx 配置，以及构建、签名和发布 [gentoo-zh overlay](https://github.com/gentoo-zh/overlay)
 二进制包的脚本。
 
-用户可直接查看[配置步骤](https://distfiles.gentoozh.org/)、
+用户可直接查看[二进制包配置](https://distfiles.gentoozh.org/binpkg-setup)、
+[distfiles 配置](https://distfiles.gentoozh.org/distfiles-setup)、
 [软件包状态](https://distfiles.gentoozh.org/packages)和
 [常见问题](https://distfiles.gentoozh.org/faq)。
 
@@ -20,6 +21,7 @@ nginx 配置，以及构建、签名和发布 [gentoo-zh overlay](https://github
 | `nginx/` | HTTP、HTTP/3 和文件服务配置 |
 | `site/` | 静态站点与公开签名密钥 |
 | `site/tools/` | 站点数据生成与内容检查，供镜像机、本机与 CI 使用 |
+| `site/internal/` | 不发布的维护者页面：设计语言与组件目录 |
 | `docs/` | 密钥轮替、恢复与已评估未实施的改动 |
 
 ## 发布范围

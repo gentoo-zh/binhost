@@ -21,7 +21,7 @@ function element(id) {
   const listeners = {};
   return {
     id, innerHTML: "", textContent: "", hidden: false, value: "",
-    href: "", dataset: {}, parentElement: { hidden: false },
+    href: "", dataset: {}, parentElement: { hidden: false, setAttribute() {}, removeAttribute() {} },
     classList: { toggle() {} },
     addEventListener(name, listener) { listeners[name] = listener; },
     setAttribute() {},
