@@ -10,6 +10,8 @@ import time
 
 BUILD = pathlib.Path(__file__).resolve().parent.parent / "build"
 
+ACCT = 'EAPI=8\ninherit acct-group\nKEYWORDS="~amd64"\nACCT_GROUP_ID=-1\n'
+
 HEADER = "ACCEPT_KEYWORDS: ~amd64\nPACKAGES: 9\nTIMESTAMP: 1\nVERSION: 0"
 
 
@@ -133,11 +135,13 @@ def availability_matrix():
                 "body": 'EAPI=8\ninherit git-r3 cmake\nKEYWORDS="~amd64"\nSLOT="0"\n',
             },
             "virtual/neither": {},
+            "acct-group/published": {"body": ACCT},
             "app-misc/repo-collision": {},
         })
         index = "\n\n".join([
             stanza("app-misc/both-1", "gentoo-zh"),
             stanza("app-misc/bin-only-1", "gentoo-zh"),
+            stanza("acct-group/published-1", "gentoo-zh"),
             stanza("app-misc/repo-collision-9", "gentoo"),
             stanza("app-misc/removed-1", "gentoo-zh"),
         ])
@@ -259,14 +263,11 @@ case("已设定的索引无法读取时中止，不覆写上一份输出", lambd
 case("写出 schema 版本，供页面判断数据是否够新", lambda: (
     run_main(stanza("dev-libs/lib-1", "gentoo"))[1]["schema"] == 4))
 
-case("acct 与 virtual 归为本地安装", lambda: (
-    classify("acct-group/example") == "meta"
-    and classify("acct-user/example") == "meta"
-    and classify("virtual/example") == "meta"))
-
-case("virtual 不因 keyword 或 bindist 改变本地安装分类", lambda: (
-    classify("virtual/example",
-             'EAPI=8\nKEYWORDS="~arm64"\nRESTRICT="bindist"\n') == "meta"))
+case("acct 与 virtual 按普通包分类", lambda: (
+    classify("acct-group/example", ACCT) == "nobuild"
+    and classify("acct-user/example", ACCT) == "nobuild"
+    and classify("virtual/example") == "candidate"
+    and classify("virtual/example", 'EAPI=8\nKEYWORDS="~arm64"\n') == "nokeyword"))
 
 case("发布政策与构建清单分类分别写入", lambda: (
     (lambda r: r["binhost"] is False and r["policy"] == "license"
@@ -317,13 +318,12 @@ case("Portage 发布政策分别识别 bindist 与许可证拒绝", lambda: (
     and resolved_policy(missing=("TEST",))[0] == "license"
     and resolved_policy()[0] == ""))
 
-case("本地安装类别写入明确的发布政策", lambda: (
-    resolved_policy(cpv="acct-group/example-1")[0] == "meta"
-    and resolved_policy(cpv="acct-user/example-1")[0] == "meta"
-    and resolved_policy(cpv="virtual/example-1")[0] == "meta"
-    and resolved_policy(cpv="app-alternatives/example-1")[0] == ""))
+case("acct 与 virtual 没有额外的发布政策", lambda: (
+    resolved_policy(cpv="acct-group/example-1")[0] == ""
+    and resolved_policy(cpv="acct-user/example-1")[0] == ""
+    and resolved_policy(cpv="virtual/example-1")[0] == ""))
 
-case("本地安装类别仍优先显示 bindist 与许可证限制", lambda: (
+case("acct 与 virtual 同样受 bindist 与许可证限制", lambda: (
     resolved_policy(restrict="bindist", cpv="virtual/example-1")[0] == "bindist"
     and resolved_policy(missing=("TEST",), cpv="virtual/example-1")[0] == "license"))
 
@@ -331,9 +331,6 @@ case("许可证政策按 ebuild 默认 USE 判定", lambda: (
     resolved_policy(iuse="+ssl minimal")[1]["USE"] == "ssl"))
 
 case("Gentoo 主树缺失时中止且不写出降级结果", missing_policy_tree)
-
-case("app-alternatives 不冒充本地安装类别", lambda: (
-    classify("app-alternatives/example") == "candidate"))
 
 case("deps.txt 单独成档，不占用 packages.txt 的状态栏", lambda: (
     (lambda r: "dev-libs/lib" in r[2] and "dev-libs/lib" not in r[3])(
@@ -355,6 +352,7 @@ case("软件包资料生成时间落在本次执行期间", lambda: (
 
 case("binpkg 与 distfiles 四种组合分别写出", lambda: (
     availability_matrix()[2] == {
+        "acct-group/published": "bin",
         "app-misc/bin-only": "bin",
         "app-misc/both": "bin+src",
         "app-misc/live-only": "--",
@@ -370,10 +368,17 @@ case("同名 ::gentoo 依赖不算 overlay binpkg", lambda: (
 
 case("overlay 所有包都列出，包括两者都没有的包", lambda: (
     set(availability_matrix()[1]) == {
-        "app-misc/bin-only", "app-misc/both", "app-misc/live-only",
+        "acct-group/published", "app-misc/bin-only", "app-misc/both", "app-misc/live-only",
         "app-misc/removed",
         "app-misc/repo-collision", "app-misc/src-only", "virtual/neither",
     }))
+
+case("已发布的 acct 包按普通包写出", lambda: (
+    availability_matrix()[1]["acct-group/published"] == {
+        "cp": "acct-group/published", "binhost": False, "dist": [],
+        "why": "nobuild",
+    }
+    and availability_matrix()[2]["acct-group/published"] == "bin"))
 
 case("只有 9999 的包仍列出并标明原因", lambda: (
     availability_matrix()[1]["app-misc/live-only"].get("why") == "live"))

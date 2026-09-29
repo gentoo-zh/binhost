@@ -18,7 +18,7 @@ from ebuilds import (                                       # noqa: E402
     ATOM, BINARY_LICENSES, PREBUILT_ECLASS, MetadataUnavailable,
     accepts_amd64, builds_from_source, default_use, effective_license,
     inherits, keywords_of, newest_ebuild, pinned_portdbapi, read_mask,
-    source_only, version_of, vercmp,
+    version_of, vercmp,
 )
 
 
@@ -39,8 +39,6 @@ STANZA = re.compile(r"^(\w+): (.*)$", re.M)
 def why_not_listed(cp, ver, text, masked):
     if masked.masks(cp, ver):
         return "masked"
-    if source_only(cp):
-        return "meta"
     if ver == "9999":
         return "live"
     kw = keywords_of(text)
@@ -74,7 +72,7 @@ def publication_policy(overlay, tree=GENTOO_TREE):
             return "license"
         if state != "yes":
             return "unknown"
-        return "meta" if source_only(cpv) else ""
+        return ""
 
     return lookup
 
