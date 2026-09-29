@@ -679,7 +679,8 @@ main li + li { margin-top: var(--sp-2); }
    OSUOSL, which also provides the build server, sits alone under Build server and spans both columns; the mirrors fill two columns as the home entry cards do. Every logo sits in a box of
    one height (64px, --sp-16) so the names line up; the image keeps its own aspect ratio and starts at the
    box's start edge. Logos are the mirrors' own artwork, only resized: colours are never changed, so a logo
-   with no dark variant that cannot be read on the dark surface sits on a white tile in dark mode instead. */
+   with no dark variant that cannot be read on the dark surface sits on a white tile in dark mode instead,
+   the tile only as wide as its logo (justify-self, since the card is a grid). */
 .mirror-cards {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4);
   margin: 0 0 var(--sp-6); padding: 0; list-style: none;
@@ -697,13 +698,13 @@ main li + li { margin-top: var(--sp-2); }
 :root[data-theme="dark"] .logo-light { display: none; }
 :root[data-theme="dark"] .logo-dark { display: block; }
 :root[data-theme="dark"] .mirror-logo-tile {
-  align-self: flex-start; box-sizing: border-box; padding: var(--sp-2); border-radius: var(--r-md); background: var(--on-art);
+  justify-self: start; box-sizing: border-box; padding: var(--sp-2); border-radius: var(--r-md); background: var(--on-art);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) .logo-light { display: none; }
   :root:not([data-theme]) .logo-dark { display: block; }
   :root:not([data-theme]) .mirror-logo-tile {
-    align-self: flex-start; box-sizing: border-box; padding: var(--sp-2); border-radius: var(--r-md); background: var(--on-art);
+    justify-self: start; box-sizing: border-box; padding: var(--sp-2); border-radius: var(--r-md); background: var(--on-art);
   }
 }
 @container main (max-width: 36rem) {
