@@ -383,7 +383,7 @@ case("已发布的 acct 包按普通包写出", lambda: (
 case("只有 9999 的包仍列出并标明原因", lambda: (
     availability_matrix()[1]["app-misc/live-only"].get("why") == "live"))
 
-case("已删除但尚未退役的公开产物保留过渡状态", lambda: (
+case("overlay 已移除但仍在公开索引中的包标为 removed", lambda: (
     availability_matrix()[1]["app-misc/removed"] == {
         "cp": "app-misc/removed", "binhost": False, "dist": [],
         "present": False, "why": "removed",

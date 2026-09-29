@@ -138,10 +138,13 @@ check("公开索引已有 binpkg 的行不显示待移除",
       !matrix.includes('href="https://github.com/gentoo-zh/overlay/tree/master/app-misc/removed"'),
       matrix.slice(0, 1800));
 
+window.MIRROR_T = (key) => (key === "policyPublished" ? "{policy} / published" : key);
 const licensePublished = renderWith("app-misc/license-published");
-check("已发布包的当前政策显示在包名旁并说明发布检查",
+delete window.MIRROR_T;
+check("已发布包的当前政策显示在包名旁，提示不沿用未发布时的说明",
       (licensePublished.match(/>why_license<\/span>/g) || []).length === 1 &&
-      licensePublished.includes('title="whyLong_license policyPublished"') &&
+      licensePublished.includes('title="policyNow_license / published"') &&
+      !licensePublished.includes("whyLong_license") &&
       /why_license<\/span><\/td><td class="mark yes">/.test(licensePublished),
       licensePublished.slice(0, 600));
 
@@ -153,11 +156,12 @@ check("overlay 已移除但仍在索引中的包标明已移除",
 
 const exclusionPublished = renderWith("app-misc/excluded-published") +
   renderWith("app-misc/channel-only");
-check("排除清单与频道排除的包已有 binpkg 时只显示勾号",
+check("排除清单与频道排除的包已有 binpkg 时只显示勾号，原因在勾号提示中",
       exclusionPublished.includes("app-misc/excluded-published") &&
       exclusionPublished.includes("app-misc/channel-only") &&
       !exclusionPublished.includes("why-tag") &&
-      (exclusionPublished.match(/class="mark yes"/g) || []).length === 2,
+      exclusionPublished.includes('<td class="mark yes" title="manual exclusion">') &&
+      exclusionPublished.includes('<td class="mark yes" title="whyLong_channelExcluded">'),
       exclusionPublished.slice(0, 900));
 
 const acct = renderWith("acct-group/aptly");
@@ -175,7 +179,7 @@ check("未发布的 virtual 包按清单外显示",
 
 check("图例分别说明发布、清单与政策状态",
       ["lgBuilt", "lgPending", "lgExcluded", "lgChannelExcluded", "lgDashBin",
-       "lgDashDist"]
+       "lgRemoved", "lgDashDist"]
         .every((key) => html.includes(`data-i18n="${key}"`)) &&
       ["lgBindist", "lgLicense"]
         .every((key) => html.includes(`data-i18n-html="${key}"`)));
@@ -197,6 +201,11 @@ check("FAQ 说明频道排除只影响本频道",
       faq.includes('data-i18n-html="stChannelExcluded"') &&
       faq.includes('data-i18n-html="sdChannelExcluded"') &&
       faq.includes('另一个频道仍可能发布该包'));
+
+check("FAQ 状态表说明已移除与频道排除时的勾号",
+      faq.includes('data-i18n-html="stRemoved"') &&
+      faq.includes('data-i18n-html="sdRemoved"') &&
+      faq.includes("排除原因在勾号的提示中"));
 
 check("distfiles 破折号区分无文件与未完整镜像",
       matrix.includes('title="distNone"') &&
