@@ -1,6 +1,6 @@
 # builders
 
-每个频道一台常驻 systemd-nspawn 机器 `binhost-<频道>`，由 `binhost-update <频道>` 在宿主机以 root 执行。以下以 `stable` 为例，`unstable` 相同，仓库部署在 `/var/lib/binhost`，告警配置 `/etc/binhost/alert.conf` 须已存在，宿主机已同步 gentoo 与 gentoo-zh，root 能 ssh 到发布目标，签名私钥不设口令：
+每个频道一台常驻 systemd-nspawn 机器 `binhost-<频道>`，由 `binhost-update <频道>` 在宿主机以 root 执行。以下以 `stable` 为例，`unstable` 相同，仓库以 `git clone https://github.com/gentoo-zh/binhost /var/lib/binhost` 部署，`binhost-update` 每轮开始前 reset 并 pull，告警配置 `/etc/binhost/alert.conf` 须已存在，宿主机已同步 gentoo 与 gentoo-zh，root 能 ssh 到发布目标，签名私钥不设口令：
 
 ```sh
 printf '[gentoo-zh]\nlocation = /var/db/repos/gentoo-zh\nsync-type = git\nsync-uri = https://github.com/gentoo-zh/overlay.git\n' > /etc/portage/repos.conf/gentoo-zh.conf
@@ -18,6 +18,6 @@ $N --bind-ro <签名公钥文件>:/tmp/binhost.asc sh -c 'getuto && gpg --homedi
 $N emerge -pvuDN @world > /tmp/world-stable.txt
 ```
 
-宿主机的 `/etc/portage/gnupg` 用于 `gpkg-sign --skip-signed` 以 nobody 身份校验已签名的包。两台机器的 `emerge -pvuDN @world` 输出交给维护者，确认没有冲突后再安装单元并启用 timer：`mkdir -p /var/cache/binhost/kernel/x86-64 /var/tmp/portage/kernel && cp /var/lib/binhost/deploy/systemd/binhost-{alert@.service,update@.service,update-*.timer,kernel.service,kernel.timer,status.service,status.timer} /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now binhost-update-{stable,unstable}.timer binhost-kernel.timer binhost-status.timer`。`binhost-status` 核对内核归档与签名密钥，并按 `/var/lib/binhost/build/VERSION` 核对部署版本，因此每次同步仓库后须写入所部署的提交号。内核归档由 `binhost-kernel.service` 在 `binhost-unstable` 的临时副本中构建，因此不需要第三台机器。
+宿主机的 `/etc/portage/gnupg` 用于 `gpkg-sign --skip-signed` 以 nobody 身份校验已签名的包。两台机器的 `emerge -pvuDN @world` 输出交给维护者，确认没有冲突后再安装单元并启用 timer：`mkdir -p /var/cache/binhost/kernel/x86-64 /var/tmp/portage/kernel && cp /var/lib/binhost/deploy/systemd/binhost-{alert@.service,update@.service,update-*.timer,kernel.service,kernel.timer,status.service,status.timer} /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now binhost-update-{stable,unstable}.timer binhost-kernel.timer binhost-status.timer`。`binhost-status` 核对内核归档与签名密钥，并按 `binhost-update` 每轮写入的 `/var/lib/binhost/build/VERSION` 核对部署版本。内核归档由 `binhost-kernel.service` 在 `binhost-unstable` 的临时 overlay 中构建，因此不需要第三台机器。
 
 `binhost-update` 每轮更新前给机器建快照，保留最近 7 个。更新损坏机器时回滚：`zfs rollback -r binhost/machines/stable@<时间>`，并从 PKGDIR 删除造成损坏的 binpkg。
