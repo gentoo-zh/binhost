@@ -142,10 +142,11 @@ window.MIRROR_T = (key) => (key === "policyPublished" ? "{policy} / published" :
 const licensePublished = renderWith("app-misc/license-published");
 delete window.MIRROR_T;
 check("已发布包的当前政策显示在包名旁，提示不沿用未发布时的说明",
-      (licensePublished.match(/>why_license<\/span>/g) || []).length === 1 &&
+      (licensePublished.match(/>policyTag_license<\/span>/g) || []).length === 1 &&
+      !licensePublished.includes(">why_license<") &&
       licensePublished.includes('title="policyNow_license / published"') &&
       !licensePublished.includes("whyLong_license") &&
-      /why_license<\/span><\/td><td class="mark yes">/.test(licensePublished),
+      /policyTag_license<\/span><\/td><td class="mark yes">/.test(licensePublished),
       licensePublished.slice(0, 600));
 
 const removed = renderWith("app-misc/removed");
@@ -176,6 +177,16 @@ check("未发布的 virtual 包按清单外显示",
       (virtualUnpublished.match(/>why_nobuild<\/span>/g) || []).length === 1 &&
       /why_nobuild<\/span><\/td><td class="mark no"/.test(virtualUnpublished),
       virtualUnpublished.slice(0, 600));
+
+setRows([{ cp: "app-misc/conditional-bindist", binhost: true, excluded: "",
+           present: true, ver: "1", size: 1, declaresDist: false, dist: false,
+           policy: "bindist", why: "" }]);
+const bindistPublished = renderWith("");
+check("已发布包旁的 bindist 标签不写成不提供 binpkg",
+      (bindistPublished.match(/>policyTag_bindist<\/span>/g) || []).length === 1 &&
+      !bindistPublished.includes(">why_bindist<") &&
+      /class="mark yes"[^>]*>\u2713/.test(bindistPublished),
+      bindistPublished.slice(0, 600));
 
 check("图例分别说明发布、清单与政策状态",
       ["lgBuilt", "lgPending", "lgExcluded", "lgChannelExcluded", "lgDashBin",

@@ -234,6 +234,9 @@ window.MIRROR_I18N = {
     policyNow_bindist: '当前 ebuild 设置了 RESTRICT=bindist',
     policyNow_license: '当前 ebuild 的 LICENSE 表达式不属于 @BINARY-REDISTRIBUTABLE',
     policyNow_unknown: '无法确定当前 ebuild 是否符合发布政策',
+    policyTag_bindist: 'bindist 限制',
+    policyTag_license: '许可证限制',
+    policyTag_unknown: '政策不明',
     policyPublished: '{policy}；公开的 binpkg 在发布前已按其版本与构建时的 USE 通过发布检查',
     whyLong_removed: 'overlay 已移除该包；该行来自仍在公开索引中的产物',
     whyLong_candidate: '检测到构建流程，但该包目前不在构建清单中',
@@ -287,6 +290,9 @@ window.MIRROR_I18N = {
     policyNow_bindist: '目前 ebuild 設定了 RESTRICT=bindist',
     policyNow_license: '目前 ebuild 的 LICENSE 表達式不屬於 @BINARY-REDISTRIBUTABLE',
     policyNow_unknown: '無法確定目前 ebuild 是否符合發布政策',
+    policyTag_bindist: 'bindist 限制',
+    policyTag_license: '授權限制',
+    policyTag_unknown: '政策不明',
     policyPublished: '{policy}；公開的 binpkg 在發布前已依其版本與建置時的 USE 通過發布檢查',
     whyLong_removed: 'overlay 已移除該套件；該列來自仍在公開索引中的產物',
     whyLong_candidate: '偵測到建置流程，但該套件目前不在建置清單中',
@@ -337,6 +343,9 @@ window.MIRROR_I18N = {
     policyNow_bindist: 'The current ebuild sets RESTRICT=bindist.',
     policyNow_license: 'The current ebuild LICENSE expression is outside @BINARY-REDISTRIBUTABLE.',
     policyNow_unknown: 'The current ebuild could not be evaluated against the publication policy.',
+    policyTag_bindist: 'bindist restricted',
+    policyTag_license: 'licence restricted',
+    policyTag_unknown: 'policy unknown',
     policyPublished: '{policy} The published binpkg passed the publication checks for its own version and build-time USE.',
     whyLong_removed: 'The package left the overlay; this row remains because its artifact is still in the public index.',
     whyLong_candidate: 'A build process was detected, but the package is not currently on the build list.',
@@ -467,10 +476,10 @@ function reasonDetail(r) {
   return details.join(" ");
 }
 
-function reasonTag(code, detail) {
+function reasonTag(code, detail, label) {
   const title = detail || t("whyLong_" + code);
   return '<span class="pend why-tag" title="' + esc(title) + '">' +
-    esc(t("why_" + code)) + '</span>';
+    esc(label || t("why_" + code)) + '</span>';
 }
 
 function render() {
@@ -498,7 +507,8 @@ function render() {
       const name = esc(r.cp).replace("/", "/<wbr>");
       const policy = r.policy && r.ver
         ? ' ' + reasonTag(r.policy,
-            t("policyPublished").replace("{policy}", t("policyNow_" + r.policy)))
+            t("policyPublished").replace("{policy}", t("policyNow_" + r.policy)),
+            t("policyTag_" + r.policy))
         : '';
       const markDetail = [r.excluded,
         r.ver && r.channelExcluded ? t("whyLong_channelExcluded") : ""]
