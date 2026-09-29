@@ -107,7 +107,7 @@ const unstable = options.find(function (option) {
   return option.getAttribute("data-channel") === "unstable";
 });
 
-check("binpkg 配置页包含 stable 与 unstable 两个频道", options.length === 2 && stable && unstable,
+check("binary package 配置页包含 stable 与 unstable 两个频道", options.length === 2 && stable && unstable,
       String(options.length));
 check("stable 默认使用原有路径和默认状态文件",
       stable && stable.getAttribute("aria-pressed") === "true" &&

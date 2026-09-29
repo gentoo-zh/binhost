@@ -117,7 +117,7 @@
   <details class="nav-group" data-group="binhost" data-default-open open>
     <summary class="nav-group-title"><span data-i18n="navGBin">binhost</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
     <ul class="pages">
-      <li><a class="nav-link" href="/binpkg-setup" data-i18n="navBin">配置 binpkg</a></li>
+      <li><a class="nav-link" href="/binpkg-setup" data-i18n="navBin">配置 binary package</a></li>
     </ul>
   </details>
   <details class="nav-group" data-group="iso" open>
@@ -198,24 +198,24 @@
 <p data-i18n-html="overlaySyncLinks">配置步骤见 <a href="/overlay#adding-overlay">overlay 指南</a>；背景见<a href="https://gentoozh.org/posts/2025-10-07-thirdparty-repo-mirror-removal/">缓存镜像停用说明</a>与<a href="https://gentoozh.org/posts/2026-07-02-gentoo-zh-repo-migration/">仓库迁移记录</a>。</p>
 <h2 id="distfiles" data-i18n-html="faqDist">distfiles</h2>
 <h3 id="q14" data-i18n="q14">如何避免自动镜像某个软件包的 distfile？</h3>
-  <p data-i18n-html="s14">ebuild 的 <code>RESTRICT</code> 中包含 <code>mirror</code> 或 <code>fetch</code> 时，会限制 distfiles 的自动镜像。<code>bindist</code> 只限制 binpkg，不单独决定 distfiles 是否镜像。</p>
+  <p data-i18n-html="s14">ebuild 的 <code>RESTRICT</code> 中包含 <code>mirror</code> 或 <code>fetch</code> 时，会限制 distfiles 的自动镜像。<code>bindist</code> 只限制 binary package，不单独决定 distfiles 是否镜像。</p>
 <h3 id="q15" data-i18n="q15">下载 distfile 时遇到 404，改用本站镜像能解决吗？</h3>
   <p data-i18n-html="a15">只有本站保存了所需文件时才能下载；本站只镜像 overlay ebuild 声明的 distfiles。<code>GENTOO_MIRRORS</code> 按顺序尝试地址，缺少文件时继续尝试后续地址。配置方法见<a href="/distfiles-setup#setup">配置 distfiles</a>。</p>
 <h3 id="q16" data-i18n="q16">下载文件的大小或校验和与 Manifest 不符，怎么办？</h3>
   <p data-i18n-html="a16">上游可能替换了同一地址的文件，不能只重新生成摘要。<a href="https://github.com/gentoo-zh/overlay/issues/11038">circuitjs1-bin 曾出现这种情况</a>，需要更新 ebuild 并实际构建、验证新版本。</p>
 <span id="usage"></span>
-<h2 id="binpkg" data-i18n-html="faqBin">binpkg</h2>
+<h2 id="binpkg" data-i18n-html="faqBin">binary package</h2>
 <span id="q13"></span>
   <h3 id="binpkg-channel" data-i18n="q13">我该选 stable 还是 unstable？</h3>
-  <p data-i18n-html="a13">按 Gentoo 主仓库的关键字选择：使用 <code>amd64</code> 选 stable，全局使用 <code>~amd64</code> 选 unstable。两个频道都接受 gentoo-zh 的 <code>~amd64</code> 软件包。频道配置见<a href="/binpkg-setup#channel">配置 binpkg</a>；overlay 的关键字设置见 <a href="/overlay#testing-keyword">overlay 指南</a>。</p>
+  <p data-i18n-html="a13">按 Gentoo 主仓库的关键字选择：使用 <code>amd64</code> 选 stable，全局使用 <code>~amd64</code> 选 unstable。两个频道都接受 gentoo-zh 的 <code>~amd64</code> 软件包。频道配置见<a href="/binpkg-setup#channel">配置 binary package</a>；overlay 的关键字设置见 <a href="/overlay#testing-keyword">overlay 指南</a>。</p>
 <span id="q6"></span>
-  <h3 id="q2" data-i18n="q2">binpkg 应该配置在哪里？</h3>
-  <p data-i18n-html="a2">本站使用 <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code> 配置频道地址与签名验证。完整步骤见<a href="/binpkg-setup#setup">配置 binpkg</a>。</p>
+  <h3 id="q2" data-i18n="q2">binary package 应该配置在哪里？</h3>
+  <p data-i18n-html="a2">本站使用 <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code> 配置频道地址与签名验证。完整步骤见<a href="/binpkg-setup#setup">配置 binary package</a>。</p>
 <h3 id="q3" data-i18n="q3">OpenRC 和 systemd 都能使用吗？</h3>
   <p data-i18n-html="a3">能否使用取决于软件包的 USE 与依赖是否适合当前系统。两个频道均使用 <code>desktop/systemd</code> profile 构建，没有单独的 OpenRC 产物。USE 不匹配时，普通安装会改用可用的源码 ebuild。</p>
 <span id="q10"></span>
-  <h3 id="q7" data-i18n="q7">本站提供哪些 binpkg？</h3>
-  <p data-i18n-html="a7">本站发布构建机的整个 <code>PKGDIR</code>，包括收录的 overlay 软件包及从源码构建的 <code>::gentoo</code> 依赖。发布前移除被 mask、受 <code>RESTRICT=bindist</code> 限制或继承 <code>linux-mod</code> 的 binpkg；<code>acct-group</code>、<code>acct-user</code> 与 <code>virtual</code> 不按类别排除。附带的依赖不替代 Gentoo 官方 binhost。可用软件包见<a href="/packages">包列表</a>，纯文本清单见 <a href="/packages.txt">stable</a> 与 <a href="/packages-unstable.txt">unstable</a>。</p>
+  <h3 id="q7" data-i18n="q7">本站提供哪些 binary package？</h3>
+  <p data-i18n-html="a7">本站发布构建机的整个 <code>PKGDIR</code>，包括收录的 overlay 软件包及从源码构建的 <code>::gentoo</code> 依赖。发布前移除被 mask、受 <code>RESTRICT=bindist</code> 限制或继承 <code>linux-mod</code> 的 binary package；<code>acct-group</code>、<code>acct-user</code> 与 <code>virtual</code> 不按类别排除。附带的依赖不替代 Gentoo 官方 binhost。可用软件包见<a href="/packages">包列表</a>，纯文本清单见 <a href="/packages.txt">stable</a> 与 <a href="/packages-unstable.txt">unstable</a>。</p>
 <span id="q12"></span>
   <h3 id="package-status" data-i18n="q12">包列表中的状态表示什么？</h3>
   <p data-i18n-html="a12">
@@ -225,21 +225,21 @@
   <table class="ref-table">
     <thead><tr><th data-i18n="stStatus">状态</th><th data-i18n="stMeaning">触发条件与常见原因</th></tr></thead>
     <tbody>
-      <tr><td class="mark yes"><svg class="icon mark-icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M7.864 15.734c-.222 0-.433-.098-.576-.27l-3.747-4.497c-.266-.319-.222-.792.096-1.057.317-.265.79-.223 1.056.096l3.154 3.786 7.44-9.469c.255-.326.728-.382 1.052-.127.326.256.383.728.127 1.053L8.454 15.447c-.14.179-.352.284-.579.287z"/></svg><span class="visually-hidden">✓</span></td><td data-i18n-html="sdBuilt">公开 binpkg 索引已有该包，可以从本站下载。它不表示该包仍在直接构建清单。包名旁同时出现发布政策时，该政策针对当前 ebuild；公开的 binpkg 在发布前已按其版本与构建时的 USE 通过发布检查。</td></tr>
-      <tr><td data-i18n-html="stPending"><code>待构建</code></td><td data-i18n-html="sdPending">该包是直接构建目标，但公开索引尚无 binpkg。它可能尚未完成首次构建，也可能最近一次未成功发布；该状态只表示目前没有公开产物。</td></tr>
+      <tr><td class="mark yes"><svg class="icon mark-icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M7.864 15.734c-.222 0-.433-.098-.576-.27l-3.747-4.497c-.266-.319-.222-.792.096-1.057.317-.265.79-.223 1.056.096l3.154 3.786 7.44-9.469c.255-.326.728-.382 1.052-.127.326.256.383.728.127 1.053L8.454 15.447c-.14.179-.352.284-.579.287z"/></svg><span class="visually-hidden">✓</span></td><td data-i18n-html="sdBuilt">公开 binary package 索引已有该包，可以从本站下载。它不表示该包仍在直接构建清单。包名旁同时出现发布政策时，该政策针对当前 ebuild；公开的 binary package 在发布前已按其版本与构建时的 USE 通过发布检查。</td></tr>
+      <tr><td data-i18n-html="stPending"><code>待构建</code></td><td data-i18n-html="sdPending">该包是直接构建目标，但公开索引尚无 binary package。它可能尚未完成首次构建，也可能最近一次未成功发布；该状态只表示目前没有公开产物。</td></tr>
       <tr><td data-i18n-html="stExcluded"><code>不构建</code></td><td data-i18n-html="sdExcluded">维护清单明确排除该包。常见原因包括无法构建、缺少支持或需要进一步核对再分发条件；标签提示中会显示记录的具体原因。</td></tr>
-      <tr><td data-i18n-html="stChannelExcluded"><code>本频道不构建</code></td><td data-i18n-html="sdChannelExcluded">该包仍在共用收录清单中，但不符合当前频道的依赖或构建条件，因此本频道不直接构建。另一个频道仍可能发布该包。该包作为其他包的依赖构建时，本频道仍可能有它的 binpkg；这时 binpkg 列只显示勾号，排除原因在勾号的提示中。</td></tr>
+      <tr><td data-i18n-html="stChannelExcluded"><code>本频道不构建</code></td><td data-i18n-html="sdChannelExcluded">该包仍在共用收录清单中，但不符合当前频道的依赖或构建条件，因此本频道不直接构建。另一个频道仍可能发布该包。该包作为其他包的依赖构建时，本频道仍可能有它的 binary package；这时 binary package 列只显示勾号，排除原因在勾号的提示中。</td></tr>
       <tr><td data-i18n-html="stOffList"><code>清单外</code></td><td data-i18n-html="sdOffList">该包不是直接构建目标。上游已经提供预编译内容或构建收益较低时通常不会直接收录，但仍可能作为依赖随包发布；包名含 <code>-bin</code> 不会自动决定该状态。</td></tr>
-      <tr><td data-i18n-html="stBindist"><code>不提供 binpkg</code></td><td data-i18n-html="sdBindist">当前 ebuild 的 <code>RESTRICT</code> 包含 <code>bindist</code>，因此本站不发布该包的 binpkg。源码包和上游预编译包都可能设置这项限制，常见原因是许可证、上游发布条款或预编译内容的再分发条件不允许本站分发二进制产物；包名含 <code>-bin</code> 本身不是判定依据。distfiles 是否镜像仍按 <code>RESTRICT</code> 中的 <code>mirror</code>、<code>fetch</code> 与每项 <code>SRC_URI</code> 单独判断。</td></tr>
-      <tr><td data-i18n-html="stLicense"><code>许可证限制</code></td><td data-i18n-html="sdLicense">当前 ebuild 的 <code>LICENSE</code> 表达式不属于本站固定的 <code>@BINARY-REDISTRIBUTABLE</code>。许可证可能允许附带条件的再分发，但本站不会据此发布 binpkg；该状态与 <code>RESTRICT=bindist</code> 分开判定。</td></tr>
-      <tr><td data-i18n-html="stRemoved"><code>已移除</code></td><td data-i18n-html="sdRemoved">overlay 已移除该包，但公开索引仍有它的 binpkg，仍可以下载。该行不链接到 overlay。</td></tr>
-      <tr><td data-i18n-html="stDist"><code>Distfiles —</code></td><td data-i18n-html="sdDist">该包没有声明 distfile、<code>RESTRICT</code> 包含 <code>mirror</code> 或 <code>fetch</code>，或声明的文件尚未全部进入镜像。破折号提示会区分没有文件与不可用；该状态不表示 binpkg 不可用。</td></tr>
+      <tr><td data-i18n-html="stBindist"><code>不提供 binpkg</code></td><td data-i18n-html="sdBindist">当前 ebuild 的 <code>RESTRICT</code> 包含 <code>bindist</code>，因此本站不发布该包的 binary package。源码包和上游预编译包都可能设置这项限制，常见原因是许可证、上游发布条款或预编译内容的再分发条件不允许本站分发二进制产物；包名含 <code>-bin</code> 本身不是判定依据。distfiles 是否镜像仍按 <code>RESTRICT</code> 中的 <code>mirror</code>、<code>fetch</code> 与每项 <code>SRC_URI</code> 单独判断。</td></tr>
+      <tr><td data-i18n-html="stLicense"><code>许可证限制</code></td><td data-i18n-html="sdLicense">当前 ebuild 的 <code>LICENSE</code> 表达式不属于本站固定的 <code>@BINARY-REDISTRIBUTABLE</code>。许可证可能允许附带条件的再分发，但本站不会据此发布 binary package；该状态与 <code>RESTRICT=bindist</code> 分开判定。</td></tr>
+      <tr><td data-i18n-html="stRemoved"><code>已移除</code></td><td data-i18n-html="sdRemoved">overlay 已移除该包，但公开索引仍有它的 binary package，仍可以下载。该行不链接到 overlay。</td></tr>
+      <tr><td data-i18n-html="stDist"><code>Distfiles —</code></td><td data-i18n-html="sdDist">该包没有声明 distfile、<code>RESTRICT</code> 包含 <code>mirror</code> 或 <code>fetch</code>，或声明的文件尚未全部进入镜像。破折号提示会区分没有文件与不可用；该状态不表示 binary package 不可用。</td></tr>
     </tbody>
   </table>
 <span id="signing"></span>
-<h3 id="q5" data-i18n="q5">如何验证下载的 binpkg 来自本站且内容未被修改？</h3>
-  <p data-i18n-html="a5">导入本站公钥，并使用配置中的 <code>verify-signature = true</code> 让 Portage 验证 binpkg 签名。公钥导入与仓库配置见<a href="/binpkg-setup#setup">配置 binpkg</a>。</p>
-  <p data-i18n-html="a5b">全局 <code>FEATURES="binpkg-request-signature"</code> 会覆盖 <code>binrepos.conf</code> 的验签设置，要求所有 binpkg（包括本地构建的）带有效且可信的签名。本地构建需启用 <code>FEATURES="binpkg-signing"</code>，并配置 <code>BINPKG_GPG_SIGNING_KEY</code> 与 <code>BINPKG_GPG_SIGNING_GPG_HOME</code>。</p>
+<h3 id="q5" data-i18n="q5">如何验证下载的 binary package 来自本站且内容未被修改？</h3>
+  <p data-i18n-html="a5">导入本站公钥，并使用配置中的 <code>verify-signature = true</code> 让 Portage 验证 binary package 签名。公钥导入与仓库配置见<a href="/binpkg-setup#setup">配置 binary package</a>。</p>
+  <p data-i18n-html="a5b">全局 <code>FEATURES="binpkg-request-signature"</code> 会覆盖 <code>binrepos.conf</code> 的验签设置，要求所有 binary package（包括本地构建的）带有效且可信的签名。本地构建需启用 <code>FEATURES="binpkg-signing"</code>，并配置 <code>BINPKG_GPG_SIGNING_KEY</code> 与 <code>BINPKG_GPG_SIGNING_GPG_HOME</code>。</p>
   <p data-i18n-html="a5c">若用 getuto 在 <code>/etc/portage/gnupg</code> 创建的本地密钥签名，还须向 GnuPG 提供保存在该目录 <code>pass</code> 文件中的口令；默认签名命令不会自动读取该文件。</p>
 <span id="q11"></span>
   <h3 id="key-download" data-i18n="q11">不安装 sec-keys 软件包时，如何取得签名公钥？</h3>
@@ -248,9 +248,9 @@
 <p data-i18n-html="binpkgKeyringAnswer"><code>getuto</code> 须先建立 <code>/etc/portage/gnupg</code> 和 Portage Local Trust Key，再导入公钥。按<a href="/binpkg-setup#setup">配置第 1 步</a>执行完整命令。口令由 <code>--passphrase-file</code> 从 <code>/etc/portage/gnupg/pass</code> 读取；验签以 <code>portage</code> 用户执行，因此须预先生成 <code>trustdb</code>。</p>
 <span id="troubleshooting"></span>
 <h3 id="q1" data-i18n="q1">配置之后 emerge 为何仍然从源码编译？</h3>
-  <p data-i18n-html="a1">启用 binpkg 不保证每个软件包都能使用现有产物。USE 不匹配时，Portage 的普通安装会改用可用的源码 ebuild；依赖能否满足也取决于当前系统。先核对 <a href="/binpkg-setup#setup">getbinpkg 配置</a>、<a href="/binpkg-setup#channel">频道</a>与<a href="/packages">包列表</a>；服务异常可查看<a href="/status">服务状态</a>。</p>
-<h3 id="q4" data-i18n="q4">binpkg 是否可能无法在我的 CPU 上运行？</h3>
-  <p data-i18n-html="a4">仍有可能。两个频道使用 <code>CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"</code>，不使用 <code>-march=native</code>，但该设置不能改变 ebuild 附带的上游预编译对象或程序库。Portage 选择 binpkg 时不比较 <code>CFLAGS</code>，因此选用的 binpkg 不一定与 CPU 兼容。</p>
+  <p data-i18n-html="a1">启用 binary package 不保证每个软件包都能使用现有产物。USE 不匹配时，Portage 的普通安装会改用可用的源码 ebuild；依赖能否满足也取决于当前系统。先核对 <a href="/binpkg-setup#setup">getbinpkg 配置</a>、<a href="/binpkg-setup#channel">频道</a>与<a href="/packages">包列表</a>；服务异常可查看<a href="/status">服务状态</a>。</p>
+<h3 id="q4" data-i18n="q4">binary package 是否可能无法在我的 CPU 上运行？</h3>
+  <p data-i18n-html="a4">仍有可能。两个频道使用 <code>CFLAGS="-O2 -pipe -march=x86-64 -mtune=generic"</code>，不使用 <code>-march=native</code>，但该设置不能改变 ebuild 附带的上游预编译对象或程序库。Portage 选择 binary package 时不比较 <code>CFLAGS</code>，因此选用的 binary package 不一定与 CPU 兼容。</p>
 <h2 id="live-iso" data-i18n-html="faqIso">Live ISO</h2>
 <span id="iso-vm"></span>
 <span id="iso-avx2"></span>
@@ -259,7 +259,7 @@
 <p data-i18n-html="isoGigosAnswer">Gig-OS 是其他组织的独立项目，本站及各镜像站只同步其安装镜像。启动、登录、硬件要求与问题反馈见 <a href="https://github.com/Gig-OS">GitHub 上的 Gig-OS</a>；镜像文件在 <a href="/gigos/">/gigos/</a> 目录。</p>
 <h2 id="mirrors" data-i18n-html="faqMirrors">镜像</h2>
 <h3 id="q8" data-i18n="q8">中国大陆有哪些镜像，分别怎么配置？</h3>
-  <p data-i18n-html="s8">可使用教育网联合镜像站、南京大学、南阳理工学院和河南教育网等镜像，地址见<a href="/mirrors">镜像列表</a>。overlay 的 Git 仓库、distfiles 与 binpkg 需分别配置，见 <a href="/overlay#adding-overlay">overlay 指南</a>、<a href="/distfiles-setup#setup">配置 distfiles</a> 和<a href="/binpkg-setup#setup">配置 binpkg</a>。</p>
+  <p data-i18n-html="s8">可使用教育网联合镜像站、南京大学、南阳理工学院和河南教育网等镜像，地址见<a href="/mirrors">镜像列表</a>。overlay 的 Git 仓库、distfiles 与 binary package 需分别配置，见 <a href="/overlay#adding-overlay">overlay 指南</a>、<a href="/distfiles-setup#setup">配置 distfiles</a> 和<a href="/binpkg-setup#setup">配置 binary package</a>。</p>
 <h3 id="cernet-redirect" data-i18n-html="cernetRedirect">使用教育网联合镜像站时，为什么 Git 提示重定向？</h3>
 <p data-i18n-html="cernetRedirectAnswer">教育网联合镜像站将请求重定向到就近的成员站，本身不保存文件。因此，Git 提示重定向是正常现象。</p>
 <h3 id="mirror-sync" data-i18n-html="mirrorSync">为什么各镜像的版本不一致？</h3>
@@ -288,7 +288,7 @@
 
 <div id="copy-toast" role="status" aria-live="polite"></div>
 
-<script src="/assets/strings.js?v=dd9ff3e6"></script>
+<script src="/assets/strings.js?v=d401535e"></script>
 <script>
 window.MIRROR_I18N = {
   "zh-tw": {
@@ -300,48 +300,48 @@ window.MIRROR_I18N = {
     "a16": "上游可能替換了同一位址的檔案，不能只重新產生摘要。<a href=\"https://github.com/gentoo-zh/overlay/issues/11038\">circuitjs1-bin 曾出現這種情況</a>，需要更新 ebuild 並實際建置、驗證新版本。",
     "title": "FAQ",
     "q1": "設定後，emerge 為何仍然從原始碼編譯？",
-    "a1": "啟用 binpkg 不保證每個套件都能使用現有產物。USE 不相符時，Portage 的一般安裝會改用可用的原始碼 ebuild；能否滿足相依性也取決於目前系統。先核對 <a href=\"/binpkg-setup#setup\">getbinpkg 設定</a>、<a href=\"/binpkg-setup#channel\">頻道</a>與<a href=\"/packages\">套件列表</a>；服務異常可查看<a href=\"/status\">服務狀態</a>。",
+    "a1": "啟用 binary package 不保證每個套件都能使用現有產物。USE 不相符時，Portage 的一般安裝會改用可用的原始碼 ebuild；能否滿足相依性也取決於目前系統。先核對 <a href=\"/binpkg-setup#setup\">getbinpkg 設定</a>、<a href=\"/binpkg-setup#channel\">頻道</a>與<a href=\"/packages\">套件列表</a>；服務異常可查看<a href=\"/status\">服務狀態</a>。",
     "q13": "我該選 stable 還是 unstable？",
-    "a13": "依 Gentoo 主倉庫的關鍵字選擇：使用 <code>amd64</code> 選 stable，全域使用 <code>~amd64</code> 選 unstable。兩個頻道都接受 gentoo-zh 的 <code>~amd64</code> 套件。頻道設定見<a href=\"/binpkg-setup#channel\">設定 binpkg</a>；overlay 的關鍵字設定見 <a href=\"/overlay#testing-keyword\">overlay 指南</a>。",
-    "q2": "binpkg 應該在哪裡設定？",
-    "a2": "本站使用 <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code> 設定頻道位址與簽章驗證。完整步驟見<a href=\"/binpkg-setup#setup\">設定 binpkg</a>。",
+    "a13": "依 Gentoo 主倉庫的關鍵字選擇：使用 <code>amd64</code> 選 stable，全域使用 <code>~amd64</code> 選 unstable。兩個頻道都接受 gentoo-zh 的 <code>~amd64</code> 套件。頻道設定見<a href=\"/binpkg-setup#channel\">設定 binary package</a>；overlay 的關鍵字設定見 <a href=\"/overlay#testing-keyword\">overlay 指南</a>。",
+    "q2": "binary package 應該在哪裡設定？",
+    "a2": "本站使用 <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code> 設定頻道位址與簽章驗證。完整步驟見<a href=\"/binpkg-setup#setup\">設定 binary package</a>。",
     "q3": "OpenRC 和 systemd 都能使用嗎？",
     "a3": "能否使用取決於套件的 USE 與相依性是否適合目前系統。兩個頻道均使用 <code>desktop/systemd</code> profile 建置，沒有單獨的 OpenRC 產物。USE 不相符時，一般安裝會改用可用的原始碼 ebuild。",
-    "q4": "binpkg 是否可能無法在我的 CPU 上執行？",
-    "a4": "仍有可能。兩個頻道使用 <code>CFLAGS=\"-O2 -pipe -march=x86-64 -mtune=generic\"</code>，不使用 <code>-march=native</code>，但該設定不能改變 ebuild 附帶的上游預先編譯物件或程式庫。Portage 選擇 binpkg 時不比較 <code>CFLAGS</code>，因此選用的 binpkg 不一定與 CPU 相容。",
-    "q5": "如何驗證下載的 binpkg 來自本站且內容未被修改？",
-    "a5": "匯入本站公鑰，並使用設定中的 <code>verify-signature = true</code> 讓 Portage 驗證 binpkg 簽章。公鑰匯入與倉庫設定見<a href=\"/binpkg-setup#setup\">設定 binpkg</a>。",
-    "a5c": "若使用 getuto 在 <code>/etc/portage/gnupg</code> 建立的本機金鑰簽署 binpkg，還須向 GnuPG 提供儲存在該目錄 <code>pass</code> 檔案中的密碼；預設簽署指令不會自動讀取該檔案。",
-    "a5b": "全域 <code>FEATURES=\"binpkg-request-signature\"</code> 會覆寫 <code>binrepos.conf</code> 的簽章驗證設定，要求所有 binpkg（包括本機建置的）具有有效且可信的簽章。本機建置須啟用 <code>FEATURES=\"binpkg-signing\"</code>，並設定 <code>BINPKG_GPG_SIGNING_KEY</code> 與 <code>BINPKG_GPG_SIGNING_GPG_HOME</code>。",
+    "q4": "binary package 是否可能無法在我的 CPU 上執行？",
+    "a4": "仍有可能。兩個頻道使用 <code>CFLAGS=\"-O2 -pipe -march=x86-64 -mtune=generic\"</code>，不使用 <code>-march=native</code>，但該設定不能改變 ebuild 附帶的上游預先編譯物件或程式庫。Portage 選擇 binary package 時不比較 <code>CFLAGS</code>，因此選用的 binary package 不一定與 CPU 相容。",
+    "q5": "如何驗證下載的 binary package 來自本站且內容未被修改？",
+    "a5": "匯入本站公鑰，並使用設定中的 <code>verify-signature = true</code> 讓 Portage 驗證 binary package 簽章。公鑰匯入與倉庫設定見<a href=\"/binpkg-setup#setup\">設定 binary package</a>。",
+    "a5c": "若使用 getuto 在 <code>/etc/portage/gnupg</code> 建立的本機金鑰簽署 binary package，還須向 GnuPG 提供儲存在該目錄 <code>pass</code> 檔案中的密碼；預設簽署指令不會自動讀取該檔案。",
+    "a5b": "全域 <code>FEATURES=\"binpkg-request-signature\"</code> 會覆寫 <code>binrepos.conf</code> 的簽章驗證設定，要求所有 binary package（包括本機建置的）具有有效且可信的簽章。本機建置須啟用 <code>FEATURES=\"binpkg-signing\"</code>，並設定 <code>BINPKG_GPG_SIGNING_KEY</code> 與 <code>BINPKG_GPG_SIGNING_GPG_HOME</code>。",
     "q8": "中國大陸有哪些鏡像，分別怎麼設定？",
     "q14": "如何避免自動鏡像某個套件的 distfile？",
     "q9": "如何自行建立鏡像？",
-    "q7": "本站提供哪些 binpkg？",
-    "a7": "本站發布建置機的整個 <code>PKGDIR</code>，包括收錄的 overlay 套件及從原始碼建置的 <code>::gentoo</code> 相依套件。發布前移除被 mask、受 <code>RESTRICT=bindist</code> 限制或繼承 <code>linux-mod</code> 的 binpkg；<code>acct-group</code>、<code>acct-user</code> 與 <code>virtual</code> 不依類別排除。附帶的相依套件不取代 Gentoo 官方 binhost。可用套件見<a href=\"/packages\">套件列表</a>，純文字清單見 <a href=\"/packages.txt\">stable</a> 與 <a href=\"/packages-unstable.txt\">unstable</a>。",
+    "q7": "本站提供哪些 binary package？",
+    "a7": "本站發布建置機的整個 <code>PKGDIR</code>，包括收錄的 overlay 套件及從原始碼建置的 <code>::gentoo</code> 相依套件。發布前移除被 mask、受 <code>RESTRICT=bindist</code> 限制或繼承 <code>linux-mod</code> 的 binary package；<code>acct-group</code>、<code>acct-user</code> 與 <code>virtual</code> 不依類別排除。附帶的相依套件不取代 Gentoo 官方 binhost。可用套件見<a href=\"/packages\">套件列表</a>，純文字清單見 <a href=\"/packages.txt\">stable</a> 與 <a href=\"/packages-unstable.txt\">unstable</a>。",
     "q12": "套件列表中的狀態表示什麼？",
     "a12": "套件列表分開顯示公開索引、直接建置清單、目前發布政策與 distfiles 鏡像狀態。同一列可以同時出現多個狀態，因為它們說明不同事實。",
     "stStatus": "狀態",
     "stMeaning": "觸發條件與常見原因",
-    "sdBuilt": "公開 binpkg 索引已有該套件，可從本站下載。這不表示該套件仍在直接建置清單。套件名旁同時出現發布政策時，該政策針對目前 ebuild；公開的 binpkg 在發布前已依其版本與建置時的 USE 通過發布檢查。",
+    "sdBuilt": "公開 binary package 索引已有該套件，可從本站下載。這不表示該套件仍在直接建置清單。套件名旁同時出現發布政策時，該政策針對目前 ebuild；公開的 binary package 在發布前已依其版本與建置時的 USE 通過發布檢查。",
     "stPending": "<code>待建置</code>",
-    "sdPending": "該套件是直接建置目標，但公開索引尚無 binpkg。它可能尚未完成首次建置，也可能在最近一次發布時未成功；該狀態只表示目前沒有公開產物。",
+    "sdPending": "該套件是直接建置目標，但公開索引尚無 binary package。它可能尚未完成首次建置，也可能在最近一次發布時未成功；該狀態只表示目前沒有公開產物。",
     "stExcluded": "<code>不建置</code>",
     "sdExcluded": "維護清單明確排除該套件。常見原因包括無法建置、缺少支援或需要進一步核對再散布條件；標籤提示中會顯示記錄的具體原因。",
     "stChannelExcluded": "<code>本頻道不建置</code>",
-    "sdChannelExcluded": "該套件仍在共用收錄清單中，但不符合目前頻道的相依套件或建置條件，因此本頻道不直接建置。另一個頻道仍可能發布該套件。該套件作為其他套件的相依套件建置時，本頻道仍可能有它的 binpkg；這時 binpkg 欄只顯示勾號，排除原因在勾號的提示中。",
+    "sdChannelExcluded": "該套件仍在共用收錄清單中，但不符合目前頻道的相依套件或建置條件，因此本頻道不直接建置。另一個頻道仍可能發布該套件。該套件作為其他套件的相依套件建置時，本頻道仍可能有它的 binary package；這時 binary package 欄只顯示勾號，排除原因在勾號的提示中。",
     "stOffList": "<code>清單外</code>",
     "sdOffList": "該套件不是直接建置目標。上游已提供預先編譯內容或建置收益較低時通常不會直接收錄，但仍可能作為相依套件一併發布；套件名含 <code>-bin</code> 不會自動決定該狀態。",
     "stBindist": "<code>不提供 binpkg</code>",
-    "sdBindist": "目前 ebuild 的 <code>RESTRICT</code> 包含 <code>bindist</code>，因此本站不發布該套件的 binpkg。原始碼套件和上游預先編譯套件都可能設定這項限制，常見原因是授權條款、上游發布條款或預先編譯內容的再散布條件不允許本站散布二進位產物；套件名含 <code>-bin</code> 本身不是判定依據。distfiles 是否鏡像仍依 <code>RESTRICT</code> 中的 <code>mirror</code>、<code>fetch</code> 與每個 <code>SRC_URI</code> 項目分別判定。",
+    "sdBindist": "目前 ebuild 的 <code>RESTRICT</code> 包含 <code>bindist</code>，因此本站不發布該套件的 binary package。原始碼套件和上游預先編譯套件都可能設定這項限制，常見原因是授權條款、上游發布條款或預先編譯內容的再散布條件不允許本站散布二進位產物；套件名含 <code>-bin</code> 本身不是判定依據。distfiles 是否鏡像仍依 <code>RESTRICT</code> 中的 <code>mirror</code>、<code>fetch</code> 與每個 <code>SRC_URI</code> 項目分別判定。",
     "stLicense": "<code>授權限制</code>",
-    "sdLicense": "目前 ebuild 的 <code>LICENSE</code> 表達式不屬於本站固定的 <code>@BINARY-REDISTRIBUTABLE</code>。授權條款可能允許附帶條件的再散布，但本站不會據此發布 binpkg；該狀態與 <code>RESTRICT=bindist</code> 分開判定。",
+    "sdLicense": "目前 ebuild 的 <code>LICENSE</code> 表達式不屬於本站固定的 <code>@BINARY-REDISTRIBUTABLE</code>。授權條款可能允許附帶條件的再散布，但本站不會據此發布 binary package；該狀態與 <code>RESTRICT=bindist</code> 分開判定。",
     "stRemoved": "<code>已移除</code>",
-    "sdRemoved": "overlay 已移除該套件，但公開索引仍有它的 binpkg，仍可下載。該列不連結到 overlay。",
+    "sdRemoved": "overlay 已移除該套件，但公開索引仍有它的 binary package，仍可下載。該列不連結到 overlay。",
     "stDist": "<code>Distfiles —</code>",
-    "sdDist": "該套件沒有宣告 distfile、<code>RESTRICT</code> 包含 <code>mirror</code> 或 <code>fetch</code>，或宣告的檔案尚未全部進入鏡像。破折號提示會區分沒有檔案與不可用；該狀態不表示 binpkg 不可用。",
-    "s8": "可使用教育網聯合鏡像站、南京大學、南陽理工學院和河南教育網等鏡像，位址見<a href=\"/mirrors\">鏡像列表</a>。overlay 的 Git 倉庫、distfiles 與 binpkg 須分別設定，見 <a href=\"/overlay#adding-overlay\">overlay 指南</a>、<a href=\"/distfiles-setup#setup\">設定 distfiles</a> 和<a href=\"/binpkg-setup#setup\">設定 binpkg</a>。",
+    "sdDist": "該套件沒有宣告 distfile、<code>RESTRICT</code> 包含 <code>mirror</code> 或 <code>fetch</code>，或宣告的檔案尚未全部進入鏡像。破折號提示會區分沒有檔案與不可用；該狀態不表示 binary package 不可用。",
+    "s8": "可使用教育網聯合鏡像站、南京大學、南陽理工學院和河南教育網等鏡像，位址見<a href=\"/mirrors\">鏡像列表</a>。overlay 的 Git 倉庫、distfiles 與 binary package 須分別設定，見 <a href=\"/overlay#adding-overlay\">overlay 指南</a>、<a href=\"/distfiles-setup#setup\">設定 distfiles</a> 和<a href=\"/binpkg-setup#setup\">設定 binary package</a>。",
     "s9": "本站檔案的 rsync 位址是 <code>rsync://distfiles.gentoozh.org/gentoo-zh/</code>。同步與申請加入列表見<a href=\"/mirrors#own\">自建鏡像說明</a>；overlay 的 Git 同步位址見 <a href=\"/overlay#adding-overlay\">overlay 指南</a>。",
-    "s14": "ebuild 的 <code>RESTRICT</code> 中包含 <code>mirror</code> 或 <code>fetch</code> 時，會限制 distfiles 的自動鏡像。<code>bindist</code> 只限制 binpkg，不單獨決定 distfiles 是否鏡像。",
+    "s14": "ebuild 的 <code>RESTRICT</code> 中包含 <code>mirror</code> 或 <code>fetch</code> 時，會限制 distfiles 的自動鏡像。<code>bindist</code> 只限制 binary package，不單獨決定 distfiles 是否鏡像。",
     "overlaySync": "舊的 overlay 同步位址還可用嗎？",
     "overlaySyncAnswer": "2025 年 10 月起，Gentoo 官方不再為第三方倉庫提供快取鏡像。此前加入的 gentoo-zh 倉庫需更新同步來源。舊的 <code>microcai/gentoo-zh</code> 位址會重新導向 <code>gentoo-zh/overlay</code>，手動設定過 remote 的使用者也應更新位址。",
     "overlaySyncLinks": "設定步驟見 <a href=\"/overlay#adding-overlay\">overlay 指南</a>；背景見<a href=\"https://gentoozh.org/posts/2025-10-07-thirdparty-repo-mirror-removal/\">快取鏡像停用說明</a>與<a href=\"https://gentoozh.org/posts/2026-07-02-gentoo-zh-repo-migration/\">倉庫遷移記錄</a>。",
@@ -353,7 +353,7 @@ window.MIRROR_I18N = {
     "binpkgKeyringAnswer": "<code>getuto</code> 須先建立 <code>/etc/portage/gnupg</code> 和 Portage Local Trust Key，再匯入公鑰。依<a href=\"/binpkg-setup#setup\">設定第 1 步</a>執行完整指令。密碼由 <code>--passphrase-file</code> 從 <code>/etc/portage/gnupg/pass</code> 讀取；簽章驗證以 <code>portage</code> 使用者執行，因此須預先產生 <code>trustdb</code>。",
     "faqOverlay": "overlay",
     "faqDist": "distfiles",
-    "faqBin": "binpkg",
+    "faqBin": "binary package",
     "faqIso": "Live ISO",
     "isoGigos": "Gig-OS 的使用說明在哪裡？",
     "isoGigosAnswer": "Gig-OS 是其他組織的獨立專案，本站及各鏡像站只同步其安裝鏡像。開機、登入、硬體需求與問題回報見 <a href=\"https://github.com/Gig-OS\">GitHub 上的 Gig-OS</a>；鏡像檔案在 <a href=\"/gigos/\">/gigos/</a> 目錄。",
@@ -367,49 +367,49 @@ window.MIRROR_I18N = {
     "q16": "What if a downloaded file does not match the Manifest size or checksum?",
     "a16": "Upstream may have replaced the file at the same URL; regenerating the digest alone is insufficient. <a href=\"https://github.com/gentoo-zh/overlay/issues/11038\">This happened to circuitjs1-bin</a>; update the ebuild, then build and verify the new version.",
     "title": "FAQ",
-    "q1": "Why does emerge still compile from source after binpkg setup?",
-    "a1": "Enabling binpkgs does not guarantee a usable binary for every package. When USE flags do not match, a normal Portage installation falls back to an available source ebuild; dependency resolution also depends on your system. Check the <a href=\"/binpkg-setup#setup\">getbinpkg configuration</a>, <a href=\"/binpkg-setup#channel\">channel</a> and <a href=\"/packages\">package list</a>; check <a href=\"/status\">service status</a> for service failures.",
+    "q1": "Why does emerge still compile from source after binary package setup?",
+    "a1": "Enabling binary packages does not guarantee a usable binary for every package. When USE flags do not match, a normal Portage installation falls back to an available source ebuild; dependency resolution also depends on your system. Check the <a href=\"/binpkg-setup#setup\">getbinpkg configuration</a>, <a href=\"/binpkg-setup#channel\">channel</a> and <a href=\"/packages\">package list</a>; check <a href=\"/status\">service status</a> for service failures.",
     "q13": "Should I choose stable or unstable?",
     "a13": "Choose the channel matching your Gentoo main repository keywords: stable for <code>amd64</code>, unstable for global <code>~amd64</code>. Both channels accept gentoo-zh packages with <code>~amd64</code>. See <a href=\"/binpkg-setup#channel\">channel setup</a> and the <a href=\"/overlay#testing-keyword\">overlay keyword settings</a>.",
-    "q2": "Where do I configure binpkgs?",
-    "a2": "Configure the channel URL and signature verification in <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code>. Follow the <a href=\"/binpkg-setup#setup\">binpkg setup guide</a>.",
+    "q2": "Where do I configure binary packages?",
+    "a2": "Configure the channel URL and signature verification in <code>/etc/portage/binrepos.conf/gentoo-zh.conf</code>. Follow the <a href=\"/binpkg-setup#setup\">binary package setup guide</a>.",
     "q3": "Does it work on both OpenRC and systemd?",
     "a3": "Compatibility depends on whether the package’s USE flags and dependencies match your system. Both channels build with a <code>desktop/systemd</code> profile, without separate OpenRC artifacts. When USE flags do not match, a normal installation falls back to an available source ebuild.",
-    "q4": "Could a binpkg fail to run on my CPU?",
-    "a4": "Yes. Both channels use <code>CFLAGS=\"-O2 -pipe -march=x86-64 -mtune=generic\"</code>, without <code>-march=native</code>, but these flags cannot change upstream prebuilt objects or libraries bundled by an ebuild. Portage does not compare <code>CFLAGS</code> when selecting a binpkg, so selection does not guarantee CPU compatibility.",
+    "q4": "Could a binary package fail to run on my CPU?",
+    "a4": "Yes. Both channels use <code>CFLAGS=\"-O2 -pipe -march=x86-64 -mtune=generic\"</code>, without <code>-march=native</code>, but these flags cannot change upstream prebuilt objects or libraries bundled by an ebuild. Portage does not compare <code>CFLAGS</code> when selecting a binary package, so selection does not guarantee CPU compatibility.",
     "q5": "How do I verify that a downloaded binary package came from this host unchanged?",
-    "a5": "Import this host’s public key and use <code>verify-signature = true</code> to have Portage verify binpkg signatures. See <a href=\"/binpkg-setup#setup\">binpkg setup</a> for key import and repository configuration.",
+    "a5": "Import this host’s public key and use <code>verify-signature = true</code> to have Portage verify binary package signatures. See <a href=\"/binpkg-setup#setup\">binary package setup</a> for key import and repository configuration.",
     "a5c": "When signing with the local key created by getuto in <code>/etc/portage/gnupg</code>, provide GnuPG with the passphrase stored in that directory’s <code>pass</code> file; the default signing command does not read it automatically.",
-    "a5b": "Global <code>FEATURES=\"binpkg-request-signature\"</code> overrides verification settings in <code>binrepos.conf</code> and requires valid, trusted signatures on all binpkgs, including local builds. For local builds, enable <code>FEATURES=\"binpkg-signing\"</code> and configure <code>BINPKG_GPG_SIGNING_KEY</code> and <code>BINPKG_GPG_SIGNING_GPG_HOME</code>.",
+    "a5b": "Global <code>FEATURES=\"binpkg-request-signature\"</code> overrides verification settings in <code>binrepos.conf</code> and requires valid, trusted signatures on all binary packages, including local builds. For local builds, enable <code>FEATURES=\"binpkg-signing\"</code> and configure <code>BINPKG_GPG_SIGNING_KEY</code> and <code>BINPKG_GPG_SIGNING_GPG_HOME</code>.",
     "q8": "Which mirrors are available in mainland China, and how do I configure them?",
     "q14": "How do I prevent automatic mirroring of a package's distfile?",
     "q9": "How do I set up my own mirror?",
-    "q7": "Which binpkgs does this host publish?",
-    "a7": "This host publishes the builder’s entire <code>PKGDIR</code>, including selected overlay packages and <code>::gentoo</code> dependencies built from source. Before publication, it removes masked binpkgs, those restricted by <code>RESTRICT=bindist</code>, and those inheriting <code>linux-mod</code>; it does not exclude the <code>acct-group</code>, <code>acct-user</code> or <code>virtual</code> categories. The included dependencies do not replace the official Gentoo binhost. See the <a href=\"/packages\">package list</a> or the plain-text lists for <a href=\"/packages.txt\">stable</a> and <a href=\"/packages-unstable.txt\">unstable</a>.",
+    "q7": "Which binary packages does this host publish?",
+    "a7": "This host publishes the builder’s entire <code>PKGDIR</code>, including selected overlay packages and <code>::gentoo</code> dependencies built from source. Before publication, it removes masked binary packages, those restricted by <code>RESTRICT=bindist</code>, and those inheriting <code>linux-mod</code>; it does not exclude the <code>acct-group</code>, <code>acct-user</code> or <code>virtual</code> categories. The included dependencies do not replace the official Gentoo binhost. See the <a href=\"/packages\">package list</a> or the plain-text lists for <a href=\"/packages.txt\">stable</a> and <a href=\"/packages-unstable.txt\">unstable</a>.",
     "q12": "What do the statuses in the package list mean?",
     "a12": "The package list shows the public index, direct build list, current publication policy and distfiles mirror status separately. Several statuses can appear on one row because they describe different facts.",
     "stStatus": "Status",
     "stMeaning": "Trigger and common causes",
-    "sdBuilt": "The public binpkg index contains this package, so it can be downloaded from this host. This does not mean the package remains a direct build target. When a publication policy also appears beside the package name, it applies to the current ebuild; the published binpkg passed the publication checks for its own version and build-time USE.",
+    "sdBuilt": "The public binary package index contains this package, so it can be downloaded from this host. This does not mean the package remains a direct build target. When a publication policy also appears beside the package name, it applies to the current ebuild; the published binary package passed the publication checks for its own version and build-time USE.",
     "stPending": "<code>pending</code>",
-    "sdPending": "The package is a direct build target, but the public index has no binpkg. Its first build may not have completed, or the latest cycle may not have published it; this status only says that no public artifact is currently available.",
+    "sdPending": "The package is a direct build target, but the public index has no binary package. Its first build may not have completed, or the latest cycle may not have published it; this status only says that no public artifact is currently available.",
     "stExcluded": "<code>excluded</code>",
     "sdExcluded": "The maintenance list explicitly excludes the package. Common reasons include build failure, missing support or a redistribution condition that needs review; the label tooltip shows the recorded reason.",
     "stChannelExcluded": "<code>not in this channel</code>",
-    "sdChannelExcluded": "The package remains on the shared build list, but this channel cannot satisfy its dependency or build conditions, so this channel does not build it directly. Another channel may still publish it. If it is built as a dependency of another package, this channel may still hold its binpkg; the binpkg column then shows only a tick, with the exclusion reason in its tooltip.",
+    "sdChannelExcluded": "The package remains on the shared build list, but this channel cannot satisfy its dependency or build conditions, so this channel does not build it directly. Another channel may still publish it. If it is built as a dependency of another package, this channel may still hold its binary package; the binary package column then shows only a tick, with the exclusion reason in its tooltip.",
     "stOffList": "<code>off-list</code>",
     "sdOffList": "The package is not a direct build target. Packages with upstream prebuilt content or little build benefit are often left off the list, but they may still be published as dependencies. A <code>-bin</code> name does not determine this status.",
     "stBindist": "<code>no binpkg</code>",
-    "sdBindist": "The current ebuild's <code>RESTRICT</code> includes <code>bindist</code>, so this host does not publish a binpkg for the package. Source and upstream-prebuilt packages can both carry this restriction, commonly because a licence, upstream release terms or redistribution conditions for prebuilt content prohibit this host from distributing binary artifacts. A <code>-bin</code> name is not evidence by itself. Distfile mirroring is evaluated separately, based on the <code>mirror</code> and <code>fetch</code> values in <code>RESTRICT</code> and each <code>SRC_URI</code> entry.",
+    "sdBindist": "The current ebuild's <code>RESTRICT</code> includes <code>bindist</code>, so this host does not publish a binary package for the package. Source and upstream-prebuilt packages can both carry this restriction, commonly because a licence, upstream release terms or redistribution conditions for prebuilt content prohibit this host from distributing binary artifacts. A <code>-bin</code> name is not evidence by itself. Distfile mirroring is evaluated separately, based on the <code>mirror</code> and <code>fetch</code> values in <code>RESTRICT</code> and each <code>SRC_URI</code> entry.",
     "stLicense": "<code>licence restricted</code>",
-    "sdLicense": "The current ebuild's <code>LICENSE</code> expression is outside this host's fixed <code>@BINARY-REDISTRIBUTABLE</code> set. The licence may permit redistribution under conditions, but this host does not publish a binpkg under that policy. This is evaluated separately from <code>RESTRICT=bindist</code>.",
+    "sdLicense": "The current ebuild's <code>LICENSE</code> expression is outside this host's fixed <code>@BINARY-REDISTRIBUTABLE</code> set. The licence may permit redistribution under conditions, but this host does not publish a binary package under that policy. This is evaluated separately from <code>RESTRICT=bindist</code>.",
     "stRemoved": "<code>removed</code>",
-    "sdRemoved": "The overlay removed this package, but the public index still holds its binpkg, which remains downloadable. The row does not link to the overlay.",
+    "sdRemoved": "The overlay removed this package, but the public index still holds its binary package, which remains downloadable. The row does not link to the overlay.",
     "stDist": "<code>Distfiles —</code>",
-    "sdDist": "The package declares no distfile, its <code>RESTRICT</code> includes <code>mirror</code> or <code>fetch</code>, or not every declared file has reached the mirror. The dash tooltip distinguishes no file from unavailable data. This status does not imply that the binpkg is unavailable.",
-    "s8": "Mirrors include CERNET, Nanjing University, Nanyang Institute of Technology and Henan Education and Research Network; see the <a href=\"/mirrors\">mirror list</a>. Configure the overlay Git repository, distfiles and binpkgs separately using the <a href=\"/overlay#adding-overlay\">overlay guide</a>, <a href=\"/distfiles-setup#setup\">distfiles setup</a> and <a href=\"/binpkg-setup#setup\">binpkg setup</a>.",
+    "sdDist": "The package declares no distfile, its <code>RESTRICT</code> includes <code>mirror</code> or <code>fetch</code>, or not every declared file has reached the mirror. The dash tooltip distinguishes no file from unavailable data. This status does not imply that the binary package is unavailable.",
+    "s8": "Mirrors include CERNET, Nanjing University, Nanyang Institute of Technology and Henan Education and Research Network; see the <a href=\"/mirrors\">mirror list</a>. Configure the overlay Git repository, distfiles and binary packages separately using the <a href=\"/overlay#adding-overlay\">overlay guide</a>, <a href=\"/distfiles-setup#setup\">distfiles setup</a> and <a href=\"/binpkg-setup#setup\">binary package setup</a>.",
     "s9": "The rsync source for this host’s files is <code>rsync://distfiles.gentoozh.org/gentoo-zh/</code>. See <a href=\"/mirrors#own\">running a mirror</a> for synchronization and listing requests, and the <a href=\"/overlay#adding-overlay\">overlay guide</a> for Git synchronization URLs.",
-    "s14": "An ebuild’s <code>RESTRICT</code> values <code>mirror</code> and <code>fetch</code> restrict automatic distfile mirroring. <code>bindist</code> restricts binpkgs and does not by itself determine whether distfiles are mirrored.",
+    "s14": "An ebuild’s <code>RESTRICT</code> values <code>mirror</code> and <code>fetch</code> restrict automatic distfile mirroring. <code>bindist</code> restricts binary packages and does not by itself determine whether distfiles are mirrored.",
     "overlaySync": "Do the old overlay sync URLs still work?",
     "overlaySyncAnswer": "Since October 2025, Gentoo no longer provides cache mirrors for third-party repositories. Update the sync source if you added gentoo-zh before then. The old <code>microcai/gentoo-zh</code> URL redirects to <code>gentoo-zh/overlay</code>; update manually configured remotes too.",
     "overlaySyncLinks": "See the <a href=\"/overlay#adding-overlay\">overlay setup steps</a>, <a href=\"https://gentoozh.org/posts/2025-10-07-thirdparty-repo-mirror-removal/\">cache mirror retirement notice</a> and <a href=\"https://gentoozh.org/posts/2026-07-02-gentoo-zh-repo-migration/\">repository migration record</a>.",
@@ -421,7 +421,7 @@ window.MIRROR_I18N = {
     "binpkgKeyringAnswer": "Run <code>getuto</code> to create <code>/etc/portage/gnupg</code> and the Portage Local Trust Key before importing the key. Follow all commands in <a href=\"/binpkg-setup#setup\">setup step 1</a>. The commands read the passphrase from <code>/etc/portage/gnupg/pass</code> with <code>--passphrase-file</code> and generate the <code>trustdb</code> before verification runs as the <code>portage</code> user.",
     "faqOverlay": "overlay",
     "faqDist": "distfiles",
-    "faqBin": "binpkg",
+    "faqBin": "Binary packages",
     "faqIso": "Live ISO",
     "isoGigos": "Where is the Gig-OS documentation?",
     "isoGigosAnswer": "Gig-OS is an independent project of another organization; this site and its mirrors only carry its installation images. For booting, login, hardware requirements and bug reports, see <a href=\"https://github.com/Gig-OS\">Gig-OS on GitHub</a>. The images are in the <a href=\"/gigos/\">/gigos/</a> directory.",

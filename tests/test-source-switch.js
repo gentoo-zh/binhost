@@ -119,13 +119,13 @@ const all = (list, uri) => list.length > 0 && list.every((u) => u === uri);
 
 // Binary package setup: two pickers (top and step 2) moving together.
 const bin = load("binpkg-setup.html", "zh-cn", storage());
-check("binpkg 配置页包含两组镜像选择器", bin.groups.length === 2, String(bin.groups.length));
+check("binary package 配置页包含两组镜像选择器", bin.groups.length === 2, String(bin.groups.length));
 const uris = bin.groups[0].opts.map((o) => o.getAttribute("data-uri"));
 check("镜像页列出配置页的全部镜像",
       uris.length === 6 && uris.every((u) => mirrorsPage.includes('href="' + u + '"') || u === origin),
       JSON.stringify(uris));
 check("简体中文默认选择教育网联合镜像站", all(bin.selected(), cernet), JSON.stringify(bin.selected()));
-check("镜像选择器会写出完整 binpkg 地址",
+check("镜像选择器会写出完整 binary package 地址",
       bin.slots.top.textContent === cernet + "/binpkgs/x86-64" &&
       bin.copies.top.getAttribute("data-copy") === cernet + "/binpkgs/x86-64");
 bin.slots.top.setAttribute("data-src-suffix", "/unstable/binpkgs/x86-64");

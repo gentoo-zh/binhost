@@ -14,18 +14,18 @@
 
   var WORDS = {
     'zh-cn': {
-      stableRow: 'stable binpkg', unstableRow: 'unstable binpkg', distRow: 'distfiles',
+      stableRow: 'stable binary package', unstableRow: 'unstable binary package', distRow: 'distfiles',
       buildRow: '最近构建', pkgs: ' 个 gentoo-zh 软件包', deps: ' 个 ::gentoo 依赖', dist: ' 个文件',
       time: '更新于 ', finished: '完成于 ', ended: '结束于 ', failed: '未完成',
-      preparing: ' 正在准备构建', building: ' 正在构建', fetching: ' 正在安装 binpkg',
+      preparing: ' 正在准备构建', building: ' 正在构建', fetching: ' 正在安装 binary package',
       uptime: '运行时间', traffic: '出站流量', ago: '前', took: '用时 ',
       day: ' 天', hour: ' 小时', minute: ' 分钟', second: ' 秒'
     },
     'zh-tw': {
-      stableRow: 'stable binpkg', unstableRow: 'unstable binpkg', distRow: 'distfiles',
+      stableRow: 'stable binary package', unstableRow: 'unstable binary package', distRow: 'distfiles',
       buildRow: '最近建置', pkgs: ' 個 gentoo-zh 套件', deps: ' 個 ::gentoo 依賴', dist: ' 個檔案',
       time: '更新於 ', finished: '完成於 ', ended: '結束於 ', failed: '未完成',
-      preparing: ' 正在準備建置', building: ' 正在建置', fetching: ' 正在安裝 binpkg',
+      preparing: ' 正在準備建置', building: ' 正在建置', fetching: ' 正在安裝 binary package',
       uptime: '運作時間', traffic: '出站流量', ago: '前', took: '耗時 ',
       day: ' 天', hour: ' 小時', minute: ' 分鐘', second: ' 秒'
     },

@@ -201,7 +201,7 @@ def main(overlay, policy_lookup=None):
         try:
             policy_lookup = publication_policy(overlay)
         except MetadataUnavailable as e:
-            print(f"!!! 无法读取 binpkg 发布策略：{e}", file=sys.stderr)
+            print(f"!!! 无法读取 binary package 发布策略：{e}", file=sys.stderr)
             print("!!! 未写出任何文件，保留上一份有效输出", file=sys.stderr)
             return 1
     out, missing, present = [], sorted(wanted), set()
@@ -306,7 +306,7 @@ def main(overlay, policy_lookup=None):
     os.replace(tmp_dep, dep_txt)
 
     with_dist = sum(1 for p in out if p["dist"])
-    print(f">>> {len(out)} packages ({len(built)} published binpkg, "
+    print(f">>> {len(out)} packages ({len(built)} published binary packages, "
           f"{sum(p['binhost'] for p in out)} on the build list, "
           f"{with_dist} declaring distfiles, {len(deps)} ::gentoo deps) -> {OUT}")
     if have is None:

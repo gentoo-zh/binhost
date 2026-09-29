@@ -118,7 +118,7 @@
   <details class="nav-group" data-group="binhost" data-default-open open>
     <summary class="nav-group-title"><span data-i18n="navGBin">binhost</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
     <ul class="pages">
-      <li><a class="nav-link" href="/binpkg-setup" data-i18n="navBin">配置 binpkg</a></li>
+      <li><a class="nav-link" href="/binpkg-setup" data-i18n="navBin">配置 binary package</a></li>
     </ul>
   </details>
   <details class="nav-group" data-group="iso" open>
@@ -343,7 +343,7 @@
   <h3 data-i18n="hTable">数据表</h3>
   <div class="demo">
     <table class="listing pkgs">
-      <thead><tr><th data-i18n="thPkg">包</th><th class="mark" data-i18n="thBin">binpkg</th><th class="ver" data-i18n="thVer">版本</th></tr></thead>
+      <thead><tr><th data-i18n="thPkg">包</th><th class="mark" data-i18n="thBin">binary package</th><th class="ver" data-i18n="thVer">版本</th></tr></thead>
       <tbody>
         <tr><td class="name"><a href="#">app-admin/chezmoi</a></td><td class="mark yes"><svg class="icon mark-icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M7.864 15.734c-.222 0-.433-.098-.576-.27l-3.747-4.497c-.266-.319-.222-.792.096-1.057.317-.265.79-.223 1.056.096l3.154 3.786 7.44-9.469c.255-.326.728-.382 1.052-.127.326.256.383.728.127 1.053L8.454 15.447c-.14.179-.352.284-.579.287z"/></svg><span class="visually-hidden">✓</span></td><td class="ver">2.71.1</td></tr>
         <tr><td class="name"><a href="#">app-misc/crush</a></td><td class="mark no"><span class="badge" data-variant="neutral" data-i18n="excluded">不构建</span></td><td class="ver"></td></tr>
@@ -352,11 +352,11 @@
     </table>
   </div>
 
-  <p data-i18n="table1">包列表搜索只匹配包名。切换频道时，overlay 列表、主仓库依赖、统计与纯文本链接使用同一频道的数据；频道选择保存在浏览器中，设置页与包列表保持一致。状态列保留到最窄布局，用于直接比较发布结果。没有公开 binpkg 时，发布政策显示在 binpkg 列；公开索引已有 binpkg 时，政策改为显示在包名旁。</p>
+  <p data-i18n="table1">包列表搜索只匹配包名。切换频道时，overlay 列表、主仓库依赖、统计与纯文本链接使用同一频道的数据；频道选择保存在浏览器中，设置页与包列表保持一致。状态列保留到最窄布局，用于直接比较发布结果。没有公开 binary package 时，发布政策显示在 binary package 列；公开索引已有 binary package 时，政策改为显示在包名旁。</p>
   <p data-i18n="table2">文件浏览器的表格留在 768px 文章栏内，与面包屑、标题和统计左右对齐，与 Spectrum 组件页的表格一致；包列表列数多，铺满面板。</p>
   <p data-i18n="table3">状态按 S2 实测：搜索框悬停时边框加深一级，聚焦时只把边框变为 gray-900，不再叠加全站焦点环，有内容时末端显示 S2 Cross 清除按钮，Escape 也能清除；文件与包列表的行悬停为 gray-25 混入 7% gray-900，按下为 10%（TableView.tsx:1900-1901），正文中的参考表不响应悬停；面包屑链接为 gray-700，悬停变 gray-800 并加下划线，最后一项加粗；这些颜色变化用 S2 默认的 150ms 过渡。文件浏览器与依赖表的行是整行的链接：<code>a::after</code> 撑满 <code>tr</code>，聚焦环画在行上而非链接文字；镜像列表的地址栏仍是普通链接，一行三项内容不是单一去向。目录为空时表体显示一行提示，复用包列表无匹配时的 <code>.empty-row</code>。</p>
 
-  <p data-i18n-html="table4">包列表照 S2 组件排版：标题与一句导语之后，工具栏一行依次是 S2 SearchField（M 号，32px 高、208px 宽，标签只给读屏，占位文字作提示）、筛选用的 SegmentedControl 与行末的次要文字计数（“513 个包”，筛选后为“12 / 513”）；手机上三者纵向堆叠。表格是非 quiet 的 TableView：1px 边框、圆角、gray-75 表头，表头吸附在顶栏下。状态用 S2 Badge 的 subtle 样式，原因为 neutral；状态说明放在 binpkg 表头的 ContextualHelp 弹出框里。<code>/packages?q=</code> 预填搜索框，输入时地址同步更新。</p>
+  <p data-i18n-html="table4">包列表照 S2 组件排版：标题与一句导语之后，工具栏一行依次是 S2 SearchField（M 号，32px 高、208px 宽，标签只给读屏，占位文字作提示）、筛选用的 SegmentedControl 与行末的次要文字计数（“513 个包”，筛选后为“12 / 513”）；手机上三者纵向堆叠。表格是非 quiet 的 TableView：1px 边框、圆角、gray-75 表头，表头吸附在顶栏下。状态用 S2 Badge 的 subtle 样式，原因为 neutral；状态说明放在 binary package 表头的 ContextualHelp 弹出框里。<code>/packages?q=</code> 预填搜索框，输入时地址同步更新。</p>
   <h3 data-i18n="hCode">代码块</h3>
   <div class="code">
     <div class="code-tools"><button type="button" class="copy-chip" aria-label="复制" data-i18n-label="copy"></button></div>
@@ -465,7 +465,7 @@
   <div class="demo">
     <p class="status-build" data-i18n="dBuildLine">最近构建：5 小时前</p>
     <ul class="stats">
-      <li class="stat"><span class="stat-label" data-i18n="dStable">stable binpkg</span><span class="stat-value">188</span></li>
+      <li class="stat"><span class="stat-label" data-i18n="dStable">stable binary package</span><span class="stat-value">188</span></li>
     </ul>
     <ul class="entry-grid">
       <li><a class="entry-card" href="#catalogue"><span class="entry-head"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M13.53 9.427c-.292-.292-.766-.294-1.06 0l-1.717 1.714V2.75c0-.414-.336-.75-.75-.75s-.75.336-.75.75v8.4L7.53 9.426c-.293-.293-.767-.293-1.06 0s-.293.767 0 1.06l2.998 2.998c.146.147.338.22.53.22.191 0 .384-.073.53-.22l3.002-2.998c.293-.292.293-.767 0-1.06"/><path fill="currentColor" d="M15.75 18H4.25C3.01 18 2 16.99 2 15.75v-2.021c0-.415.336-.75.75-.75s.75.335.75.75v2.021c0 .413.337.75.75.75h11.5c.413 0 .75-.337.75-.75v-2.021c0-.415.336-.75.75-.75s.75.335.75.75v2.021c0 1.24-1.01 2.25-2.25 2.25"/></svg><span class="entry-title" data-i18n="navGBin">binhost</span></span><span class="entry-desc" data-i18n="dCardDesc">整张卡片是一个链接</span></a></li>
@@ -473,7 +473,7 @@
     <details class="nav-group" open>
       <summary class="nav-group-title"><span data-i18n="navGBin">binhost</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
       <ul class="pages">
-        <li><a class="nav-link" href="#catalogue" aria-current="page" data-i18n="navBin">配置 binpkg</a></li>
+        <li><a class="nav-link" href="#catalogue" aria-current="page" data-i18n="navBin">配置 binary package</a></li>
         <li><a class="nav-link" href="#catalogue" data-i18n="navFiles">文件</a></li>
       </ul>
     </details>
@@ -503,9 +503,9 @@
   <p data-i18n="text1">先写结论，再说明必要理由；需要因果关系时明确写出。每段不超过 4 句，不添加重复总结。简体使用大陆用语（软件、网络、程序、数据、默认、内存），繁体使用台湾用语，技术术语保留英文原文。</p>
 
   <div class="demo">
-    <p class="rule-do" data-i18n="do1">Portage 接受 binpkg 时不比较 CFLAGS，因此构建端必须保证该参数。</p>
+    <p class="rule-do" data-i18n="do1">Portage 接受 binary package 时不比较 CFLAGS，因此构建端必须保证该参数。</p>
     <p class="rule-dont" data-specimen data-i18n="dont1">我们非常重视兼容性，会尽力确保您的使用体验。</p>
-    <p class="rule-do" data-i18n="do2">本站发布 overlay binpkg 及构建时从源码编译的 ::gentoo 依赖。这些内容不替代官方 binhost。</p>
+    <p class="rule-do" data-i18n="do2">本站发布 overlay binary package 及构建时从源码编译的 ::gentoo 依赖。这些内容不替代官方 binhost。</p>
     <p class="rule-dont" data-specimen data-i18n="dont2">三样内容都可以直接浏览和下载哦。</p>
   </div>
 
@@ -580,7 +580,7 @@
 
 <div id="copy-toast" role="status" aria-live="polite"></div>
 
-<script src="/assets/strings.js?v=dd9ff3e6"></script>
+<script src="/assets/strings.js?v=d401535e"></script>
 <script>
 window.MIRROR_I18N = {
   'zh-tw': {
@@ -613,13 +613,13 @@ window.MIRROR_I18N = {
     choiceLabel: "頻道",
     hTable: "資料表",
     thPkg: "套件",
-    thBin: "binpkg",
+    thBin: "binary package",
     thVer: "版本",
     excluded: "不建置",
     pending: "待建置",
-    table1: "套件列表搜尋只比對套件名。切換頻道時，overlay 列表、主倉庫依賴、統計與純文字連結使用同一頻道的資料；頻道選擇儲存在瀏覽器中，設定頁與套件列表保持一致。狀態欄保留到最窄版面，用於直接比較發布結果。沒有公開 binpkg 時，發布政策顯示在 binpkg 欄；公開索引已有 binpkg 時，政策改為顯示在套件名旁。",
+    table1: "套件列表搜尋只比對套件名。切換頻道時，overlay 列表、主倉庫依賴、統計與純文字連結使用同一頻道的資料；頻道選擇儲存在瀏覽器中，設定頁與套件列表保持一致。狀態欄保留到最窄版面，用於直接比較發布結果。沒有公開 binary package 時，發布政策顯示在 binary package 欄；公開索引已有 binary package 時，政策改為顯示在套件名旁。",
     table2: "檔案瀏覽器的表格留在 768px 文章欄內，與麵包屑、標題和統計左右對齊，與 Spectrum 元件頁的表格一致；套件列表欄數多，鋪滿面板。",
-    table4: "套件列表依 S2 元件排版：標題與一句導言之後，工具列一行依序是 S2 SearchField（M 號，32px 高、208px 寬，標籤只給螢幕閱讀器，預留位置文字作提示）、篩選用的 SegmentedControl 與行末的次要文字計數（「513 個套件」，篩選後為「12 / 513」）；手機上三者縱向堆疊。表格是非 quiet 的 TableView：1px 邊框、圓角、gray-75 表頭，表頭吸附在頂欄下。狀態用 S2 Badge 的 subtle 樣式，原因為 neutral；狀態說明放在 binpkg 表頭的 ContextualHelp 彈出框裡。<code>/packages?q=</code> 預填搜尋框，輸入時網址同步更新。",
+    table4: "套件列表依 S2 元件排版：標題與一句導言之後，工具列一行依序是 S2 SearchField（M 號，32px 高、208px 寬，標籤只給螢幕閱讀器，預留位置文字作提示）、篩選用的 SegmentedControl 與行末的次要文字計數（「513 個套件」，篩選後為「12 / 513」）；手機上三者縱向堆疊。表格是非 quiet 的 TableView：1px 邊框、圓角、gray-75 表頭，表頭吸附在頂欄下。狀態用 S2 Badge 的 subtle 樣式，原因為 neutral；狀態說明放在 binary package 表頭的 ContextualHelp 彈出框裡。<code>/packages?q=</code> 預填搜尋框，輸入時網址同步更新。",
     table3: "狀態依 S2 實測：搜尋框懸停時邊框加深一級，聚焦時只把邊框變為 gray-900，不再疊加全站焦點環，有內容時末端顯示 S2 Cross 清除按鈕，Escape 也能清除；檔案與套件列表的列懸停為 gray-25 混入 7% gray-900，按下為 10%（TableView.tsx:1900-1901），內文中的參考表不回應懸停；麵包屑連結為 gray-700，懸停變 gray-800 並加底線，最後一項加粗；這些顏色變化用 S2 預設的 150ms 過渡。檔案瀏覽器與依賴表的列是整列的連結：<code>a::after</code> 撐滿 <code>tr</code>，聚焦環畫在列上而非連結文字；鏡像列表的地址欄仍是普通連結，一列三項內容不是單一去向。目錄為空時表身顯示一列提示，沿用套件列表無符合項目時的 <code>.empty-row</code>。",
     hCode: "程式碼區塊",
     hLang: "語言",
@@ -632,9 +632,9 @@ window.MIRROR_I18N = {
     m4: "每種語言各寫一份，只顯示目前語言的內容",
     hText: "文字",
     text1: "先寫結論，再說明必要理由；需要因果關係時明確寫出。每段不超過 4 句，不加入重複總結。簡體使用大陸用語，繁體使用台灣用語（軟體、網路、程式、資料、預設、記憶體），技術術語保留英文原文。",
-    do1: "Portage 接受 binpkg 時不比較 CFLAGS，因此建置端必須確保該參數。",
+    do1: "Portage 接受 binary package 時不比較 CFLAGS，因此建置端必須確保該參數。",
     dont1: "我們非常重視相容性，會盡力確保您的使用體驗。",
-    do2: "本站發布 overlay binpkg 及建置時從原始碼編譯的 ::gentoo 相依套件。這些內容不取代官方 binhost。",
+    do2: "本站發布 overlay binary package 及建置時從原始碼編譯的 ::gentoo 相依套件。這些內容不取代官方 binhost。",
     dont2: "三樣內容都可以直接瀏覽和下載喔。",
     specimen: "下面三張表的範例欄保持簡體中文，用於檢查來源文案。譯文按目標語言單獨審校。",
     hBanPhrase: "禁止的句式",
@@ -769,7 +769,7 @@ window.MIRROR_I18N = {
     thClass: "類別",
     thTokens: "權杖",
     hOverviewDemo: "概覽與入門頁元件",
-    dStable: "stable binpkg",
+    dStable: "stable binary package",
     dBuildLine: "最近建置：5 小時前",
     dCardDesc: "整張卡片是一個連結",
     cat1: "頁面標題",
@@ -841,9 +841,9 @@ window.MIRROR_I18N = {
     thVer: "Version",
     excluded: "excluded",
     pending: "pending",
-    table1: "Package search matches the package name. Switching channels updates the overlay list, main-repository dependencies, counts, and plain-text links from the same channel data. The browser stores the channel choice so setup and package-list pages stay aligned. Status columns remain visible until the narrowest layout because they carry the page's primary comparison. Publication policy appears in the binary column when no public binpkg exists, and beside the package name when the public index already has a binpkg.",
+    table1: "Package search matches the package name. Switching channels updates the overlay list, main-repository dependencies, counts, and plain-text links from the same channel data. The browser stores the channel choice so setup and package-list pages stay aligned. Status columns remain visible until the narrowest layout because they carry the page's primary comparison. Publication policy appears in the binary column when no public binary package exists, and beside the package name when the public index already has a binary package.",
     table2: "The file browser keeps its table in the 768px article column, aligned with the breadcrumbs, title and counts, as a Spectrum component page keeps its tables; the package list has more columns and takes the whole panel.",
-    table4: "The package list is laid out from S2 components: after the title and a one-sentence lead, one toolbar row holds an S2 SearchField (size M, 32px tall and 208px wide, its label for screen readers only and the placeholder as the hint), the filter SegmentedControl and the count in secondary text at the row's end (\"513 packages\", or \"12 / 513\" when filtered); on phones the three stack. The tables are TableViews in the default style: a 1px border, rounded corners, a gray-75 header that sticks under the top bar. Status words are S2 Badges with the subtle fill, neutral for a reason; the status explanation sits in a ContextualHelp popover in the binpkg header. <code>/packages?q=</code> fills the search, and typing keeps the address in step.",
+    table4: "The package list is laid out from S2 components: after the title and a one-sentence lead, one toolbar row holds an S2 SearchField (size M, 32px tall and 208px wide, its label for screen readers only and the placeholder as the hint), the filter SegmentedControl and the count in secondary text at the row's end (\"513 packages\", or \"12 / 513\" when filtered); on phones the three stack. The tables are TableViews in the default style: a 1px border, rounded corners, a gray-75 header that sticks under the top bar. Status words are S2 Badges with the subtle fill, neutral for a reason; the status explanation sits in a ContextualHelp popover in the binary package header. <code>/packages?q=</code> fills the search, and typing keeps the address in step.",
     table3: "States follow S2 as measured: the search border darkens one step on hover and turns gray-900 on focus with no site focus ring on top, and while it holds text the S2 Cross clear button shows at its end (Escape clears too); rows of the file and package lists hover to gray-25 with 7% gray-900 and press to 10% (TableView.tsx:1900-1901), while reference tables in prose do not react; breadcrumb links are gray-700, turning gray-800 and underlined on hover, and the last is bold; these colours change on S2's default 150ms transition. File-browser and dependency-table rows are whole-row links: <code>a::after</code> stretches over the <code>tr</code>, and the focus ring is drawn on the row rather than the link's own text; the mirror list's address column stays a plain link, since its row holds three separate values, not one destination. An empty directory shows one message row in the body, reusing the package list's no-match <code>.empty-row</code>.",
     hCode: "Code blocks",
     hLang: "Language",
