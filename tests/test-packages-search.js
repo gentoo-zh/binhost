@@ -114,7 +114,7 @@ const packages = [
   "CPV: app-misc/other-2\nREPO: gentoo-zh\nSIZE: 20",
 ].join("\n");
 const overlayBuilt = globalThis.__t.parsePackages(packages, "gentoo-zh");
-check("只把 gentoo-zh stanza 算作 overlay binpkg",
+check("只把 gentoo-zh stanza 算作 overlay binary package",
       overlayBuilt["app-misc/same"].ver === "1" &&
       overlayBuilt["app-misc/other"].ver === "2",
       JSON.stringify(overlayBuilt));
@@ -168,7 +168,7 @@ check("overlay 已移除但仍在索引中的包标明已移除",
 
 const exclusionPublished = renderWith("app-misc/excluded-published") +
   renderWith("app-misc/channel-only");
-check("排除清单与频道排除的包已有 binpkg 时只显示勾号，原因在勾号提示中",
+check("排除清单与频道排除的包已有 binary package 时只显示勾号，原因在勾号提示中",
       exclusionPublished.includes("app-misc/excluded-published") &&
       exclusionPublished.includes("app-misc/channel-only") &&
       !exclusionPublished.includes('class="badge"') &&
@@ -202,13 +202,13 @@ setRows([{ cp: "app-misc/conditional-bindist", binhost: true, excluded: "",
            present: true, ver: "1", size: 1, declaresDist: false, dist: false,
            policy: "bindist", why: "" }]);
 const bindistPublished = renderWith("");
-check("已发布包旁的 bindist 标签不写成不提供 binpkg",
+check("已发布包旁的 bindist 标签不写成不提供 binary package",
       (bindistPublished.match(/>policyTag_bindist<\/span>/g) || []).length === 1 &&
       !bindistPublished.includes(">why_bindist<") &&
       /class="mark yes"[^>]*><svg class="icon mark-icon"/.test(bindistPublished),
       bindistPublished.slice(0, 600));
 
-check("状态说明在 binpkg 表头的 ContextualHelp 里，并链接到 FAQ",
+check("状态说明在 binary package 表头的 ContextualHelp 里，并链接到 FAQ",
       /<th class="mark bin-col">[\s\S]*?popovertarget="status-help"[\s\S]*?<\/th>/.test(html) &&
       /<div class="ctx-pop" id="status-help" popover role="dialog"[\s\S]*?href="\/faq#package-status" data-i18n="lgMore"/.test(html) &&
       !html.includes('class="legend"'));

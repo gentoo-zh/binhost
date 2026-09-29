@@ -19,8 +19,8 @@
 <meta property="og:image" content="https://distfiles.gentoozh.org/assets/logo.webp">
 <meta name="twitter:card" content="summary">
 <!-- /chrome:head -->
-<title>配置 binpkg — Gentoo-zh 下载</title>
-<meta name="description" content="把 gentoo-zh 的 binpkg 仓库加入 Portage：选择频道与镜像，导入签名公钥，启用 getbinpkg。">
+<title>配置 binary package — Gentoo-zh 下载</title>
+<meta name="description" content="把 gentoo-zh 的 binary package 仓库加入 Portage：选择频道与镜像，导入签名公钥，启用 getbinpkg。">
 </head>
 <body>
 
@@ -118,7 +118,7 @@
   <details class="nav-group" data-group="binhost" data-default-open open>
     <summary class="nav-group-title"><span data-i18n="navGBin">binhost</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
     <ul class="pages">
-      <li><a class="nav-link" href="/binpkg-setup" aria-current="page" data-i18n="navBin">配置 binpkg</a></li>
+      <li><a class="nav-link" href="/binpkg-setup" aria-current="page" data-i18n="navBin">配置 binary package</a></li>
     </ul>
   </details>
   <details class="nav-group" data-group="iso" open>
@@ -193,7 +193,7 @@
 
 <main id="main" class="wrap">
 
-  <h1 class="title" data-i18n="title">配置 binpkg</h1>
+  <h1 class="title" data-i18n="title">配置 binary package</h1>
 
   <p class="note callout" data-i18n-html="prereq">
     先决条件：添加 gentoo-zh overlay 并接受其测试关键字，见
@@ -370,7 +370,7 @@
   <p class="note" data-i18n-html="sigNote">全局签名要求与本地构建签名见 <a href="/faq#q5">FAQ</a>。</p>
 
   <p class="note" data-i18n-html="onceNote">
-    无需修改 <code>make.conf</code>，也可在单次安装中使用 binpkg：
+    无需修改 <code>make.conf</code>，也可在单次安装中使用 binary package：
   </p>
 
   <div class="code cmd">
@@ -379,7 +379,7 @@
     <button type="button" class="head-btn sudo-btn" aria-pressed="true">sudo</button>
   </div>
 
-  <p class="note" data-i18n-html="guideNote">binpkg 不适用的原因见 <a href="/faq#q1">FAQ</a>；高级配置参考 <a href="https://wiki.gentoo.org/wiki/Binary_package_guide">Binary package guide</a>。</p>
+  <p class="note" data-i18n-html="guideNote">binary package 不适用的原因见 <a href="/faq#q1">FAQ</a>；高级配置参考 <a href="https://wiki.gentoo.org/wiki/Binary_package_guide">Binary package guide</a>。</p>
   </div>
 
   <h2 id="key-download" data-i18n="q11">不安装 sec-keys 软件包时，如何取得签名公钥？</h2>
@@ -419,7 +419,7 @@
 <div id="copy-toast" role="status" aria-live="polite"></div>
 
 <script src="/assets/util.js?v=216bc353"></script>
-<script src="/assets/strings.js?v=dd9ff3e6"></script>
+<script src="/assets/strings.js?v=d401535e"></script>
 <script>
 window.MIRROR_I18N = {
   "zh-tw": {
@@ -437,8 +437,8 @@ window.MIRROR_I18N = {
     "modeQuick": "快速設定",
     "quickNote": "快速設定指令包含全部四個設定步驟；手動設定分別顯示每一步的內容。",
     "prereq": "先決條件：新增 gentoo-zh overlay 並接受其測試關鍵字，見 <a href=\"/overlay\">Overlay 指南</a>。",
-    "onceNote": "無須修改 <code>make.conf</code>，也可在單次安裝中使用 binpkg：",
-    "guideNote": "binpkg 不適用的原因見 <a href=\"/faq#q1\">FAQ</a>；進階設定參考 <a href=\"https://wiki.gentoo.org/wiki/Binary_package_guide\">Binary package guide</a>。",
+    "onceNote": "無須修改 <code>make.conf</code>，也可在單次安裝中使用 binary package：",
+    "guideNote": "binary package 不適用的原因見 <a href=\"/faq#q1\">FAQ</a>；進階設定參考 <a href=\"https://wiki.gentoo.org/wiki/Binary_package_guide\">Binary package guide</a>。",
     "sigNote": "全域簽章要求與本機建置簽章見 <a href=\"/faq#q5\">FAQ</a>。",
     "srcLabel": "鏡像",
     "srcCernet": "教育網聯合鏡像站",
@@ -456,7 +456,7 @@ window.MIRROR_I18N = {
     "step2": "新增倉庫",
     "step3": "啟用 getbinpkg（附加）",
     "keyNote": "匯入失敗時，見 <a href=\"/faq#binpkg-keyring\">公鑰匯入 FAQ</a>。",
-    "title": "設定 binpkg",
+    "title": "設定 binary package",
     "h2channel": "選擇頻道",
     "h2setup": "設定"
   },

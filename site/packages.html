@@ -135,7 +135,7 @@
   <details class="nav-group" data-group="binhost" data-default-open open>
     <summary class="nav-group-title"><span data-i18n="navGBin">binhost</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
     <ul class="pages">
-      <li><a class="nav-link" href="/binpkg-setup" data-i18n="navBin">配置 binpkg</a></li>
+      <li><a class="nav-link" href="/binpkg-setup" data-i18n="navBin">配置 binary package</a></li>
     </ul>
   </details>
   <details class="nav-group" data-group="iso" open>
@@ -246,7 +246,7 @@
     </div>
     <div class="seg filters" id="filters" role="group" aria-label="筛选" data-i18n-label="aFilter">
       <button class="filter on" data-f="all" aria-pressed="true" data-i18n="fltAll">全部</button>
-      <button class="filter" data-f="bin" aria-pressed="false" data-i18n="fltBin">仅 binpkg</button>
+      <button class="filter" data-f="bin" aria-pressed="false" data-i18n="fltBin">仅 binary package</button>
       <button class="filter" data-f="dist" aria-pressed="false" data-i18n="fltDist">仅 distfiles</button>
     </div>
     <p class="pkg-count" id="count" aria-live="polite"></p>
@@ -257,7 +257,7 @@
       <thead>
         <tr>
           <th data-i18n="thPkg">软件包</th>
-          <th class="mark bin-col"><span class="th-help"><span data-i18n="thBin">binpkg</span><button type="button" class="ctx-help" popovertarget="status-help" aria-label="帮助" data-i18n-label="helpLabel"><svg class="icon icon-sm" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M9.988 15.527c-.23.008-.455-.074-.627-.229-.33-.365-.33-.92 0-1.286.17-.158.395-.243.627-.235.236-.01.466.08.633.248.162.168.25.394.242.627.012.235-.07.466-.228.64-.174.165-.408.25-.647.235"/><path fill="currentColor" d="M10 18.75c-4.825 0-8.75-3.925-8.75-8.75S5.175 1.25 10 1.25s8.75 3.925 8.75 8.75-3.925 8.75-8.75 8.75m0-16c-3.998 0-7.25 3.252-7.25 7.25s3.252 7.25 7.25 7.25 7.25-3.252 7.25-7.25S13.998 2.75 10 2.75"/><path fill="currentColor" d="M9.992 12.706c-.414 0-.75-.336-.75-.75 0-1.022.07-1.714 1.04-2.683.784-.786.917-1.101.917-1.65 0-.21-.066-1.259-1.374-1.259-1.365 0-1.51 1.156-1.526 1.388-.027.413-.393.72-.797.7-.414-.028-.727-.385-.7-.798.064-.965.777-2.79 3.023-2.79 1.887 0 2.874 1.388 2.874 2.758 0 1.144-.457 1.81-1.357 2.712-.576.576-.6.811-.6 1.622 0 .414-.336.75-.75.75"/></svg></button></span></th>
+          <th class="mark bin-col"><span class="th-help"><span data-i18n="thBin">binary package</span><button type="button" class="ctx-help" popovertarget="status-help" aria-label="帮助" data-i18n-label="helpLabel"><svg class="icon icon-sm" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M9.988 15.527c-.23.008-.455-.074-.627-.229-.33-.365-.33-.92 0-1.286.17-.158.395-.243.627-.235.236-.01.466.08.633.248.162.168.25.394.242.627.012.235-.07.466-.228.64-.174.165-.408.25-.647.235"/><path fill="currentColor" d="M10 18.75c-4.825 0-8.75-3.925-8.75-8.75S5.175 1.25 10 1.25s8.75 3.925 8.75 8.75-3.925 8.75-8.75 8.75m0-16c-3.998 0-7.25 3.252-7.25 7.25s3.252 7.25 7.25 7.25 7.25-3.252 7.25-7.25S13.998 2.75 10 2.75"/><path fill="currentColor" d="M9.992 12.706c-.414 0-.75-.336-.75-.75 0-1.022.07-1.714 1.04-2.683.784-.786.917-1.101.917-1.65 0-.21-.066-1.259-1.374-1.259-1.365 0-1.51 1.156-1.526 1.388-.027.413-.393.72-.797.7-.414-.028-.727-.385-.7-.798.064-.965.777-2.79 3.023-2.79 1.887 0 2.874 1.388 2.874 2.758 0 1.144-.457 1.81-1.357 2.712-.576.576-.6.811-.6 1.622 0 .414-.336.75-.75.75"/></svg></button></span></th>
           <th class="mark" data-i18n="thDist">distfiles</th>
           <th class="ver" data-i18n="thVer">版本</th>
           <th class="size" data-i18n="thSize">大小</th>
@@ -295,7 +295,7 @@
   <p class="pkg-updated" id="updated"></p>
   <div class="ctx-pop" id="status-help" popover role="dialog" aria-labelledby="status-help-title" tabindex="-1">
     <p class="ctx-title" id="status-help-title" data-i18n="helpTitle">状态</p>
-    <p class="ctx-body" data-i18n="helpBody">勾号表示公开索引已收录该软件包的 binpkg 或全部 distfiles。灰色标签说明缺少 binpkg 的原因。包名旁同时出现发布政策时，该政策针对当前 ebuild；公开的 binpkg 在发布前已按其版本与构建时的 USE 通过发布检查。指针停在标签上可查看完整原因。</p>
+    <p class="ctx-body" data-i18n="helpBody">勾号表示公开索引已收录该软件包的 binary package 或全部 distfiles。灰色标签说明缺少 binary package 的原因。包名旁同时出现发布政策时，该政策针对当前 ebuild；公开的 binary package 在发布前已按其版本与构建时的 USE 通过发布检查。指针停在标签上可查看完整原因。</p>
     <p class="ctx-foot"><a href="/faq#package-status" data-i18n="lgMore">查看状态说明与常见原因</a></p>
   </div>
 
@@ -343,17 +343,17 @@
 <!-- /chrome:foot -->
 
 <script src="/assets/util.js?v=216bc353"></script>
-<script src="/assets/strings.js?v=dd9ff3e6"></script>
+<script src="/assets/strings.js?v=d401535e"></script>
 <script>
 window.MIRROR_I18N = {
   'zh-cn': {
-    binUnknown: '无法获取 binpkg 索引',
+    binUnknown: '无法获取 binary package 索引',
     loading: '加载中…',
     failed: '无法加载软件包数据：',
     thPkg: '软件包',
     thVer: '版本',
     thSize: '大小',
-    thBin: 'binpkg',
+    thBin: 'binary package',
     thDist: 'distfiles',
     h2deps: '::gentoo 依赖',
     depsLead: "依赖收录范围见 <a href=\"/faq#q7\">FAQ</a>；纯文本见 <a id=\"depsTextDetail\" href=\"/deps.txt\">/deps.txt</a>。",
@@ -362,11 +362,11 @@ window.MIRROR_I18N = {
     h2overlay: 'overlay 软件包',
     depsStale: '本站数据尚未包含依赖列表，暂时无法显示',
     thSlot: 'Slot',
-    updBin: 'binpkg 更新于 ',
+    updBin: 'binary package 更新于 ',
     updDist: 'distfiles 更新于 ',
     fltAll: '全部',
     aFilter: '筛选',
-    fltBin: '仅 binpkg',
+    fltBin: '仅 binary package',
     fltDist: '仅 distfiles',
     countAll: '{n} 个软件包',
     countSome: '{m} / {n}',
@@ -374,7 +374,7 @@ window.MIRROR_I18N = {
     excluded: '不构建',
     why_prebuilt: '清单外',
     why_nobuild: '清单外',
-    why_bindist: '不提供 binpkg',
+    why_bindist: '不提供 binary package',
     why_license: '许可证限制',
     why_unknown: '政策不明',
     why_channelExcluded: '本频道不构建',
@@ -385,20 +385,20 @@ window.MIRROR_I18N = {
     why_candidate: '清单外',
     whyLong_prebuilt: '上游提供预编译内容；这不是发布限制，该软件包目前不在构建清单中',
     whyLong_nobuild: '未检测到常见构建 eclass；这不是发布限制，该软件包目前不在构建清单中',
-    whyLong_bindist: 'RESTRICT=bindist，本站不发布 binpkg；distfiles 按 mirror、fetch 与 SRC_URI 分别判定',
-    whyLong_license: '当前 ebuild 的 LICENSE 表达式不属于 @BINARY-REDISTRIBUTABLE，本站不发布 binpkg',
-    whyLong_unknown: '无法确定当前 ebuild 是否符合 binpkg 发布政策',
+    whyLong_bindist: 'RESTRICT=bindist，本站不发布 binary package；distfiles 按 mirror、fetch 与 SRC_URI 分别判定',
+    whyLong_license: '当前 ebuild 的 LICENSE 表达式不属于 @BINARY-REDISTRIBUTABLE，本站不发布 binary package',
+    whyLong_unknown: '无法确定当前 ebuild 是否符合 binary package 发布政策',
     whyLong_channelExcluded: '该软件包不符合当前频道的依赖或构建要求，仍可能由另一个频道发布',
     whyLong_nokeyword: '没有 amd64 关键字',
     whyLong_masked: '被 profiles/package.mask 屏蔽',
-    whyLong_live: '仅有 live ebuild，本站不发布 binpkg',
+    whyLong_live: '仅有 live ebuild，本站不发布 binary package',
     policyNow_bindist: '当前 ebuild 设置了 RESTRICT=bindist',
     policyNow_license: '当前 ebuild 的 LICENSE 表达式不属于 @BINARY-REDISTRIBUTABLE',
     policyNow_unknown: '无法确定当前 ebuild 是否符合发布政策',
     policyTag_bindist: 'bindist 限制',
     policyTag_license: '许可证限制',
     policyTag_unknown: '政策不明',
-    policyPublished: '{policy}；公开的 binpkg 在发布前已按其版本与构建时的 USE 通过发布检查',
+    policyPublished: '{policy}；公开的 binary package 在发布前已按其版本与构建时的 USE 通过发布检查',
     whyLong_removed: 'overlay 已移除该软件包；该行来自仍在公开索引中的产物',
     whyLong_candidate: '检测到构建流程，但该软件包目前不在构建清单中',
     lgMore: '查看状态说明与常见原因',
@@ -412,10 +412,10 @@ window.MIRROR_I18N = {
   },
   'zh-tw': {
     helpTitle: '狀態', helpLabel: '說明',
-    helpBody: '勾號表示公開索引已收錄該套件的 binpkg 或全部 distfiles。灰色標籤說明缺少 binpkg 的原因。套件名旁同時出現發布政策時，該政策針對目前 ebuild；公開的 binpkg 在發布前已依其版本與建置時的 USE 通過發布檢查。指標停在標籤上可查看完整原因。',
-    binUnknown: '無法取得 binpkg 索引', pending: '待建置', excluded: '不建置', updBin: 'binpkg 更新於 ', updDist: 'distfiles 更新於 ', fltAll: '全部', aFilter: '篩選', fltBin: '僅 binpkg', fltDist: '僅 distfiles', title: '套件列表',
+    helpBody: '勾號表示公開索引已收錄該套件的 binary package 或全部 distfiles。灰色標籤說明缺少 binary package 的原因。套件名旁同時出現發布政策時，該政策針對目前 ebuild；公開的 binary package 在發布前已依其版本與建置時的 USE 通過發布檢查。指標停在標籤上可查看完整原因。',
+    binUnknown: '無法取得 binary package 索引', pending: '待建置', excluded: '不建置', updBin: 'binary package 更新於 ', updDist: 'distfiles 更新於 ', fltAll: '全部', aFilter: '篩選', fltBin: '僅 binary package', fltDist: '僅 distfiles', title: '套件列表',
     lead: 'overlay 套件與 ::gentoo 相依套件分開顯示。純文字列表見 <a id="packagesText" href="/packages.txt">/packages.txt</a> 與 <a id="depsText" href="/deps.txt">/deps.txt</a>。',
-    loading: '載入中…', failed: '無法載入套件資料：', thPkg: '套件', thVer: '版本', thSize: '大小', thBin: 'binpkg', thDist: 'distfiles',
+    loading: '載入中…', failed: '無法載入套件資料：', thPkg: '套件', thVer: '版本', thSize: '大小', thBin: 'binary package', thDist: 'distfiles',
     h2deps: '::gentoo 相依套件',
     depsLead: "相依套件收錄範圍見 <a href=\"/faq#q7\">FAQ</a>；純文字見 <a id=\"depsTextDetail\" href=\"/deps.txt\">/deps.txt</a>。",
     depsCount: ' 個 ::gentoo 套件',
@@ -423,26 +423,26 @@ window.MIRROR_I18N = {
     h2overlay: 'overlay 套件',
     depsStale: '本站資料尚未包含相依套件列表，暫時無法顯示',
     thSlot: 'Slot', countAll: '{n} 個套件', countSome: '{m} / {n}', none: '沒有符合的套件。',
-    why_prebuilt: '清單外', why_nobuild: '清單外', why_bindist: '不提供 binpkg',
+    why_prebuilt: '清單外', why_nobuild: '清單外', why_bindist: '不提供 binary package',
     why_license: '授權限制', why_unknown: '政策不明',
     why_channelExcluded: '本頻道不建置',
     why_nokeyword: '無 amd64', why_masked: '已遮蔽', why_live: '僅 9999', why_removed: '已移除', why_candidate: '清單外',
     whyLong_prebuilt: '上游提供預先編譯的內容；這不是發布限制，該套件目前不在建置清單中',
     whyLong_nobuild: '未偵測到常見建置 eclass；這不是發布限制，該套件目前不在建置清單中',
-    whyLong_bindist: 'RESTRICT=bindist，本站不發布 binpkg；distfiles 依 mirror、fetch 與 SRC_URI 分別判定',
-    whyLong_license: '目前 ebuild 的 LICENSE 表達式不屬於 @BINARY-REDISTRIBUTABLE，本站不發布 binpkg',
-    whyLong_unknown: '無法確定目前 ebuild 是否符合 binpkg 發布政策',
+    whyLong_bindist: 'RESTRICT=bindist，本站不發布 binary package；distfiles 依 mirror、fetch 與 SRC_URI 分別判定',
+    whyLong_license: '目前 ebuild 的 LICENSE 表達式不屬於 @BINARY-REDISTRIBUTABLE，本站不發布 binary package',
+    whyLong_unknown: '無法確定目前 ebuild 是否符合 binary package 發布政策',
     whyLong_channelExcluded: '該套件不符合目前頻道的相依套件或建置要求，仍可能由另一個頻道發布',
     whyLong_nokeyword: '沒有 amd64 關鍵字',
     whyLong_masked: '被 profiles/package.mask 遮蔽',
-    whyLong_live: '僅有 live ebuild，本站不發布 binpkg',
+    whyLong_live: '僅有 live ebuild，本站不發布 binary package',
     policyNow_bindist: '目前 ebuild 設定了 RESTRICT=bindist',
     policyNow_license: '目前 ebuild 的 LICENSE 表達式不屬於 @BINARY-REDISTRIBUTABLE',
     policyNow_unknown: '無法確定目前 ebuild 是否符合發布政策',
     policyTag_bindist: 'bindist 限制',
     policyTag_license: '授權限制',
     policyTag_unknown: '政策不明',
-    policyPublished: '{policy}；公開的 binpkg 在發布前已依其版本與建置時的 USE 通過發布檢查',
+    policyPublished: '{policy}；公開的 binary package 在發布前已依其版本與建置時的 USE 通過發布檢查',
     whyLong_removed: 'overlay 已移除該套件；該列來自仍在公開索引中的產物',
     whyLong_candidate: '偵測到建置流程，但該套件目前不在建置清單中',
     lgMore: '查看狀態說明與常見原因',
@@ -456,7 +456,7 @@ window.MIRROR_I18N = {
   },
   'en': {
     helpTitle: 'Status', helpLabel: 'Help',
-    helpBody: 'A check mark means the public index carries the package\'s binary package or all of its distfiles. A grey badge gives the reason a binary package is missing. When a publication policy also appears beside the package name, it applies to the current ebuild; the published binpkg passed the publication checks for its own version and build-time USE. Point at a badge to read the full reason.',
+    helpBody: 'A check mark means the public index carries the package\'s binary package or all of its distfiles. A grey badge gives the reason a binary package is missing. When a publication policy also appears beside the package name, it applies to the current ebuild; the published binary package passed the publication checks for its own version and build-time USE. Point at a badge to read the full reason.',
     binUnknown: 'The binary package index is unavailable.', pending: 'pending build', excluded: 'not built', updBin: 'binary packages updated ', updDist: 'distfiles updated ', fltAll: 'All', aFilter: 'Filter', fltBin: 'Binary packages only', fltDist: 'distfiles only', title: 'Packages',
     h2deps: '::gentoo dependencies',
     depsLead: "See the <a href=\"/faq#q7\">FAQ</a> for dependency coverage, or <a id=\"depsTextDetail\" href=\"/deps.txt\">/deps.txt</a> for the plain-text list.",
@@ -468,26 +468,26 @@ window.MIRROR_I18N = {
     lead: 'Overlay packages and ::gentoo dependencies are shown separately. Plain-text lists are at <a id="packagesText" href="/packages.txt">/packages.txt</a> and <a id="depsText" href="/deps.txt">/deps.txt</a>.',
     loading: 'Loading…', failed: 'Could not load package data: ', thPkg: 'Package', thVer: 'Version', thSize: 'Size', thBin: 'Binary package', thDist: 'distfiles',
     countAll: '{n} packages', countSome: '{m} / {n}', none: 'No matching packages.',
-    why_prebuilt: 'off-list', why_nobuild: 'off-list', why_bindist: 'no binpkg',
+    why_prebuilt: 'off-list', why_nobuild: 'off-list', why_bindist: 'no binary package',
     why_license: 'licence restricted', why_unknown: 'policy unknown',
     why_channelExcluded: 'not built in this channel',
     why_nokeyword: 'no amd64', why_masked: 'masked', why_live: '9999 only', why_removed: 'removed', why_candidate: 'off-list',
     whyLong_prebuilt: 'Upstream provides prebuilt content. This is not a publication restriction; the package is not currently on the build list.',
     whyLong_nobuild: 'No common build eclass was detected. This is not a publication restriction; the package is not currently on the build list.',
-    whyLong_bindist: 'RESTRICT=bindist; this host does not publish a binpkg. distfiles are evaluated separately under mirror, fetch and SRC_URI rules.',
-    whyLong_license: 'The current ebuild LICENSE expression is outside @BINARY-REDISTRIBUTABLE, so this host does not publish a binpkg.',
+    whyLong_bindist: 'RESTRICT=bindist; this host does not publish a binary package. distfiles are evaluated separately under mirror, fetch and SRC_URI rules.',
+    whyLong_license: 'The current ebuild LICENSE expression is outside @BINARY-REDISTRIBUTABLE, so this host does not publish a binary package.',
     whyLong_unknown: 'The current ebuild could not be evaluated against the binary-package publication policy.',
     whyLong_channelExcluded: 'The package does not meet this channel\'s dependency or build requirements. Another channel may still publish it.',
     whyLong_nokeyword: 'No amd64 keyword.',
     whyLong_masked: 'Masked in profiles/package.mask.',
-    whyLong_live: 'Only a live ebuild exists; this host does not publish a binpkg.',
+    whyLong_live: 'Only a live ebuild exists; this host does not publish a binary package.',
     policyNow_bindist: 'The current ebuild sets RESTRICT=bindist.',
     policyNow_license: 'The current ebuild LICENSE expression is outside @BINARY-REDISTRIBUTABLE.',
     policyNow_unknown: 'The current ebuild could not be evaluated against the publication policy.',
     policyTag_bindist: 'bindist restricted',
     policyTag_license: 'licence restricted',
     policyTag_unknown: 'policy unknown',
-    policyPublished: '{policy} The published binpkg passed the publication checks for its own version and build-time USE.',
+    policyPublished: '{policy} The published binary package passed the publication checks for its own version and build-time USE.',
     whyLong_removed: 'The package was removed from the overlay; this row remains because its artifact is still in the public index.',
     whyLong_candidate: 'A build process was detected, but the package is not currently on the build list.',
     lgMore: 'Status definitions and common causes',

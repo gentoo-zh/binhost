@@ -39,7 +39,7 @@
 <link rel="preload" href="/server-status.json" as="fetch" crossorigin>
 <link rel="preload" href="/packages.json" as="fetch" crossorigin>
 <title>Gentoo-zh 下载</title>
-<meta name="description" content="gentoo-zh 的 binpkg 与 distfiles 镜像。">
+<meta name="description" content="gentoo-zh 的 binary package 与 distfiles 镜像。">
 </head>
 <body>
 
@@ -137,7 +137,7 @@
   <details class="nav-group" data-group="binhost" data-default-open open>
     <summary class="nav-group-title"><span data-i18n="navGBin">binhost</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
     <ul class="pages">
-      <li><a class="nav-link" href="/binpkg-setup" data-i18n="navBin">配置 binpkg</a></li>
+      <li><a class="nav-link" href="/binpkg-setup" data-i18n="navBin">配置 binary package</a></li>
     </ul>
   </details>
   <details class="nav-group" data-group="iso" open>
@@ -214,7 +214,7 @@
 
   <div class="hero">
   <h1 class="title hero-title" data-i18n="hero">Gentoo-zh 下载</h1>
-  <p class="hero-lead" data-i18n="lead">中国大陆与海外镜像提供 gentoo-zh overlay 及其 distfiles、binpkg 与 Live ISO。</p>
+  <p class="hero-lead" data-i18n="lead">中国大陆与海外镜像提供 gentoo-zh overlay 及其 distfiles、binary package 与 Live ISO。</p>
 
   <div class="install hero-install">
     <div class="src-pick" data-src-switch="git" data-src-group="git" role="group" aria-label="同步源" data-i18n-label="aGit">
@@ -243,8 +243,8 @@
   <p class="status-build"><span data-i18n="sBuild">最近构建：</span><span data-stat="build">—</span></p>
   <ul class="stats" data-stats aria-labelledby="status-title">
     <li class="stat" data-stat="overlay"><span class="stat-label" data-i18n="sOverlay">overlay 维护的软件包</span><span class="stat-value">—</span></li>
-    <li class="stat" data-stat="stable"><span class="stat-label" data-i18n="sStable">stable binpkg</span><span class="stat-value">—</span></li>
-    <li class="stat" data-stat="unstable"><span class="stat-label" data-i18n="sUnstable">unstable binpkg</span><span class="stat-value">—</span></li>
+    <li class="stat" data-stat="stable"><span class="stat-label" data-i18n="sStable">stable binary package</span><span class="stat-value">—</span></li>
+    <li class="stat" data-stat="unstable"><span class="stat-label" data-i18n="sUnstable">unstable binary package</span><span class="stat-value">—</span></li>
     <li class="stat" data-stat="dist"><span class="stat-label" data-i18n="sDist">distfiles 文件</span><span class="stat-value">—</span></li>
   </ul>
   </section>
@@ -254,10 +254,10 @@
   <ul class="entry-grid">
     <li><a class="entry-card" href="/overlay"><span class="entry-head"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 13.5c-.43 0-.86-.123-1.235-.37L2.729 9.166c-.635-.417-1.015-1.12-1.015-1.879 0-.76.38-1.464 1.015-1.882l6.036-3.966c.75-.492 1.72-.492 2.47 0l6.036 3.966c.636.418 1.015 1.121 1.015 1.882s-.38 1.462-1.015 1.879l-6.036 3.966c-.375.246-.805.369-1.235.369m-.412-1.623c.25.164.574.164.824 0l6.036-3.966c.215-.14.338-.369.338-.626s-.123-.485-.339-.627l-6.035-3.966c-.25-.164-.574-.164-.824 0L3.552 6.658c-.215.142-.338.37-.338.627s.123.486.338.626z"/><path fill="currentColor" d="M10 19c-.43 0-.86-.123-1.235-.37l-6.036-3.965c-.577-.379-.942-.99-1.001-1.675-.06-.694.197-1.364.703-1.839.302-.282.777-.266 1.06.036s.268.777-.034 1.06c-.17.157-.254.382-.234.614.01.132.068.38.33.55l6.035 3.966c.25.164.574.164.824 0l6.036-3.966c.26-.17.319-.418.33-.55.02-.232-.066-.456-.235-.614-.302-.283-.317-.758-.034-1.06s.758-.318 1.06-.036c.507.475.763 1.145.703 1.84-.059.685-.424 1.295-1.001 1.674l-6.036 3.966C10.86 18.877 10.43 19 10 19"/></svg><span class="entry-title" data-i18n="navGOverlay">Overlay</span></span><span class="entry-desc" data-i18n="gOverlay">添加 gentoo-zh overlay，安装 fcitx 输入法、中文字体与中国大陆常用应用。</span></a></li>
     <li><a class="entry-card" href="/distfiles-setup" id="distfiles"><span class="entry-head"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M16.75 3H3.25C2.01 3 1 4.01 1 5.25v1c0 .778.398 1.465 1 1.869v6.631C2 15.99 3.01 17 4.25 17h11.5c1.24 0 2.25-1.01 2.25-2.25V8.119c.602-.404 1-1.09 1-1.869v-1C19 4.01 17.99 3 16.75 3M2.5 5.25c0-.413.336-.75.75-.75h13.5c.414 0 .75.337.75.75v1c0 .413-.336.75-.75.75H3.25c-.414 0-.75-.337-.75-.75zM15.75 15.5H4.25c-.414 0-.75-.337-.75-.75V8.5h13v6.25c0 .413-.336.75-.75.75"/><path fill="currentColor" d="M12.25 10.5h-4.5c-.414 0-.75.336-.75.75s.336.75.75.75h4.5c.414 0 .75-.336.75-.75s-.336-.75-.75-.75"/></svg><span class="entry-title" data-i18n="navGDist">distfiles</span></span><span class="entry-desc" data-i18n="gDist">让 Portage 从本站镜像下载 overlay 软件包的源码。</span></a></li>
-    <li><a class="entry-card" href="/binpkg-setup" id="binpkgs"><span class="entry-head"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M13.53 9.427c-.292-.292-.766-.294-1.06 0l-1.717 1.714V2.75c0-.414-.336-.75-.75-.75s-.75.336-.75.75v8.4L7.53 9.426c-.293-.293-.767-.293-1.06 0s-.293.767 0 1.06l2.998 2.998c.146.147.338.22.53.22.191 0 .384-.073.53-.22l3.002-2.998c.293-.292.293-.767 0-1.06"/><path fill="currentColor" d="M15.75 18H4.25C3.01 18 2 16.99 2 15.75v-2.021c0-.415.336-.75.75-.75s.75.335.75.75v2.021c0 .413.337.75.75.75h11.5c.413 0 .75-.337.75-.75v-2.021c0-.415.336-.75.75-.75s.75.335.75.75v2.021c0 1.24-1.01 2.25-2.25 2.25"/></svg><span class="entry-title" data-i18n="navGBin">binhost</span></span><span class="entry-desc" data-i18n="gBin">安装已签名的 binpkg，省去本地编译，分 stable 与 unstable 两个频道。</span></a></li>
+    <li><a class="entry-card" href="/binpkg-setup" id="binpkgs"><span class="entry-head"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M13.53 9.427c-.292-.292-.766-.294-1.06 0l-1.717 1.714V2.75c0-.414-.336-.75-.75-.75s-.75.336-.75.75v8.4L7.53 9.426c-.293-.293-.767-.293-1.06 0s-.293.767 0 1.06l2.998 2.998c.146.147.338.22.53.22.191 0 .384-.073.53-.22l3.002-2.998c.293-.292.293-.767 0-1.06"/><path fill="currentColor" d="M15.75 18H4.25C3.01 18 2 16.99 2 15.75v-2.021c0-.415.336-.75.75-.75s.75.335.75.75v2.021c0 .413.337.75.75.75h11.5c.413 0 .75-.337.75-.75v-2.021c0-.415.336-.75.75-.75s.75.335.75.75v2.021c0 1.24-1.01 2.25-2.25 2.25"/></svg><span class="entry-title" data-i18n="navGBin">binhost</span></span><span class="entry-desc" data-i18n="gBin">安装已签名的 binary package，省去本地编译，分 stable 与 unstable 两个频道。</span></a></li>
     <li><a class="entry-card" href="/iso"><span class="entry-head"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M19 17.5H1c-.414 0-.75-.336-.75-.75S.586 16 1 16h18c.414 0 .75.336.75.75s-.336.75-.75.75M15.75 15H4.25C3.01 15 2 13.99 2 12.75v-7.5C2 4.01 3.01 3 4.25 3h11.5C16.99 3 18 4.01 18 5.25v7.5c0 1.24-1.01 2.25-2.25 2.25M4.25 4.5c-.413 0-.75.337-.75.75v7.5c0 .413.337.75.75.75h11.5c.413 0 .75-.337.75-.75v-7.5c0-.413-.337-.75-.75-.75z"/></svg><span class="entry-title" data-i18n="navIso">Live ISO</span></span><span class="entry-desc" data-i18n="gIso">下载每周更新的 CJK 最小安装镜像，另可下载独立项目 Gig-OS 的镜像。</span></a></li>
     <li><a class="entry-card" href="/mirrors"><span class="entry-head"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M13.75 2.75c0-.414-.336-.75-.75-.75H4.25C3.01 2 2 3.01 2 4.25V13c0 .414.336.75.75.75s.75-.336.75-.75V4.25c0-.414.336-.75.75-.75H13c.414 0 .75-.336.75-.75M14.75 11.5c0 .414-.336.75-.75.75h-1.75V14c0 .414-.336.75-.75.75s-.75-.336-.75-.75v-1.75H9c-.414 0-.75-.336-.75-.75s.336-.75.75-.75h1.75V9c0-.414.336-.75.75-.75s.75.336.75.75v1.75H14c.414 0 .75.336.75.75"/><path fill="currentColor" d="M15.75 5h-8.5C6.01 5 5 6.01 5 7.25v8.5C5 16.99 6.01 18 7.25 18h8.5c1.24 0 2.25-1.01 2.25-2.25v-8.5C18 6.01 16.99 5 15.75 5m.75 10.75c0 .414-.336.75-.75.75h-8.5c-.414 0-.75-.336-.75-.75v-8.5c0-.414.336-.75.75-.75h8.5c.414 0 .75.336.75.75z"/></svg><span class="entry-title" data-i18n="navGMirrors">镜像</span></span><span class="entry-desc" data-i18n="gMirrors">查看中国大陆与海外的镜像及同步地址。</span></a></li>
-    <li><a class="entry-card" href="/faq"><span class="entry-head"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M9.988 15.527c-.23.008-.455-.074-.627-.229-.33-.365-.33-.92 0-1.286.17-.158.395-.243.627-.235.236-.01.466.08.633.248.162.168.25.394.242.627.012.235-.07.466-.228.64-.174.165-.408.25-.647.235"/><path fill="currentColor" d="M10 18.75c-4.825 0-8.75-3.925-8.75-8.75S5.175 1.25 10 1.25s8.75 3.925 8.75 8.75-3.925 8.75-8.75 8.75m0-16c-3.998 0-7.25 3.252-7.25 7.25s3.252 7.25 7.25 7.25 7.25-3.252 7.25-7.25S13.998 2.75 10 2.75"/><path fill="currentColor" d="M9.992 12.706c-.414 0-.75-.336-.75-.75 0-1.022.07-1.714 1.04-2.683.784-.786.917-1.101.917-1.65 0-.21-.066-1.259-1.374-1.259-1.365 0-1.51 1.156-1.526 1.388-.027.413-.393.72-.797.7-.414-.028-.727-.385-.7-.798.064-.965.777-2.79 3.023-2.79 1.887 0 2.874 1.388 2.874 2.758 0 1.144-.457 1.81-1.357 2.712-.576.576-.6.811-.6 1.622 0 .414-.336.75-.75.75"/></svg><span class="entry-title" data-i18n="navHelp">帮助</span></span><span class="entry-desc" data-i18n="gFaq">选择频道、配置 binpkg 与 overlay 的常见问题。</span></a></li>
+    <li><a class="entry-card" href="/faq"><span class="entry-head"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M9.988 15.527c-.23.008-.455-.074-.627-.229-.33-.365-.33-.92 0-1.286.17-.158.395-.243.627-.235.236-.01.466.08.633.248.162.168.25.394.242.627.012.235-.07.466-.228.64-.174.165-.408.25-.647.235"/><path fill="currentColor" d="M10 18.75c-4.825 0-8.75-3.925-8.75-8.75S5.175 1.25 10 1.25s8.75 3.925 8.75 8.75-3.925 8.75-8.75 8.75m0-16c-3.998 0-7.25 3.252-7.25 7.25s3.252 7.25 7.25 7.25 7.25-3.252 7.25-7.25S13.998 2.75 10 2.75"/><path fill="currentColor" d="M9.992 12.706c-.414 0-.75-.336-.75-.75 0-1.022.07-1.714 1.04-2.683.784-.786.917-1.101.917-1.65 0-.21-.066-1.259-1.374-1.259-1.365 0-1.51 1.156-1.526 1.388-.027.413-.393.72-.797.7-.414-.028-.727-.385-.7-.798.064-.965.777-2.79 3.023-2.79 1.887 0 2.874 1.388 2.874 2.758 0 1.144-.457 1.81-1.357 2.712-.576.576-.6.811-.6 1.622 0 .414-.336.75-.75.75"/></svg><span class="entry-title" data-i18n="navHelp">帮助</span></span><span class="entry-desc" data-i18n="gFaq">选择频道、配置 binary package 与 overlay 的常见问题。</span></a></li>
   </ul>
 
   <!-- chrome:pager -->
@@ -281,22 +281,22 @@
 <div id="copy-toast" role="status" aria-live="polite"></div>
 
 <script src="/assets/util.js?v=216bc353"></script>
-<script src="/assets/strings.js?v=dd9ff3e6"></script>
+<script src="/assets/strings.js?v=d401535e"></script>
 <script>
 window.MIRROR_I18N = {
   'zh-tw': {
     title: "概覽",
     hero: "Gentoo-zh 下载",
-    lead: "中國大陸與海外鏡像提供 gentoo-zh overlay 及其 distfiles、binpkg 與 Live ISO。",
+    lead: "中國大陸與海外鏡像提供 gentoo-zh overlay 及其 distfiles、binary package 與 Live ISO。",
     gOverlay: "新增 gentoo-zh overlay，安裝 fcitx 輸入法、中文字型與中國大陸常用的應用程式。",
     gDist: "讓 Portage 從本站鏡像下載 overlay 套件的原始碼。",
-    gBin: "安裝已簽章的 binpkg，省去本機編譯，分 stable 與 unstable 兩個頻道。",
+    gBin: "安裝已簽章的 binary package，省去本機編譯，分 stable 與 unstable 兩個頻道。",
     gIso: "下載每週更新的 CJK 最小安裝鏡像，另可下載獨立專案 Gig-OS 的鏡像。",
     gMirrors: "查看中國大陸與海外的鏡像及同步位址。",
-    gFaq: "選擇頻道、設定 binpkg 與 overlay 的常見問題。",
+    gFaq: "選擇頻道、設定 binary package 與 overlay 的常見問題。",
     sOverlay: "overlay 維護的套件",
-    sStable: "stable binpkg",
-    sUnstable: "unstable binpkg",
+    sStable: "stable binary package",
+    sUnstable: "unstable binary package",
     sDist: "distfiles 檔案",
     sBuild: "最近建置：",
     statusLink: "詳細狀態",
@@ -344,7 +344,7 @@ window.MIRROR_I18N = {
 <script src="/assets/sudo-switch.js?v=281123b7"></script>
 <script src="/assets/source-switch.js?v=220d0618"></script>
 <script src="/assets/mirror-health.js?v=d3ec16a3"></script>
-<script src="/assets/status-data.js?v=09338ba6"></script>
+<script src="/assets/status-data.js?v=b07c7c3e"></script>
 
 </body>
 </html>

@@ -350,7 +350,7 @@ case("软件包资料生成时间落在本次执行期间", lambda: (
     (lambda before, result: before <= result[1]["generated"] <= int(time.time()))(
         int(time.time()), run_main(stanza("dev-libs/lib-1", "gentoo")))))
 
-case("binpkg 与 distfiles 四种组合分别写出", lambda: (
+case("binary package 与 distfiles 四种组合分别写出", lambda: (
     availability_matrix()[2] == {
         "acct-group/published": "bin",
         "app-misc/bin-only": "bin",
@@ -362,7 +362,7 @@ case("binpkg 与 distfiles 四种组合分别写出", lambda: (
         "virtual/neither": "--",
     }))
 
-case("同名 ::gentoo 依赖不算 overlay binpkg", lambda: (
+case("同名 ::gentoo 依赖不算 overlay binary package", lambda: (
     "app-misc/repo-collision" not in availability_matrix()[0][4]
     and availability_matrix()[2]["app-misc/repo-collision"] == "--"))
 

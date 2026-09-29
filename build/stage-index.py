@@ -454,7 +454,7 @@ def main(pkgdir, stage, overlay=None, rev="", gentoo_rev="", lookup=None, seed_f
         elif state == "removed":
             print(f"!! 不发布 {cpv}：该版本已从源仓库移除", file=sys.stderr)
         else:
-            print(f"!! 不发布 {cpv}：RESTRICT=bindist，不发布 binpkg", file=sys.stderr)
+            print(f"!! 不发布 {cpv}：RESTRICT=bindist，不发布 binary package", file=sys.stderr)
     (stage / "quarantine.txt").write_text(
         "".join(f"{rel}\n" for _, rel, state in sorted(refused)
                 if state in IMMEDIATE_QUARANTINE_STATES))

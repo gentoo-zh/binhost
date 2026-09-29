@@ -61,8 +61,8 @@ const DONE = { state: "done", started: 100, finished: now - 5 * 3600, duration: 
 
 (async function () {
   const done = await render({ stable: DONE, unstable: { ...DONE, finished: now - 9 * 3600 } });
-  check("两个频道的 binpkg 统计都显示",
-        done.html.includes("stable binpkg") && done.html.includes("unstable binpkg") &&
+  check("两个频道的 binary package 统计都显示",
+        done.html.includes("stable binary package") && done.html.includes("unstable binary package") &&
         ["188", "67", "196", "236", "1158"].every((n) => done.html.includes(n)), done.html);
   check("完成的构建写明频道、用时与完成时间",
         (done.server.match(/最近建置/g) || []).length === 2 &&
@@ -147,11 +147,11 @@ const DONE = { state: "done", started: 100, finished: now - 5 * 3600, duration: 
     stable: { state: "running", kind: "binary", done: 33, total: 720, now: "sys-libs/zlib",
               generated: now },
   });
-  check("取用现成 binpkg 时报的是这个状态而不是构建中",
-        merging.html.includes("33/720") && merging.html.includes("正在安裝 binpkg") &&
+  check("取用现成 binary package 时报的是这个状态而不是构建中",
+        merging.html.includes("33/720") && merging.html.includes("正在安裝 binary package") &&
         !merging.html.includes("正在建置"), merging.html);
   const fetching = ["zh-cn", "zh-tw", "en"].map((l) => merging.api.WORDS[l].fetching);
-  check("三种语言都说安装现成的 binpkg，不说取",
+  check("三种语言都说安装现成的 binary package，不说取",
         fetching.every((v) => /安裝|安装|installing/.test(v)) &&
         !fetching.some((v) => /正在取|fetching/.test(v)), fetching.join(" | "));
 
@@ -172,7 +172,7 @@ const DONE = { state: "done", started: 100, finished: now - 5 * 3600, duration: 
 
   const simplified = await render({ stable: DONE }, "zh-cn");
   check("简体中文显示两个频道的明确标签",
-        simplified.html.includes("stable binpkg") && simplified.html.includes("unstable binpkg"),
+        simplified.html.includes("stable binary package") && simplified.html.includes("unstable binary package"),
         simplified.html);
   const english = await render({ stable: DONE }, "en");
   check("英文用英文单位", english.server.includes("Latest build") &&

@@ -20,7 +20,7 @@
 <meta name="twitter:card" content="summary">
 <!-- /chrome:head -->
 <title>Overlay — Gentoo-zh 下载</title>
-<meta name="description" content="添加 gentoo-zh overlay，配置测试关键字、distfiles 与 binpkg。">
+<meta name="description" content="添加 gentoo-zh overlay，配置测试关键字、distfiles 与 binary package。">
 </head>
 <body>
 
@@ -118,7 +118,7 @@
   <details class="nav-group" data-group="binhost" data-default-open open>
     <summary class="nav-group-title"><span data-i18n="navGBin">binhost</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
     <ul class="pages">
-      <li><a class="nav-link" href="/binpkg-setup" data-i18n="navBin">配置 binpkg</a></li>
+      <li><a class="nav-link" href="/binpkg-setup" data-i18n="navBin">配置 binary package</a></li>
     </ul>
   </details>
   <details class="nav-group" data-group="iso" open>
@@ -297,10 +297,10 @@ net-im/tencent-qq ~amd64</pre>
 
   <p data-i18n-html="overlay_027">列出 overlay 提供的软件包：<code>eix -RO gentoo-zh</code>。</p>
 
-  <h2 id="distfiles-binpkg" data-i18n="overlay_028">distfiles 镜像与 binpkg</h2>
+  <h2 id="distfiles-binpkg" data-i18n="overlay_028">distfiles 镜像与 binary package</h2>
 
   <p id="distfiles-mirror" data-i18n-html="overlay_distfiles">distfiles 镜像用于下载源码，见<a href="/distfiles-setup">配置 distfiles</a>。</p>
-  <p id="binary-packages" data-i18n-html="overlay_binpkg">binpkg 用于安装预编译软件包，可独立启用，见<a href="/binpkg-setup">配置 binpkg</a>。</p>
+  <p id="binary-packages" data-i18n-html="overlay_binpkg">binary package 用于安装预编译软件包，可独立启用，见<a href="/binpkg-setup">配置 binary package</a>。</p>
 
   <h2 id="notes" data-i18n="overlay_065">注意事项</h2>
 
@@ -328,11 +328,11 @@ net-im/tencent-qq ~amd64</pre>
 <div id="copy-toast" role="status" aria-live="polite"></div>
 
 <script src="/assets/util.js?v=216bc353"></script>
-<script src="/assets/strings.js?v=dd9ff3e6"></script>
+<script src="/assets/strings.js?v=d401535e"></script>
 <script>
 window.MIRROR_I18N = {
   "zh-tw": {
-    "overlay_binpkg": "binpkg 用於安裝預先編譯的套件，可獨立啟用，見<a href=\"/binpkg-setup\">設定 binpkg</a>。",
+    "overlay_binpkg": "binary package 用於安裝預先編譯的套件，可獨立啟用，見<a href=\"/binpkg-setup\">設定 binary package</a>。",
     "overlay_distfiles": "distfiles 鏡像用於下載原始碼，見<a href=\"/distfiles-setup\">設定 distfiles</a>。",
     "overlay_title": "Overlay",
     "overlay_001": "<a href=\"https://github.com/gentoo-zh/overlay\">gentoo-zh</a> 是 Gentoo 中文社区維護的 overlay，前身為 2003 年的 gentoo-tw 與 gentoo-china，收錄中文使用者常用的套件。",
@@ -362,12 +362,12 @@ window.MIRROR_I18N = {
     "overlay_025": "也可逐一接受套件的測試關鍵字：",
     "overlay_026": "安裝套件",
     "overlay_027": "列出 overlay 提供的套件：<code>eix -RO gentoo-zh</code>。",
-    "overlay_028": "distfiles 鏡像與 binpkg",
+    "overlay_028": "distfiles 鏡像與 binary package",
     "overlay_065": "注意事項",
     "overlayFaq": "舊同步位址、重新導向與版本差異見 <a href=\"/faq#overlay\">Overlay FAQ</a> 和<a href=\"/faq#mirrors\">鏡像 FAQ</a>。",
 },
   "en": {
-    "overlay_binpkg": "Enable binpkg independently to install prebuilt packages; see <a href=\"/binpkg-setup\">binpkg setup</a>.",
+    "overlay_binpkg": "Enable binary packages independently to install prebuilt packages; see <a href=\"/binpkg-setup\">binary package setup</a>.",
     "overlay_distfiles": "Use distfiles mirrors to download source archives; see <a href=\"/distfiles-setup\">distfiles setup</a>.",
     "overlay_title": "Overlay",
     "overlay_001": "<a href=\"https://github.com/gentoo-zh/overlay\">gentoo-zh</a> is an overlay maintained by the Gentoo-zh Community. Its predecessors, gentoo-tw and gentoo-china, date to 2003; it provides packages commonly used by Chinese-speaking users.",

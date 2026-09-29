@@ -177,8 +177,8 @@
     "en": "Overlay"
    },
    "desc": {
-    "zh-cn": "添加 overlay、接受测试关键字、安装软件包、distfiles 镜像与 binpkg、注意事项",
-    "zh-tw": "新增 overlay、接受測試關鍵字、安裝套件、distfiles 鏡像與 binpkg、注意事項",
+    "zh-cn": "添加 overlay、接受测试关键字、安装软件包、distfiles 镜像与 binary package、注意事项",
+    "zh-tw": "新增 overlay、接受測試關鍵字、安裝套件、distfiles 鏡像與 binary package、注意事項",
     "en": "Add the overlay, Accept the testing keyword, Install a package, distfiles mirrors and binary packages, Notes"
    },
    "keywords": [
@@ -244,8 +244,8 @@
    "group": "overlay",
    "kind": "section",
    "title": {
-    "zh-cn": "distfiles 镜像与 binpkg",
-    "zh-tw": "distfiles 鏡像與 binpkg",
+    "zh-cn": "distfiles 镜像与 binary package",
+    "zh-tw": "distfiles 鏡像與 binary package",
     "en": "distfiles mirrors and binary packages"
    },
    "desc": {
@@ -370,8 +370,8 @@
    "group": "binhost",
    "kind": "page",
    "title": {
-    "zh-cn": "配置 binpkg",
-    "zh-tw": "設定 binpkg",
+    "zh-cn": "配置 binary package",
+    "zh-tw": "設定 binary package",
     "en": "Set up binary packages"
    },
    "desc": {
@@ -393,8 +393,8 @@
     "en": "Choose a channel"
    },
    "desc": {
-    "zh-cn": "配置 binpkg",
-    "zh-tw": "設定 binpkg",
+    "zh-cn": "配置 binary package",
+    "zh-tw": "設定 binary package",
     "en": "Set up binary packages"
    },
    "keywords": [
@@ -411,8 +411,8 @@
     "en": "Configure"
    },
    "desc": {
-    "zh-cn": "配置 binpkg",
-    "zh-tw": "設定 binpkg",
+    "zh-cn": "配置 binary package",
+    "zh-tw": "設定 binary package",
     "en": "Set up binary packages"
    },
    "keywords": [
@@ -429,8 +429,8 @@
     "en": "How do I get the public signing key without installing the sec-keys package?"
    },
    "desc": {
-    "zh-cn": "配置 binpkg",
-    "zh-tw": "設定 binpkg",
+    "zh-cn": "配置 binary package",
+    "zh-tw": "設定 binary package",
     "en": "Set up binary packages"
    },
    "keywords": [
@@ -609,9 +609,9 @@
     "en": "FAQ"
    },
    "desc": {
-    "zh-cn": "overlay、distfiles、binpkg、Live ISO、镜像",
-    "zh-tw": "overlay、distfiles、binpkg、Live ISO、鏡像",
-    "en": "overlay, distfiles, binpkg, Live ISO, Mirrors"
+    "zh-cn": "overlay、distfiles、binary package、Live ISO、镜像",
+    "zh-tw": "overlay、distfiles、binary package、Live ISO、鏡像",
+    "en": "overlay, distfiles, Binary packages, Live ISO, Mirrors"
    },
    "keywords": [
     "faq"
@@ -730,9 +730,9 @@
    "group": "help",
    "kind": "section",
    "title": {
-    "zh-cn": "binpkg",
-    "zh-tw": "binpkg",
-    "en": "binpkg"
+    "zh-cn": "binary package",
+    "zh-tw": "binary package",
+    "en": "Binary packages"
    },
    "desc": {
     "zh-cn": "FAQ",
@@ -753,9 +753,9 @@
     "en": "Should I choose stable or unstable?"
    },
    "desc": {
-    "zh-cn": "FAQ · binpkg",
-    "zh-tw": "FAQ · binpkg",
-    "en": "FAQ · binpkg"
+    "zh-cn": "FAQ · binary package",
+    "zh-tw": "FAQ · binary package",
+    "en": "FAQ · Binary packages"
    },
    "keywords": [
     "binpkg-channel"
@@ -766,14 +766,14 @@
    "group": "help",
    "kind": "section",
    "title": {
-    "zh-cn": "binpkg 应该配置在哪里？",
-    "zh-tw": "binpkg 應該在哪裡設定？",
-    "en": "Where do I configure binpkgs?"
+    "zh-cn": "binary package 应该配置在哪里？",
+    "zh-tw": "binary package 應該在哪裡設定？",
+    "en": "Where do I configure binary packages?"
    },
    "desc": {
-    "zh-cn": "FAQ · binpkg",
-    "zh-tw": "FAQ · binpkg",
-    "en": "FAQ · binpkg"
+    "zh-cn": "FAQ · binary package",
+    "zh-tw": "FAQ · binary package",
+    "en": "FAQ · Binary packages"
    },
    "keywords": [
     "q2"
@@ -789,9 +789,9 @@
     "en": "Does it work on both OpenRC and systemd?"
    },
    "desc": {
-    "zh-cn": "FAQ · binpkg",
-    "zh-tw": "FAQ · binpkg",
-    "en": "FAQ · binpkg"
+    "zh-cn": "FAQ · binary package",
+    "zh-tw": "FAQ · binary package",
+    "en": "FAQ · Binary packages"
    },
    "keywords": [
     "q3"
@@ -802,14 +802,14 @@
    "group": "help",
    "kind": "section",
    "title": {
-    "zh-cn": "本站提供哪些 binpkg？",
-    "zh-tw": "本站提供哪些 binpkg？",
-    "en": "Which binpkgs does this host publish?"
+    "zh-cn": "本站提供哪些 binary package？",
+    "zh-tw": "本站提供哪些 binary package？",
+    "en": "Which binary packages does this host publish?"
    },
    "desc": {
-    "zh-cn": "FAQ · binpkg",
-    "zh-tw": "FAQ · binpkg",
-    "en": "FAQ · binpkg"
+    "zh-cn": "FAQ · binary package",
+    "zh-tw": "FAQ · binary package",
+    "en": "FAQ · Binary packages"
    },
    "keywords": [
     "q7"
@@ -825,9 +825,9 @@
     "en": "What do the statuses in the package list mean?"
    },
    "desc": {
-    "zh-cn": "FAQ · binpkg",
-    "zh-tw": "FAQ · binpkg",
-    "en": "FAQ · binpkg"
+    "zh-cn": "FAQ · binary package",
+    "zh-tw": "FAQ · binary package",
+    "en": "FAQ · Binary packages"
    },
    "keywords": [
     "package-status"
@@ -838,14 +838,14 @@
    "group": "help",
    "kind": "section",
    "title": {
-    "zh-cn": "如何验证下载的 binpkg 来自本站且内容未被修改？",
-    "zh-tw": "如何驗證下載的 binpkg 來自本站且內容未被修改？",
+    "zh-cn": "如何验证下载的 binary package 来自本站且内容未被修改？",
+    "zh-tw": "如何驗證下載的 binary package 來自本站且內容未被修改？",
     "en": "How do I verify that a downloaded binary package came from this host unchanged?"
    },
    "desc": {
-    "zh-cn": "FAQ · binpkg",
-    "zh-tw": "FAQ · binpkg",
-    "en": "FAQ · binpkg"
+    "zh-cn": "FAQ · binary package",
+    "zh-tw": "FAQ · binary package",
+    "en": "FAQ · Binary packages"
    },
    "keywords": [
     "q5"
@@ -861,9 +861,9 @@
     "en": "How do I get the public signing key without installing the sec-keys package?"
    },
    "desc": {
-    "zh-cn": "FAQ · binpkg",
-    "zh-tw": "FAQ · binpkg",
-    "en": "FAQ · binpkg"
+    "zh-cn": "FAQ · binary package",
+    "zh-tw": "FAQ · binary package",
+    "en": "FAQ · Binary packages"
    },
    "keywords": [
     "key-download"
@@ -879,9 +879,9 @@
     "en": "How do I fix no writable keyring found when importing the key?"
    },
    "desc": {
-    "zh-cn": "FAQ · binpkg",
-    "zh-tw": "FAQ · binpkg",
-    "en": "FAQ · binpkg"
+    "zh-cn": "FAQ · binary package",
+    "zh-tw": "FAQ · binary package",
+    "en": "FAQ · Binary packages"
    },
    "keywords": [
     "binpkg-keyring"
@@ -894,12 +894,12 @@
    "title": {
     "zh-cn": "配置之后 emerge 为何仍然从源码编译？",
     "zh-tw": "設定後，emerge 為何仍然從原始碼編譯？",
-    "en": "Why does emerge still compile from source after binpkg setup?"
+    "en": "Why does emerge still compile from source after binary package setup?"
    },
    "desc": {
-    "zh-cn": "FAQ · binpkg",
-    "zh-tw": "FAQ · binpkg",
-    "en": "FAQ · binpkg"
+    "zh-cn": "FAQ · binary package",
+    "zh-tw": "FAQ · binary package",
+    "en": "FAQ · Binary packages"
    },
    "keywords": [
     "q1"
@@ -910,14 +910,14 @@
    "group": "help",
    "kind": "section",
    "title": {
-    "zh-cn": "binpkg 是否可能无法在我的 CPU 上运行？",
-    "zh-tw": "binpkg 是否可能無法在我的 CPU 上執行？",
-    "en": "Could a binpkg fail to run on my CPU?"
+    "zh-cn": "binary package 是否可能无法在我的 CPU 上运行？",
+    "zh-tw": "binary package 是否可能無法在我的 CPU 上執行？",
+    "en": "Could a binary package fail to run on my CPU?"
    },
    "desc": {
-    "zh-cn": "FAQ · binpkg",
-    "zh-tw": "FAQ · binpkg",
-    "en": "FAQ · binpkg"
+    "zh-cn": "FAQ · binary package",
+    "zh-tw": "FAQ · binary package",
+    "en": "FAQ · Binary packages"
    },
    "keywords": [
     "q4"
