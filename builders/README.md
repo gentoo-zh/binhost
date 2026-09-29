@@ -1,6 +1,6 @@
 # builders
 
-每个频道一台常驻 systemd-nspawn 机器 `binhost-<频道>`，由 `binhost-update <频道>` 在宿主机以 root 执行。以下以 `stable` 为例，`unstable` 相同，仓库以 `git clone https://github.com/gentoo-zh/binhost /var/lib/binhost` 部署，`binhost-update` 每轮开始前 reset 并 pull，告警配置 `/etc/binhost/alert.conf` 须已存在，宿主机已同步 gentoo 与 gentoo-zh，root 能 ssh 到发布目标，签名私钥不设口令：
+每个频道一台常驻 systemd-nspawn 机器 `binhost-<频道>`，由 `binhost-update <频道>` 在宿主机以 root 执行。以下以 `stable` 为例，`unstable` 相同，仓库以 `git clone https://github.com/gentoo-zh/binhost /var/lib/binhost` 部署，`binhost-update` 每轮开始前 reset 并 pull，告警配置 `/etc/binhost/alert.conf` 须已存在，宿主机已同步 gentoo 与 gentoo-zh（宿主机本身不安装 overlay 的包：`/etc/portage/package.mask` 写 `*/*::gentoo-zh`，`/etc/portage/package.unmask` 只放行内核归档要查询的 `sys-kernel/gentoo-cjk-kernel::gentoo-zh`），root 能 ssh 到发布目标，签名私钥不设口令：
 
 ```sh
 printf '[gentoo-zh]\nlocation = /var/db/repos/gentoo-zh\nsync-type = git\nsync-uri = https://github.com/gentoo-zh/overlay.git\n' > /etc/portage/repos.conf/gentoo-zh.conf
