@@ -1,0 +1,1069 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<!-- chrome:head -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/assets/logo.webp">
+<link rel="preload" href="/assets/fonts/source-sans-3.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/tokens.css?v=1e90dbb8">
+<link rel="stylesheet" href="/assets/site.css?v=4f99deea">
+<script src="/assets/early.js?v=e170b3a5"></script>
+<script src="/assets/docs.js?v=7bf4e48d" defer></script>
+<script src="/assets/indicator.js?v=d209281f" defer></script>
+<script src="/assets/seg-picker.js?v=e8734be5" defer></script>
+<script src="/assets/search.js?v=a358ca65" defer></script>
+<meta property="og:site_name" content="Gentoo-zh 下载">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://distfiles.gentoozh.org/assets/logo.webp">
+<meta name="twitter:card" content="summary">
+<!-- /chrome:head -->
+<title>设计语言 — Gentoo-zh 下载</title>
+<meta name="robots" content="noindex">
+</head>
+<body>
+
+<!-- chrome:nav -->
+<a class="skip" href="#main" data-i18n="skip">跳到正文</a>
+<header class="nav">
+  <button type="button" class="icon-btn nav-toggle" aria-expanded="false" aria-controls="sidebar" hidden>
+    <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M16.25 14H3.75c-.414 0-.75.336-.75.75s.336.75.75.75h12.5c.414 0 .75-.336.75-.75s-.336-.75-.75-.75M3.75 5.5h12.5c.414 0 .75-.336.75-.75S16.664 4 16.25 4H3.75c-.414 0-.75.336-.75.75s.336.75.75.75M16.25 9H3.75c-.414 0-.75.336-.75.75s.336.75.75.75h12.5c.414 0 .75-.336.75-.75S16.664 9 16.25 9"/></svg><span class="visually-hidden" data-i18n="navMenu">页面菜单</span>
+  </button>
+  <a class="nav-brand" href="/">
+    <img src="/assets/logo.webp" alt="" width="28" height="28">
+    <span class="nav-title" data-i18n="brand">Gentoo-zh 下载</span>
+  </a>
+  <div class="nav-tools" id="controls">
+    <button type="button" class="search-trigger js-only" aria-haspopup="dialog" aria-expanded="false" aria-controls="site-search" aria-keyshortcuts="Control+K Meta+K /">
+      <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="m18.53 17.47-5.083-5.084C14.417 11.186 15 9.66 15 8c0-3.86-3.14-7-7-7S1 4.14 1 8s3.14 7 7 7c1.66 0 3.185-.584 4.386-1.553l5.084 5.083c.146.147.338.22.53.22s.384-.073.53-.22c.293-.293.293-.767 0-1.06M8 13.5c-3.032 0-5.5-2.468-5.5-5.5S4.968 2.5 8 2.5s5.5 2.468 5.5 5.5-2.468 5.5-5.5 5.5"/></svg><span class="search-trigger-label" data-i18n="sdOpen">搜索 Gentoo-zh 下载</span><kbd class="search-kbd" aria-hidden="true">Ctrl K</kbd>
+    </button>
+    <a class="icon-btn bar-link" href="/files/" aria-label="文件" data-i18n-label="navFiles">
+      <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M16.75 5h-5.964c-.218 0-.424-.095-.567-.259L8.516 2.776C8.088 2.283 7.468 2 6.816 2H3.25C2.01 2 1 3.01 1 4.25v10.5C1 15.99 2.01 17 3.25 17h13.5c1.24 0 2.25-1.01 2.25-2.25v-7.5C19 6.01 17.99 5 16.75 5M3.25 3.5h3.565c.218 0 .424.095.567.259L8.458 5H2.5v-.75c0-.413.336-.75.75-.75M17.5 14.75c0 .413-.336.75-.75.75H3.25c-.414 0-.75-.337-.75-.75V6.5h14.25c.414 0 .75.337.75.75z"/></svg>
+    </a>
+    <a class="icon-btn gh" href="https://github.com/gentoo-zh"
+       title="gentoo-zh" aria-label="GitHub">
+      <svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.02-2.06-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.62-5.48 5.92.43.37.81 1.1.81 2.22 0 1.61-.01 2.9-.01 3.29 0 .32.21.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5z"/></svg>
+    </a>
+    <span class="bar-divider" aria-hidden="true"></span>
+    <div class="menu-wrap js-only" data-menu="lang">
+      <button type="button" class="icon-btn menu-trigger" id="lang-trigger" aria-haspopup="menu" aria-expanded="false" aria-controls="lang-menu">
+        <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 1.252c-4.825 0-8.75 3.925-8.75 8.75s3.925 8.75 8.75 8.75 8.75-3.925 8.75-8.75-3.925-8.75-8.75-8.75m7.21 8H14.07c-.14-2.33-.915-4.526-2.192-6.245 2.856.767 5.023 3.231 5.334 6.245m-7.198 7.631c-1.49-1.537-2.419-3.745-2.582-6.131h5.14c-.162 2.388-1.081 4.593-2.558 6.131M7.431 9.252c.162-2.387 1.091-4.594 2.581-6.132 1.477 1.538 2.396 3.743 2.558 6.132zm.715-6.251c-1.29 1.72-2.074 3.92-2.215 6.251H2.79c.312-3.022 2.49-5.49 5.357-6.251M2.79 10.752h3.142c.141 2.33.926 4.53 2.216 6.25-2.867-.759-5.046-3.228-5.358-6.25m9.088 6.245c1.277-1.72 2.052-3.915 2.192-6.245h3.142c-.311 3.014-2.479 5.478-5.334 6.245"/></svg>
+      </button>
+      <div class="menu" id="lang-menu" role="menu" aria-labelledby="lang-trigger" hidden>
+        <button type="button" class="menu-item" role="menuitemradio" aria-checked="true" data-value="zh-cn" lang="zh-CN"><svg class="icon icon-sm menu-check" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M7.864 15.734c-.222 0-.433-.098-.576-.27l-3.747-4.497c-.266-.319-.222-.792.096-1.057.317-.265.79-.223 1.056.096l3.154 3.786 7.44-9.469c.255-.326.728-.382 1.052-.127.326.256.383.728.127 1.053L8.454 15.447c-.14.179-.352.284-.579.287z"/></svg><span class="menu-label">简体中文</span></button>
+        <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-value="zh-tw" lang="zh-TW"><svg class="icon icon-sm menu-check" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M7.864 15.734c-.222 0-.433-.098-.576-.27l-3.747-4.497c-.266-.319-.222-.792.096-1.057.317-.265.79-.223 1.056.096l3.154 3.786 7.44-9.469c.255-.326.728-.382 1.052-.127.326.256.383.728.127 1.053L8.454 15.447c-.14.179-.352.284-.579.287z"/></svg><span class="menu-label">繁體中文</span></button>
+        <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-value="en" lang="en"><svg class="icon icon-sm menu-check" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M7.864 15.734c-.222 0-.433-.098-.576-.27l-3.747-4.497c-.266-.319-.222-.792.096-1.057.317-.265.79-.223 1.056.096l3.154 3.786 7.44-9.469c.255-.326.728-.382 1.052-.127.326.256.383.728.127 1.053L8.454 15.447c-.14.179-.352.284-.579.287z"/></svg><span class="menu-label">English</span></button>
+      </div>
+    </div>
+    <noscript>
+      <details class="menu-wrap lang-static">
+        <summary class="icon-btn" aria-label="语言" data-i18n-label="aLang"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 1.252c-4.825 0-8.75 3.925-8.75 8.75s3.925 8.75 8.75 8.75 8.75-3.925 8.75-8.75-3.925-8.75-8.75-8.75m7.21 8H14.07c-.14-2.33-.915-4.526-2.192-6.245 2.856.767 5.023 3.231 5.334 6.245m-7.198 7.631c-1.49-1.537-2.419-3.745-2.582-6.131h5.14c-.162 2.388-1.081 4.593-2.558 6.131M7.431 9.252c.162-2.387 1.091-4.594 2.581-6.132 1.477 1.538 2.396 3.743 2.558 6.132zm.715-6.251c-1.29 1.72-2.074 3.92-2.215 6.251H2.79c.312-3.022 2.49-5.49 5.357-6.251M2.79 10.752h3.142c.141 2.33.926 4.53 2.216 6.25-2.867-.759-5.046-3.228-5.358-6.25m9.088 6.245c1.277-1.72 2.052-3.915 2.192-6.245h3.142c-.311 3.014-2.479 5.478-5.334 6.245"/></svg></summary>
+        <div class="menu">
+          <a class="menu-item" href="?lang=zh-cn" hreflang="zh-CN" lang="zh-CN" aria-current="true"><span class="menu-label">简体中文</span></a>
+          <a class="menu-item" href="?lang=zh-tw" hreflang="zh-TW" lang="zh-TW"><span class="menu-label">繁體中文</span></a>
+          <a class="menu-item" href="?lang=en" hreflang="en" lang="en"><span class="menu-label">English</span></a>
+        </div>
+      </details>
+    </noscript>
+    <button type="button" class="icon-btn theme-btn js-only" id="theme-toggle">
+      <span class="ico ico-lighten"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 6.35c2.012 0 3.65 1.638 3.65 3.65s-1.638 3.65-3.65 3.65S6.35 12.012 6.35 10 7.988 6.35 10 6.35m0-1.5c-2.84 0-5.15 2.31-5.15 5.15s2.31 5.15 5.15 5.15 5.15-2.31 5.15-5.15S12.84 4.85 10 4.85M10 3.25c-.414 0-.75-.336-.75-.75V1.25c0-.414.336-.75.75-.75s.75.336.75.75V2.5c0 .414-.336.75-.75.75M10 19.5c-.414 0-.75-.336-.75-.75V17.5c0-.414.336-.75.75-.75s.75.336.75.75v1.25c0 .414-.336.75-.75.75M2.5 10.75H1.25c-.414 0-.75-.336-.75-.75s.336-.75.75-.75H2.5c.414 0 .75.336.75.75s-.336.75-.75.75M18.75 10.75H17.5c-.414 0-.75-.336-.75-.75s.336-.75.75-.75h1.25c.414 0 .75.336.75.75s-.336.75-.75.75M15.304 5.446c-.193 0-.384-.073-.53-.22-.294-.292-.294-.767 0-1.06l.883-.884c.293-.293.768-.293 1.06 0s.294.768 0 1.06l-.883.885c-.146.146-.338.22-.53.22M3.813 16.938c-.193 0-.384-.074-.53-.22-.294-.293-.294-.768 0-1.06l.883-.885c.293-.293.768-.293 1.06 0s.294.768 0 1.061l-.883.884c-.147.146-.338.22-.53.22M4.696 5.446c-.192 0-.383-.073-.53-.22l-.884-.883c-.293-.293-.293-.768 0-1.06s.768-.294 1.06 0l.885.883c.293.293.293.768 0 1.06-.147.147-.338.22-.53.22M16.188 16.938c-.193 0-.384-.074-.53-.22l-.885-.884c-.293-.293-.293-.768 0-1.06s.768-.294 1.061 0l.884.883c.293.293.293.768 0 1.06-.147.147-.338.22-.53.22"/></svg></span>
+      <span class="ico ico-contrast"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 18.78c-4.825 0-8.75-3.926-8.75-8.75S5.175 1.28 10 1.28s8.75 3.924 8.75 8.75-3.925 8.75-8.75 8.75m0-16c-3.998 0-7.25 3.251-7.25 7.25s3.252 7.25 7.25 7.25 7.25-3.253 7.25-7.25S13.998 2.78 10 2.78"/><path fill="currentColor" d="M10 14.384c0 .653.615 1.121 1.251.973 2.435-.566 4.249-2.75 4.249-5.357s-1.814-4.79-4.249-5.357c-.636-.148-1.251.32-1.251.973z"/></svg></span>
+    </button>
+  </div>
+</header>
+<dialog class="sd" id="site-search" aria-label="搜索 Gentoo-zh 下载" data-i18n-label="sdOpen" data-src="/assets/search-index.json">
+  <div class="sd-brand">
+    <a class="sd-brand-link" href="/"><img src="/assets/logo.webp" alt="" width="28" height="28"><span data-i18n="brand">Gentoo-zh 下载</span></a>
+    <p class="sd-tagline" data-i18n="sdTagline">Gentoo 中文社区的 overlay 指南、distfiles、binhost、Live ISO 与镜像服务。</p>
+  </div>
+  <div class="sd-main">
+    <div class="sd-top">
+      <div class="search-field sd-field">
+        <svg class="icon search-icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="m18.53 17.47-5.083-5.084C14.417 11.186 15 9.66 15 8c0-3.86-3.14-7-7-7S1 4.14 1 8s3.14 7 7 7c1.66 0 3.185-.584 4.386-1.553l5.084 5.083c.146.147.338.22.53.22s.384-.073.53-.22c.293-.293.293-.767 0-1.06M8 13.5c-3.032 0-5.5-2.468-5.5-5.5S4.968 2.5 8 2.5s5.5 2.468 5.5 5.5-2.468 5.5-5.5 5.5"/></svg>
+        <input class="search sd-input" type="search" role="combobox" aria-expanded="true" aria-controls="sd-results" aria-autocomplete="list" autocomplete="off" spellcheck="false" aria-label="搜索 Gentoo-zh 下载" data-i18n-label="sdOpen">
+      </div>
+    </div>
+    <div class="sd-chips" role="group" aria-label="分类" data-i18n-label="sdCats"></div>
+    <div class="sd-status" role="status"><span class="sd-msg"></span><button type="button" class="msg-retry sd-retry" data-i18n="sdRetry" hidden>重试</button></div>
+    <div class="sd-results" id="sd-results" role="listbox" aria-label="搜索结果" data-i18n-label="sdResults"></div>
+  </div>
+  <button type="button" class="icon-btn sd-close" aria-label="关闭" data-i18n-label="sdClose"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="m11.06 10 5.207-5.206c.293-.293.293-.768 0-1.06s-.767-.294-1.06 0L10 8.938 4.793 3.733c-.293-.293-.767-.293-1.06 0s-.293.768 0 1.06L8.939 10l-5.206 5.206c-.293.293-.293.768 0 1.06.146.147.338.22.53.22s.384-.073.53-.22L10 11.062l5.207 5.206c.146.146.338.22.53.22s.384-.074.53-.22c.293-.293.293-.768 0-1.06z"/></svg></button>
+  <div class="sd-strings" hidden>
+    <span data-i18n="fCommunity">Gentoo 中文社区</span><span data-i18n="sdAll">全部</span><span data-i18n="sdPkgs">软件包</span><span data-i18n="sdLoading">正在加载…</span>
+    <span data-i18n="sdFailed">无法加载搜索索引。</span><span data-i18n="sdNone">没有与“{q}”匹配的结果。</span>
+    <span data-i18n="sdPkgHint">输入至少 2 个字符以搜索软件包。</span><span data-i18n="sdPkgFailed">无法加载软件包列表。</span>
+    <span data-i18n="sdPkgMore">共 {n} 个匹配的软件包，此处显示前 {m} 个。</span>
+  </div>
+</dialog>
+<nav class="sidebar" id="sidebar" aria-label="页面" data-i18n-label="aPages">
+  <p class="nav-label" id="nav-intro" data-i18n="navSecIntro">简介</p>
+  <ul class="pages" aria-labelledby="nav-intro">
+    <li><a class="nav-link" href="/" data-i18n="navHome">概览</a></li>
+    <li class="bar-mirror"><a class="nav-link bar-mirror-link" href="/files/" data-i18n="navFiles">文件</a></li>
+  </ul>
+  <details class="nav-group" data-group="overlay" data-default-open open>
+    <summary class="nav-group-title"><span data-i18n="navGOverlay">overlay</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/overlay" data-i18n="navOverlay">加入 overlay</a></li>
+      <li><a class="nav-link" href="/packages" data-i18n="navPkgs">软件包列表</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="distfiles" data-default-open open>
+    <summary class="nav-group-title"><span data-i18n="navGDist">distfiles</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/distfiles-setup" data-i18n="navDist">配置 distfiles</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="binhost" data-default-open open>
+    <summary class="nav-group-title"><span data-i18n="navGBin">binhost</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/binpkg-setup" data-i18n="navBin">配置 binpkg</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="iso" open>
+    <summary class="nav-group-title"><span data-i18n="navIso">Live ISO</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/iso" data-i18n="navIsoGet">CJK 最小安装镜像</a></li>
+      <li><a class="nav-link" href="/gigos/" data-i18n="navGigos">Gig-OS（独立项目）</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="mirrors" data-default-open open>
+    <summary class="nav-group-title"><span data-i18n="navGMirrors">镜像</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/mirrors" data-i18n="navMirrors">镜像列表</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="help" open>
+    <summary class="nav-group-title"><span data-i18n="navHelp">帮助</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/faq">FAQ</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="about" open>
+    <summary class="nav-group-title"><span data-i18n="navGAbout">关于</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/about" data-i18n="navAbout">关于本站</a></li>
+      <li><a class="nav-link" href="/status" data-i18n="navStatus">服务状态</a></li>
+      <li><a class="nav-link" href="/thanks" data-i18n="navThanks">致谢</a></li>
+    </ul>
+  </details>
+</nav>
+<script>
+// Every group is open in the markup, so without scripts the whole list shows. Before the first paint this
+// marks the current page where render-chrome.py could not, keeps its group open, and sets each other group
+// as the reader last left it in this session, else as the markup's data-default-open says: the docs keep
+// their tree as it was between pages and open only their main group at first.
+(function () {
+  var side = document.getElementById('sidebar'), key = 'nav-groups', saved = {};
+  try { saved = JSON.parse(sessionStorage.getItem(key)) || {}; } catch (e) { saved = {}; }
+  var path = location.pathname.replace(/\.html$/, '').replace(/\/index$/, '/');
+  function matches(a) {
+    var href = a.getAttribute('href');
+    return href === path || (href.length > 1 && href.slice(-1) === '/' && path.indexOf(href) === 0);
+  }
+  // The file browser's chrome marks /files/, but a directory the sidebar links to (/gigos/) is marked
+  // itself while the reader browses it.
+  var current = side.querySelector('a[aria-current="page"]');
+  if (!current || !matches(current)) {
+    var found = null;
+    side.querySelectorAll('a[href^="/"]').forEach(function (a) {
+      if (!found && matches(a)) found = a;
+    });
+    if (found) {
+      if (current) current.removeAttribute('aria-current');
+      current = found;
+      found.setAttribute('aria-current', 'page');
+    }
+  }
+  side.querySelectorAll('.nav-group').forEach(function (g) {
+    var id = g.getAttribute('data-group');
+    g.open = current && g.contains(current) ? true
+      : typeof saved[id] === 'boolean' ? saved[id] : g.hasAttribute('data-default-open');
+    // The toggle event fires after the element's own state changes, for a mouse click, a keyboard
+    // toggle or a script setting .open alike, so g.open here is always the new state.
+    g.addEventListener('toggle', function () {
+      saved[id] = g.open;
+      try { sessionStorage.setItem(key, JSON.stringify(saved)); } catch (e) { /* not kept */ }
+    });
+  });
+})();
+</script>
+<!-- /chrome:nav -->
+
+<main id="main" class="wrap">
+
+  <h1 class="title" data-i18n="title">设计语言</h1>
+  <p class="lead" data-i18n="lead">本页规定站点的设计取值与规则。修改样式或新增页面时，以本页为准。色板、字号和圆角从当前生效的样式表读取，不另抄数值。</p>
+
+  <h2 id="role" data-i18n="hRole">定位</h2>
+
+  <p data-i18n="role1">本站是供用户查找地址、确认包状态和浏览目录的索引站点。设计优先保证信息密度与数据可读性，再考虑留白和装饰。</p>
+  <p data-i18n-html="role2">Spectrum 2 文档的版式：左侧页面列表，中间正文，宽屏右侧列出本页小节。每页的小节可以直接跳转，页面增加时只需在侧栏加一行，顶栏不必改。本站不照搬 <a href="https://gentoozh.org/">gentoozh.org</a> 的卡片网格：卡片内边距会拉开数据表的行距。</p>
+
+  <h2 id="color" data-i18n="hColor">色彩</h2>
+
+  <p data-i18n-html="color1">中性色、状态色与阴影取自 Adobe 的 Spectrum 2 官方令牌 <code>@adobe/spectrum-tokens</code> 15.4.1，灰阶不带色相。强调色是 Gentoo 官方紫 <code>#54487A</code>（tyrian 主题 <code>_variables.scss</code> 与 Gentoo Wiki 的 Project:Artwork/Colors），悬停用官方的 <code>#61538D</code>。深色模式保留同一色相，只提高明度。全站只有这一个强调色相。</p>
+  <p data-i18n-html="color2">对比度按渲染出的颜色对计算：浅色强调色在白底上 8.1:1，深色强调色 <code>#a897e3</code> 在深色面板 <code>#111111</code> 上 7.4:1。强调色只用于链接、焦点环与代码里的值；当前项的竖条、标签页的指示条和选中的切换按钮都用中性灰，与 Spectrum 2 文档一致。状态色只出现在三处：已构建的对勾（绿）、注意提示框的竖条（橙）、复制失败的提示（红）。</p>
+
+  <h3 data-i18n="hLight">浅色</h3>
+  <div class="sw-grid" id="sw-light" data-theme="light"><div class="sw sw-bg"><i></i><b>bg</b><span>#f8f8f8</span></div><div class="sw sw-surface"><i></i><b>surface</b><span>#ffffff</span></div><div class="sw sw-raised"><i></i><b>raised</b><span>#ffffff</span></div><div class="sw sw-code-bg"><i></i><b>code-bg</b><span>#f8f8f8</span></div><div class="sw sw-hover"><i></i><b>hover</b><span>#e9e9e9</span></div><div class="sw sw-track"><i></i><b>track</b><span>#e9e9e9</span></div><div class="sw sw-track-on"><i></i><b>track-on</b><span>#ffffff</span></div><div class="sw sw-border-subtle"><i></i><b>border-subtle</b><span>#e9e9e9</span></div><div class="sw sw-border"><i></i><b>border</b><span>#e1e1e1</span></div><div class="sw sw-border-strong"><i></i><b>border-strong</b><span>#8f8f8f</span></div><div class="sw sw-fg"><i></i><b>fg</b><span>#131313</span></div><div class="sw sw-fg-body"><i></i><b>fg-body</b><span>#292929</span></div><div class="sw sw-fg-soft"><i></i><b>fg-soft</b><span>#505050</span></div><div class="sw sw-fg-muted"><i></i><b>fg-muted</b><span>#717171</span></div><div class="sw sw-accent"><i></i><b>accent</b><span>#54487a</span></div><div class="sw sw-ok"><i></i><b>ok</b><span>#05834e</span></div><div class="sw sw-neutral-subtle"><i></i><b>neutral-subtle</b><span>#e9e9e9</span></div><div class="sw sw-notice"><i></i><b>notice</b><span>#c24e00</span></div><div class="sw sw-bad"><i></i><b>bad</b><span>#d73220</span></div></div>
+
+  <h3 data-i18n="hDark">深色</h3>
+  <div class="sw-grid" id="sw-dark" data-theme="dark"><div class="sw sw-bg"><i></i><b>bg</b><span>#1b1b1b</span></div><div class="sw sw-surface"><i></i><b>surface</b><span>#111111</span></div><div class="sw sw-raised"><i></i><b>raised</b><span>#222222</span></div><div class="sw sw-code-bg"><i></i><b>code-bg</b><span>#1b1b1b</span></div><div class="sw sw-hover"><i></i><b>hover</b><span>#2c2c2c</span></div><div class="sw sw-track"><i></i><b>track</b><span>#2c2c2c</span></div><div class="sw sw-track-on"><i></i><b>track-on</b><span>#111111</span></div><div class="sw sw-border-subtle"><i></i><b>border-subtle</b><span>#2c2c2c</span></div><div class="sw sw-border"><i></i><b>border</b><span>#393939</span></div><div class="sw sw-border-strong"><i></i><b>border-strong</b><span>#6d6d6d</span></div><div class="sw sw-fg"><i></i><b>fg</b><span>#f2f2f2</span></div><div class="sw sw-fg-body"><i></i><b>fg-body</b><span>#dbdbdb</span></div><div class="sw sw-fg-soft"><i></i><b>fg-soft</b><span>#afafaf</span></div><div class="sw sw-fg-muted"><i></i><b>fg-muted</b><span>#8a8a8a</span></div><div class="sw sw-accent"><i></i><b>accent</b><span>#a897e3</span></div><div class="sw sw-ok"><i></i><b>ok</b><span>#099d59</span></div><div class="sw sw-neutral-subtle"><i></i><b>neutral-subtle</b><span>#2c2c2c</span></div><div class="sw sw-notice"><i></i><b>notice</b><span>#e06400</span></div><div class="sw sw-bad"><i></i><b>bad</b><span>#fc432e</span></div></div>
+
+  <table class="spec">
+    <thead><tr><th data-i18n="thVar">变量</th><th data-i18n="thUse">用途</th></tr></thead>
+    <tbody>
+      <tr><td>--bg</td><td data-i18n="v_bg">页面底色（Spectrum gray-50）</td></tr>
+      <tr><td>--surface</td><td data-i18n="v_surface">面板与表头（gray-25；深色模式下比底色更深）</td></tr>
+      <tr><td>--raised</td><td data-i18n="v_raised">菜单等浮起的面</td></tr>
+      <tr><td>--code-bg</td><td data-i18n="v_code_bg">代码块与行内代码（gray-50，嵌入面板）</td></tr>
+      <tr><td>--hover</td><td data-i18n="v_hover">悬停时的底色</td></tr>
+      <tr><td>--track</td><td data-i18n="v_track">分段控件的轨道</td></tr>
+      <tr><td>--track-on</td><td data-i18n="v_track_on">切换按钮的当前项</td></tr>
+      <tr><td>--border-subtle</td><td data-i18n="v_border_subtle">行内代码的边框</td></tr>
+      <tr><td>--border</td><td data-i18n="v_border">分隔线。面板内部用线，不用阴影</td></tr>
+      <tr><td>--border-strong</td><td data-i18n="v_border_strong">搜索框边框、侧栏悬停竖条与代码块滚动条，对面板 3:1</td></tr>
+      <tr><td>--fg</td><td data-i18n="v_fg">标题与当前项</td></tr>
+      <tr><td>--fg-body</td><td data-i18n="v_fg_body">正文；步骤编号与打开的 sudo 以它为底</td></tr>
+      <tr><td>--fg-soft</td><td data-i18n="v_fg_soft">次要信息：说明、表头、代码里的选项</td></tr>
+      <tr><td>--fg-muted</td><td data-i18n="v_fg_muted">第三级：单位、时间、提示符，对面板 4.5:1</td></tr>
+      <tr><td>--accent</td><td data-i18n="v_accent">链接、焦点环、代码里的值</td></tr>
+      <tr><td>--ok</td><td data-i18n="v_ok">只用于已构建的对勾</td></tr>
+      <tr><td>--neutral-subtle</td><td data-i18n="v_neutral_subtle">引导卡片图标的底（S2 neutral-subtle，即 gray-100）</td></tr>
+      <tr><td>--notice</td><td data-i18n="v_notice">注意提示框的图标</td></tr>
+      <tr><td>--notice-border</td><td data-i18n="v_notice_border">注意提示框的 2px 边框（notice-700）</td></tr>
+      <tr><td>--bad</td><td data-i18n="v_bad">复制失败的提示</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="type" data-i18n="hFont">字体</h2>
+
+  <p data-i18n="font1">正文使用 Source Sans 3，它近似 Spectrum 的 Adobe Clean；代码与数据使用 Source Code Pro。包名、版本、路径、体积和时间需要纵向对齐，比例字体做不到。两个字体都只含拉丁字形并随站点自托管，中文落到系统的思源黑体、苹方或微软雅黑。</p>
+
+  <div class="demo">
+    <p class="demo-sans" data-i18n="fontSans">Source Sans 3：正文与说明文字 The quick brown fox</p>
+    <p class="demo-mono" data-i18n="fontMono">Source Code Pro：app-i18n/fcitx-rime-extra 5.1.8 · 12.4 M · 2026-07-27</p>
+  </div>
+
+  <p data-i18n="font2">字号取自 React Spectrum 文档的实测值：标题 58px、h2 28px、h3 22px、正文与引导句 18px。中文低一档，行高 1.8，汉字才不挤在一起。下表的值随当前语言读取。</p>
+
+  <table class="spec">
+    <thead><tr><th data-i18n="thSize">尺寸</th><th data-i18n="thWhere">用途</th></tr></thead>
+    <tbody>
+      <tr><td data-token="fs-title">3rem</td><td data-i18n="s_fs_title">页面标题，每页一个</td></tr>
+      <tr><td data-token="fs-h2">1.625rem</td><td data-i18n="s_fs_h2">章节标题</td></tr>
+      <tr><td data-token="fs-h3">1.25rem</td><td data-i18n="s_fs_h3">小节标题、FAQ 问题</td></tr>
+      <tr><td data-token="fs-lead">1.0625rem</td><td data-i18n="s_fs_lead">引导句，与正文同大</td></tr>
+      <tr><td data-token="fs-body">1.0625rem</td><td data-i18n="s_fs_body">正文、步骤标题</td></tr>
+      <tr><td data-token="fs-ui">0.875rem</td><td data-i18n="s_fs_ui">控件、侧栏、表格、状态行</td></tr>
+      <tr><td data-token="fs-code">0.875rem</td><td data-i18n="s_fs_code">代码块与表格数据</td></tr>
+      <tr><td data-token="fs-small">0.75rem</td><td data-i18n="s_fs_small">时间戳、徽标、页脚、文件路径</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="spacing" data-i18n="hSpacing">间距与分隔</h2>
+
+  <p data-i18n="spacing1">间距取 Spectrum 2 的 spacing 阶梯：4、8、12、16、24、32、40、48、64px。版面只有一种分层：灰底上一块面板，面板顶部圆角并带三层阴影。面板内部用 1px 线分隔各行，代码块与安装框用 gray-50 灰底嵌入面板；只有面板与菜单带阴影。</p>
+
+  <table class="spec">
+    <thead><tr><th data-i18n="thRadius">圆角</th><th data-i18n="thWhere">用途</th></tr></thead>
+    <tbody>
+      <tr><td data-token="r-sm" data-label="--r-sm">--r-sm · 4px</td><td data-i18n="rad_r_sm">行内代码、徽标、焦点环、侧栏行、标签页</td></tr>
+      <tr><td data-token="r-md" data-label="--r-md">--r-md · 8px</td><td data-i18n="rad_r_md">32px 控件：按钮、分段控件轨道与选项、菜单项、大纲链接</td></tr>
+      <tr><td data-token="r-lg" data-label="--r-lg">--r-lg · 10px</td><td data-i18n="rad_r_lg">控件尺度的面：提示框、卡片、菜单弹出层、提示条、选中的分段、顶栏按钮</td></tr>
+      <tr><td data-token="r-xl" data-label="--r-xl">--r-xl · 16px</td><td data-i18n="rad_r_xl">代码块、安装框、面板顶部</td></tr>
+      <tr><td data-token="r-full" data-label="--r-full">--r-full · 9999px</td><td data-i18n="rad_r_full">胶囊与圆头：竖条、标签页指示条、步骤编号、搜索框。check-css 拒绝不是 --r-* 令牌的圆角</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="mobile" data-i18n="hMobile">移动端</h2>
+
+  <p data-i18n="mobile1">布局断点两档，按视口宽度；表格列另按正文栏宽度用容器查询收起，侧栏占去的宽度因此不必另算。新增断点前必须补上对应宽度的验证。</p>
+
+  <table class="spec">
+    <thead><tr><th data-i18n="thBp">断点</th><th data-i18n="thBpDo">作用</th></tr></thead>
+    <tbody>
+      <tr><td>64rem</td><td data-i18n="bp2">以下一栏：侧栏收进顶栏的菜单按钮，右侧本页目录改为顶栏正中的小节选择按钮，控件高度 40px；顶栏隐藏文字链接、GitHub 图标与分隔线，“文件”改列在侧栏的概览下方</td></tr>
+      <tr><td>34rem</td><td data-i18n="bp3">手机：状态行的数值换到标签下方，代码字号与内边距收紧，页面标题降到 40px</td></tr>
+      <tr><td>@container 58 / 48 / 40rem</td><td data-i18n="bp4">正文栏窄于这些宽度时依次隐藏体积列、版本列、日期列</td></tr>
+    </tbody>
+  </table>
+  <p data-i18n="mobile2">媒体查询与容器查询都写在基准规则之后。同权重规则按源码顺序覆盖；写在基准规则之前会被后续基准规则覆盖。</p>
+
+  <table class="spec">
+    <thead><tr><th data-i18n="thRule">规则</th><th data-i18n="thWhy">原因</th></tr></thead>
+    <tbody>
+      <tr><td data-i18n="r1k">顶栏一行</td><td data-i18n="r1v">品牌名超长时以省略号截断，语言与主题始终可见</td></tr>
+      <tr><td data-i18n="r2k">无脚本时侧栏在正文上方</td><td data-i18n-html="r2v">early.js 在 &lt;html&gt; 写入 data-js 后，侧栏才收进菜单按钮；脚本关闭时导航仍然可用</td></tr>
+      <tr><td data-i18n="r3k">表格逐列隐藏</td><td data-i18n="r3v">依次隐藏体积列与版本列，状态列保留到最后</td></tr>
+      <tr><td data-i18n="r4k">表头留在视口内</td><td data-i18n="r4v">thead 使用 position: sticky，top 使用 --nav-h。顶栏同样为 sticky；若 top 为 0，表头会被顶栏遮挡。util.js 测量窄屏顶栏高度并写入变量</td></tr>
+      <tr><td data-i18n="r5k">包名在斜线处断行</td><td data-i18n-html="r5v">用 &lt;wbr&gt; 标出断点。word-break: break-all 会把 app-admin/1password 切成无法辨认的三段</td></tr>
+      <tr><td data-i18n="r6k">页面不横向滚动</td><td data-i18n="r6v">代码块与地址栏在各自容器内滚动，表格通过逐列隐藏适配视口。表格外层不得设置 overflow；overflow-x 不是 visible 时，overflow-y 的 visible 会计算为 auto，sticky 表头将绑定到该容器</td></tr>
+      <tr><td data-i18n="r7k">正文内边距</td><td data-i18n="r7v">手机 16px，桌面 40px。更小的值会让正文紧贴视口边缘</td></tr>
+    </tbody>
+  </table>
+  <p data-i18n-html="mobile3">修改后逐一验证 320 至 1280 的每个宽度：可见列、指纹换行、标题字号、顶栏折行、表头吸顶、<code>documentElement.scrollWidth</code> 不大于 <code>clientWidth</code>。使用指定宽度的 iframe 测量；修改 <code>html.style.width</code> 不会触发媒体查询。</p>
+
+  <h2 id="components" data-i18n="hComp">组件</h2>
+
+  <h3 data-i18n="hShell">外壳</h3>
+  <p data-i18n-html="shell1">顶栏、侧栏、页脚与右侧目录由 <code>site/tools/render-chrome.py</code> 从 <code>site/tools/chrome/</code> 的模板生成，各页一致。顶栏左侧是站点标志与站名，正中是搜索按钮，右侧依次是“文件”图标按钮（S2 Folder 图标）、GitHub 图标、分隔线、语言与主题按钮，顺序与 React Spectrum 文档的顶栏相同。侧栏顶端是单独的概览，其下每个产品一个折叠分组：组名与页面行同样大小、字重与颜色，行尾的 Chevron 在展开时用 150ms 转向下方，组内页面再缩进 16px，展开与收起时立即出现或消失。悬停一行时左侧立即出现浅灰竖条，Chevron 加深；按下时整行按 S2 pressScale 下沉；键盘焦点环画在行内 2px，圆角 8px。以上状态均于 2026-09-29 在官方文档侧栏实测。没有脚本时各组全部展开；有脚本时展开当前页所在的组，其余组沿用读者在本次会话中的选择，初始按 <code>data-default-open</code>。新增页面只需在 <code>nav.html</code> 的组里加一行。以 / 结尾的行是文件浏览器的目录（如 /gigos/），不进上一页与下一页；浏览该目录时，侧栏把当前页标记从“文件”移到这一行。当前页加粗，左侧一道中性灰竖条；右侧目录由 <code>docs.js</code> 从正文 h2 生成，读到的小节同样标出竖条；小节只列在这里，不进侧栏，与 React Spectrum 文档一致。1024px 以下右侧目录收起，顶栏正中改为小节选择按钮：按钮写出正在读的小节，第一个小节之前写页面标题，点开是列出标题与各小节的弹出菜单。页面滚动 24 到 64px 之间，按钮上移淡入，顶栏浮起并加阴影；减少动态效果时按钮直接显示。只有正文含两个以上 h2 的页面保留右侧目录一栏，其余页面的正文在面板内居中。面板高一个视口，粘在顶栏下方：页面滚动时正文从顶栏下方经过，面板上方的圆角始终可见。官方文档在 1024px 以上让面板自身滚动、页面不滚动（2026-09-29 实测）；这里保留页面滚动，锚点、目录的阅读位置与键盘滚动不受影响。</p>
+
+  <h3 data-i18n="hChoice">选项切换</h3>
+  <div class="demo">
+    <div class="mode-pick" role="tablist" aria-label="配置方式" data-i18n-label="aMode">
+      <button type="button" class="mode on" role="tab" aria-selected="true" data-i18n="modeManual">手动配置</button>
+      <button type="button" class="mode" role="tab" aria-selected="false" tabindex="-1" data-i18n="modeQuick">快速配置</button>
+    </div>
+    <div class="src-pick" role="group" aria-label="频道" data-i18n-label="aChannel">
+      <span class="src-label" data-i18n="choiceLabel">频道</span>
+      <span class="seg"><button type="button" class="src-opt on" aria-pressed="true">stable</button>
+      <button type="button" class="src-opt" aria-pressed="false">unstable</button></span>
+    </div>
+  </div>
+  <p data-i18n-html="choice1">切换整块内容的选择（配置方式）画成 Spectrum 的标签页：文字下方一道 2px 中性灰横条，没有底线。频道、镜像与包列表筛选是 Spectrum 2 的分段控件：灰色轨道，选中项加 2px 描边；镜像选择与它改动的地址或代码放在同一个安装框里。文件浏览器在根目录以下用同一组镜像选择器改写文件的下载链接，默认源站；目录列表仍从源站读取。所有镜像选择器共用 <code>mirror-source</code>，在一页选定后其他页沿用。当前项写在元素上（<code>.on</code> 与 <code>aria-pressed</code>），切换后立即更新相关地址、配置和状态。标签页切换的面板带 <code>data-pane</code>；初始项是标记中带 <code>.on</code> 的标签，链接指向某个面板内的锚点时先切到该面板，右侧目录只列出可见面板的小节。没有脚本时标签隐藏，各面板依次显示。</p>
+
+  <h3 data-i18n="hMenu">菜单按钮</h3>
+  <p data-i18n="menu1">语言与主题各是一个安静的 ActionButton：32px 高、圆角 10、20px 图标，语言按钮只有地球图标，名称写出当前语言（如“语言：简体中文”），不加工具提示，与 S2 ActionButton 文档一致。语言按钮点开是 S2 Menu：弹出层内距 8px、圆角 10、带阴影，深色下另加 1px gray-200 描边；菜单项高 32px，已选项只在起始侧显示勾号，悬停与键盘焦点为 gray-200 底、gray-900 字。键盘按 WAI-ARIA 菜单按钮实现：Enter、空格或下箭头展开并聚焦已选项，上下箭头、Home、End 移动，Enter 选择，Escape 收起并把焦点还给按钮，Tab 或点击外部也会收起。</p>
+  <p data-i18n-html="menu2">主题默认跟随系统。主题按钮与 React Spectrum 文档相同，是切换按钮而不是菜单：跟随系统时按下改用与当前相反的主题，再按一次恢复跟随系统。图标是按下后将切换到的主题：浅色生效时为 Contrast，深色生效时为 Lighten。按钮名称写出当前模式与按下的效果，例如“主题：跟随系统（浅色），按下改用深色”。选定的主题保存在 <code>mirror-theme</code>，恢复跟随系统时清除；<code>early.js</code> 在绘制前写入 <code>data-theme</code>，CSS 按 <code>data-theme</code> 与系统设置选择图标，因此首帧即正确，系统设置改变时也随之更新。不执行脚本时两个按钮隐藏，主题跟随系统；语言链接放在 <code>&lt;details&gt;</code> 里，但译文由脚本替换，没有脚本时页面仍是简体。</p>
+
+  <h3 data-i18n="hSearch">站内搜索</h3>
+  <p data-i18n-html="search1">站内搜索照 React Spectrum 文档的搜索实现（doona 文档照它复制，见 <code>doona-docs</code> 的 <code>site/scripts/search.js</code> 与 <code>site/styles/search.css</code>）。顶栏中间是 S2 SearchField 形状的触发按钮：40px 高、全圆角、2px 浅灰边框（悬停时加深，获得焦点时为正文色），末端是 24px 高的快捷键标签；点按、在按钮上直接输入（字符进入搜索框）、Ctrl K（Mac 为 Command K）或 / 打开几乎占满窗口的模态对话框，关闭按钮在右上角。左栏是站点标志、站名与一句介绍，右侧依次是 2px 深色边框的搜索框、分类标签和结果。分类标签按侧栏的产品分组生成，外加“全部”与“包”，以竖线与最后的外部链接标签（Gentoo 中文社区，带 LinkOut 图标）分开；选中的标签以正文色填充、底色文字，其余为浅灰底。页面结果是 S2 Card 形状的卡片，四列：圆角 10、带阴影，上方柔和的紫色渐变底板居中放分组的 64px 白色图标，下方是粗体标题与至多两行说明；当前结果加 2px 正文色边框。包结果是 32px 高的紧凑列表行，结果在对话框内滚动。1024px 以下触发按钮只显示图标，对话框占满屏幕，站名移到顶部。</p>
+  <p data-i18n-html="search2">搜索框是 combobox，结果是 listbox：焦点始终在搜索框，方向键、Home、End 通过 <code>aria-activedescendant</code> 移动当前结果，当前结果带焦点环，Enter 打开；输入后自动选中第一项。Esc 与关闭按钮关闭对话框，焦点回到触发按钮；Tab 在对话框内循环。索引由 <code>site/tools/build-search-index.py</code> 从页面生成，<code>--check</code> 在索引过期时失败，首次打开时加载；包数据取自 <code>/packages.json</code>，查询达到 2 个字符才匹配。打开与关闭通过 View Transition 在触发按钮与对话框之间变形，历时 250ms；手机上整页淡入淡出；减少动态效果时不做动画。</p>
+
+  <h3 data-i18n="hIcon">图标</h3>
+  <p data-i18n-html="icon1">图标全部是 Spectrum 2 workflow 图标，逐个取自 <code>@react-spectrum/s2</code> 1.7.1 的 <code>icons/</code>，几何不改，颜色取 <code>currentColor</code>：MenuHamburger、GlobeGrid、Lighten、Contrast、DeviceDesktop、Copy、Search、ChevronRight、OpenIn、Checkmark、Close。与 14px 文字并排时 20px，在面包屑、外部链接与菜单勾号处 16px。GitHub 标志沿用 GitHub 自己的图形，React Spectrum 文档也这样做。</p>
+
+  <h3 data-i18n="hMotion">动效</h3>
+  <p data-i18n="motion1">动效照 React Spectrum 文档实测：切换主题时底色立即切换，控件颜色以 150ms 过渡，主题按钮的图标以 200ms 交叉淡入淡出并旋转 90 度；菜单以 200ms 淡入，同时从按钮方向位移 4px，关闭时原路退出，打开用 CSS 默认的 ease 曲线，关闭用 S2 的 in 曲线（Popover.tsx）；按下按钮时下沉 2px，与 S2 pressScale 相同；手机上的页面列表以 250ms 淡入。焦点环立即出现，换页与内容加载都没有动画，滚动只驱动 1024px 以下顶栏的小节选择按钮。</p>
+  <p data-i18n-html="motion2">令牌在 <code>tokens.css</code>：缓动曲线 <code>--animation-ease-in-out</code>、<code>--animation-ease-in</code>、<code>--animation-ease-out</code> 取自 <code>@spectrum-css/tokens</code> 16.0.2，与 S2 样式宏相同；时长 <code>--animation-duration-state</code>（150ms）与 <code>--animation-duration-overlay</code>（200ms）取 S2 组件实际使用的值，<code>--animation-duration-500</code>（250ms）取自同一份令牌。所有动效只写在 <code>prefers-reduced-motion: no-preference</code> 里，系统要求减少动态效果时状态立即切换。首次绘制不播放过渡：<code>early.js</code> 在绘制前设定主题，并用 <code>data-settling</code> 在页面脚本恢复所存选项期间停用过渡。</p>
+
+  <h3 data-i18n="hTable">数据表</h3>
+  <div class="demo">
+    <table class="listing pkgs">
+      <thead><tr><th data-i18n="thPkg">包</th><th class="mark" data-i18n="thBin">binpkg</th><th class="ver" data-i18n="thVer">版本</th></tr></thead>
+      <tbody>
+        <tr><td class="name"><a href="#">app-admin/chezmoi</a></td><td class="mark yes"><svg class="icon mark-icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M7.864 15.734c-.222 0-.433-.098-.576-.27l-3.747-4.497c-.266-.319-.222-.792.096-1.057.317-.265.79-.223 1.056.096l3.154 3.786 7.44-9.469c.255-.326.728-.382 1.052-.127.326.256.383.728.127 1.053L8.454 15.447c-.14.179-.352.284-.579.287z"/></svg><span class="visually-hidden">✓</span></td><td class="ver">2.71.1</td></tr>
+        <tr><td class="name"><a href="#">app-misc/crush</a></td><td class="mark no"><span class="badge" data-variant="neutral" data-i18n="excluded">不构建</span></td><td class="ver"></td></tr>
+        <tr><td class="name"><a href="#">app-text/goldendict</a></td><td class="mark no"><span class="badge" data-variant="neutral" data-i18n="pending">待构建</span></td><td class="ver"></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p data-i18n="table1">包列表搜索只匹配包名。切换频道时，overlay 列表、主仓库依赖、统计与纯文本链接使用同一频道的数据；频道选择保存在浏览器中，设置页与包列表保持一致。状态列保留到最窄布局，用于直接比较发布结果。没有公开 binpkg 时，发布政策显示在 binpkg 列；公开索引已有 binpkg 时，政策改为显示在包名旁。</p>
+  <p data-i18n="table2">文件浏览器的表格留在 768px 文章栏内，与面包屑、标题和统计左右对齐，与 Spectrum 组件页的表格一致；包列表列数多，铺满面板。</p>
+  <p data-i18n="table3">状态按 S2 实测：搜索框悬停时边框加深一级，聚焦时只把边框变为 gray-900，不再叠加全站焦点环，有内容时末端显示 S2 Cross 清除按钮，Escape 也能清除；文件与包列表的行悬停为 gray-25 混入 7% gray-900，按下为 10%（TableView.tsx:1900-1901），正文中的参考表不响应悬停；面包屑链接为 gray-700，悬停变 gray-800 并加下划线，最后一项加粗；这些颜色变化用 S2 默认的 150ms 过渡。文件浏览器与依赖表的行是整行的链接：<code>a::after</code> 撑满 <code>tr</code>，聚焦环画在行上而非链接文字；镜像列表的地址栏仍是普通链接，一行三项内容不是单一去向。目录为空时表体显示一行提示，复用包列表无匹配时的 <code>.empty-row</code>。</p>
+
+  <p data-i18n-html="table4">包列表照 S2 组件排版：标题与一句导语之后，工具栏一行依次是 S2 SearchField（M 号，32px 高、208px 宽，标签只给读屏，占位文字作提示）、筛选用的 SegmentedControl 与行末的次要文字计数（“513 个包”，筛选后为“12 / 513”）；手机上三者纵向堆叠。表格是非 quiet 的 TableView：1px 边框、圆角、gray-75 表头，表头吸附在顶栏下。状态用 S2 Badge 的 subtle 样式，原因为 neutral；状态说明放在 binpkg 表头的 ContextualHelp 弹出框里。<code>/packages?q=</code> 预填搜索框，输入时地址同步更新。</p>
+  <h3 data-i18n="hCode">代码块</h3>
+  <div class="code">
+    <div class="code-tools"><button type="button" class="copy-chip" aria-label="复制" data-i18n-label="copy"></button></div>
+<pre data-syntax="conf"><span class="t-c"># /etc/portage/binrepos.conf/gentoo-zh.conf</span>
+[<span class="t-f">gentoo-zh</span>]
+<span class="t-p">sync-uri</span> = <span class="t-s">https://distfiles.gentoozh.org/binpkgs/x86-64</span>
+<span class="t-p">priority</span> = <span class="t-n">10</span>
+<span class="t-p">verify-signature</span> = <span class="t-k">true</span></pre>
+  </div>
+  <p data-i18n-html="code1">代码块照 React Spectrum 文档的写法：gray-50 底、圆角 16、内距 32（1024px 以下 12），没有标题栏，代码 14/21（1024px 以下 12/18）。配置片段的第一行是注释，写出要编辑的文件，与文档在代码第一行注明 <code>src/app.tsx</code> 的方式相同。复制按钮与 sudo 开关在右上角：复制是 24px 的安静按钮，只有 Copy 图标，名称写在 <code>aria-label</code>；sudo 是 24px 的切换按钮，打开时以正文色为底。复制内容等于屏幕上显示的文字，不含提示符。</p>
+  <p data-i18n-html="codeSyn">语法颜色在生成页面时由 <code>site/tools/highlight.py</code> 写入，页面不依赖脚本；颜色过期时 <code>render-chrome.py --check</code> 报错。颜色按文档高亮器的角色取值（s2-docs <code>Code.tsx</code>）：字符串 green-1000，关键字 magenta-1000，数字 pink-1000，属性 indigo-1000，命令与节名 red-1000，变量 fuchsia-1000，注释与提示符 gray-700，标点保持正文色。脚本改写的镜像地址与 <code>sudo</code> 前缀各是一个完整元素，改写后保留所在位置的颜色。</p>
+  <p data-i18n-html="code2">超长的命令按 shell 续行符拆成多行；无法拆开的长值（<code>GENTOO_MIRRORS</code>）在块内折行，复制内容不变。其余超宽的行在代码块内横向滚动，页面本身不横向滚动。滚动条用细样式，滑块取 <code>--border-strong</code>。</p>
+
+  <div class="install" id="code-demo">
+    <div class="src-pick" data-src-switch="demo" data-src-group="demo" role="group" aria-label="镜像" data-i18n-label="aMirror">
+      <span class="seg"><button type="button" class="src-opt on" data-uri="https://distfiles.gentoozh.org" data-i18n="dOrigin">源站</button>
+      <button type="button" class="src-opt" data-uri="https://ftp2.osuosl.org/pub/gentoo-zh">OSUOSL</button></span>
+    </div>
+    <div class="code">
+      <div class="code-tools"><button type="button" class="head-btn sudo-btn" aria-pressed="true">sudo</button><button type="button" class="copy-chip" aria-label="复制" data-i18n-label="copy"></button></div>
+<pre data-syntax="sh"><span class="prompt"></span><span class="sudo t-k">sudo </span><span class="t-f">mkdir</span> -p /etc/portage/binrepos.conf
+<span class="prompt"></span><span class="sudo t-k">sudo </span><span class="t-f">tee</span> /etc/portage/binrepos.conf/gentoo-zh.conf &gt; /dev/null &lt;&lt;<span class="t-s">'EOF'</span>
+[<span class="t-f">gentoo-zh</span>]
+<span class="t-p">sync-uri</span> = <span class="t-s" data-src-slot="demo" data-src-suffix="/binpkgs/x86-64">https://distfiles.gentoozh.org/binpkgs/x86-64</span>
+<span class="t-p">priority</span> = <span class="t-n">10</span>
+<span class="t-s">EOF</span></pre>
+    </div>
+  </div>
+  <div class="code cmd">
+<pre data-syntax="sh"><span class="sudo t-k">sudo </span><span class="t-f">emerge</span> --ask --getbinpkg &lt;package&gt;</pre>
+    <button type="button" class="copy-chip" aria-label="复制" data-i18n-label="copy"></button>
+    <button type="button" class="head-btn sudo-btn" aria-pressed="true">sudo</button>
+  </div>
+  <p data-i18n="codeCmd">单行命令用文档的 Command 样式：S2 Prompt 图标、等宽命令，复制按钮紧跟在命令后面，是 24px 的 gray-100 按钮；sudo 开关在行尾。安装框是文档的 InstallCommand：分段控件距边 24px（1024px 以下 12px），下方是它改动的命令、地址或代码块，这些内容不再单独铺底。</p>
+
+  <h3 data-i18n="hSteps">编号步骤</h3>
+  <div class="step">
+    <p class="step-title"><span class="n">1</span><span data-i18n="dStep">在 make.conf 末尾追加：</span></p>
+    <div class="code">
+      <div class="code-tools"><button type="button" class="copy-chip" aria-label="复制" data-i18n-label="copy"></button></div>
+<pre data-syntax="conf"><span class="t-c"># /etc/portage/make.conf</span>
+<span class="t-p">FEATURES</span>=<span class="t-s">"</span><span class="t-v">${FEATURES}</span><span class="t-s"> getbinpkg"</span></pre>
+    </div>
+  </div>
+  <p data-i18n="steps1">编号步骤照文档的 StepList：步骤文字用正文字号与字重，前面是一行高的 gray-800 圆形，数字用底色。宽度 768px 以上圆形悬在正文左侧，步骤下的代码块与安装框与文字对齐。</p>
+
+  <h3 data-i18n="hCallout">提示框</h3>
+  <p class="note callout" data-i18n="calloutInfo">先决条件：配置之前必须完成的一步。</p>
+  <p class="note callout" data-tone="notice" data-i18n="calloutNotice">注意：只适合已满足前提的系统。</p>
+  <p data-i18n="callout1">提示框是 S2 InlineAlert 的默认样式 border（InlineAlert.tsx:28-95，文档正文中的提示框也是这种）：面板底色、四周 2px 边框、圆角 10、内距 24、14px 正文色文字。neutral 用 gray-700 边框、不带图标；notice 用 notice-700 边框，并在末端浮动 notice 色的 AlertDiamond 图标。不在某一侧单独加色条。只给读者必须先看到的内容用，普通说明仍是段落。</p>
+
+  <h3 data-i18n="hDisclosure">折叠区块</h3>
+  <div class="demo">
+    <details class="disclosure">
+      <summary><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg><span data-i18n="dDiscSummary">手动配置或更换镜像</span></summary>
+      <div class="disclosure-panel">
+        <p data-i18n="dDiscBody">面板内容仍是普通段落，只有折叠区块本身取 S2 Disclosure 的间距。</p>
+      </div>
+    </details>
+  </div>
+  <p data-i18n-html="disc1">折叠区块是 React Spectrum S2 的 Disclosure，非 quiet，M 号（<code>@react-spectrum/s2</code> 1.7.1 <code>Disclosure.tsx</code>）：外框上下各一道 1px gray-200 分隔线；标题行高 <code>--control-h</code>，Chevron 在起始侧，静止指向行尾、展开时转向下方，RTL 下静止指向反向；标题加粗、标题色，内距与图标前的间距都是 11px，方框圆角只在键盘聚焦时出现；悬停与按下各叠一层站内既有的底色。面板上 8px、下 16px，两侧 9px。原生 <code>&lt;details&gt;</code> 没有脚本也能用，展开与收起没有过渡，与源码里面板高度的动画不同；面板里的内容保持原样，只是外层多了这圈间距。只用于正文，不影响顶栏语言菜单、侧栏分组等外壳里的 <code>&lt;details&gt;</code>。</p>
+
+  <h3 data-i18n="hLink">链接</h3>
+  <p data-i18n-html="link1">链接的颜色按 S2 Link：强调色，悬停时换成下一级强调色；页脚链接为 gray-800，悬停变 gray-900。与 S2 不同，全站链接不加下划线，平时和悬停时都没有（维护者 2026-09-29 的要求）；键盘聚焦时显示站内统一的焦点环。访问过的链接不另设颜色。上一页与下一页按 S2 Card 的 tertiary 变体：无底色，2px gray-100 描边，悬停与键盘聚焦时变 gray-200，按下时按 pressScale 下沉；官方文档目前已不在页尾放上一页与下一页。</p>
+
+  <h2 id="catalogue" data-i18n="hCatalogue">组件目录</h2>
+  <p data-i18n-html="catIntro">每个页面只由下列组件组成，定义都在 <code>site.css</code>；间距、圆角、字号与颜色只取 <code>tokens.css</code> 的令牌，<code>check-css.py</code> 拒绝 site.css 中的原始长度与颜色、页面中的 style 属性和页面内样式表。新的需求写成新组件或已有组件的变体，并记在本表。</p>
+  <table class="spec">
+    <thead><tr><th data-i18n="thComp">组件</th><th data-i18n="thClass">类</th><th data-i18n="thTokens">令牌</th></tr></thead>
+    <tbody>
+      <tr><td data-i18n="cat1">页面标题</td><td><code>h1.title</code> <code>.lead</code></td><td><code>--fs-title</code> <code>--lh-title</code> <code>--fs-lead</code></td></tr>
+      <tr><td data-i18n="cat2">统计条</td><td><code>.section-head</code> <code>.section-more</code> <code>.status-build</code> <code>.stats</code> <code>.stat</code> <code>.stat-label</code> <code>.stat-value</code></td><td><code>--fs-figure</code> <code>--fs-ui</code> <code>--sp-6</code></td></tr>
+      <tr><td data-i18n="cat3">指引卡片</td><td><code>.entry-grid</code> <code>.entry-card</code> <code>[data-density="compact"]</code> <code>.entry-head</code> <code>.entry-title</code> <code>.entry-desc</code></td><td><code>--fs-h3</code> <code>--fs-body</code> <code>--fs-ui</code> <code>--border-subtle</code> <code>--fill-hover</code> <code>--r-lg</code> <code>--press-card</code></td></tr>
+      <tr><td data-i18n="cat16">侧栏分组</td><td><code>.sidebar</code> <code>.nav-label</code> <code>.nav-group</code> <code>.nav-group-title</code> <code>.chevron</code> <code>.nav-link</code></td><td><code>--side-gap</code> <code>--chevron</code> <code>--chevron-box</code> <code>--control-h</code> <code>--bw-2</code> <code>--bar-h</code> <code>--bar-hover</code> <code>--lh-label</code></td></tr>
+      <tr><td data-i18n="cat17">本页目录</td><td><code>.toc</code> <code>.toc-title</code> <code>.toc-link</code> <code>.toc-pick</code> <code>.toc-pick-btn</code> <code>.toc-menu</code></td><td><code>--toc-w</code> <code>--control-h</code> <code>--chevron-l</code> <code>--fs-value</code> <code>--fill-hover</code> <code>--raised</code> <code>--shadow-elevated</code></td></tr>
+      <tr><td data-i18n="cat4">步骤</td><td><code>.step</code> <code>.step-title</code> <code>.n</code></td><td><code>--step-dot</code> <code>--sp-2</code> <code>--sp-8</code></td></tr>
+      <tr><td data-i18n="cat5">安装框</td><td><code>.install</code> <code>.cmd</code> <code>.uri</code></td><td><code>--code-bg</code> <code>--r-xl</code> <code>--install-in</code> <code>--icon-prompt</code> <code>--btn-s</code></td></tr>
+      <tr><td data-i18n="cat6">代码块</td><td><code>.code</code> <code>.code-tools</code> <code>[data-syntax]</code> <code>.t-*</code> <code>.copy-chip</code> <code>.head-btn</code></td><td><code>--code-bg</code> <code>--r-xl</code> <code>--code-pad</code> <code>--fs-pre</code> <code>--syn-*</code> <code>--btn-s</code> <code>--icon-sm</code></td></tr>
+      <tr><td data-i18n="cat7">提示框</td><td><code>.callout</code> <code>[data-tone="notice"]</code></td><td><code>--fg-soft</code> <code>--notice-border</code> <code>--notice</code> <code>--icon-notice</code> <code>--r-lg</code> <code>--sp-6</code></td></tr>
+      <tr><td data-i18n="cat8">分段控件</td><td><code>.src-pick</code> <code>.seg</code> <code>.src-opt</code> <code>.filter</code> <code>.channel-pick</code> <code>.channel-total</code></td><td><code>--track</code> <code>--track-on</code> <code>--bw-2</code> <code>--control-h</code></td></tr>
+      <tr><td data-i18n="cat8p">选择器（分段控件一行放不下时）</td><td><code>.seg-pick</code> <code>.seg-pick-btn</code> <code>.seg-pick-value</code> <code>.seg-pick-chevron</code> <code>.seg-pick-menu</code> <code>.menu-item</code> <code>.menu-check</code></td><td><code>--track</code> <code>--fill-hover</code> <code>--control-h</code> <code>--r-md</code> <code>--chevron</code> <code>--raised</code> <code>--shadow-elevated</code></td></tr>
+      <tr><td data-i18n="cat9">标签页</td><td><code>.mode-pick[role="tablist"]</code> <code>.mode</code> <code>[data-pane]</code></td><td><code>--bw-2</code> <code>--fg-soft</code></td></tr>
+      <tr><td data-i18n="cat10">菜单</td><td><code>.menu-wrap</code> <code>.menu</code> <code>.menu-item</code></td><td><code>--menu-min</code> <code>--raised</code> <code>--shadow-elevated</code> <code>--popover-offset</code></td></tr>
+      <tr><td data-i18n="cat11">操作按钮</td><td><code>.icon-btn</code></td><td><code>--control-h</code> <code>--edge-visual</code> <code>--icon</code> <code>--press-depth</code></td></tr>
+      <tr><td data-i18n="cat12">表格</td><td><code>.listing</code> <code>.pkgs</code> <code>.deps-table</code> <code>.empty-row</code> <code>.ref-table</code> <code>.mirror-table</code> <code>.channel-guide</code> <code>.channel-field</code></td><td><code>--col-*</code> <code>--border</code> <code>--control-h</code></td></tr>
+      <tr><td data-i18n="cat13">键值列表</td><td><code>.facts</code> <code>.meta</code></td><td><code>--fact-row</code> <code>--fact-label</code> <code>--fs-value</code></td></tr>
+      <tr><td data-i18n="cat14">面包屑</td><td><code>.crumbs</code> <code>.crumb-sep</code></td><td><code>--icon-sm</code> <code>--fg-muted</code></td></tr>
+      <tr><td data-i18n="cat15">上一页与下一页</td><td><code>.pager</code> <code>.pager-link</code> <code>.pager-dir</code> <code>.pager-title</code></td><td><code>--track</code> <code>--border</code> <code>--r-lg</code> <code>--press-card</code> <code>--sp-12</code></td></tr>
+      <tr><td data-i18n="cat17">站内搜索</td><td><code>.search-trigger</code> <code>.search-kbd</code> <code>.sd</code> <code>.sd-brand</code> <code>.sd-field</code> <code>.sd-chip</code> <code>.sd-divider</code> <code>.sd-cards</code> <code>.sd-card</code> <code>.sd-art</code> <code>.sd-pkg</code></td><td><code>--search-w</code> <code>--field-h</code> <code>--side-w</code> <code>--art-from</code> <code>--art-to</code> <code>--on-art</code> <code>--art-icon</code> <code>--backdrop</code> <code>--r-lg</code> <code>--r-xl</code> <code>--animation-duration-500</code></td></tr>
+      <tr><td data-i18n="cat18">链接</td><td><code>a</code> <code>.link-alone</code> <code>.jump</code> <code>.foot a</code></td><td><code>--accent</code> <code>--accent-hover</code> <code>--fg-body</code> <code>--fg</code></td></tr>
+      <tr><td data-i18n="cat19">顶栏链接</td><td><code>.bar-link</code> <code>.bar-divider</code> <code>.bar-mirror</code></td><td><code>--control-h</code> <code>--r-lg</code> <code>--fs-ui</code> <code>--fill-hover</code></td></tr>
+      <tr><td data-i18n="cat20">镜像卡片</td><td><code>.mirror-cards</code> <code>.mirror-card-lead</code> <code>.mirror-logo</code> <code>.mirror-logo-tile</code> <code>.mirror-name</code> <code>.mirror-loc</code> <code>.mirror-desc</code> <code>.mirror-site</code> <code>.logo-light</code> <code>.logo-dark</code></td><td><code>--sp-16</code> <code>--border-subtle</code> <code>--fill-hover</code> <code>--accent</code> <code>--on-art</code> <code>--r-lg</code> <code>--r-md</code> <code>--bw-2</code></td></tr>
+      <tr><td data-i18n="cat26">首页引导区</td><td><code>.hero</code> <code>.hero-title</code> <code>.hero-lead</code> <code>.hero-install</code> <code>.hero-more</code></td><td><code>--fs-title</code> <code>--fs-h3</code> <code>--fs-ui</code> <code>--sp-3</code> <code>--sp-4</code> <code>--sp-8</code></td></tr>
+      <tr><td data-i18n="cat27">密钥指纹</td><td><code>.fpr-box</code> <code>.fpr</code></td><td><code>--sp-2</code> <code>--btn-s</code> <code>--r-md</code> <code>--fs-code</code></td></tr>
+      <tr><td data-i18n="cat28">空状态与消息</td><td><code>.empty-state</code> <code>.empty-state-illo</code> <code>.msg</code> <code>.msg-retry</code></td><td><code>--sp-12</code> <code>--sp-10</code> <code>--sp-3</code> <code>--sp-1</code> <code>--fg-muted</code> <code>--control-h</code></td></tr>
+      <tr><td data-i18n="cat21">加载状态</td><td><code>.skeleton-row</code> <code>.skel</code> <code>.loading-row</code> <code>.progress-circle</code> <code>[aria-busy]</code></td><td><code>--track</code> <code>--progress-m</code> <code>--progress-stroke</code> <code>--loading-band</code> <code>--animation-duration-spin</code> <code>--animation-duration-skeleton</code></td></tr>
+      <tr><td data-i18n="cat22">包列表工具栏</td><td><code>.pkg-toolbar</code> <code>.pkg-search</code> <code>.pkg-count</code> <code>.pkg-caption</code> <code>.pkg-updated</code></td><td><code>--control-h</code> <code>--sp-16</code> <code>--fs-ui</code> <code>--fg-soft</code></td></tr>
+      <tr><td data-i18n="cat23">标签</td><td><code>.badge</code> <code>[data-variant="neutral"]</code></td><td><code>--btn-s</code> <code>--fs-small</code> <code>--neutral-subtle</code> <code>--r-sm</code></td></tr>
+      <tr><td data-i18n="cat24">上下文帮助</td><td><code>.th-help</code> <code>.ctx-help</code> <code>.ctx-pop</code> <code>.ctx-title</code> <code>.ctx-body</code> <code>.ctx-foot</code></td><td><code>--icon</code> <code>--raised</code> <code>--shadow-elevated</code> <code>--r-lg</code> <code>--popover-offset</code> <code>--animation-duration-overlay</code></td></tr>
+      <tr><td data-i18n="cat25">折叠区块</td><td><code>.disclosure</code> <code>.disclosure-panel</code> <code>.chevron</code></td><td><code>--control-h</code> <code>--disclosure-head-pad</code> <code>--disclosure-panel-pad</code> <code>--border</code> <code>--r-md</code></td></tr>
+      <tr><td data-i18n="cat29">镜像同步状态</td><td><code>.src-opt[data-behind]</code> <code>.menu-item[data-behind]</code> <code>.listing .badge[data-src-note]</code></td><td><code>--notice</code> <code>--neutral-subtle</code> <code>--sp-1</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3 data-i18n="hOverviewDemo">概览与入门页组件</h3>
+  <div class="demo">
+    <p class="status-build" data-i18n="dBuildLine">最近构建：5 小时前</p>
+    <ul class="stats">
+      <li class="stat"><span class="stat-label" data-i18n="dStable">stable binpkg</span><span class="stat-value">188</span></li>
+    </ul>
+    <ul class="entry-grid">
+      <li><a class="entry-card" href="#catalogue"><span class="entry-head"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M13.53 9.427c-.292-.292-.766-.294-1.06 0l-1.717 1.714V2.75c0-.414-.336-.75-.75-.75s-.75.336-.75.75v8.4L7.53 9.426c-.293-.293-.767-.293-1.06 0s-.293.767 0 1.06l2.998 2.998c.146.147.338.22.53.22.191 0 .384-.073.53-.22l3.002-2.998c.293-.292.293-.767 0-1.06"/><path fill="currentColor" d="M15.75 18H4.25C3.01 18 2 16.99 2 15.75v-2.021c0-.415.336-.75.75-.75s.75.335.75.75v2.021c0 .413.337.75.75.75h11.5c.413 0 .75-.337.75-.75v-2.021c0-.415.336-.75.75-.75s.75.335.75.75v2.021c0 1.24-1.01 2.25-2.25 2.25"/></svg><span class="entry-title" data-i18n="navGBin">binhost</span></span><span class="entry-desc" data-i18n="dCardDesc">整张卡片是一个链接</span></a></li>
+    </ul>
+    <details class="nav-group" open>
+      <summary class="nav-group-title"><span data-i18n="navGBin">binhost</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+      <ul class="pages">
+        <li><a class="nav-link" href="#catalogue" aria-current="page" data-i18n="navBin">配置 binpkg</a></li>
+        <li><a class="nav-link" href="#catalogue" data-i18n="navFiles">文件</a></li>
+      </ul>
+    </details>
+    <nav class="pager" aria-label="上一页与下一页" data-i18n-label="aPager">
+      <a class="pager-link pager-prev" href="#catalogue"><span class="pager-dir" data-i18n="prev">上一页</span><span class="pager-title" data-i18n="navHome">概览</span></a>
+      <a class="pager-link pager-next" href="#catalogue"><span class="pager-dir" data-i18n="next">下一页</span><span class="pager-title" data-i18n="navDist">配置 distfiles</span></a>
+    </nav>
+  </div>
+
+  <h2 id="language" data-i18n="hLang">语言</h2>
+
+  <p data-i18n-html="lang1">简体是源文案，直接写在 HTML 中；<code>i18n.js</code> 在 body 末尾替换繁体与英文。浏览器可能在替换前开始绘制，因此 <code>early.js</code> 位于 <code>&lt;head&gt;</code>，同步判断访客语言。简体立即显示；其他语言在替换完成前隐藏正文，并以 1.5 秒为最长等待时间。</p>
+
+  <table class="spec">
+    <thead><tr><th data-i18n="thMark">标记</th><th data-i18n="thSwap">换什么</th></tr></thead>
+    <tbody>
+      <tr><td>data-i18n</td><td data-i18n="m1">元素的文字</td></tr>
+      <tr><td>data-i18n-html</td><td data-i18n="m2">整段内容，含里面的标签与链接</td></tr>
+      <tr><td>data-i18n-href</td><td data-i18n="m3">链接地址。gentoozh.org 按语言分路径</td></tr>
+      <tr><td>data-langblock</td><td data-i18n="m4">每种语言各写一份，只显示当前语言的内容</td></tr>
+    </tbody>
+  </table>
+  <p data-i18n="lang2">顶栏、侧栏与页脚由全站共用，并随当前语言切换。每个页面的顶栏都有语言菜单，用户可以修改全站语言偏好。</p>
+
+  <h2 id="writing" data-i18n="hText">文字</h2>
+
+  <p data-i18n="text1">先写结论，再说明必要理由；需要因果关系时明确写出。每段不超过 4 句，不添加重复总结。简体使用大陆用语（软件、网络、程序、数据、默认、内存），繁体使用台湾用语，技术术语保留英文原文。</p>
+
+  <div class="demo">
+    <p class="rule-do" data-i18n="do1">Portage 接受 binpkg 时不比较 CFLAGS，因此构建端必须保证该参数。</p>
+    <p class="rule-dont" data-specimen data-i18n="dont1">我们非常重视兼容性，会尽力确保您的使用体验。</p>
+    <p class="rule-do" data-i18n="do2">本站发布 overlay binpkg 及构建时从源码编译的 ::gentoo 依赖。这些内容不替代官方 binhost。</p>
+    <p class="rule-dont" data-specimen data-i18n="dont2">三样内容都可以直接浏览和下载哦。</p>
+  </div>
+
+  <p data-i18n="specimen">下面三张表的示例列保持简体中文，用于检查源文案。译文按目标语言单独审校。</p>
+
+  <h3 data-i18n="hBanPhrase">禁止的句式</h3>
+  <table class="spec">
+    <thead><tr><th data-i18n="thPhrase">句式</th><th data-i18n="thProblem">问题</th></tr></thead>
+    <tbody>
+      <tr><td data-specimen>不是 X，而是 Y</td><td data-i18n="p1">否定式对比会延后核心结论</td></tr>
+      <tr><td data-specimen>这不仅是…更是…</td><td data-i18n="p2">伪广度，没有增加信息</td></tr>
+      <tr><td data-specimen>从 X 到 Y</td><td data-i18n="p3">同上</td></tr>
+      <tr><td data-specimen>无缝、直观、强大</td><td data-i18n="p4">三项形容词堆叠，都不可验证</td></tr>
+      <tr><td data-specimen>值得注意的是</td><td data-i18n="p5">直接陈述重点，无需预告</td></tr>
+      <tr><td data-specimen>总的来说 / 综上所述</td><td data-i18n="p6">总结段本身就不写</td></tr>
+      <tr><td data-specimen>随着…的不断发展</td><td data-i18n="p7">套话开头</td></tr>
+      <tr><td data-specimen>其实 / 说白了 / 坦白讲</td><td data-i18n="p8">口语开头</td></tr>
+    </tbody>
+  </table>
+
+  <h3 data-i18n="hBanWord">禁止的词</h3>
+  <table class="spec">
+    <thead><tr><th data-i18n="thCat">类别</th><th data-i18n="thEx">例</th></tr></thead>
+    <tbody>
+      <tr><td data-i18n="w1">互联网黑话</td><td data-specimen>赋能、抓手、闭环、底层逻辑、颗粒度、心智、护城河、沉淀、生态位</td></tr>
+      <tr><td data-i18n="w2">公文腔</td><td data-specimen>不断深化、持续推动、有力支撑、彰显、诠释、注入新的活力</td></tr>
+      <tr><td data-i18n="w3">翻译腔空转词，能删则删</td><td data-specimen>作为、关于、基于、进行、通过</td></tr>
+      <tr><td data-i18n="w4">口语</td><td data-specimen>的话、就行、拉下来、装上、搞定</td></tr>
+    </tbody>
+  </table>
+
+  <h3 data-i18n="hPunct">标点</h3>
+  <table class="spec">
+    <thead><tr><th data-i18n="thSym">符号</th><th data-i18n="thPRule">规则</th></tr></thead>
+    <tbody>
+      <tr><td>“ ”</td><td data-i18n="pu1">只用于引述与专有名称，不用于强调</td></tr>
+      <tr><td>——</td><td data-i18n="pu2">全角，两侧不加空格，每千字不超过 1 次</td></tr>
+      <tr><td>—</td><td data-i18n="pu3">不用 em dash 加空格的英式写法</td></tr>
+      <tr><td>……</td><td data-i18n="pu4">省略号用这个，不用三个点</td></tr>
+      <tr><td>emoji</td><td data-i18n="pu5">不用</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="never" data-i18n="hNever">刻意不做的</h2>
+
+  <div class="demo">
+    <p class="rule-dont" data-specimen data-i18n="n1">渐变光晕、彩色渐变标题、玻璃拟态</p>
+    <p class="rule-dont" data-specimen data-i18n="n2">大圆角卡片加投影堆成的网格</p>
+    <p class="rule-dont" data-specimen data-i18n="n3">超大字号的营销式首屏</p>
+    <p class="rule-dont" data-specimen data-i18n="n4">图标装饰每一个标题</p>
+    <p class="rule-dont" data-specimen data-i18n="n5">装饰性动效：进场动画、滚动触发的动画、循环播放的动画</p>
+    <p class="rule-dont" data-specimen data-i18n="n6">第二个强调色相</p>
+  </div>
+
+  <p data-i18n="never1">这些元素组合后容易形成通用模板外观。本站通过排版与信息组织建立层次，装饰不承担信息表达功能。</p>
+
+  <h2 id="credits" data-i18n="hCredit">来源与致谢</h2>
+
+  <p data-i18n-html="credit1">版式参照 Adobe 的 <a href="https://react-spectrum.adobe.com/">React Spectrum</a> 与 Spectrum 2 的文档。颜色、间距与圆角来自 <code>@adobe/spectrum-tokens</code> 15.4.1（Apache-2.0），字号与外壳尺寸是 2026-09-29 在 react-spectrum.adobe.com 实测的计算样式，每个取值的来源写在 <code>site/assets/tokens.css</code> 开头。图标取自 <code>@react-spectrum/s2</code> 1.7.1（Apache-2.0），几何未改。Source Sans 3 与 Source Code Pro 按 SIL Open Font License 1.1 分发。强调色取自 Gentoo 的 <a href="https://gitweb.gentoo.org/sites/tyrian-theme.git/">tyrian 主题</a>。完整声明见 <a href="/assets/NOTICE.txt">NOTICE</a>。</p>
+
+</main>
+
+<!-- chrome:foot -->
+<aside class="toc" data-outline aria-labelledby="toc-title" hidden>
+  <p class="toc-title" id="toc-title" data-i18n="onPage">本页内容</p>
+  <ul class="toc-list"></ul>
+</aside>
+<footer class="foot">
+  <p class="foot-note" data-i18n-html="fMaint">本站由 Gentoo 中文社区维护，构建机由 <a href="/thanks">OSUOSL</a> 提供。</p>
+</footer>
+<!-- /chrome:foot -->
+
+<div id="copy-toast" role="status" aria-live="polite"></div>
+
+<script src="/assets/strings.js?v=a45bdd00"></script>
+<script>
+window.MIRROR_I18N = {
+  'zh-tw': {
+    title: "設計語言",
+    hRole: "定位",
+    role1: "這是供使用者查找位址、確認套件狀態和瀏覽目錄的索引站點。設計優先確保資訊密度與資料可讀性，再考慮留白和裝飾。",
+    hColor: "色彩",
+    hDark: "深色",
+    hLight: "淺色",
+    thVar: "變數",
+    thUse: "用途",
+    hFont: "字型",
+    thSize: "尺寸",
+    thWhere: "用在哪",
+    hSpacing: "間距與分隔",
+    hMobile: "行動裝置",
+    thBp: "斷點",
+    thBpDo: "做什麼",
+    thRule: "規則",
+    thWhy: "原因",
+    r4k: "表頭留在視窗內",
+    r4v: "thead 使用 position: sticky，top 使用 --nav-h。頂欄同樣為 sticky；若 top 為 0，表頭會被頂欄遮住。util.js 測量窄螢幕頂欄高度並寫入變數",
+    r5k: "套件名在斜線處斷行",
+    r5v: "用 &lt;wbr&gt; 標出斷點。word-break: break-all 會把 app-admin/1password 切成無法辨認的三段",
+    r6k: "頁面不橫向捲動",
+    r6v: "程式碼區塊與網址列在各自容器內捲動，表格透過逐欄隱藏適配視窗。表格外層不得設定 overflow；overflow-x 不是 visible 時，overflow-y 的 visible 會計算為 auto，sticky 表頭將綁定到該容器",
+    mobile3: "修改後逐一驗證 320 至 1280 的每個寬度：可見欄位、指紋換行、標題字級、頂欄折行、表頭吸頂、<code>documentElement.scrollWidth</code> 不大於 <code>clientWidth</code>。使用指定寬度的 iframe 測量；修改 <code>html.style.width</code> 不會觸發媒體查詢。",
+    hComp: "元件",
+    hChoice: "選項切換",
+    choiceLabel: "頻道",
+    hTable: "資料表",
+    thPkg: "套件",
+    thBin: "binpkg",
+    thVer: "版本",
+    excluded: "不建置",
+    pending: "待建置",
+    table1: "套件列表搜尋只比對套件名。切換頻道時，overlay 列表、主倉庫依賴、統計與純文字連結使用同一頻道的資料；頻道選擇儲存在瀏覽器中，設定頁與套件列表保持一致。狀態欄保留到最窄版面，用於直接比較發布結果。沒有公開 binpkg 時，發布政策顯示在 binpkg 欄；公開索引已有 binpkg 時，政策改為顯示在套件名旁。",
+    table2: "檔案瀏覽器的表格留在 768px 文章欄內，與麵包屑、標題和統計左右對齊，與 Spectrum 元件頁的表格一致；套件列表欄數多，鋪滿面板。",
+    table4: "套件列表依 S2 元件排版：標題與一句導言之後，工具列一行依序是 S2 SearchField（M 號，32px 高、208px 寬，標籤只給螢幕閱讀器，預留位置文字作提示）、篩選用的 SegmentedControl 與行末的次要文字計數（「513 個套件」，篩選後為「12 / 513」）；手機上三者縱向堆疊。表格是非 quiet 的 TableView：1px 邊框、圓角、gray-75 表頭，表頭吸附在頂欄下。狀態用 S2 Badge 的 subtle 樣式，原因為 neutral；狀態說明放在 binpkg 表頭的 ContextualHelp 彈出框裡。<code>/packages?q=</code> 預填搜尋框，輸入時網址同步更新。",
+    table3: "狀態依 S2 實測：搜尋框懸停時邊框加深一級，聚焦時只把邊框變為 gray-900，不再疊加全站焦點環，有內容時末端顯示 S2 Cross 清除按鈕，Escape 也能清除；檔案與套件列表的列懸停為 gray-25 混入 7% gray-900，按下為 10%（TableView.tsx:1900-1901），內文中的參考表不回應懸停；麵包屑連結為 gray-700，懸停變 gray-800 並加底線，最後一項加粗；這些顏色變化用 S2 預設的 150ms 過渡。檔案瀏覽器與依賴表的列是整列的連結：<code>a::after</code> 撐滿 <code>tr</code>，聚焦環畫在列上而非連結文字；鏡像列表的地址欄仍是普通連結，一列三項內容不是單一去向。目錄為空時表身顯示一列提示，沿用套件列表無符合項目時的 <code>.empty-row</code>。",
+    hCode: "程式碼區塊",
+    hLang: "語言",
+    lang1: "簡體是來源文案，直接寫在 HTML 中；<code>i18n.js</code> 在 body 末尾替換繁體與英文。瀏覽器可能在替換前開始繪製，因此 <code>early.js</code> 位於 <code>&lt;head&gt;</code>，同步判斷訪客語言。簡體立即顯示；其他語言在替換完成前隱藏內文，並以 1.5 秒為最長等待時間。",
+    thMark: "標記",
+    thSwap: "替換什麼",
+    m1: "元素的文字",
+    m2: "整段內容，含裡面的標籤與連結",
+    m3: "連結網址。gentoozh.org 按語言分路徑",
+    m4: "每種語言各寫一份，只顯示目前語言的內容",
+    hText: "文字",
+    text1: "先寫結論，再說明必要理由；需要因果關係時明確寫出。每段不超過 4 句，不加入重複總結。簡體使用大陸用語，繁體使用台灣用語（軟體、網路、程式、資料、預設、記憶體），技術術語保留英文原文。",
+    do1: "Portage 接受 binpkg 時不比較 CFLAGS，因此建置端必須確保該參數。",
+    dont1: "我們非常重視相容性，會盡力確保您的使用體驗。",
+    do2: "本站發布 overlay binpkg 及建置時從原始碼編譯的 ::gentoo 相依套件。這些內容不取代官方 binhost。",
+    dont2: "三樣內容都可以直接瀏覽和下載喔。",
+    specimen: "下面三張表的範例欄保持簡體中文，用於檢查來源文案。譯文按目標語言單獨審校。",
+    hBanPhrase: "禁止的句式",
+    thPhrase: "句式",
+    thProblem: "問題",
+    p1: "否定式對比會延後核心結論",
+    p2: "偽廣度，沒有增加資訊",
+    p3: "同上",
+    p4: "三項形容詞堆疊，都不可驗證",
+    p5: "直接陳述重點，無須預告",
+    p6: "總結段本身就不寫",
+    p7: "套話開頭",
+    p8: "口語開頭",
+    hBanWord: "禁止的詞",
+    thCat: "類別",
+    thEx: "例",
+    w1: "網路黑話",
+    w2: "公文腔",
+    w3: "翻譯腔空轉詞，能刪則刪",
+    w4: "口語",
+    hPunct: "標點",
+    thSym: "符號",
+    thPRule: "規則",
+    pu1: "只用於引述與專有名稱，不用於強調",
+    pu2: "全形，兩側不加空格，每千字不超過 1 次",
+    pu3: "不用 em dash 加空格的英式寫法",
+    pu4: "刪節號用這個，不用三個點",
+    pu5: "不用",
+    hNever: "刻意不做的",
+    n1: "漸層光暈、彩色漸層標題、玻璃擬態",
+    n2: "大圓角卡片加陰影堆成的網格",
+    n3: "超大字級的行銷式首屏",
+    n4: "圖示裝飾每一個標題",
+    n5: "裝飾性動效：進場動畫、捲動觸發的動畫、循環播放的動畫",
+    never1: "這些元素組合後容易形成通用模板外觀。本站透過排版與資訊組織建立層次，裝飾不承擔資訊表達功能。",
+    lead: "本頁定義網站的設計取值與規則。修改樣式或新增頁面時，以本頁為準。色板、字級與圓角從目前生效的樣式表讀取，不另抄數值。",
+    role2: "Spectrum 2 文件的版面：左側頁面列表，中間內文，寬螢幕右側列出本頁小節。每頁的小節可以直接跳轉，頁面增加時只需在側欄加一行，頂欄不必修改。本站不照搬 <a href=\"https://gentoozh.org/\">gentoozh.org</a> 的卡片網格：卡片內距會拉開資料表的行距。",
+    color1: "中性色、狀態色與陰影取自 Adobe 的 Spectrum 2 官方權杖 <code>@adobe/spectrum-tokens</code> 15.4.1，灰階不帶色相。強調色是 Gentoo 官方紫 <code>#54487A</code>（tyrian 主題 <code>_variables.scss</code> 與 Gentoo Wiki 的 Project:Artwork/Colors），懸停用官方的 <code>#61538D</code>。深色模式保留同一色相，只提高明度。全站只有這一個強調色相。",
+    color2: "對比度依渲染出的顏色對計算：淺色強調色在白底上 8.1:1，深色強調色 <code>#a897e3</code> 在深色面板 <code>#111111</code> 上 7.4:1。強調色只用於連結、焦點環與程式碼裡的值；目前項目的豎條、分頁的指示條與選中的切換按鈕都用中性灰，與 Spectrum 2 文件一致。狀態色只出現在三處：已建置的勾號（綠）、注意提示框的豎條（橙）、複製失敗的提示（紅）。",
+    v_bg: "頁面底色（Spectrum gray-50）",
+    v_surface: "面板與表頭（gray-25；深色模式下比底色更深）",
+    v_raised: "選單等浮起的面",
+    v_code_bg: "程式碼區塊與行內程式碼（gray-50，嵌入面板）",
+    v_hover: "懸停時的底色",
+    v_track: "分段控制項的軌道",
+    v_track_on: "切換按鈕的目前項目",
+    v_border_subtle: "行內程式碼的邊框",
+    v_border: "分隔線。面板內部用線，不用陰影",
+    v_border_strong: "搜尋框邊框、側欄懸停豎條與程式碼區塊捲軸，對面板 3:1",
+    v_fg: "標題與目前項目",
+    v_fg_body: "內文；步驟編號與開啟的 sudo 以它為底",
+    v_fg_soft: "次要資訊：說明、表頭、程式碼裡的選項",
+    v_fg_muted: "第三級：單位、時間、提示符，對面板 4.5:1",
+    v_accent: "連結、焦點環、程式碼裡的值",
+    v_ok: "只用於已建置的勾號",
+    v_neutral_subtle: "引導卡片圖示的底（S2 neutral-subtle，即 gray-100）",
+    v_notice: "注意提示框的圖示",
+    v_notice_border: "注意提示框的 2px 邊框（notice-700）",
+    v_bad: "複製失敗的提示",
+    font1: "內文使用 Source Sans 3，它近似 Spectrum 的 Adobe Clean；程式碼與資料使用 Source Code Pro。套件名、版本、路徑、大小和時間需要縱向對齊，比例字型做不到。兩個字型都只含拉丁字形並隨網站自行託管，中文落到系統的思源黑體、蘋方或微軟正黑體。",
+    font2: "字級取自 React Spectrum 文件的實測值：標題 58px、h2 28px、h3 22px、內文與引導句 18px。中文低一級，行高 1.8，漢字才不擠在一起。下表的值隨目前語言讀取。",
+    fontSans: "Source Sans 3：內文與說明文字 The quick brown fox",
+    fontMono: "Source Code Pro：app-i18n/fcitx-rime-extra 5.1.8 · 12.4 M · 2026-07-27",
+    s_fs_title: "頁面標題，每頁一個",
+    s_fs_h2: "章節標題",
+    s_fs_h3: "小節標題、FAQ 問題",
+    s_fs_lead: "引導句，與內文同大",
+    s_fs_body: "內文、步驟標題",
+    s_fs_ui: "控制項、側欄、表格、狀態列",
+    s_fs_code: "程式碼區塊與表格資料",
+    s_fs_small: "時間戳記、徽章、頁尾、檔案路徑",
+    spacing1: "間距取 Spectrum 2 的 spacing 階梯：4、8、12、16、24、32、40、48、64px。版面只有一種分層：灰底上一塊面板，面板頂部圓角並帶三層陰影。面板內部用 1px 線分隔各列，程式碼區塊與安裝框用 gray-50 灰底嵌入面板；只有面板與選單帶陰影。",
+    thRadius: "圓角",
+    rad_r_sm: "行內程式碼、徽章、焦點環、側欄列、分頁標籤",
+    rad_r_md: "32px 控制項：按鈕、分段控制項軌道與選項、選單項目、大綱連結",
+    rad_r_lg: "控制項尺度的面：提示框、卡片、選單彈出層、提示條、選中的分段、頂欄按鈕",
+    rad_r_xl: "程式碼區塊、安裝框、面板頂部",
+    rad_r_full: "膠囊與圓頭：豎條、分頁指示條、步驟編號、搜尋框。check-css 拒絕不是 --r-* 權杖的圓角",
+    mobile1: "版面斷點兩檔，依視窗寬度；表格欄另依內文欄寬度用容器查詢收起，側欄佔去的寬度因此不必另算。新增斷點前必須補上對應寬度的驗證。",
+    bp2: "以下一欄：側欄收進頂欄的選單按鈕，右側本頁目錄改為頂欄正中的小節選擇按鈕，控制項高度 40px；頂欄隱藏文字連結、GitHub 圖示與分隔線，「檔案」改列在側欄的概覽下方",
+    bp3: "手機：狀態列的數值換到標籤下方，程式碼字級與內距收緊，頁面標題降到 40px",
+    bp4: "內文欄窄於這些寬度時依序隱藏大小欄、版本欄、日期欄",
+    mobile2: "媒體查詢與容器查詢都寫在基準規則之後。同權重規則依原始碼順序覆蓋；寫在基準規則之前會被後續基準規則覆蓋。",
+    r1k: "頂欄一行",
+    r1v: "品牌名過長時以省略號截斷，語言與主題始終可見",
+    r2k: "無指令碼時側欄在內文上方",
+    r2v: "early.js 在 &lt;html&gt; 寫入 data-js 後，側欄才收進選單按鈕；指令碼關閉時導覽仍然可用",
+    r3k: "表格逐欄隱藏",
+    r3v: "依序隱藏大小欄與版本欄，狀態欄保留到最後",
+    r7k: "內文內距",
+    r7v: "手機 16px，桌面 40px。更小的值會讓內文緊貼視窗邊緣",
+    hShell: "外殼",
+    shell1: "頂欄、側欄、頁尾與右側目錄由 <code>site/tools/render-chrome.py</code> 從 <code>site/tools/chrome/</code> 的範本產生，各頁一致。頂欄左側是站點標誌與站名，正中是搜尋按鈕，右側依序是「檔案」圖示按鈕（S2 Folder 圖示）、GitHub 圖示、分隔線、語言與主題按鈕，順序與 React Spectrum 文件的頂欄相同。側欄頂端是單獨的概覽，其下每個產品一個摺疊分組：組名與頁面列同樣大小、字重與顏色，列尾的 Chevron 在展開時用 150ms 轉向下方，組內頁面再縮排 16px，展開與收合時立即出現或消失。游標停在一列上時左側立即出現淺灰豎條，Chevron 加深；按下時整列依 S2 pressScale 下沉；鍵盤焦點環畫在列內 2px，圓角 8px。以上狀態均於 2026-09-29 在官方文件側欄實測。沒有指令碼時各組全部展開；有指令碼時展開目前頁面所在的組，其餘組沿用讀者在本次工作階段中的選擇，初始依 <code>data-default-open</code>。新增頁面只需在 <code>nav.html</code> 的組裡加一行。以 / 結尾的行是檔案瀏覽器的目錄（如 /gigos/），不進上一頁與下一頁；瀏覽該目錄時，側欄把目前頁面標記從“檔案”移到這一行。目前頁面加粗，左側一道中性灰豎條；右側目錄由 <code>docs.js</code> 從內文 h2 產生，讀到的小節同樣標出豎條；小節只列在這裡，不進側欄，與 React Spectrum 文件一致。1024px 以下右側目錄收起，頂欄正中改為小節選擇按鈕：按鈕寫出正在讀的小節，第一個小節之前寫頁面標題，點開是列出標題與各小節的彈出選單。頁面捲動 24 到 64px 之間，按鈕上移淡入，頂欄浮起並加陰影；減少動態效果時按鈕直接顯示。只有內文含兩個以上 h2 的頁面保留右側目錄一欄，其餘頁面的內文在面板內置中。面板高一個視窗，黏在頂欄下方：頁面捲動時內文從頂欄下方經過，面板上方的圓角始終可見。官方文件在 1024px 以上讓面板自身捲動、頁面不捲動（2026-09-29 實測）；這裡保留頁面捲動，錨點、目錄的閱讀位置與鍵盤捲動不受影響。",
+    choice1: "切換整塊內容的選擇（設定方式）畫成 Spectrum 的分頁標籤：文字下方一道 2px 中性灰橫條，沒有底線。頻道、鏡像與套件列表篩選是 Spectrum 2 的分段控制項：灰色軌道，選中項加 2px 描邊；鏡像選擇與它改動的位址或程式碼放在同一個安裝框裡。檔案瀏覽器在根目錄以下用同一組鏡像選擇器改寫檔案的下載連結，預設來源站；目錄列表仍從來源站讀取。所有鏡像選擇器共用 <code>mirror-source</code>，在一頁選定後其他頁沿用。目前項目寫在元素上（<code>.on</code> 與 <code>aria-pressed</code>），切換後立即更新相關位址、設定和狀態。分頁標籤切換的面板帶 <code>data-pane</code>；初始項是標記中帶 <code>.on</code> 的標籤，連結指向某個面板內的錨點時先切到該面板，右側目錄只列出可見面板的小節。沒有指令碼時標籤隱藏，各面板依序顯示。",
+    modeManual: "手動設定",
+    aMode: "設定方式", aChannel: "頻道",
+    modeQuick: "快速設定",
+    code1: "程式碼區塊照 React Spectrum 文件的寫法：gray-50 底、圓角 16、內距 32（1024px 以下 12），沒有標題列，程式碼 14/21（1024px 以下 12/18）。設定片段的第一列是註解，寫出要編輯的檔案，與文件在程式碼第一列註明 <code>src/app.tsx</code> 的方式相同。複製按鈕與 sudo 開關在右上角：複製是 24px 的安靜按鈕，只有 Copy 圖示，名稱寫在 <code>aria-label</code>；sudo 是 24px 的切換按鈕，開啟時以內文色為底。複製內容等於畫面上顯示的文字，不含提示符。",
+    code2: "超長的命令依 shell 續行符號拆成多列；無法拆開的長值（<code>GENTOO_MIRRORS</code>）在區塊內折行，複製內容不變。其餘超寬的列在程式碼區塊內橫向捲動，頁面本身不橫向捲動。捲軸用細樣式，滑桿取 <code>--border-strong</code>。",
+    codeSyn: "語法顏色在產生頁面時由 <code>site/tools/highlight.py</code> 寫入，頁面不依賴指令碼；顏色過期時 <code>render-chrome.py --check</code> 回報錯誤。顏色依文件高亮器的角色取值（s2-docs <code>Code.tsx</code>）：字串 green-1000，關鍵字 magenta-1000，數字 pink-1000，屬性 indigo-1000，命令與區段名稱 red-1000，變數 fuchsia-1000，註解與提示符 gray-700，標點保持內文色。指令碼改寫的鏡像位址與 <code>sudo</code> 前綴各是一個完整元素，改寫後保留所在位置的顏色。",
+    codeCmd: "單列命令用文件的 Command 樣式：S2 Prompt 圖示、等寬命令，複製按鈕緊接在命令後面，是 24px 的 gray-100 按鈕；sudo 開關在列尾。安裝框是文件的 InstallCommand：分段控制項距邊 24px（1024px 以下 12px），下方是它改動的命令、位址或程式碼區塊，這些內容不再單獨鋪底。",
+    hSteps: "編號步驟",
+    dStep: "在 make.conf 末尾附加：",
+    aMirror: "鏡像",
+    dOrigin: "源站",
+    steps1: "編號步驟照文件的 StepList：步驟文字用內文字級與字重，前面是一列高的 gray-800 圓形，數字用底色。寬度 768px 以上圓形懸在內文左側，步驟下的程式碼區塊與安裝框與文字對齊。",
+    hCallout: "提示框",
+    hDisclosure: "摺疊區塊",
+    dDiscSummary: "手動設定或更換鏡像",
+    dDiscBody: "面板內容仍是一般段落，只有摺疊區塊本身取 S2 Disclosure 的間距。",
+    disc1: "摺疊區塊是 React Spectrum S2 的 Disclosure，非 quiet，M 號（<code>@react-spectrum/s2</code> 1.7.1 <code>Disclosure.tsx</code>）：外框上下各一道 1px gray-200 分隔線；標題列高 <code>--control-h</code>，Chevron 在起始側，靜止時指向列尾、展開時轉向下方，RTL 下靜止時指向反方向；標題加粗、標題色，內距與圖示前的間距都是 11px，方框圓角只在鍵盤聚焦時出現；懸停與按下各疊一層站內既有的底色。面板上 8px、下 16px，兩側 9px。原生 <code>&lt;details&gt;</code> 不靠指令碼也能用，展開與收起沒有過渡，與原始碼裡面板高度的動畫不同；面板裡的內容保持原樣，只是外層多了這圈間距。只用於內文，不影響頂欄語言選單、側欄分組等外殼裡的 <code>&lt;details&gt;</code>。",
+    hLink: "連結",
+    link1: "連結的顏色依 S2 Link：強調色，游標停留時換成下一級強調色；頁尾連結為 gray-800，游標停留時變 gray-900。與 S2 不同，全站連結不加底線，平時和游標停留時都沒有（維護者 2026-09-29 的要求）；鍵盤聚焦時顯示站內統一的焦點環。造訪過的連結不另設顏色。上一頁與下一頁依 S2 Card 的 tertiary 變體：無底色，2px gray-100 描邊，游標停留與鍵盤聚焦時變 gray-200，按下時依 pressScale 下沉；官方文件目前已不在頁尾放上一頁與下一頁。",
+    calloutInfo: "先決條件：設定之前必須完成的一步。",
+    calloutNotice: "注意：只適合已滿足前提的系統。",
+    hMenu: "選單按鈕",
+    menu1: "語言與主題各是一個安靜的 ActionButton：32px 高、圓角 10、20px 圖示，語言按鈕只有地球圖示，名稱寫出目前語言（如「語言：繁體中文」），不加工具提示，與 S2 ActionButton 文件一致。語言按鈕點開是 S2 Menu：彈出層內距 8px、圓角 10、帶陰影，深色下另加 1px gray-200 描邊；選單項目高 32px，已選項目只在起始側顯示勾號，懸停與鍵盤焦點為 gray-200 底、gray-900 字。鍵盤依 WAI-ARIA 選單按鈕實作：Enter、空白鍵或下方向鍵展開並聚焦已選項目，上下方向鍵、Home、End 移動，Enter 選擇，Escape 收起並把焦點還給按鈕，Tab 或點擊外部也會收起。",
+    menu2: "主題預設跟隨系統。主題按鈕與 React Spectrum 文件相同，是切換按鈕而不是選單：跟隨系統時按下改用與目前相反的主題，再按一次恢復跟隨系統。圖示是按下後將切換到的主題：淺色生效時為 Contrast，深色生效時為 Lighten。按鈕名稱寫出目前模式與按下的效果，例如“主題：跟隨系統（淺色），按下改用深色”。選定的主題儲存在 <code>mirror-theme</code>，恢復跟隨系統時清除；<code>early.js</code> 在繪製前寫入 <code>data-theme</code>，CSS 依 <code>data-theme</code> 與系統設定選擇圖示，因此第一個畫面即正確，系統設定改變時也隨之更新。不執行指令碼時兩個按鈕隱藏，主題跟隨系統；語言連結放在 <code>&lt;details&gt;</code> 裡，但譯文由指令碼替換，沒有指令碼時頁面仍是簡體。",
+    hMotion: "動效",
+    motion1: "動效依 React Spectrum 文件實測：切換主題時底色立即切換，控制項顏色以 150ms 過渡，主題按鈕的圖示以 200ms 交叉淡入淡出並旋轉 90 度；選單以 200ms 淡入，同時從按鈕方向位移 4px，關閉時原路退出，開啟用 CSS 預設的 ease 曲線，關閉用 S2 的 in 曲線（Popover.tsx）；按下按鈕時下沉 2px，與 S2 pressScale 相同；手機上的頁面列表以 250ms 淡入。焦點環立即出現，換頁與內容載入都沒有動畫，捲動只驅動 1024px 以下頂欄的小節選擇按鈕。",
+    motion2: "權杖在 <code>tokens.css</code>：緩動曲線 <code>--animation-ease-in-out</code>、<code>--animation-ease-in</code>、<code>--animation-ease-out</code> 取自 <code>@spectrum-css/tokens</code> 16.0.2，與 S2 樣式巨集相同；時長 <code>--animation-duration-state</code>（150ms）與 <code>--animation-duration-overlay</code>（200ms）取 S2 元件實際使用的值，<code>--animation-duration-500</code>（250ms）取自同一份權杖。所有動效只寫在 <code>prefers-reduced-motion: no-preference</code> 裡，系統要求減少動態效果時狀態立即切換。首次繪製不播放過渡：<code>early.js</code> 在繪製前設定主題，並用 <code>data-settling</code> 在頁面指令碼還原所存選項期間停用過渡。",
+    hIcon: "圖示",
+    icon1: "圖示全部是 Spectrum 2 workflow 圖示，逐一取自 <code>@react-spectrum/s2</code> 1.7.1 的 <code>icons/</code>，幾何不改，顏色取 <code>currentColor</code>：MenuHamburger、GlobeGrid、Lighten、Contrast、DeviceDesktop、Copy、Search、ChevronRight、OpenIn、Checkmark、Close。與 14px 文字並排時 20px，在麵包屑、外部連結與選單勾號處 16px。GitHub 標誌沿用 GitHub 自己的圖形，React Spectrum 文件也這樣做。",
+    callout1: "提示框是 S2 InlineAlert 的預設樣式 border（InlineAlert.tsx:28-95，文件內文中的提示框也是這種）：面板底色、四周 2px 邊框、圓角 10、內距 24、14px 內文色文字。neutral 用 gray-700 邊框、不帶圖示；notice 用 notice-700 邊框，並在末端浮動 notice 色的 AlertDiamond 圖示。不在某一側單獨加色條。只給讀者必須先看到的內容用，一般說明仍是段落。",
+    lang2: "頂欄、側欄與頁尾由全站共用，並隨目前語言切換。每個頁面的頂欄都有語言選單，使用者可以修改全站語言偏好。",
+    n6: "第二個強調色相",
+    hCredit: "來源與致謝",
+    credit1: "版面參照 Adobe 的 <a href=\"https://react-spectrum.adobe.com/\">React Spectrum</a> 與 Spectrum 2 的文件。顏色、間距與圓角來自 <code>@adobe/spectrum-tokens</code> 15.4.1（Apache-2.0），字級與外框尺寸是 2026-09-29 在 react-spectrum.adobe.com 實測的計算樣式，每個取值的來源寫在 <code>site/assets/tokens.css</code> 開頭。圖示取自 <code>@react-spectrum/s2</code> 1.7.1（Apache-2.0），幾何未改。Source Sans 3 與 Source Code Pro 依 SIL Open Font License 1.1 散布。強調色取自 Gentoo 的 <a href=\"https://gitweb.gentoo.org/sites/tyrian-theme.git/\">tyrian 主題</a>。完整聲明見 <a href=\"/assets/NOTICE.txt\">NOTICE</a>。",
+    hCatalogue: "元件目錄",
+    catIntro: "每個頁面只由下列元件組成，定義都在 <code>site.css</code>；間距、圓角、字級與顏色只取 <code>tokens.css</code> 的權杖，<code>check-css.py</code> 拒絕 site.css 中的原始長度與顏色、頁面中的 style 屬性與頁面內樣式表。新的需求寫成新元件或既有元件的變體，並記在本表。",
+    thComp: "元件",
+    thClass: "類別",
+    thTokens: "權杖",
+    hOverviewDemo: "概覽與入門頁元件",
+    dStable: "stable binpkg",
+    dBuildLine: "最近建置：5 小時前",
+    dCardDesc: "整張卡片是一個連結",
+    cat1: "頁面標題",
+    cat2: "統計列",
+    cat3: "指引卡片",
+    cat16: "側欄分組",
+    cat17: "本頁目錄",
+    cat4: "步驟",
+    cat5: "安裝框",
+    cat6: "程式碼區塊",
+    cat7: "提示框",
+    cat8: "分段控制項",
+    cat8p: "選擇器（分段控制項一行放不下時）",
+    cat9: "分頁標籤",
+    cat10: "選單",
+    cat11: "動作按鈕",
+    cat12: "表格",
+    cat13: "鍵值列表",
+    cat14: "導覽路徑",
+    cat15: "上一頁與下一頁",
+    cat17: "站內搜尋",
+    cat19: "頂欄連結",
+    cat20: "鏡像卡片",
+    cat21: "載入狀態",
+    cat22: "套件列表工具列",
+    cat23: "標籤",
+    cat24: "情境說明",
+    cat25: "摺疊區塊",
+    cat26: "首頁引導區",
+    cat27: "金鑰指紋",
+    cat28: "空狀態與訊息",
+    cat29: "鏡像同步狀態",
+    hSearch: "站內搜尋",
+    search1: "站內搜尋照 React Spectrum 文件的搜尋實作（doona 文件照它複製，見 <code>doona-docs</code> 的 <code>site/scripts/search.js</code> 與 <code>site/styles/search.css</code>）。頂欄中間是 S2 SearchField 形狀的觸發按鈕：40px 高、全圓角、2px 淺灰邊框（懸停時加深，取得焦點時為內文色），末端是 24px 高的快捷鍵標籤；點按、在按鈕上直接輸入（字元進入搜尋框）、Ctrl K（Mac 為 Command K）或 / 開啟幾乎佔滿視窗的強制回應對話框，關閉按鈕在右上角。左欄是站點標誌、站名與一句介紹，右側依序是 2px 深色邊框的搜尋框、分類標籤和結果。分類標籤依側欄的產品分組產生，另加「全部」與「套件」，以豎線與最後的外部連結標籤（Gentoo 中文社区，帶 LinkOut 圖示）分開；選取的標籤以內文色填滿、底色文字，其餘為淺灰底。頁面結果是 S2 Card 形狀的卡片，四欄：圓角 10、帶陰影，上方柔和的紫色漸層底板置中放分組的 64px 白色圖示，下方是粗體標題與至多兩行說明；目前結果加 2px 內文色邊框。套件結果是 32px 高的精簡清單列，結果在對話框內捲動。1024px 以下觸發按鈕只顯示圖示，對話框佔滿螢幕，站名移到頂部。",
+    search2: "搜尋框是 combobox，結果是 listbox：焦點始終在搜尋框，方向鍵、Home、End 透過 <code>aria-activedescendant</code> 移動目前結果，目前結果帶焦點環，Enter 開啟；輸入後自動選取第一項。Esc 與關閉按鈕關閉對話框，焦點回到觸發按鈕；Tab 在對話框內循環。索引由 <code>site/tools/build-search-index.py</code> 從頁面產生，<code>--check</code> 在索引過期時失敗，首次開啟時載入；套件資料取自 <code>/packages.json</code>，查詢達到 2 個字元才比對。開啟與關閉透過 View Transition 在觸發按鈕與對話框之間變形，歷時 250ms；手機上整頁淡入淡出；減少動態效果時不做動畫。",
+    cat18: "連結"
+  },
+  'en': {
+    title: "Design language",
+    hRole: "What this site is",
+    role1: "This is an index site, not a product home page. People come here to copy an address, check whether a package is carried, or see what a directory holds. Every decision follows from that: density over whitespace, readable data over a handsome layout.",
+    hColor: "Colour",
+    hDark: "Dark",
+    hLight: "Light",
+    thVar: "Variable",
+    thUse: "Purpose",
+    hFont: "Type",
+    thSize: "Size",
+    thWhere: "Used for",
+    hSpacing: "Spacing and separation",
+    hMobile: "Small screens",
+    thBp: "Breakpoint",
+    thBpDo: "Effect",
+    thRule: "Rule",
+    thWhy: "Reason",
+    r4k: "The table header stays in view",
+    r4v: "thead is position: sticky with top at --nav-h. The header bar is sticky as well, so a top of 0 puts the table header underneath it. util.js measures the bar's height on narrow screens into the variable",
+    r5k: "Package names break at the slash",
+    r5v: "A &lt;wbr&gt; marks the break. word-break: break-all cuts app-admin/1password into three pieces nobody can read",
+    r6k: "The page never scrolls sideways",
+    r6v: "Code blocks and address bars scroll inside their own container, and the table fits by hiding columns. No overflow may wrap the table: once overflow-x is anything but visible, a visible overflow-y computes to auto and the sticky header sticks to that container instead",
+    mobile3: "Measure every width from 320 to 1280 after a change: which columns are visible, how the fingerprint wraps, the title size, the header wrap, the sticky header, and that <code>documentElement.scrollWidth</code> is no larger than <code>clientWidth</code>. Measure inside an iframe of that width; setting <code>html.style.width</code> does not trigger media queries.",
+    hComp: "Components",
+    hChoice: "Option switchers",
+    choiceLabel: "Channel",
+    hTable: "Data tables",
+    thPkg: "Package",
+    thBin: "Binary",
+    thVer: "Version",
+    excluded: "excluded",
+    pending: "pending",
+    table1: "Package search matches the package name. Switching channels updates the overlay list, main-repository dependencies, counts, and plain-text links from the same channel data. The browser stores the channel choice so setup and package-list pages stay aligned. Status columns remain visible until the narrowest layout because they carry the page's primary comparison. Publication policy appears in the binary column when no public binpkg exists, and beside the package name when the public index already has a binpkg.",
+    table2: "The file browser keeps its table in the 768px article column, aligned with the breadcrumbs, title and counts, as a Spectrum component page keeps its tables; the package list has more columns and takes the whole panel.",
+    table4: "The package list is laid out from S2 components: after the title and a one-sentence lead, one toolbar row holds an S2 SearchField (size M, 32px tall and 208px wide, its label for screen readers only and the placeholder as the hint), the filter SegmentedControl and the count in secondary text at the row's end (\"513 packages\", or \"12 / 513\" when filtered); on phones the three stack. The tables are TableViews in the default style: a 1px border, rounded corners, a gray-75 header that sticks under the top bar. Status words are S2 Badges with the subtle fill, neutral for a reason; the status explanation sits in a ContextualHelp popover in the binpkg header. <code>/packages?q=</code> fills the search, and typing keeps the address in step.",
+    table3: "States follow S2 as measured: the search border darkens one step on hover and turns gray-900 on focus with no site focus ring on top, and while it holds text the S2 Cross clear button shows at its end (Escape clears too); rows of the file and package lists hover to gray-25 with 7% gray-900 and press to 10% (TableView.tsx:1900-1901), while reference tables in prose do not react; breadcrumb links are gray-700, turning gray-800 and underlined on hover, and the last is bold; these colours change on S2's default 150ms transition. File-browser and dependency-table rows are whole-row links: <code>a::after</code> stretches over the <code>tr</code>, and the focus ring is drawn on the row rather than the link's own text; the mirror list's address column stays a plain link, since its row holds three separate values, not one destination. An empty directory shows one message row in the body, reusing the package list's no-match <code>.empty-row</code>.",
+    hCode: "Code blocks",
+    hLang: "Language",
+    lang1: "Simplified Chinese is the source text and sits in the HTML; <code>i18n.js</code> swaps in Traditional Chinese and English at the end of the body. A browser is free to paint before that, so <code>early.js</code> runs synchronously in the <code>&lt;head&gt;</code> and decides which language the visitor wants: for Simplified it does nothing at all and not one frame is delayed; for the other two it holds the body back until the swap is done, with a 1.5 second fallback.",
+    thMark: "Attribute",
+    thSwap: "What it swaps",
+    m1: "The text of the element",
+    m2: "The whole content, including the tags and links inside it",
+    m3: "The link target. gentoozh.org splits its paths by language",
+    m4: "Several copies of one block, only the current language shown",
+    hText: "Copy",
+    text1: "Conclusion first, then the reason; write out cause and effect rather than listing symptoms side by side. No paragraph runs past four sentences. No summary paragraph and no closing flourish. Simplified Chinese uses mainland terms, Traditional Chinese uses Taiwanese ones, and technical terms stay in English.",
+    do1: "Because portage does not compare CFLAGS when it accepts a binary package, this can only be guaranteed at build time.",
+    dont1: "We place the greatest importance on compatibility and will do our utmost to ensure your experience.",
+    do2: "This host publishes overlay binary packages and the ::gentoo dependencies compiled from source during the build. This content does not replace the official Gentoo binhost.",
+    dont2: "All three of them are ready for you to browse and download!",
+    specimen: "The example column of the three tables below does not change with the language. The rules govern the Chinese this site writes, and once a sentence is translated it is no longer the sentence being ruled out.",
+    hBanPhrase: "Banned constructions",
+    thPhrase: "Construction",
+    thProblem: "Problem",
+    p1: "A negated comparison; it circles before reaching the point",
+    p2: "False breadth, carrying no information",
+    p3: "As above",
+    p4: "Three stacked adjectives, none of them verifiable",
+    p5: "Write the thing worth noting, do not announce it first",
+    p6: "Summary paragraphs are not written at all",
+    p7: "A boilerplate opening",
+    p8: "A colloquial opening",
+    hBanWord: "Banned words",
+    thCat: "Category",
+    thEx: "Examples",
+    w1: "Startup jargon",
+    w2: "Bureaucratic register",
+    w3: "Translationese filler, cut wherever it can be cut",
+    w4: "Colloquialisms",
+    hPunct: "Punctuation",
+    thSym: "Mark",
+    thPRule: "Rule",
+    pu1: "Quotation and proper names only, never emphasis",
+    pu2: "Full width, no spaces around it, at most once per thousand characters",
+    pu3: "Not the English style of an em dash with spaces around it",
+    pu4: "Use this for an ellipsis, not three dots",
+    pu5: "Not used",
+    hNever: "Deliberately absent",
+    n1: "Gradient glows, gradient-filled headings, glassmorphism",
+    n2: "Grids of large rounded cards stacked with drop shadows",
+    n3: "An oversized marketing hero",
+    n4: "An icon decorating every heading",
+    n5: "Decorative motion: entrance, scroll-triggered or looping animation",
+    never1: "Together these elements make sites look like the same generic template. This site establishes hierarchy through typography and information structure; decoration does not carry information.",
+    lead: "The values and rules this site is built on. Read it before changing a style, and take values from here for a new page. The palettes, type sizes and radii are read from the stylesheet in force, never copied.",
+    role2: "The layout of the Spectrum 2 documentation: the page list on the left, the article in the middle and, on wide screens, the page's sections on the right. Every section is one click away, and a new page is one more sidebar row with no change to the top bar. The card grid of <a href=\"https://gentoozh.org/\">gentoozh.org</a> is not reused: card padding spreads the rows of a data table apart.",
+    color1: "Neutrals, status colours and shadows are Adobe's official Spectrum 2 tokens, <code>@adobe/spectrum-tokens</code> 15.4.1; the grey scale carries no hue. The accent is Gentoo's official purple <code>#54487A</code> (the tyrian theme's <code>_variables.scss</code> and the Gentoo wiki's Project:Artwork/Colors), with the official <code>#61538D</code> on hover. Dark mode keeps the hue and raises only lightness. The site uses no other accent hue.",
+    color2: "Contrast is computed on the rendered pairs: the light accent is 8.1:1 on white, and the dark accent <code>#a897e3</code> 7.4:1 on the dark panel <code>#111111</code>. The accent marks links, the focus ring and values in code only; the current-page bar, the tab indicator and selected toggles are neutral grey, as in the Spectrum 2 docs. Status colours appear in three places only: the built checkmark (green), the bar of a notice callout (orange), and the copy-failed toast (red).",
+    v_bg: "Page ground (Spectrum gray-50)",
+    v_surface: "The panel and table headers (gray-25; darker than the ground in dark mode)",
+    v_raised: "Raised surfaces such as menus",
+    v_code_bg: "Code blocks and inline code (gray-50, recessed into the panel)",
+    v_hover: "Hover fill",
+    v_track: "The track of segmented controls",
+    v_track_on: "The selected segment of a toggle group",
+    v_border_subtle: "The inline code border",
+    v_border: "Dividers. Inside the panel, lines separate; shadows do not",
+    v_border_strong: "Search field border, sidebar hover bars and code block scrollbars, 3:1 on the panel",
+    v_fg: "Headings and current items",
+    v_fg_body: "Body text; the fill of step numbers and of sudo when on",
+    v_fg_soft: "Secondary text: notes, table headers, flags in code",
+    v_fg_muted: "Tertiary: units, times, prompts, 4.5:1 on the panel",
+    v_accent: "Links, the focus ring, values in code",
+    v_ok: "Only the built checkmark",
+    v_neutral_subtle: "The fill behind a guide card's icon (S2 neutral-subtle, gray-100)",
+    v_notice: "The icon of a notice callout",
+    v_notice_border: "The 2px border of a notice callout (notice-700)",
+    v_bad: "The copy-failed toast",
+    font1: "Text is set in Source Sans 3, which approximates Spectrum's Adobe Clean; code and data in Source Code Pro. Package names, versions, paths, sizes and times must line up vertically, which a proportional face cannot do. Both files hold Latin glyphs only and are served by the site itself; Chinese falls back to the system's Noto Sans CJK, PingFang or Microsoft YaHei.",
+    font2: "Sizes are the measured values of the React Spectrum docs: title 58px, h2 28px, h3 22px, body and lead 18px. Chinese takes one step down with a line height of 1.8 so the characters do not crowd. The values below are read for the current language.",
+    fontSans: "Source Sans 3: body and notes, The quick brown fox",
+    fontMono: "Source Code Pro: app-i18n/fcitx-rime-extra 5.1.8 · 12.4 M · 2026-07-27",
+    s_fs_title: "Page title, one per page",
+    s_fs_h2: "Section headings",
+    s_fs_h3: "Subsections, FAQ questions",
+    s_fs_lead: "The lead, at body size",
+    s_fs_body: "Body text, step titles",
+    s_fs_ui: "Controls, the sidebar, tables, status rows",
+    s_fs_code: "Code blocks and table data",
+    s_fs_small: "Timestamps, badges, the footer, file paths",
+    spacing1: "Spacing follows the Spectrum 2 spacing ladder: 4, 8, 12, 16, 24, 32, 40, 48 and 64px. The layout has one layer: a panel on a grey ground, rounded at the top with a three-layer shadow. Inside the panel, 1px lines separate rows, and code blocks and install boxes sit in a gray-50 fill recessed into the panel; only the panel and menus cast shadows.",
+    thRadius: "Radius",
+    rad_r_sm: "Inline code, badges, the focus ring, sidebar rows, tabs",
+    rad_r_md: "32px controls: buttons, segmented tracks and items, menu items, outline links",
+    rad_r_lg: "Surfaces at control scale: callouts, cards, the menu popover, the toast, the selected segment, top-bar buttons",
+    rad_r_xl: "Code blocks, install boxes, the top of the panel",
+    rad_r_full: "Pills and round ends: bars, the tab indicator, step numbers, the search field. check-css rejects any radius that is not an --r-* token",
+    mobile1: "Two layout breakpoints, by viewport width. Table columns collapse separately, by the width of the article column through container queries, so the sidebar's width needs no separate arithmetic. A new breakpoint comes with verification at its width.",
+    bp2: "Below it one column: the sidebar opens from the menu button, the outline becomes a section picker centred in the top bar, and controls are 40px high; the text links, the GitHub icon and the divider leave the top bar, and Files moves into the sidebar below Overview",
+    bp3: "Phones: status values move under their labels, code size and padding tighten, the page title drops to 40px",
+    bp4: "As the article column narrows past these widths, the size, version and date columns go in turn",
+    mobile2: "Media and container queries sit after the base rules. At equal specificity the later rule wins, so a rule placed among the base rules is overridden by the base rules below it.",
+    r1k: "One-line top bar",
+    r1v: "The brand truncates with an ellipsis; language and theme stay visible",
+    r2k: "Without scripts the sidebar sits above main",
+    r2v: "The sidebar folds into the menu button only once early.js has set data-js on &lt;html&gt;, so navigation still works with scripts off",
+    r3k: "Columns hide one at a time",
+    r3v: "Size, then version; the status columns stay to the last",
+    r7k: "Article padding",
+    r7v: "16px on phones, 40px on desktop. Less puts the text against the viewport edge",
+    hShell: "Shell",
+    shell1: "The top bar, sidebar, footer and outline are generated by <code>site/tools/render-chrome.py</code> from the templates in <code>site/tools/chrome/</code>, so every page matches. The top bar holds the logo and site name at the start, the search trigger in the middle, and at the end the Files icon button (S2 Folder icon), the GitHub icon, a divider, then language and theme, in the order of the React Spectrum docs' bar. The sidebar opens with the overview on its own, then one disclosure per product: the group title has the size, weight and colour of a page row and ends in a chevron that turns down over 150ms when the group is open; the group's pages sit 16px further in and appear or go at once. Hovering a row shows the light grey bar at once and darkens the chevron; pressing sinks the row with S2 pressScale; the keyboard focus ring sits 2px inside the row at radius 8. All measured on the docs' sidebar on 2026-09-29. Without scripts every group is open; with them the current page's group opens and the others keep what the reader chose earlier in the session, starting from <code>data-default-open</code>. A new page is one line in its group in <code>nav.html</code>. A row ending in / is a file-browser directory (such as /gigos/): the pager skips it, and while that directory is browsed the sidebar moves the current-page mark from Files to that row. The current page is bold with a neutral grey bar before it; the outline is built by <code>docs.js</code> from the h2s in main, and the section being read gets the same bar. Sections are listed only there, never in the sidebar, as on the React Spectrum docs. Below 1024px the outline column goes and the top bar centres a section picker: it names the section being read, or the page title before the first one, and opens a popover listing the title and every section. Between 24 and 64px of scrolling the picker rises and fades in and the bar lifts onto the raised layer with a shadow; with reduced motion the picker simply shows. Only pages with two or more h2s keep the outline column; the rest centre their article in the panel. The panel is one viewport tall and sticks below the top bar: the content passes under the bar and the panel's rounded top corners stay in view. From 1024px up the docs scroll the panel itself and not the page (measured 2026-09-29); here the page still scrolls, so anchors, the outline's reading position and keyboard scrolling work as usual.",
+    choice1: "A choice that switches a whole pane (the setup mode) is drawn as Spectrum tabs: a 2px neutral grey bar under the label and no track line. The channel, mirrors and package filters are Spectrum 2 segmented controls: a grey track with the selected segment outlined in 2px; a mirror picker shares one install box with the address or code it changes. Below its root the file browser uses the same mirror picker to rewrite file download links, defaulting to the origin; listings still come from the origin. Every mirror picker shares <code>mirror-source</code>, so a choice on one page carries to the others. The current item is stated on the element (<code>.on</code> and <code>aria-pressed</code>), and switching updates the related addresses, configuration and status at once.A pane switched by tabs carries <code>data-pane</code>; the initial tab is the one marked <code>.on</code>, a link to an anchor inside a pane switches to that pane first, and the outline lists only the visible pane's sections. Without scripts the tabs are hidden and the panes follow one another.",
+    modeManual: "Step by step",
+    aMode: "Setup method", aChannel: "Channel",
+    modeQuick: "Quick setup",
+    code1: "Code blocks follow the React Spectrum docs: a gray-50 fill, radius 16, 32px padding (12px below 1024px), no header bar, and 14/21 code (12/18 below 1024px). A config snippet names the file to edit in a comment on its first line, as the docs name <code>src/app.tsx</code> in the first line of the code. Copy and the sudo toggle sit in the top-right corner: copy is a quiet 24px button with only the Copy icon and an <code>aria-label</code>; sudo is a 24px toggle button filled with the body colour when on. Copy puts the text on screen on the clipboard, without the prompt.",
+    code2: "Long commands are split with shell line continuations; a long value that cannot be split (<code>GENTOO_MIRRORS</code>) wraps inside the block, and the copied text is unchanged. Other wide lines scroll inside the block; the page itself never scrolls sideways. The scrollbar is thin, with its thumb in <code>--border-strong</code>.",
+    codeSyn: "<code>site/tools/highlight.py</code> writes the syntax colours when the pages are generated, so they need no script, and <code>render-chrome.py --check</code> fails when they are out of date. Each colour is a role of the docs’ highlighter (s2-docs <code>Code.tsx</code>): strings green-1000, keywords magenta-1000, numbers pink-1000, properties indigo-1000, commands and section names red-1000, variables fuchsia-1000, comments and prompts gray-700; punctuation keeps the body colour. The mirror address and the <code>sudo</code> prefix, which scripts rewrite, are each one whole element, so they keep the colour of their position after a rewrite.",
+    codeCmd: "A one-line command uses the docs’ Command layout: the S2 Prompt icon, the command in monospace, and the copy button right after the command, a 24px gray-100 button; the sudo toggle sits at the end of the row. The install box is the docs’ InstallCommand: the segmented control 24px from the edge (12px below 1024px), and under it the command, address or code block it changes, without a fill of their own.",
+    hSteps: "Numbered steps",
+    dStep: "Append to make.conf:",
+    aMirror: "Mirror",
+    dOrigin: "Origin",
+    steps1: "Numbered steps follow the docs’ StepList: the step text at body size and weight after a gray-800 circle one line high, with the number in the ground colour. From 768px the circle hangs to the left of the text, so the step’s code blocks and install boxes line up under the text.",
+    hCallout: "Callouts",
+    hDisclosure: "Disclosure",
+    dDiscSummary: "Manual configuration or a different mirror",
+    dDiscBody: "The panel content is still an ordinary paragraph; only the disclosure itself takes the S2 Disclosure spacing.",
+    disc1: "The disclosure is the React Spectrum S2 Disclosure, non-quiet, size M (<code>@react-spectrum/s2</code> 1.7.1 <code>Disclosure.tsx</code>): the wrapper carries a 1px gray-200 border top and bottom; the header is <code>--control-h</code> tall with the Chevron at the start, pointing to the line's end at rest and turning to point down when open, mirrored under RTL; the title is bold and heading-coloured, its padding and the gap before the icon both 11px, and the header only rounds its corners on keyboard focus; hover and press each add one of the site's existing fills. The panel is 8px above, 16px below and 9px on each side. Native <code>&lt;details&gt;</code> needs no script, so unlike the source's animated panel height it opens and closes at once; the wrapped content keeps its own look, only gaining this padding. It is for content only, and never reaches the chrome's own <code>&lt;details&gt;</code> — the language menu, a sidebar group.",
+    hLink: "Links",
+    link1: "Links take S2 Link's colours: the accent colour, and the next accent step on hover; footer links are gray-800 and turn gray-900 on hover. Unlike S2, no link on the site is underlined, at rest or on hover (the maintainer's request, 2026-09-29); keyboard focus shows the site's focus ring. Visited links are not styled. Previous and next are the S2 Card's tertiary variant: no fill, a 2px gray-100 ring that turns gray-200 on hover and keyboard focus, and pressScale while pressed; the docs no longer end a page with a pager.",
+    calloutInfo: "Prerequisite: a step that must come before setup.",
+    calloutNotice: "Notice: only for systems that meet the precondition.",
+    hMenu: "Menu buttons",
+    menu1: "Language and theme are each one quiet ActionButton: 32px tall, radius 10, a 20px icon; the language button shows only the globe and its name says the language in force (“Language: English”), with no tooltip, as the S2 ActionButton docs do. The language button opens an S2 Menu: an 8px-padded popover with radius 10 and a shadow, plus a 1px gray-200 outline in dark; items are 32px and the selected one shows only a checkmark at the start; hover and keyboard focus are gray-200 with gray-900 text. The keyboard follows the WAI-ARIA menu button: Enter, Space or Down Arrow opens it on the selected item, the arrows, Home and End move, Enter picks, Escape closes it and returns focus to the button, and Tab or a click outside also closes it.",
+    menu2: "The theme follows the system by default. As in the React Spectrum docs, the theme button is a toggle, not a menu: while following the system a press forces the opposite theme, and a second press follows the system again. The icon is the theme a press switches to: Contrast while light is in effect, Lighten while dark is. The button's name states the mode in force and what a press does, such as “Theme: system (light), press to use dark”. A forced theme is stored in <code>mirror-theme</code> and cleared on returning to the system; <code>early.js</code> sets <code>data-theme</code> before paint and CSS picks the icon from <code>data-theme</code> and the system setting, so the first frame is right and a change of the system setting updates it. Without scripts both buttons are hidden and the theme follows the system; the language links sit in a <code>&lt;details&gt;</code>, but the translations are applied by script, so without it the page stays in Simplified Chinese.",
+    hMotion: "Motion",
+    motion1: "Motion follows measurements of the React Spectrum docs. A theme switch changes the ground at once while controls ease their colours over 150ms and the theme button crossfades its icons over 200ms, turning them 90 degrees. A menu fades in over 200ms while moving 4px away from its button, and leaves the same way, entering on the CSS default ease and leaving on the S2 in curve (Popover.tsx). A pressed button sinks 2px, as S2 pressScale does. On phones the page list fades in over 250ms. The focus ring appears at once; page changes and loading content are not animated, and scrolling drives only the top bar's section picker below 1024px.",
+    motion2: "The tokens are in <code>tokens.css</code>. The curves <code>--animation-ease-in-out</code>, <code>--animation-ease-in</code> and <code>--animation-ease-out</code> come from <code>@spectrum-css/tokens</code> 16.0.2 and match the S2 style macro. The durations <code>--animation-duration-state</code> (150ms) and <code>--animation-duration-overlay</code> (200ms) are the values S2 components use, and <code>--animation-duration-500</code> (250ms) comes from the same token set. All motion is declared under <code>prefers-reduced-motion: no-preference</code>, so with reduced motion every change is instant. Nothing plays on first paint: <code>early.js</code> sets the theme before paint, and <code>data-settling</code> holds transitions off while the page scripts restore saved choices.",
+    hIcon: "Icons",
+    icon1: "Every icon is a Spectrum 2 workflow icon copied from <code>icons/</code> in <code>@react-spectrum/s2</code> 1.7.1, geometry unchanged, coloured with <code>currentColor</code>: MenuHamburger, GlobeGrid, Lighten, Contrast, DeviceDesktop, Copy, Search, ChevronRight, OpenIn, Checkmark and Close. They are 20px beside 14px text and 16px in breadcrumbs, external links and menu checkmarks. The GitHub mark is GitHub's own, as on the React Spectrum docs.",
+    callout1: "A callout is an S2 InlineAlert in its default fill style, border (InlineAlert.tsx:28-95, and how the docs set alerts in prose): the panel fill, a 2px border all round, radius 10, 24px inside, 14px text in the body colour. Neutral borders in gray-700 with no icon; notice borders in notice-700 and floats the AlertDiamond icon in the notice colour at the end. No edge carries a bar of its own. It is for what the reader must see first; ordinary notes stay paragraphs.",
+    lang2: "The top bar, sidebar and footer are shared by every page and follow the language everywhere. The language menu is in the top bar of every page: it sets a site-wide preference, and a missing control reads as a broken one.",
+    n6: "A second accent hue",
+    hCredit: "Sources and credits",
+    credit1: "The layout follows the documentation of Adobe's <a href=\"https://react-spectrum.adobe.com/\">React Spectrum</a> and Spectrum 2. Colours, spacing and radii come from <code>@adobe/spectrum-tokens</code> 15.4.1 (Apache-2.0); type sizes and shell geometry are computed styles measured on react-spectrum.adobe.com on 2026-09-29. <code>site/assets/tokens.css</code> names the source of each value. The icons are from <code>@react-spectrum/s2</code> 1.7.1 (Apache-2.0), geometry unchanged. Source Sans 3 and Source Code Pro are distributed under the SIL Open Font License 1.1. The accent comes from Gentoo's <a href=\"https://gitweb.gentoo.org/sites/tyrian-theme.git/\">tyrian theme</a>. The full notices are in <a href=\"/assets/NOTICE.txt\">NOTICE</a>.",
+    hCatalogue: "Component catalogue",
+    catIntro: "Every page is built only from the components below, all defined in <code>site.css</code>. Spacing, radii, type sizes and colours come only from tokens in <code>tokens.css</code>; <code>check-css.py</code> rejects raw lengths and colours in site.css, style attributes in pages and page stylesheets. A new need becomes a new component or a variant of one, recorded in this table.",
+    thComp: "Component",
+    thClass: "Classes",
+    thTokens: "Tokens",
+    hOverviewDemo: "Overview and getting-started components",
+    dStable: "stable binary packages",
+    dBuildLine: "Latest build: 5 h ago",
+    dCardDesc: "The whole card is one link",
+    cat1: "Page header",
+    cat2: "Statistics strip",
+    cat3: "Guide cards",
+    cat16: "Sidebar groups",
+    cat17: "On this page",
+    cat4: "Step",
+    cat5: "Install box",
+    cat6: "Code block",
+    cat7: "Callout",
+    cat8: "Segmented control",
+    cat8p: "Picker (a segmented control that does not fit on one row)",
+    cat9: "Tabs",
+    cat10: "Menu",
+    cat11: "Action button",
+    cat12: "Table",
+    cat13: "Key-value list",
+    cat14: "Breadcrumbs",
+    cat15: "Previous and next",
+    cat17: "Site search",
+    cat19: "Top-bar links",
+    cat20: "Mirror cards",
+    cat21: "Loading states",
+    cat22: "Package list toolbar",
+    cat23: "Badge",
+    cat24: "Contextual help",
+    cat25: "Disclosure",
+    cat26: "Home hero",
+    cat27: "Key fingerprint",
+    cat28: "Empty and message states",
+    cat29: "Mirror sync status",
+    hSearch: "Site search",
+    search1: "The site search follows the React Spectrum docs' search as the doona docs copy it (<code>site/scripts/search.js</code> and <code>site/styles/search.css</code> in <code>doona-docs</code>). The trigger in the middle of the top bar has the S2 SearchField shape: 40px tall, fully rounded, a 2px light gray border (darker on hover, the text colour with focus), a 24px shortcut keycap at its end. A click, typing on it (the character lands in the field), Ctrl K (Command K on a Mac) or / opens a modal dialog nearly as large as the window, with the close button in its corner. The start column holds the site's logo, name and one line about it; beside it come the search field with a 2px dark border, the category chips and the results. The chips follow the sidebar's product groups, plus All and Packages, with dividers before the categories and before a final link out (the Gentoo-zh Community, with the LinkOut icon); the chosen chip is filled with the text colour under the ground colour, the others with light gray. A page result is an S2 Card in a four-column grid: radius 10 with a shadow, a soft purple gradient panel with the group's 64px white icon, then a bold title and at most two lines of description; the active result takes a 2px border in the text colour. Package results are compact 32px rows, and the results scroll inside the dialog. Below 1024px the trigger shows only its icon, the dialog fills the screen and the site name moves to the top.",
+    search2: "The field is a combobox and the results a listbox: focus stays in the field, and the arrow keys, Home and End move the active result through <code>aria-activedescendant</code>; the active result wears the focus ring and Enter opens it. Typing makes the first result active. Escape and the close button close the dialog and return focus to the trigger; Tab cycles inside it. <code>site/tools/build-search-index.py</code> builds the index from the pages, <code>--check</code> fails when it is stale, and the index loads on the first open; packages come from <code>/packages.json</code> and match from 2 characters. Opening and closing morph between trigger and dialog through a View Transition over 250ms; on a phone the page cross-fades; with reduced motion nothing moves.",
+    cat18: "Links"
+  }
+};
+</script>
+<script src="/assets/i18n.js?v=da677fcb"></script>
+<script src="/assets/sudo-switch.js?v=281123b7"></script>
+<script src="/assets/source-switch.js?v=4b48c941"></script>
+<script>
+(function () {
+  // render-chrome.py writes the palettes and the zh-cn sizes from tokens.css for readers without scripts;
+  // this rereads them from the stylesheet in force, so the sizes follow the current language.
+  var TOKENS = ['bg', 'surface', 'raised', 'code-bg', 'hover', 'track', 'track-on', 'border-subtle', 'border', 'border-strong', 'fg', 'fg-body', 'fg-soft', 'fg-muted', 'accent', 'ok', 'neutral-subtle', 'notice', 'bad'];
+
+  // Each grid carries data-theme, so the tokens resolve to that palette inside it and every swatch
+  // paints itself through its class; only the printed values are read back here.
+  function swatches(el) {
+    var cs = getComputedStyle(el);
+    el.querySelectorAll('.sw').forEach(function (sw) {
+      sw.querySelector('span').textContent = cs.getPropertyValue('--' + sw.querySelector('b').textContent).trim();
+    });
+  }
+
+  function sizes() {
+    var cs = getComputedStyle(document.documentElement);
+    document.querySelectorAll('[data-token]').forEach(function (td) {
+      var v = cs.getPropertyValue('--' + td.dataset.token).trim();
+      td.textContent = td.dataset.label ? td.dataset.label + ' · ' + v : v;
+    });
+  }
+
+  swatches(document.getElementById('sw-light'));
+  swatches(document.getElementById('sw-dark'));
+  sizes();
+  document.addEventListener('langchange', sizes);
+})();
+</script>
+</body>
+</html>

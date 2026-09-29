@@ -60,8 +60,10 @@
       var count = option.querySelector('[data-channel-total]');
       var path = option.getAttribute('data-path');
       if (!count || !path) return;
-      fetch(path + '/status.json')
-        .then(function (response) { return response.ok ? response.json() : null; })
+      // status-data.js, when the page loads it, has fetched these indexes already.
+      var shared = typeof window !== 'undefined' && window.MirrorStatus && window.MirrorStatus.json;
+      (shared ? shared(path + '/status.json') : fetch(path + '/status.json')
+        .then(function (response) { return response.ok ? response.json() : null; }))
         .then(function (status) {
           var total = status && (typeof status.overlay === 'number'
             ? status.overlay : status.packages);

@@ -13,9 +13,20 @@ const COMMON = (() => {
 const LANGS = ['zh-tw', 'en'];
 let bad = 0;
 
-for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
+const internal = path.join(dir, 'internal');
+const pages = fs.readdirSync(dir).filter(f => f.endsWith('.html')).concat(
+  fs.existsSync(internal)
+    ? fs.readdirSync(internal).filter(f => f.endsWith('.html')).map(f => 'internal/' + f) : []);
+for (const f of pages) {
   const s = fs.readFileSync(path.join(dir, f), 'utf8');
-  const keysInPage = [...s.matchAll(/data-i18n(?:-html|-href)?="([A-Za-z0-9_]+)"/g)];
+  const keysInPage = [...s.matchAll(/data-i18n(?:-html|-href|-label)?="([A-Za-z0-9_]+)"/g)];
+  // A Chinese aria-label is read out in every language, so it needs a key like visible text.
+  for (const [tag, label] of s.matchAll(/<[a-z][^>]*\saria-label="([^"]*[^\x00-\x7f][^"]*)"[^>]*>/g)) {
+    if (!/\sdata-i18n-label="/.test(tag)) {
+      console.error(`!!! ${f}: aria-label="${label}" 没有 data-i18n-label，切换语言后仍读中文`);
+      bad++;
+    }
+  }
   const keysInScript = [...s.matchAll(/\bt\(["']([A-Za-z0-9_]+)["']\)/g)];
   const strings = s.match(/<div id="strings"[\s\S]*?<\/div>/);
   if (strings) {

@@ -245,6 +245,42 @@
    "run.sh",
    "echo \"旧文件一个都没删\"\n",
    "emitted"
+  ],
+  [
+   "英文社区名写法错误（正序）",
+   "page.html",
+   "<meta name=\"description\" content=\"Maintained by the Gentoo Chinese community.\">\n",
+   "visible"
+  ],
+  [
+   "英文社区名写法错误（倒序）",
+   "page.html",
+   "<p>Founded by the Chinese Gentoo community in 2003.</p>\n",
+   "visible"
+  ],
+  [
+   "中国指代大陆，未写全称",
+   "page.html",
+   "<p>本镜像面向中国用户提供服务。</p>\n",
+   "visible"
+  ],
+  [
+   "国内指代大陆，未写全称",
+   "page.html",
+   "<p>国内用户可选用教育网镜像。</p>\n",
+   "visible"
+  ],
+  [
+   "英文 China 未加 mainland",
+   "page.html",
+   "<p>Users in China should pick the CERNET mirror.</p>\n",
+   "visible"
+  ],
+  [
+   "strings.js 里的英文社区名写法错误",
+   "assets/strings.js",
+   "fCommunity: 'Gentoo Chinese Community',",
+   "strings"
   ]
  ],
  "clean": {
@@ -259,7 +295,7 @@
   "units/probe.service": "[Unit]\nDescription=每日构建并发布\n"
  },
  "site": {
-  "ok": "<p>先执行一次配置</p>\n",
+  "ok": "<p>先执行一次配置</p>\n<p>常见地区包括中国大陆、mainland China 与 gentoo-china 项目。</p>\n",
   "bad": "<p>先跑一次配置</p>\n"
  }
 }

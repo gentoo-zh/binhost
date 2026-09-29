@@ -1,0 +1,80 @@
+Third-party material in the distfiles.gentoozh.org site
+(gentoo-zh/binhost, site/)
+
+Design
+The site's documentation layout follows the documentation of Adobe's React
+Spectrum and Spectrum 2 (https://react-spectrum.adobe.com/). Neutral and
+status colours, spacing, radii and type sizes are values from
+@adobe/spectrum-tokens 15.4.1 (Apache License 2.0,
+https://github.com/adobe/spectrum-design-data); /assets/tokens.css names
+the token each value comes from. The licence text is
+/assets/LICENSE-Apache-2.0.txt. The accent is Gentoo's purple from the
+tyrian theme (https://gitweb.gentoo.org/sites/tyrian-theme.git).
+
+Adobe Spectrum icons
+Copyright 2024 Adobe. All rights reserved.
+The MenuHamburger, GlobeGrid, Lighten, Contrast, Copy,
+Search, ChevronRight, Checkmark, Close, Layers, Archive, Download,
+DeviceLaptop, Duplicate, HelpCircle, Prompt, Chat, Key and Email workflow icons in the page
+header, the pages and /assets/tokens.css are copied from
+@react-spectrum/s2 1.7.1 (icons/<Name>.mjs). The chevron of the sidebar
+groups is the UI icon Chevron at size 100, from the same package
+(dist/private/S2_ChevronSize100.mjs), and the search's link-out mark is the UI
+icon LinkOut at size 200 (dist/private/S2_LinkOutSize200.mjs). The SVG geometry is unchanged;
+fills use currentColor. Licensed under the Apache License, Version 2.0;
+the licence text is /assets/LICENSE-Apache-2.0.txt
+(https://www.apache.org/licenses/LICENSE-2.0).
+Source: https://github.com/adobe/react-spectrum
+
+Adobe Spectrum illustration
+Copyright 2024 Adobe. All rights reserved.
+The illustration in the 404 page's empty state is the NoSearchResults linear
+illustration, size M, from @react-spectrum/s2 1.7.1
+(illustrations/linear/internal/S2_lin_noSearchResults_96.mjs). The SVG
+geometry is unchanged; fills use currentColor. Licensed under the Apache
+License, Version 2.0; the licence text is /assets/LICENSE-Apache-2.0.txt
+(https://www.apache.org/licenses/LICENSE-2.0).
+Source: https://github.com/adobe/react-spectrum
+
+Simple Icons brand marks
+The Telegram and Matrix icons on /about are the Telegram and Matrix brand marks
+from Simple Icons 16.33.0 (icons/telegram.svg, icons/matrix.svg). The SVG
+geometry is unchanged; fills use currentColor. Dedicated to the public domain
+under CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/).
+Source: https://github.com/simple-icons/simple-icons
+
+Source Sans 3 and Source Code Pro
+Source Sans 3: Copyright 2010-2020 Adobe (http://www.adobe.com/), with
+Reserved Font Name 'Source'.
+Source Code Pro: Copyright 2010, 2012 Adobe Systems Incorporated
+(http://www.adobe.com/), with Reserved Font Name 'Source'.
+The site serves their Google Fonts Latin WOFF2 subsets, unmodified, under the
+SIL Open Font License 1.1. The licence texts are
+/assets/fonts/LICENSE-SourceSans3.txt and
+/assets/fonts/LICENSE-SourceCodePro.txt; site/assets/fonts/README.md in the
+repository records the source revisions.
+
+OSU Open Source Lab logo
+The logo on /thanks is the Oregon State University Open Source Lab's own
+artwork: /assets/osuosl-logo-light.png is
+https://osuosl.org/images/osllogo-print_0.png and
+/assets/osuosl-logo-dark.png is https://osuosl.org/images/osllogo-white_0.png,
+both retrieved 2026-09-29 and unmodified. The page only scales them. OSUOSL's
+logo rules (https://osuosl.org/about/logos/) allow resizing but no change to
+colours or alignment.
+
+Mirror logos
+Each mirror's logo on /thanks is that mirror's own artwork, taken from the
+logo its website shows, retrieved 2026-09-29. The page only scales them and
+never changes their colours; a logo that cannot be read on the dark theme
+sits on a white tile there instead.
+- /assets/logos/cernet.svg: https://mirrors.cernet.edu.cn/static/img/mirrorz.svg
+  (the MirrorZ logo in the site's sidebar). Inkscape and RDF metadata and
+  the title removed; shapes and colours unchanged.
+- /assets/logos/nju.webp: https://mirror.nju.edu.cn/assets/nju-CWbhqkwx.png
+  (the site's header logo), scaled from 400x400 to 128x128, lossless WebP.
+- /assets/logos/nyist.webp: https://mirror.nyist.edu.cn/static/img/logo-share.png
+  (the site's header logo), its transparent margin trimmed (to 336x333),
+  then scaled to 129x128, lossless WebP.
+- /assets/logos/hernet.svg: https://mirrors.ha.edu.cn/static/img/logo-hernet.svg
+  (the HERNET mark in the site's header), unchanged.

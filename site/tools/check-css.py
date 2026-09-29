@@ -12,7 +12,7 @@ def rules(css):
         structural = re.sub(r"(['\"])(?:\\.|(?!\1).)*\1", "", line)
         opens = structural.count("{")
         closes = structural.count("}")
-        if re.match(r"\s*@media", structural):
+        if re.match(r"\s*@(media|container|supports)\b", structural):
             label = structural.split("{", 1)[0].strip()
             if opens > closes:
                 media.append((label, depth + 1))
@@ -25,14 +25,76 @@ def rules(css):
     return out
 
 
+# Values come from tokens.css. In site.css a declaration may not write a length in px or rem or a colour
+# literal: a new value is a new token, named for its role, or it is a value the scale already has.
+# Relative units (%, em, ch, fr, vw, vh, dvh), angles and durations through var() are fine. Exceptions:
+RAW_OK = {
+    "0px": "zero in any unit",
+    "1px": "hairlines: borders, dividers and the 1px outline of an overlay",
+    "-1px": "the margin that hides a visually hidden element",
+}
+# A corner radius is one of the radius tokens and nothing else, so each component size keeps one radius.
+RADIUS_TOKEN = re.compile(r"var\(--r-[a-z]+\)|0")
+LENGTH = re.compile(r"(?<![\w.#-])-?(?:\d+\.?\d*|\.\d+)(?:px|rem)\b")
+COLOUR = re.compile(r"#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch|lab|lch)\(")
+
+
+def blank_comments(css):
+    # Comments become spaces, newlines kept, so line numbers still match the file.
+    return re.sub(r"/\*.*?\*/", lambda m: re.sub(r"[^\n]", " ", m.group(0)), css, flags=re.S)
+
+
+def raw_values(css):
+    out = []
+    for lineno, line in enumerate(blank_comments(css).split("\n"), 1):
+        if re.match(r"\s*@(media|container|supports)\b", line):
+            continue  # a media condition cannot read a custom property
+        for decl in re.findall(r"([\w-]+)\s*:\s*([^;{}]+)", line):
+            if re.fullmatch(r"border(?:-[a-z]+)*-radius", decl[0]):
+                parts = decl[1].replace("!important", "").split()
+                if not parts or not all(RADIUS_TOKEN.fullmatch(p) for p in parts):
+                    out.append(f"行 {lineno}：{decl[0]} 写了 {decl[1].strip()}，圆角只能取 --r-* 令牌")
+                    continue
+            value = re.sub(r"var\([^()]*\)", "", decl[1])
+            for m in LENGTH.finditer(value):
+                if m.group(0) not in RAW_OK:
+                    out.append(f"行 {lineno}：{decl[0]} 写了 {m.group(0)}，应取 tokens.css 的令牌")
+            for m in COLOUR.finditer(value):
+                out.append(f"行 {lineno}：{decl[0]} 写了颜色 {m.group(0)}，应取 tokens.css 的令牌")
+    return out
+
+
+def inline_styles(pages, scripts):
+    # A page is built from the shared components only: no style attribute, no page stylesheet.
+    out = []
+    for f in pages:
+        for lineno, line in enumerate(f.read_text().split("\n"), 1):
+            if re.search(r"<style\b", line):
+                out.append(f"{f.name} 行 {lineno}：页面内的 <style>，样式应写在 site.css")
+            if re.search(r"\sstyle\s*=", line):
+                out.append(f"{f.name} 行 {lineno}：style 属性，样式应写在 site.css")
+    for f in scripts:
+        for lineno, line in enumerate(f.read_text().split("\n"), 1):
+            if re.search(r"""\sstyle=['"\\]""", line):
+                out.append(f"{f.name} 行 {lineno}：脚本生成 style 属性，样式应写在 site.css")
+    return out
+
+
 def main(site):
     site = pathlib.Path(site)
     css_path = site / "assets" / "site.css"
-    css = css_path.read_text()
+    # Tokens live in tokens.css and components in site.css; variables and palettes span both.
+    css = "\n".join(p.read_text() for p in
+                    [site / "assets" / "tokens.css", css_path] if p.exists())
     src = "\n".join(p.read_text() for p in
-                    list(site.glob("*.html")) + list((site / "assets").glob("*.js")))
+                    list(site.glob("*.html")) + list(site.glob("internal/*.html")) +
+                    list((site / "assets").glob("*.js")))
 
     bad = []
+
+    bad.extend(raw_values(css_path.read_text()) if css_path.exists() else [])
+    pages = sorted(site.glob("*.html")) + sorted(site.glob("internal/*.html"))
+    bad.extend(inline_styles(pages, sorted((site / "assets").glob("*.js"))))
 
     declared = set(re.findall(r"^\s*(--[a-z0-9-]+)\s*:", css, re.M))
     used = set(re.findall(r"var\((--[a-z0-9-]+)", css)) | set(re.findall(r"(--[a-z0-9-]+)", src))

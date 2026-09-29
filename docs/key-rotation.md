@@ -57,7 +57,7 @@ gpg --homedir /var/lib/binhost/gnupg --armor \
 
 ### 四、重叠期，至少一个月
 
-继续用旧密钥签名，同时在站点首页与社区渠道说明需要重新导入。
+继续用旧密钥签名，同时在站点概览页、二进制包配置页与社区渠道说明需要重新导入。
 
 由于无法统计已重新导入公钥的用户数量，重叠期以时间为准。
 
@@ -134,7 +134,7 @@ verify_download https://distfiles.gentoozh.org/unstable/binpkgs/x86-64
 - `.asc` 可以包含多把公钥，重叠期即为此状态，它会打印数量提醒收尾
 - 仓库中出现的每个指纹都必须是 `.asc` 已发布的公钥
 - 两个构建服务必须指定同一把密钥，且该密钥未撤销、具备签名能力
-- 当前签名密钥必须同时出现在 `site/index.html` 与本文中
+- 当前签名密钥必须同时出现在 `site/binpkg-setup.html` 与本文中
 - `.asc` 中不得保留已过期的公钥
 
 它不判断哪个密钥是新密钥，只验证这些位置互相一致，且均包含在已发布的公钥中。
@@ -145,7 +145,7 @@ verify_download https://distfiles.gentoozh.org/unstable/binpkgs/x86-64
 |---|---|
 | `deploy/systemd/binhost-build.service` 的 `Environment=SIGNING_KEY=` | stable 构建使用的密钥 |
 | `deploy/systemd/binhost-build-unstable.service` 的 `Environment=SIGNING_KEY=` | unstable 构建使用的密钥 |
-| `site/index.html` 的指纹与复制按钮 | 用户导入后核对的依据 |
+| `site/binpkg-setup.html` 的指纹与复制按钮 | 用户导入后核对的依据 |
 | `docs/key-rotation.md` 开头 | 本文记录的当前指纹 |
 | 镜像机的 `/etc/binhost/signing-key.fpr` | `site-sync.sh` 据此决定是否同步公钥 |
 

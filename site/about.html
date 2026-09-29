@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<!-- chrome:head -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/assets/logo.webp">
+<link rel="preload" href="/assets/fonts/source-sans-3.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/tokens.css?v=1e90dbb8">
+<link rel="stylesheet" href="/assets/site.css?v=4f99deea">
+<script src="/assets/early.js?v=e170b3a5"></script>
+<script src="/assets/docs.js?v=7bf4e48d" defer></script>
+<script src="/assets/indicator.js?v=d209281f" defer></script>
+<script src="/assets/seg-picker.js?v=e8734be5" defer></script>
+<script src="/assets/search.js?v=a358ca65" defer></script>
+<meta property="og:site_name" content="Gentoo-zh 下载">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://distfiles.gentoozh.org/assets/logo.webp">
+<meta name="twitter:card" content="summary">
+<!-- /chrome:head -->
+<title>关于本站 — Gentoo-zh 下载</title>
+<meta name="description" content="gentoo-zh 的联系方式，以及本站源码、签名公钥与社区站点的链接。">
+</head>
+<body>
+
+<!-- chrome:nav current="/about" -->
+<a class="skip" href="#main" data-i18n="skip">跳到正文</a>
+<header class="nav">
+  <button type="button" class="icon-btn nav-toggle" aria-expanded="false" aria-controls="sidebar" hidden>
+    <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M16.25 14H3.75c-.414 0-.75.336-.75.75s.336.75.75.75h12.5c.414 0 .75-.336.75-.75s-.336-.75-.75-.75M3.75 5.5h12.5c.414 0 .75-.336.75-.75S16.664 4 16.25 4H3.75c-.414 0-.75.336-.75.75s.336.75.75.75M16.25 9H3.75c-.414 0-.75.336-.75.75s.336.75.75.75h12.5c.414 0 .75-.336.75-.75S16.664 9 16.25 9"/></svg><span class="visually-hidden" data-i18n="navMenu">页面菜单</span>
+  </button>
+  <a class="nav-brand" href="/">
+    <img src="/assets/logo.webp" alt="" width="28" height="28">
+    <span class="nav-title" data-i18n="brand">Gentoo-zh 下载</span>
+  </a>
+  <div class="nav-tools" id="controls">
+    <button type="button" class="search-trigger js-only" aria-haspopup="dialog" aria-expanded="false" aria-controls="site-search" aria-keyshortcuts="Control+K Meta+K /">
+      <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="m18.53 17.47-5.083-5.084C14.417 11.186 15 9.66 15 8c0-3.86-3.14-7-7-7S1 4.14 1 8s3.14 7 7 7c1.66 0 3.185-.584 4.386-1.553l5.084 5.083c.146.147.338.22.53.22s.384-.073.53-.22c.293-.293.293-.767 0-1.06M8 13.5c-3.032 0-5.5-2.468-5.5-5.5S4.968 2.5 8 2.5s5.5 2.468 5.5 5.5-2.468 5.5-5.5 5.5"/></svg><span class="search-trigger-label" data-i18n="sdOpen">搜索 Gentoo-zh 下载</span><kbd class="search-kbd" aria-hidden="true">Ctrl K</kbd>
+    </button>
+    <a class="icon-btn bar-link" href="/files/" aria-label="文件" data-i18n-label="navFiles">
+      <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M16.75 5h-5.964c-.218 0-.424-.095-.567-.259L8.516 2.776C8.088 2.283 7.468 2 6.816 2H3.25C2.01 2 1 3.01 1 4.25v10.5C1 15.99 2.01 17 3.25 17h13.5c1.24 0 2.25-1.01 2.25-2.25v-7.5C19 6.01 17.99 5 16.75 5M3.25 3.5h3.565c.218 0 .424.095.567.259L8.458 5H2.5v-.75c0-.413.336-.75.75-.75M17.5 14.75c0 .413-.336.75-.75.75H3.25c-.414 0-.75-.337-.75-.75V6.5h14.25c.414 0 .75.337.75.75z"/></svg>
+    </a>
+    <a class="icon-btn gh" href="https://github.com/gentoo-zh"
+       title="gentoo-zh" aria-label="GitHub">
+      <svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.02-2.06-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.62-5.48 5.92.43.37.81 1.1.81 2.22 0 1.61-.01 2.9-.01 3.29 0 .32.21.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5z"/></svg>
+    </a>
+    <span class="bar-divider" aria-hidden="true"></span>
+    <div class="menu-wrap js-only" data-menu="lang">
+      <button type="button" class="icon-btn menu-trigger" id="lang-trigger" aria-haspopup="menu" aria-expanded="false" aria-controls="lang-menu">
+        <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 1.252c-4.825 0-8.75 3.925-8.75 8.75s3.925 8.75 8.75 8.75 8.75-3.925 8.75-8.75-3.925-8.75-8.75-8.75m7.21 8H14.07c-.14-2.33-.915-4.526-2.192-6.245 2.856.767 5.023 3.231 5.334 6.245m-7.198 7.631c-1.49-1.537-2.419-3.745-2.582-6.131h5.14c-.162 2.388-1.081 4.593-2.558 6.131M7.431 9.252c.162-2.387 1.091-4.594 2.581-6.132 1.477 1.538 2.396 3.743 2.558 6.132zm.715-6.251c-1.29 1.72-2.074 3.92-2.215 6.251H2.79c.312-3.022 2.49-5.49 5.357-6.251M2.79 10.752h3.142c.141 2.33.926 4.53 2.216 6.25-2.867-.759-5.046-3.228-5.358-6.25m9.088 6.245c1.277-1.72 2.052-3.915 2.192-6.245h3.142c-.311 3.014-2.479 5.478-5.334 6.245"/></svg>
+      </button>
+      <div class="menu" id="lang-menu" role="menu" aria-labelledby="lang-trigger" hidden>
+        <button type="button" class="menu-item" role="menuitemradio" aria-checked="true" data-value="zh-cn" lang="zh-CN"><svg class="icon icon-sm menu-check" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M7.864 15.734c-.222 0-.433-.098-.576-.27l-3.747-4.497c-.266-.319-.222-.792.096-1.057.317-.265.79-.223 1.056.096l3.154 3.786 7.44-9.469c.255-.326.728-.382 1.052-.127.326.256.383.728.127 1.053L8.454 15.447c-.14.179-.352.284-.579.287z"/></svg><span class="menu-label">简体中文</span></button>
+        <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-value="zh-tw" lang="zh-TW"><svg class="icon icon-sm menu-check" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M7.864 15.734c-.222 0-.433-.098-.576-.27l-3.747-4.497c-.266-.319-.222-.792.096-1.057.317-.265.79-.223 1.056.096l3.154 3.786 7.44-9.469c.255-.326.728-.382 1.052-.127.326.256.383.728.127 1.053L8.454 15.447c-.14.179-.352.284-.579.287z"/></svg><span class="menu-label">繁體中文</span></button>
+        <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-value="en" lang="en"><svg class="icon icon-sm menu-check" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M7.864 15.734c-.222 0-.433-.098-.576-.27l-3.747-4.497c-.266-.319-.222-.792.096-1.057.317-.265.79-.223 1.056.096l3.154 3.786 7.44-9.469c.255-.326.728-.382 1.052-.127.326.256.383.728.127 1.053L8.454 15.447c-.14.179-.352.284-.579.287z"/></svg><span class="menu-label">English</span></button>
+      </div>
+    </div>
+    <noscript>
+      <details class="menu-wrap lang-static">
+        <summary class="icon-btn" aria-label="语言" data-i18n-label="aLang"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 1.252c-4.825 0-8.75 3.925-8.75 8.75s3.925 8.75 8.75 8.75 8.75-3.925 8.75-8.75-3.925-8.75-8.75-8.75m7.21 8H14.07c-.14-2.33-.915-4.526-2.192-6.245 2.856.767 5.023 3.231 5.334 6.245m-7.198 7.631c-1.49-1.537-2.419-3.745-2.582-6.131h5.14c-.162 2.388-1.081 4.593-2.558 6.131M7.431 9.252c.162-2.387 1.091-4.594 2.581-6.132 1.477 1.538 2.396 3.743 2.558 6.132zm.715-6.251c-1.29 1.72-2.074 3.92-2.215 6.251H2.79c.312-3.022 2.49-5.49 5.357-6.251M2.79 10.752h3.142c.141 2.33.926 4.53 2.216 6.25-2.867-.759-5.046-3.228-5.358-6.25m9.088 6.245c1.277-1.72 2.052-3.915 2.192-6.245h3.142c-.311 3.014-2.479 5.478-5.334 6.245"/></svg></summary>
+        <div class="menu">
+          <a class="menu-item" href="?lang=zh-cn" hreflang="zh-CN" lang="zh-CN" aria-current="true"><span class="menu-label">简体中文</span></a>
+          <a class="menu-item" href="?lang=zh-tw" hreflang="zh-TW" lang="zh-TW"><span class="menu-label">繁體中文</span></a>
+          <a class="menu-item" href="?lang=en" hreflang="en" lang="en"><span class="menu-label">English</span></a>
+        </div>
+      </details>
+    </noscript>
+    <button type="button" class="icon-btn theme-btn js-only" id="theme-toggle">
+      <span class="ico ico-lighten"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 6.35c2.012 0 3.65 1.638 3.65 3.65s-1.638 3.65-3.65 3.65S6.35 12.012 6.35 10 7.988 6.35 10 6.35m0-1.5c-2.84 0-5.15 2.31-5.15 5.15s2.31 5.15 5.15 5.15 5.15-2.31 5.15-5.15S12.84 4.85 10 4.85M10 3.25c-.414 0-.75-.336-.75-.75V1.25c0-.414.336-.75.75-.75s.75.336.75.75V2.5c0 .414-.336.75-.75.75M10 19.5c-.414 0-.75-.336-.75-.75V17.5c0-.414.336-.75.75-.75s.75.336.75.75v1.25c0 .414-.336.75-.75.75M2.5 10.75H1.25c-.414 0-.75-.336-.75-.75s.336-.75.75-.75H2.5c.414 0 .75.336.75.75s-.336.75-.75.75M18.75 10.75H17.5c-.414 0-.75-.336-.75-.75s.336-.75.75-.75h1.25c.414 0 .75.336.75.75s-.336.75-.75.75M15.304 5.446c-.193 0-.384-.073-.53-.22-.294-.292-.294-.767 0-1.06l.883-.884c.293-.293.768-.293 1.06 0s.294.768 0 1.06l-.883.885c-.146.146-.338.22-.53.22M3.813 16.938c-.193 0-.384-.074-.53-.22-.294-.293-.294-.768 0-1.06l.883-.885c.293-.293.768-.293 1.06 0s.294.768 0 1.061l-.883.884c-.147.146-.338.22-.53.22M4.696 5.446c-.192 0-.383-.073-.53-.22l-.884-.883c-.293-.293-.293-.768 0-1.06s.768-.294 1.06 0l.885.883c.293.293.293.768 0 1.06-.147.147-.338.22-.53.22M16.188 16.938c-.193 0-.384-.074-.53-.22l-.885-.884c-.293-.293-.293-.768 0-1.06s.768-.294 1.061 0l.884.883c.293.293.293.768 0 1.06-.147.147-.338.22-.53.22"/></svg></span>
+      <span class="ico ico-contrast"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 18.78c-4.825 0-8.75-3.926-8.75-8.75S5.175 1.28 10 1.28s8.75 3.924 8.75 8.75-3.925 8.75-8.75 8.75m0-16c-3.998 0-7.25 3.251-7.25 7.25s3.252 7.25 7.25 7.25 7.25-3.253 7.25-7.25S13.998 2.78 10 2.78"/><path fill="currentColor" d="M10 14.384c0 .653.615 1.121 1.251.973 2.435-.566 4.249-2.75 4.249-5.357s-1.814-4.79-4.249-5.357c-.636-.148-1.251.32-1.251.973z"/></svg></span>
+    </button>
+  </div>
+</header>
+<dialog class="sd" id="site-search" aria-label="搜索 Gentoo-zh 下载" data-i18n-label="sdOpen" data-src="/assets/search-index.json">
+  <div class="sd-brand">
+    <a class="sd-brand-link" href="/"><img src="/assets/logo.webp" alt="" width="28" height="28"><span data-i18n="brand">Gentoo-zh 下载</span></a>
+    <p class="sd-tagline" data-i18n="sdTagline">Gentoo 中文社区的 overlay 指南、distfiles、binhost、Live ISO 与镜像服务。</p>
+  </div>
+  <div class="sd-main">
+    <div class="sd-top">
+      <div class="search-field sd-field">
+        <svg class="icon search-icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="m18.53 17.47-5.083-5.084C14.417 11.186 15 9.66 15 8c0-3.86-3.14-7-7-7S1 4.14 1 8s3.14 7 7 7c1.66 0 3.185-.584 4.386-1.553l5.084 5.083c.146.147.338.22.53.22s.384-.073.53-.22c.293-.293.293-.767 0-1.06M8 13.5c-3.032 0-5.5-2.468-5.5-5.5S4.968 2.5 8 2.5s5.5 2.468 5.5 5.5-2.468 5.5-5.5 5.5"/></svg>
+        <input class="search sd-input" type="search" role="combobox" aria-expanded="true" aria-controls="sd-results" aria-autocomplete="list" autocomplete="off" spellcheck="false" aria-label="搜索 Gentoo-zh 下载" data-i18n-label="sdOpen">
+      </div>
+    </div>
+    <div class="sd-chips" role="group" aria-label="分类" data-i18n-label="sdCats"></div>
+    <div class="sd-status" role="status"><span class="sd-msg"></span><button type="button" class="msg-retry sd-retry" data-i18n="sdRetry" hidden>重试</button></div>
+    <div class="sd-results" id="sd-results" role="listbox" aria-label="搜索结果" data-i18n-label="sdResults"></div>
+  </div>
+  <button type="button" class="icon-btn sd-close" aria-label="关闭" data-i18n-label="sdClose"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="m11.06 10 5.207-5.206c.293-.293.293-.768 0-1.06s-.767-.294-1.06 0L10 8.938 4.793 3.733c-.293-.293-.767-.293-1.06 0s-.293.768 0 1.06L8.939 10l-5.206 5.206c-.293.293-.293.768 0 1.06.146.147.338.22.53.22s.384-.073.53-.22L10 11.062l5.207 5.206c.146.146.338.22.53.22s.384-.074.53-.22c.293-.293.293-.768 0-1.06z"/></svg></button>
+  <div class="sd-strings" hidden>
+    <span data-i18n="fCommunity">Gentoo 中文社区</span><span data-i18n="sdAll">全部</span><span data-i18n="sdPkgs">软件包</span><span data-i18n="sdLoading">正在加载…</span>
+    <span data-i18n="sdFailed">无法加载搜索索引。</span><span data-i18n="sdNone">没有与“{q}”匹配的结果。</span>
+    <span data-i18n="sdPkgHint">输入至少 2 个字符以搜索软件包。</span><span data-i18n="sdPkgFailed">无法加载软件包列表。</span>
+    <span data-i18n="sdPkgMore">共 {n} 个匹配的软件包，此处显示前 {m} 个。</span>
+  </div>
+</dialog>
+<nav class="sidebar" id="sidebar" aria-label="页面" data-i18n-label="aPages">
+  <p class="nav-label" id="nav-intro" data-i18n="navSecIntro">简介</p>
+  <ul class="pages" aria-labelledby="nav-intro">
+    <li><a class="nav-link" href="/" data-i18n="navHome">概览</a></li>
+    <li class="bar-mirror"><a class="nav-link bar-mirror-link" href="/files/" data-i18n="navFiles">文件</a></li>
+  </ul>
+  <details class="nav-group" data-group="overlay" data-default-open open>
+    <summary class="nav-group-title"><span data-i18n="navGOverlay">overlay</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/overlay" data-i18n="navOverlay">加入 overlay</a></li>
+      <li><a class="nav-link" href="/packages" data-i18n="navPkgs">软件包列表</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="distfiles" data-default-open open>
+    <summary class="nav-group-title"><span data-i18n="navGDist">distfiles</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/distfiles-setup" data-i18n="navDist">配置 distfiles</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="binhost" data-default-open open>
+    <summary class="nav-group-title"><span data-i18n="navGBin">binhost</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/binpkg-setup" data-i18n="navBin">配置 binpkg</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="iso" open>
+    <summary class="nav-group-title"><span data-i18n="navIso">Live ISO</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/iso" data-i18n="navIsoGet">CJK 最小安装镜像</a></li>
+      <li><a class="nav-link" href="/gigos/" data-i18n="navGigos">Gig-OS（独立项目）</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="mirrors" data-default-open open>
+    <summary class="nav-group-title"><span data-i18n="navGMirrors">镜像</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/mirrors" data-i18n="navMirrors">镜像列表</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="help" open>
+    <summary class="nav-group-title"><span data-i18n="navHelp">帮助</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/faq">FAQ</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="about" open>
+    <summary class="nav-group-title"><span data-i18n="navGAbout">关于</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/about" aria-current="page" data-i18n="navAbout">关于本站</a></li>
+      <li><a class="nav-link" href="/status" data-i18n="navStatus">服务状态</a></li>
+      <li><a class="nav-link" href="/thanks" data-i18n="navThanks">致谢</a></li>
+    </ul>
+  </details>
+</nav>
+<script>
+// Every group is open in the markup, so without scripts the whole list shows. Before the first paint this
+// marks the current page where render-chrome.py could not, keeps its group open, and sets each other group
+// as the reader last left it in this session, else as the markup's data-default-open says: the docs keep
+// their tree as it was between pages and open only their main group at first.
+(function () {
+  var side = document.getElementById('sidebar'), key = 'nav-groups', saved = {};
+  try { saved = JSON.parse(sessionStorage.getItem(key)) || {}; } catch (e) { saved = {}; }
+  var path = location.pathname.replace(/\.html$/, '').replace(/\/index$/, '/');
+  function matches(a) {
+    var href = a.getAttribute('href');
+    return href === path || (href.length > 1 && href.slice(-1) === '/' && path.indexOf(href) === 0);
+  }
+  // The file browser's chrome marks /files/, but a directory the sidebar links to (/gigos/) is marked
+  // itself while the reader browses it.
+  var current = side.querySelector('a[aria-current="page"]');
+  if (!current || !matches(current)) {
+    var found = null;
+    side.querySelectorAll('a[href^="/"]').forEach(function (a) {
+      if (!found && matches(a)) found = a;
+    });
+    if (found) {
+      if (current) current.removeAttribute('aria-current');
+      current = found;
+      found.setAttribute('aria-current', 'page');
+    }
+  }
+  side.querySelectorAll('.nav-group').forEach(function (g) {
+    var id = g.getAttribute('data-group');
+    g.open = current && g.contains(current) ? true
+      : typeof saved[id] === 'boolean' ? saved[id] : g.hasAttribute('data-default-open');
+    // The toggle event fires after the element's own state changes, for a mouse click, a keyboard
+    // toggle or a script setting .open alike, so g.open here is always the new state.
+    g.addEventListener('toggle', function () {
+      saved[id] = g.open;
+      try { sessionStorage.setItem(key, JSON.stringify(saved)); } catch (e) { /* not kept */ }
+    });
+  });
+})();
+</script>
+<!-- /chrome:nav -->
+
+<main id="main" class="wrap">
+
+  <h1 class="title" data-i18n="title">关于本站</h1>
+
+  <h2 id="contact" data-i18n="h2contact">联系</h2>
+  <ul class="entry-grid">
+    <li><a class="entry-card" href="https://github.com/gentoo-zh/binhost/issues"><span class="entry-head"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.02-2.06-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.62-5.48 5.92.43.37.81 1.1.81 2.22 0 1.61-.01 2.9-.01 3.29 0 .32.21.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5z"/></svg><span class="entry-title">GitHub Issues</span></span><span class="entry-desc">github.com/gentoo-zh/binhost/issues</span></a></li>
+    <li><a class="entry-card" href="https://forum.gentoozh.org/"><span class="entry-head"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M16.75 2h-8C7.507 2 6.5 3.007 6.5 4.25v.5c0 .414.336.75.75.75S8 5.164 8 4.75v-.5c0-.413.337-.75.75-.75h8c.413 0 .75.338.75.75v4.5c0 .413-.337.75-.75.75H16c-.414 0-.75.336-.75.75v1.651L13.5 10.36V9.25C13.5 8.007 12.493 7 11.25 7h-8C2.007 7 1 8.007 1 9.25v4.5C1 14.99 2.01 16 3.25 16v2.137c0 .383.228.723.58.869q.182.073.365.072c.239 0 .466-.089.618-.245L8.033 16h3.217c1.243 0 2.25-1.007 2.25-2.25v-1.393l1.64 1.444c.18.18.42.275.665.275.122 0 .246-.023.364-.072.352-.147.581-.486.581-.867V11C17.99 11 19 9.99 19 8.75v-4.5C19 3.007 17.993 2 16.75 2M12 13.75c0 .413-.337.75-.75.75H7.467L4.75 16.894V15.25c0-.414-.336-.75-.75-.75h-.75c-.412 0-.75-.337-.75-.75v-4.5c0-.412.338-.75.75-.75h8c.413 0 .75.338.75.75z"/></svg><span class="entry-title" data-i18n="ctForum">论坛</span></span><span class="entry-desc">forum.gentoozh.org</span></a></li>
+    <li><a class="entry-card" href="https://t.me/gentoo_zh"><span class="entry-head"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg><span class="entry-title">Telegram @gentoo_zh</span></span><span class="entry-desc">t.me/gentoo_zh</span></a></li>
+    <li><a class="entry-card" href="https://t.me/gentoocn"><span class="entry-head"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg><span class="entry-title">Telegram @gentoocn</span></span><span class="entry-desc">t.me/gentoocn</span></a></li>
+    <li><a class="entry-card" href="https://matrix.to/#/#gentoo-zh:gentoozh.org"><span class="entry-head"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M.632.55v22.9H2.28V24H0V0h2.28v.55zm7.043 7.26v1.157h.033c.309-.443.683-.784 1.117-1.024.433-.245.936-.365 1.5-.365.54 0 1.033.107 1.481.314.448.208.785.582 1.02 1.108.254-.374.6-.706 1.034-.992.434-.287.95-.43 1.546-.43.453 0 .872.056 1.26.167.388.11.716.286.993.53.276.245.489.559.646.951.152.392.23.863.23 1.417v5.728h-2.349V11.52c0-.286-.01-.559-.032-.812a1.755 1.755 0 0 0-.18-.66 1.106 1.106 0 0 0-.438-.448c-.194-.11-.457-.166-.785-.166-.332 0-.6.064-.803.189a1.38 1.38 0 0 0-.48.499 1.946 1.946 0 0 0-.231.696 5.56 5.56 0 0 0-.06.785v4.768h-2.35v-4.8c0-.254-.004-.503-.018-.752a2.074 2.074 0 0 0-.143-.688 1.052 1.052 0 0 0-.415-.503c-.194-.125-.476-.19-.854-.19-.111 0-.259.024-.439.074-.18.051-.36.143-.53.282-.171.138-.319.337-.439.595-.12.259-.18.6-.18 1.02v4.966H5.46V7.81zm15.693 15.64V.55H21.72V0H24v24h-2.28v-.55z"/></svg><span class="entry-title">Matrix #gentoo-zh</span></span><span class="entry-desc">matrix.to/#/#gentoo-zh:gentoozh.org</span></a></li>
+    <li><a class="entry-card" href="mailto:zakk@gentoozh.org"><span class="entry-head"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M16.75 2.993H3.25C2.01 2.993 1 4.003 1 5.243v9.5c0 1.24 1.01 2.25 2.25 2.25h13.5c1.24 0 2.25-1.01 2.25-2.25v-9.5c0-1.24-1.01-2.25-2.25-2.25m-.42 1.5-5.838 5.083c-.28.244-.704.244-.985 0L3.67 4.493zm.42 11H3.25c-.413 0-.75-.337-.75-.75V5.462l6.021 5.245c.422.367.95.55 1.479.55s1.057-.183 1.478-.55L17.5 5.462v9.281c0 .413-.337.75-.75.75"/></svg><span class="entry-title" data-i18n="ctEmail">电子邮件</span></span><span class="entry-desc">zakk@gentoozh.org</span></a></li>
+  </ul>
+
+  <h2 id="links" data-i18n="h2links">相关链接</h2>
+  <ul class="entry-grid">
+    <li><a class="entry-card" href="https://github.com/gentoo-zh/binhost"><span class="entry-head"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.02-2.06-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.62-5.48 5.92.43.37.81 1.1.81 2.22 0 1.61-.01 2.9-.01 3.29 0 .32.21.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5z"/></svg><span class="entry-title" data-i18n="lSrc">本站源码</span></span><span class="entry-desc">github.com/gentoo-zh/binhost</span></a></li>
+    <li><a class="entry-card" href="/gentoo-zh-binhost.asc"><span class="entry-head"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M2.073 12.668c1.11-1.323 3.243-1.469 5.017-.442l8.566-10.794c.258-.325.73-.377 1.054-.122.325.257.379.73.122 1.053l-.56.707 2.21 1.856c.155.129.25.315.266.516.016.2-.05.4-.183.551l-2.107 2.415c-.148.17-.356.257-.565.257-.171 0-.342-.058-.483-.176l-2.064-1.733-.623.784 2.046 1.716c.317.265.358.74.091 1.057-.148.176-.36.267-.574.267-.17 0-.342-.058-.482-.176L11.79 8.716l-3.526 4.442c.702.736 1.157 1.627 1.254 2.541.091.873-.148 1.7-.675 2.328-.626.745-1.58 1.12-2.61 1.12-1.011 0-2.097-.36-3.02-1.083-1.033-.807-1.694-1.927-1.815-3.07-.09-.873.149-1.7.674-2.326m13.739-5.8 1.12-1.285-1.594-1.338-1.06 1.336zm-12.92 7.969c.076.73.543 1.495 1.246 2.046 1.215.947 2.843 1.031 3.556.18.337-.402.367-.877.332-1.207-.077-.73-.543-1.494-1.247-2.044-.651-.51-1.422-.77-2.106-.77-.591 0-1.12.194-1.45.589-.336.401-.366.878-.331 1.206"/></svg><span class="entry-title" data-i18n="lKey">签名公钥</span></span><span class="entry-desc">gentoo-zh-binhost.asc</span></a></li>
+    <li><a class="entry-card" href="https://github.com/gentoo-zh/overlay"><span class="entry-head"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.02-2.06-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.62-5.48 5.92.43.37.81 1.1.81 2.22 0 1.61-.01 2.9-.01 3.29 0 .32.21.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5z"/></svg><span class="entry-title">gentoo-zh/overlay</span></span><span class="entry-desc">github.com/gentoo-zh/overlay</span></a></li>
+    <li><a class="entry-card" href="https://gentoozh.org/"><span class="entry-head"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 1.252c-4.825 0-8.75 3.925-8.75 8.75s3.925 8.75 8.75 8.75 8.75-3.925 8.75-8.75-3.925-8.75-8.75-8.75m7.21 8H14.07c-.14-2.33-.915-4.526-2.192-6.245 2.856.767 5.023 3.231 5.334 6.245m-7.198 7.631c-1.49-1.537-2.419-3.745-2.582-6.131h5.14c-.162 2.388-1.081 4.593-2.558 6.131M7.431 9.252c.162-2.387 1.091-4.594 2.581-6.132 1.477 1.538 2.396 3.743 2.558 6.132zm.715-6.251c-1.29 1.72-2.074 3.92-2.215 6.251H2.79c.312-3.022 2.49-5.49 5.357-6.251M2.79 10.752h3.142c.141 2.33.926 4.53 2.216 6.25-2.867-.759-5.046-3.228-5.358-6.25m9.088 6.245c1.277-1.72 2.052-3.915 2.192-6.245h3.142c-.311 3.014-2.479 5.478-5.334 6.245"/></svg><span class="entry-title" data-i18n="lCommunity">gentoozh.org</span></span><span class="entry-desc">gentoozh.org</span></a></li>
+  </ul>
+
+  <!-- chrome:pager -->
+  <nav class="pager" aria-label="上一页与下一页" data-i18n-label="aPager">
+    <a class="pager-link pager-prev" href="/faq"><span class="pager-dir" data-i18n="prev">上一页</span><span class="pager-title">FAQ</span></a>
+    <a class="pager-link pager-next" href="/status"><span class="pager-dir" data-i18n="next">下一页</span><span class="pager-title" data-i18n="navStatus">服务状态</span></a>
+  </nav>
+  <!-- /chrome:pager -->
+</main>
+
+<!-- chrome:foot -->
+<aside class="toc" data-outline aria-labelledby="toc-title" hidden>
+  <p class="toc-title" id="toc-title" data-i18n="onPage">本页内容</p>
+  <ul class="toc-list"></ul>
+</aside>
+<footer class="foot">
+  <p class="foot-note" data-i18n-html="fMaint">本站由 Gentoo 中文社区维护，构建机由 <a href="/thanks">OSUOSL</a> 提供。</p>
+</footer>
+<!-- /chrome:foot -->
+
+<script src="/assets/util.js?v=216bc353"></script>
+<script src="/assets/strings.js?v=a45bdd00"></script>
+<script>
+window.MIRROR_I18N = {
+  'zh-tw': {
+    title: '關於本站',
+    h2contact: '聯絡',
+    ctForum: '論壇',
+    ctEmail: '電子郵件',
+    h2links: '相關連結',
+    lSrc: '本站原始碼',
+    lKey: '簽章公鑰',
+    lCommunity: 'gentoozh.org',
+  },
+  'en': {
+    title: 'About this site',
+    h2contact: 'Contact',
+    ctForum: 'Forum',
+    ctEmail: 'Email',
+    h2links: 'Related links',
+    lSrc: 'Site source code',
+    lKey: 'Public signing key',
+    lCommunity: 'gentoozh.org',
+  }
+};
+</script>
+<script src="/assets/i18n.js?v=da677fcb"></script>
+</body>
+</html>

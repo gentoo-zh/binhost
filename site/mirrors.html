@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<!-- chrome:head -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/assets/logo.webp">
+<link rel="preload" href="/assets/fonts/source-sans-3.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/tokens.css?v=1e90dbb8">
+<link rel="stylesheet" href="/assets/site.css?v=4f99deea">
+<script src="/assets/early.js?v=e170b3a5"></script>
+<script src="/assets/docs.js?v=7bf4e48d" defer></script>
+<script src="/assets/indicator.js?v=d209281f" defer></script>
+<script src="/assets/seg-picker.js?v=e8734be5" defer></script>
+<script src="/assets/search.js?v=a358ca65" defer></script>
+<meta property="og:site_name" content="Gentoo-zh 下载">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://distfiles.gentoozh.org/assets/logo.webp">
+<meta name="twitter:card" content="summary">
+<!-- /chrome:head -->
+<title>镜像 — Gentoo-zh 下载</title>
+<meta name="description" content="gentoo-zh binpkg 与 distfiles 的镜像列表，以及自建镜像的同步地址。">
+</head>
+<body>
+
+<!-- chrome:nav current="/mirrors" -->
+<a class="skip" href="#main" data-i18n="skip">跳到正文</a>
+<header class="nav">
+  <button type="button" class="icon-btn nav-toggle" aria-expanded="false" aria-controls="sidebar" hidden>
+    <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M16.25 14H3.75c-.414 0-.75.336-.75.75s.336.75.75.75h12.5c.414 0 .75-.336.75-.75s-.336-.75-.75-.75M3.75 5.5h12.5c.414 0 .75-.336.75-.75S16.664 4 16.25 4H3.75c-.414 0-.75.336-.75.75s.336.75.75.75M16.25 9H3.75c-.414 0-.75.336-.75.75s.336.75.75.75h12.5c.414 0 .75-.336.75-.75S16.664 9 16.25 9"/></svg><span class="visually-hidden" data-i18n="navMenu">页面菜单</span>
+  </button>
+  <a class="nav-brand" href="/">
+    <img src="/assets/logo.webp" alt="" width="28" height="28">
+    <span class="nav-title" data-i18n="brand">Gentoo-zh 下载</span>
+  </a>
+  <div class="nav-tools" id="controls">
+    <button type="button" class="search-trigger js-only" aria-haspopup="dialog" aria-expanded="false" aria-controls="site-search" aria-keyshortcuts="Control+K Meta+K /">
+      <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="m18.53 17.47-5.083-5.084C14.417 11.186 15 9.66 15 8c0-3.86-3.14-7-7-7S1 4.14 1 8s3.14 7 7 7c1.66 0 3.185-.584 4.386-1.553l5.084 5.083c.146.147.338.22.53.22s.384-.073.53-.22c.293-.293.293-.767 0-1.06M8 13.5c-3.032 0-5.5-2.468-5.5-5.5S4.968 2.5 8 2.5s5.5 2.468 5.5 5.5-2.468 5.5-5.5 5.5"/></svg><span class="search-trigger-label" data-i18n="sdOpen">搜索 Gentoo-zh 下载</span><kbd class="search-kbd" aria-hidden="true">Ctrl K</kbd>
+    </button>
+    <a class="icon-btn bar-link" href="/files/" aria-label="文件" data-i18n-label="navFiles">
+      <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M16.75 5h-5.964c-.218 0-.424-.095-.567-.259L8.516 2.776C8.088 2.283 7.468 2 6.816 2H3.25C2.01 2 1 3.01 1 4.25v10.5C1 15.99 2.01 17 3.25 17h13.5c1.24 0 2.25-1.01 2.25-2.25v-7.5C19 6.01 17.99 5 16.75 5M3.25 3.5h3.565c.218 0 .424.095.567.259L8.458 5H2.5v-.75c0-.413.336-.75.75-.75M17.5 14.75c0 .413-.336.75-.75.75H3.25c-.414 0-.75-.337-.75-.75V6.5h14.25c.414 0 .75.337.75.75z"/></svg>
+    </a>
+    <a class="icon-btn gh" href="https://github.com/gentoo-zh"
+       title="gentoo-zh" aria-label="GitHub">
+      <svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.02-2.06-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.62-5.48 5.92.43.37.81 1.1.81 2.22 0 1.61-.01 2.9-.01 3.29 0 .32.21.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5z"/></svg>
+    </a>
+    <span class="bar-divider" aria-hidden="true"></span>
+    <div class="menu-wrap js-only" data-menu="lang">
+      <button type="button" class="icon-btn menu-trigger" id="lang-trigger" aria-haspopup="menu" aria-expanded="false" aria-controls="lang-menu">
+        <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 1.252c-4.825 0-8.75 3.925-8.75 8.75s3.925 8.75 8.75 8.75 8.75-3.925 8.75-8.75-3.925-8.75-8.75-8.75m7.21 8H14.07c-.14-2.33-.915-4.526-2.192-6.245 2.856.767 5.023 3.231 5.334 6.245m-7.198 7.631c-1.49-1.537-2.419-3.745-2.582-6.131h5.14c-.162 2.388-1.081 4.593-2.558 6.131M7.431 9.252c.162-2.387 1.091-4.594 2.581-6.132 1.477 1.538 2.396 3.743 2.558 6.132zm.715-6.251c-1.29 1.72-2.074 3.92-2.215 6.251H2.79c.312-3.022 2.49-5.49 5.357-6.251M2.79 10.752h3.142c.141 2.33.926 4.53 2.216 6.25-2.867-.759-5.046-3.228-5.358-6.25m9.088 6.245c1.277-1.72 2.052-3.915 2.192-6.245h3.142c-.311 3.014-2.479 5.478-5.334 6.245"/></svg>
+      </button>
+      <div class="menu" id="lang-menu" role="menu" aria-labelledby="lang-trigger" hidden>
+        <button type="button" class="menu-item" role="menuitemradio" aria-checked="true" data-value="zh-cn" lang="zh-CN"><svg class="icon icon-sm menu-check" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M7.864 15.734c-.222 0-.433-.098-.576-.27l-3.747-4.497c-.266-.319-.222-.792.096-1.057.317-.265.79-.223 1.056.096l3.154 3.786 7.44-9.469c.255-.326.728-.382 1.052-.127.326.256.383.728.127 1.053L8.454 15.447c-.14.179-.352.284-.579.287z"/></svg><span class="menu-label">简体中文</span></button>
+        <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-value="zh-tw" lang="zh-TW"><svg class="icon icon-sm menu-check" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M7.864 15.734c-.222 0-.433-.098-.576-.27l-3.747-4.497c-.266-.319-.222-.792.096-1.057.317-.265.79-.223 1.056.096l3.154 3.786 7.44-9.469c.255-.326.728-.382 1.052-.127.326.256.383.728.127 1.053L8.454 15.447c-.14.179-.352.284-.579.287z"/></svg><span class="menu-label">繁體中文</span></button>
+        <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-value="en" lang="en"><svg class="icon icon-sm menu-check" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M7.864 15.734c-.222 0-.433-.098-.576-.27l-3.747-4.497c-.266-.319-.222-.792.096-1.057.317-.265.79-.223 1.056.096l3.154 3.786 7.44-9.469c.255-.326.728-.382 1.052-.127.326.256.383.728.127 1.053L8.454 15.447c-.14.179-.352.284-.579.287z"/></svg><span class="menu-label">English</span></button>
+      </div>
+    </div>
+    <noscript>
+      <details class="menu-wrap lang-static">
+        <summary class="icon-btn" aria-label="语言" data-i18n-label="aLang"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 1.252c-4.825 0-8.75 3.925-8.75 8.75s3.925 8.75 8.75 8.75 8.75-3.925 8.75-8.75-3.925-8.75-8.75-8.75m7.21 8H14.07c-.14-2.33-.915-4.526-2.192-6.245 2.856.767 5.023 3.231 5.334 6.245m-7.198 7.631c-1.49-1.537-2.419-3.745-2.582-6.131h5.14c-.162 2.388-1.081 4.593-2.558 6.131M7.431 9.252c.162-2.387 1.091-4.594 2.581-6.132 1.477 1.538 2.396 3.743 2.558 6.132zm.715-6.251c-1.29 1.72-2.074 3.92-2.215 6.251H2.79c.312-3.022 2.49-5.49 5.357-6.251M2.79 10.752h3.142c.141 2.33.926 4.53 2.216 6.25-2.867-.759-5.046-3.228-5.358-6.25m9.088 6.245c1.277-1.72 2.052-3.915 2.192-6.245h3.142c-.311 3.014-2.479 5.478-5.334 6.245"/></svg></summary>
+        <div class="menu">
+          <a class="menu-item" href="?lang=zh-cn" hreflang="zh-CN" lang="zh-CN" aria-current="true"><span class="menu-label">简体中文</span></a>
+          <a class="menu-item" href="?lang=zh-tw" hreflang="zh-TW" lang="zh-TW"><span class="menu-label">繁體中文</span></a>
+          <a class="menu-item" href="?lang=en" hreflang="en" lang="en"><span class="menu-label">English</span></a>
+        </div>
+      </details>
+    </noscript>
+    <button type="button" class="icon-btn theme-btn js-only" id="theme-toggle">
+      <span class="ico ico-lighten"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 6.35c2.012 0 3.65 1.638 3.65 3.65s-1.638 3.65-3.65 3.65S6.35 12.012 6.35 10 7.988 6.35 10 6.35m0-1.5c-2.84 0-5.15 2.31-5.15 5.15s2.31 5.15 5.15 5.15 5.15-2.31 5.15-5.15S12.84 4.85 10 4.85M10 3.25c-.414 0-.75-.336-.75-.75V1.25c0-.414.336-.75.75-.75s.75.336.75.75V2.5c0 .414-.336.75-.75.75M10 19.5c-.414 0-.75-.336-.75-.75V17.5c0-.414.336-.75.75-.75s.75.336.75.75v1.25c0 .414-.336.75-.75.75M2.5 10.75H1.25c-.414 0-.75-.336-.75-.75s.336-.75.75-.75H2.5c.414 0 .75.336.75.75s-.336.75-.75.75M18.75 10.75H17.5c-.414 0-.75-.336-.75-.75s.336-.75.75-.75h1.25c.414 0 .75.336.75.75s-.336.75-.75.75M15.304 5.446c-.193 0-.384-.073-.53-.22-.294-.292-.294-.767 0-1.06l.883-.884c.293-.293.768-.293 1.06 0s.294.768 0 1.06l-.883.885c-.146.146-.338.22-.53.22M3.813 16.938c-.193 0-.384-.074-.53-.22-.294-.293-.294-.768 0-1.06l.883-.885c.293-.293.768-.293 1.06 0s.294.768 0 1.061l-.883.884c-.147.146-.338.22-.53.22M4.696 5.446c-.192 0-.383-.073-.53-.22l-.884-.883c-.293-.293-.293-.768 0-1.06s.768-.294 1.06 0l.885.883c.293.293.293.768 0 1.06-.147.147-.338.22-.53.22M16.188 16.938c-.193 0-.384-.074-.53-.22l-.885-.884c-.293-.293-.293-.768 0-1.06s.768-.294 1.061 0l.884.883c.293.293.293.768 0 1.06-.147.147-.338.22-.53.22"/></svg></span>
+      <span class="ico ico-contrast"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 18.78c-4.825 0-8.75-3.926-8.75-8.75S5.175 1.28 10 1.28s8.75 3.924 8.75 8.75-3.925 8.75-8.75 8.75m0-16c-3.998 0-7.25 3.251-7.25 7.25s3.252 7.25 7.25 7.25 7.25-3.253 7.25-7.25S13.998 2.78 10 2.78"/><path fill="currentColor" d="M10 14.384c0 .653.615 1.121 1.251.973 2.435-.566 4.249-2.75 4.249-5.357s-1.814-4.79-4.249-5.357c-.636-.148-1.251.32-1.251.973z"/></svg></span>
+    </button>
+  </div>
+</header>
+<dialog class="sd" id="site-search" aria-label="搜索 Gentoo-zh 下载" data-i18n-label="sdOpen" data-src="/assets/search-index.json">
+  <div class="sd-brand">
+    <a class="sd-brand-link" href="/"><img src="/assets/logo.webp" alt="" width="28" height="28"><span data-i18n="brand">Gentoo-zh 下载</span></a>
+    <p class="sd-tagline" data-i18n="sdTagline">Gentoo 中文社区的 overlay 指南、distfiles、binhost、Live ISO 与镜像服务。</p>
+  </div>
+  <div class="sd-main">
+    <div class="sd-top">
+      <div class="search-field sd-field">
+        <svg class="icon search-icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="m18.53 17.47-5.083-5.084C14.417 11.186 15 9.66 15 8c0-3.86-3.14-7-7-7S1 4.14 1 8s3.14 7 7 7c1.66 0 3.185-.584 4.386-1.553l5.084 5.083c.146.147.338.22.53.22s.384-.073.53-.22c.293-.293.293-.767 0-1.06M8 13.5c-3.032 0-5.5-2.468-5.5-5.5S4.968 2.5 8 2.5s5.5 2.468 5.5 5.5-2.468 5.5-5.5 5.5"/></svg>
+        <input class="search sd-input" type="search" role="combobox" aria-expanded="true" aria-controls="sd-results" aria-autocomplete="list" autocomplete="off" spellcheck="false" aria-label="搜索 Gentoo-zh 下载" data-i18n-label="sdOpen">
+      </div>
+    </div>
+    <div class="sd-chips" role="group" aria-label="分类" data-i18n-label="sdCats"></div>
+    <div class="sd-status" role="status"><span class="sd-msg"></span><button type="button" class="msg-retry sd-retry" data-i18n="sdRetry" hidden>重试</button></div>
+    <div class="sd-results" id="sd-results" role="listbox" aria-label="搜索结果" data-i18n-label="sdResults"></div>
+  </div>
+  <button type="button" class="icon-btn sd-close" aria-label="关闭" data-i18n-label="sdClose"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="m11.06 10 5.207-5.206c.293-.293.293-.768 0-1.06s-.767-.294-1.06 0L10 8.938 4.793 3.733c-.293-.293-.767-.293-1.06 0s-.293.768 0 1.06L8.939 10l-5.206 5.206c-.293.293-.293.768 0 1.06.146.147.338.22.53.22s.384-.073.53-.22L10 11.062l5.207 5.206c.146.146.338.22.53.22s.384-.074.53-.22c.293-.293.293-.768 0-1.06z"/></svg></button>
+  <div class="sd-strings" hidden>
+    <span data-i18n="fCommunity">Gentoo 中文社区</span><span data-i18n="sdAll">全部</span><span data-i18n="sdPkgs">软件包</span><span data-i18n="sdLoading">正在加载…</span>
+    <span data-i18n="sdFailed">无法加载搜索索引。</span><span data-i18n="sdNone">没有与“{q}”匹配的结果。</span>
+    <span data-i18n="sdPkgHint">输入至少 2 个字符以搜索软件包。</span><span data-i18n="sdPkgFailed">无法加载软件包列表。</span>
+    <span data-i18n="sdPkgMore">共 {n} 个匹配的软件包，此处显示前 {m} 个。</span>
+  </div>
+</dialog>
+<nav class="sidebar" id="sidebar" aria-label="页面" data-i18n-label="aPages">
+  <p class="nav-label" id="nav-intro" data-i18n="navSecIntro">简介</p>
+  <ul class="pages" aria-labelledby="nav-intro">
+    <li><a class="nav-link" href="/" data-i18n="navHome">概览</a></li>
+    <li class="bar-mirror"><a class="nav-link bar-mirror-link" href="/files/" data-i18n="navFiles">文件</a></li>
+  </ul>
+  <details class="nav-group" data-group="overlay" data-default-open open>
+    <summary class="nav-group-title"><span data-i18n="navGOverlay">overlay</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/overlay" data-i18n="navOverlay">加入 overlay</a></li>
+      <li><a class="nav-link" href="/packages" data-i18n="navPkgs">软件包列表</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="distfiles" data-default-open open>
+    <summary class="nav-group-title"><span data-i18n="navGDist">distfiles</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/distfiles-setup" data-i18n="navDist">配置 distfiles</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="binhost" data-default-open open>
+    <summary class="nav-group-title"><span data-i18n="navGBin">binhost</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/binpkg-setup" data-i18n="navBin">配置 binpkg</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="iso" open>
+    <summary class="nav-group-title"><span data-i18n="navIso">Live ISO</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/iso" data-i18n="navIsoGet">CJK 最小安装镜像</a></li>
+      <li><a class="nav-link" href="/gigos/" data-i18n="navGigos">Gig-OS（独立项目）</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="mirrors" data-default-open open>
+    <summary class="nav-group-title"><span data-i18n="navGMirrors">镜像</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/mirrors" aria-current="page" data-i18n="navMirrors">镜像列表</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="help" open>
+    <summary class="nav-group-title"><span data-i18n="navHelp">帮助</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/faq">FAQ</a></li>
+    </ul>
+  </details>
+  <details class="nav-group" data-group="about" open>
+    <summary class="nav-group-title"><span data-i18n="navGAbout">关于</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
+    <ul class="pages">
+      <li><a class="nav-link" href="/about" data-i18n="navAbout">关于本站</a></li>
+      <li><a class="nav-link" href="/status" data-i18n="navStatus">服务状态</a></li>
+      <li><a class="nav-link" href="/thanks" data-i18n="navThanks">致谢</a></li>
+    </ul>
+  </details>
+</nav>
+<script>
+// Every group is open in the markup, so without scripts the whole list shows. Before the first paint this
+// marks the current page where render-chrome.py could not, keeps its group open, and sets each other group
+// as the reader last left it in this session, else as the markup's data-default-open says: the docs keep
+// their tree as it was between pages and open only their main group at first.
+(function () {
+  var side = document.getElementById('sidebar'), key = 'nav-groups', saved = {};
+  try { saved = JSON.parse(sessionStorage.getItem(key)) || {}; } catch (e) { saved = {}; }
+  var path = location.pathname.replace(/\.html$/, '').replace(/\/index$/, '/');
+  function matches(a) {
+    var href = a.getAttribute('href');
+    return href === path || (href.length > 1 && href.slice(-1) === '/' && path.indexOf(href) === 0);
+  }
+  // The file browser's chrome marks /files/, but a directory the sidebar links to (/gigos/) is marked
+  // itself while the reader browses it.
+  var current = side.querySelector('a[aria-current="page"]');
+  if (!current || !matches(current)) {
+    var found = null;
+    side.querySelectorAll('a[href^="/"]').forEach(function (a) {
+      if (!found && matches(a)) found = a;
+    });
+    if (found) {
+      if (current) current.removeAttribute('aria-current');
+      current = found;
+      found.setAttribute('aria-current', 'page');
+    }
+  }
+  side.querySelectorAll('.nav-group').forEach(function (g) {
+    var id = g.getAttribute('data-group');
+    g.open = current && g.contains(current) ? true
+      : typeof saved[id] === 'boolean' ? saved[id] : g.hasAttribute('data-default-open');
+    // The toggle event fires after the element's own state changes, for a mouse click, a keyboard
+    // toggle or a script setting .open alike, so g.open here is always the new state.
+    g.addEventListener('toggle', function () {
+      saved[id] = g.open;
+      try { sessionStorage.setItem(key, JSON.stringify(saved)); } catch (e) { /* not kept */ }
+    });
+  });
+})();
+</script>
+<!-- /chrome:nav -->
+
+<main id="main" class="wrap">
+
+  <h1 class="title" data-i18n="title">镜像</h1>
+
+  <h2 id="list" data-i18n="h2list">镜像列表</h2>
+
+  <table class="ref-table mirror-table">
+    <thead><tr><th data-i18n="thMirror">镜像</th><th data-i18n="thLoc">位置</th><th data-i18n="thAddr">地址</th></tr></thead>
+    <tbody>
+      <tr><td data-i18n="mOrigin">源站</td><td data-i18n="locDe">德国</td><td><a href="/">distfiles.gentoozh.org</a></td></tr>
+      <tr><td data-i18n="mCernet">教育网联合镜像站</td><td data-i18n="locCn">中国大陆</td><td><a href="https://mirrors.cernet.edu.cn/gentoo-zh">mirrors.cernet.edu.cn/gentoo-zh</a></td></tr>
+      <tr><td data-i18n="mNju">南京大学</td><td data-i18n="locCn">中国大陆</td><td><a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a></td></tr>
+      <tr><td data-i18n="mNyist">南阳理工学院</td><td data-i18n="locCn">中国大陆</td><td><a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a></td></tr>
+      <tr><td data-i18n="mHernet">河南教育网</td><td data-i18n="locCn">中国大陆</td><td><a href="https://mirrors.ha.edu.cn/gentoo-zh">mirrors.ha.edu.cn/gentoo-zh</a></td></tr>
+      <tr><td data-i18n="mOsuosl">俄勒冈州立大学开源实验室</td><td data-i18n="locUs">美国</td><td><a href="https://ftp2.osuosl.org/pub/gentoo-zh">ftp2.osuosl.org/pub/gentoo-zh</a></td></tr>
+    </tbody>
+  </table>
+
+  <p class="note" data-i18n-html="mirrorsNote">以上镜像均提供 binpkg 与 distfiles，使用方法见<a href="/binpkg-setup">配置 binpkg</a>与<a href="/distfiles-setup">配置 distfiles</a>。</p>
+
+<p data-i18n-html="mirrorFaq">重定向与同步进度问题见<a href="/faq#mirrors">镜像 FAQ</a>。</p>
+  <h2 id="own" data-i18n="q9">如何自行建立镜像？</h2>
+  <p data-i18n-html="a9">从以下地址同步；如需加入镜像列表，请在 <a href="https://github.com/gentoo-zh/binhost/issues">GitHub Issues</a> 提交镜像信息。</p>
+  <div class="install">
+    <div class="uri">
+      <code>rsync://distfiles.gentoozh.org/gentoo-zh/</code>
+      <button type="button" class="copy-chip" data-copy="rsync://distfiles.gentoozh.org/gentoo-zh/" aria-label="复制" data-i18n-label="copy"></button>
+    </div>
+  </div>
+
+  <!-- chrome:pager -->
+  <nav class="pager" aria-label="上一页与下一页" data-i18n-label="aPager">
+    <a class="pager-link pager-prev" href="/iso"><span class="pager-dir" data-i18n="prev">上一页</span><span class="pager-title" data-i18n="navIsoGet">CJK 最小安装镜像</span></a>
+    <a class="pager-link pager-next" href="/faq"><span class="pager-dir" data-i18n="next">下一页</span><span class="pager-title">FAQ</span></a>
+  </nav>
+  <!-- /chrome:pager -->
+</main>
+
+<!-- chrome:foot -->
+<aside class="toc" data-outline aria-labelledby="toc-title" hidden>
+  <p class="toc-title" id="toc-title" data-i18n="onPage">本页内容</p>
+  <ul class="toc-list"></ul>
+</aside>
+<footer class="foot">
+  <p class="foot-note" data-i18n-html="fMaint">本站由 Gentoo 中文社区维护，构建机由 <a href="/thanks">OSUOSL</a> 提供。</p>
+</footer>
+<!-- /chrome:foot -->
+
+<div id="copy-toast" role="status" aria-live="polite"></div>
+
+<script src="/assets/util.js?v=216bc353"></script>
+<script src="/assets/strings.js?v=a45bdd00"></script>
+<script>
+window.MIRROR_I18N = {
+  "zh-tw": {
+    "title": "鏡像",
+    "h2list": "鏡像列表",
+    "thMirror": "鏡像",
+    "thAddr": "位址",
+    "thLoc": "位置",
+    "locDe": "德國",
+    "locCn": "中國大陸",
+    "locUs": "美國",
+    "mOrigin": "來源站",
+    "mCernet": "教育網聯合鏡像站",
+    "mNju": "南京大學",
+    "mNyist": "南陽理工學院",
+    "mHernet": "河南教育網",
+    "mOsuosl": "奧勒岡州立大學開放原始碼實驗室",
+    "mirrorsNote": "以上鏡像均提供 binpkg 與 distfiles，使用方法見<a href=\"/binpkg-setup\">設定 binpkg</a>與<a href=\"/distfiles-setup\">設定 distfiles</a>。",
+    "q9": "如何自行建立鏡像？",
+    "a9": "從以下位址同步；如需加入鏡像列表，請在 <a href=\"https://github.com/gentoo-zh/binhost/issues\">GitHub Issues</a> 提交鏡像資訊。",
+    "mirrorFaq": "重新導向與同步進度問題見<a href=\"/faq#mirrors\">鏡像 FAQ</a>。"
+  },
+  "en": {
+    "title": "Mirrors",
+    "h2list": "Mirror list",
+    "thMirror": "Mirror",
+    "thAddr": "Address",
+    "thLoc": "Location",
+    "locDe": "Germany",
+    "locCn": "mainland China",
+    "locUs": "United States",
+    "mOrigin": "Origin",
+    "mCernet": "CERNET",
+    "mNju": "Nanjing University",
+    "mNyist": "NYIST",
+    "mHernet": "HERNET",
+    "mOsuosl": "Oregon State University Open Source Lab",
+    "mirrorsNote": "These mirrors provide binary packages and distfiles; see <a href=\"/binpkg-setup\">binpkg setup</a> and <a href=\"/distfiles-setup\">distfiles setup</a>.",
+    "q9": "How do I set up my own mirror?",
+    "a9": "Sync from the address below; to join the mirror list, submit your mirror details through <a href=\"https://github.com/gentoo-zh/binhost/issues\">GitHub Issues</a>.",
+    "mirrorFaq": "See the <a href=\"/faq#mirrors\">mirror FAQ</a> for redirects and sync progress."
+  }
+};
+</script>
+<script src="/assets/i18n.js?v=da677fcb"></script>
+</body>
+</html>

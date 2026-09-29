@@ -6,13 +6,26 @@
     try { return localStorage.getItem(k); } catch (e) { return null; }
   }
 
-  var mode = read('mirror-theme') || 'system';
-  if (mode !== 'light' && mode !== 'dark' && mode !== 'system') mode = 'system';
-  root.setAttribute('data-theme-mode', mode);
-  if (mode === 'light' || mode === 'dark') root.setAttribute('data-theme', mode);
-  root.style.colorScheme = mode === 'system' ? 'light dark' : mode;
+  // With scripts the phone sidebar folds into the menu button; without them it stays above main.
+  root.setAttribute('data-js', '');
 
-  var lang = read('mirror-lang');
+  // The page scripts set their saved choices (source, channel, tab) at the end of the body, possibly after
+  // a first paint. data-settling holds transitions off until two frames after DOMContentLoaded, so that
+  // setup lands at once and only the reader's own actions animate.
+  root.setAttribute('data-settling', '');
+  document.addEventListener('DOMContentLoaded', function () {
+    var raf = window.requestAnimationFrame || function (f) { return setTimeout(f, 16); };
+    raf(function () { raf(function () { root.removeAttribute('data-settling'); }); });
+  });
+
+  // A forced theme is stored; following the system stores nothing.
+  var mode = read('mirror-theme');
+  if (mode === 'light' || mode === 'dark') root.setAttribute('data-theme', mode);
+  root.style.colorScheme = mode === 'light' || mode === 'dark' ? mode : 'light dark';
+
+  // A ?lang= link picks the language before paint; i18n.js stores it.
+  var q = /[?&]lang=(zh-cn|zh-tw|en)(?:&|$)/.exec((window.location && window.location.search) || '');
+  var lang = q ? q[1] : read('mirror-lang');
   if (!lang) {
     var n = (navigator && navigator.language) || '';
     lang = /^en/i.test(n) ? 'en'
