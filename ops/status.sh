@@ -20,6 +20,8 @@ DISK_WARN_PCT="${DISK_WARN_PCT:-85}"
 DISK_PATH="${DISK_PATH:-/srv/pub}"
 VERSION_FILE="${VERSION_FILE:-}"
 REPO_API="${REPO_API:-https://api.github.com/repos/gentoo-zh/binhost/commits/master}"
+BUILDER_REPO="${BUILDER_REPO:-/var/lib/binhost}"
+UNIT_DIR="${UNIT_DIR:-/etc/systemd/system}"
 MONITORS_FILE="${MONITORS_FILE:-/usr/local/lib/binhost/MONITORS}"
 SITE_WORK="${SITE_WORK:-/var/lib/binhost-site}"
 SITE_LOCK="${SITE_LOCK:-${SITE_WORK}.lock}"
@@ -63,7 +65,6 @@ if [[ -z ${COMPONENT} ]]; then
 fi
 case ${COMPONENT} in
     mirror)  TRACKED="deploy ops build/gen-packages.py build/ebuilds.py build/verify-deps.py build/generation.py build/dep-exceptions.txt nginx" ;;
-    builder) TRACKED="build ops deploy/systemd" ;;
     *)       TRACKED="" ;;
 esac
 
@@ -127,7 +128,36 @@ check_kernel_archive() {
     fi
 }
 
-if [[ -n ${VERSION_FILE} && -r ${VERSION_FILE} ]]; then
+# The builder pulls master at the start of every run (builders/binhost-update reports a failed pull itself),
+# so its code trailing master between runs is expected and not a fault. What only an install updates are the
+# unit files copied into UNIT_DIR: each one installed there must match the checkout's copy. Units the builder
+# does not install (the old pipeline's) are skipped.
+check_builder_version() {
+    local here unit name
+    local -a stale=()
+    here=$(tr -d ' \n' < "${VERSION_FILE}" 2>/dev/null)
+    if [[ -z ${here} ]]; then
+        bad "部署版本" "缺少 VERSION，构建尚未记录提交号"
+        return
+    elif [[ ! ${here} =~ ^[0-9a-f]{40}$ ]]; then
+        bad "部署版本" "VERSION 不是提交号：${here:0:16}"
+        return
+    fi
+    for unit in "${BUILDER_REPO}"/deploy/systemd/*.service "${BUILDER_REPO}"/deploy/systemd/*.timer; do
+        name=${unit##*/}
+        [[ -e ${unit} && -e ${UNIT_DIR}/${name} ]] || continue
+        cmp -s "${unit}" "${UNIT_DIR}/${name}" || stale+=("${name}")
+    done
+    if (( ${#stale[@]} )); then
+        bad "部署版本" "${here:0:8}，已安装的单元文件与仓库不一致：${stale[*]}，需重新安装"
+    else
+        note "部署版本" "${here:0:8}，每轮构建开始时拉取 master；已安装的单元文件与仓库一致"
+    fi
+}
+
+if [[ ${COMPONENT} == builder ]]; then
+    check_builder_version
+elif [[ -n ${VERSION_FILE} && -r ${VERSION_FILE} ]]; then
     here=$(tr -d ' \n' < "${VERSION_FILE}")
     there=$(curl -fsS --max-time 20 "${REPO_API}" 2>/dev/null |
             sed -n 's/^  "sha": "\([0-9a-f]\{40\}\)",$/\1/p' | head -1)

@@ -595,6 +595,47 @@ ok "版本一致时才算通过" "$(version_probe "${SHA40}" "${SAME}")" "passed
 ok "只修改 generation.py 时镜像机仍判定部署落后" \
    "$(version_probe "${SHA40}" "${NEW}" "${GENERATION_CHANGED}")" "failed"
 
+# The builder: its code trails master between runs by design, so only the installed unit files are compared
+# with the checkout. mode: same (installed copy matches), differ, absent (unit not installed there).
+builder_version_probe() {
+    local ver="$1" mode="$2" d out
+    d=$(mktemp -d); mkdir -p "${d}/bin" "${d}/repo/deploy/systemd" "${d}/units"
+    cat > "${d}/bin/curl" <<EOF
+#!/bin/bash
+case "\$*" in
+  *commits/master*) ${NEW} ;;
+  *compare/*) ${GENERATION_CHANGED} ;;
+esac
+exit 22
+EOF
+    printf '#!/bin/bash\nexit 1\n' > "${d}/bin/sudo"
+    printf '#!/bin/bash\nexit 1\n' > "${d}/bin/openssl"
+    chmod +x "${d}/bin"/*
+    printf '[Unit]\nDescription=a\n' > "${d}/repo/deploy/systemd/binhost-update@.service"
+    printf '[Unit]\nDescription=old\n' > "${d}/repo/deploy/systemd/binhost-build.service"
+    case ${mode} in
+        same)   cp "${d}/repo/deploy/systemd/binhost-update@.service" "${d}/units/" ;;
+        differ) printf '[Unit]\nDescription=b\n' > "${d}/units/binhost-update@.service" ;;
+    esac
+    [[ -n ${ver} ]] && printf '%s\n' "${ver}" > "${d}/VERSION"
+    out=$( cd "${ROOT}" && PATH="${d}/bin:${PATH}" ALERT_CONF=/nonexistent \
+        STATE_FILE="${d}/state" VERSION_FILE="${d}/VERSION" \
+        SIGNING_GNUPGHOME="${d}/nokey" DISK_PATH="${d}/nodisk" \
+        HEARTBEAT="${d}/nowhere/.health" SITE_WORK="${d}/nowork" \
+        SITE_DEST="${d}/nodest" MONITORS_FILE="${d}/nomon" COMPONENT=builder \
+        BUILDER_REPO="${d}/repo" UNIT_DIR="${d}/units" \
+        bash ops/status.sh 2>&1 | grep '部署版本' )
+    rm -rf "${d}"
+    case "${out}" in *'<--'*) echo failed ;; *) echo passed ;; esac
+}
+
+ok "构建机代码落后 master、build 已变更时不算故障，下一轮构建会拉取" \
+   "$(builder_version_probe "${SHA40}" same)" "passed"
+ok "构建机已安装的单元文件与仓库不一致时算故障" "$(builder_version_probe "${SHA40}" differ)" "failed"
+ok "构建机未安装的单元文件（旧流水线）不参与比对" "$(builder_version_probe "${SHA40}" absent)" "passed"
+ok "构建机缺少 VERSION 时算故障" "$(builder_version_probe "" same)" "failed"
+ok "构建机 VERSION 不是提交号时算故障" "$(builder_version_probe not-a-sha same)" "failed"
+
 d=$(mktemp -d); mkdir -p "${d}/bin" "${d}/gnupg"
 # shellcheck disable=SC2016  # binhost-update carries the literal ${SIGNING_KEY:-...}
 printf 'SIGNING_KEY=${SIGNING_KEY:-%s}\n' "${SHA40}" > "${d}/binhost-update"
