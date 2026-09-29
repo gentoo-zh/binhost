@@ -261,6 +261,24 @@ jobs:
         run: node tests/test-source-switch.js
       - name: Binary package channels switch as one configuration
         run: node tests/test-channel-switch.js
+      - name: Code blocks copy what they show
+        run: node tests/test-code-copy.js
+      - name: The sudo toggle rewrites every command block
+        run: node tests/test-sudo-switch.js
+      - name: Segmented controls slide their selection indicator
+        run: node tests/test-indicator.js
+      - name: Segmented controls fall back to a Picker when they overflow
+        run: node tests/test-seg-picker.js
+      - name: The page outline follows the headings
+        run: node tests/test-docs-outline.js
+      - name: Pages keep their size while data loads
+        run: node tests/test-loading-states.js
+      - name: Search index matches the pages
+        run: python3 site/tools/build-search-index.py --check
+      - name: Code highlighting is current
+        run: python3 tests/test-highlight.py
+      - name: Mirror status check
+        run: python3 tests/test-mirror-status.py
       - name: Mirror pickers agree
         run: python3 site/tools/check-pickers.py
       - name: Both setup modes say the same thing
