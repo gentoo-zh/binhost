@@ -116,6 +116,8 @@
     <dd data-i18n-html="lgBindist"><code>RESTRICT=bindist</code> 禁止发布 binpkg</dd>
     <dt><span class="pend why-tag" data-i18n="why_license">许可证限制</span></dt>
     <dd data-i18n-html="lgLicense"><code>LICENSE</code> 表达式不属于 <code>@BINARY-REDISTRIBUTABLE</code></dd>
+    <dt><span class="pend why-tag" data-i18n="why_removed">已移除</span></dt>
+    <dd data-i18n="lgRemoved">overlay 已移除该包，公开索引仍有旧 binpkg</dd>
     <dt class="mark no">&#8212;</dt>
     <dd data-i18n="lgDashDist">未声明 distfile、禁止镜像或尚未完整镜像</dd>
   </dl>
@@ -229,7 +231,10 @@ window.MIRROR_I18N = {
     whyLong_nokeyword: '没有 amd64 keyword',
     whyLong_masked: '被 profiles/package.mask 屏蔽',
     whyLong_live: '仅有 live ebuild，本站不发布 binpkg',
-    policyPublished: '公开的 binpkg 在发布前已按其版本与构建时的 USE 通过发布检查',
+    policyNow_bindist: '当前 ebuild 设置了 RESTRICT=bindist',
+    policyNow_license: '当前 ebuild 的 LICENSE 表达式不属于 @BINARY-REDISTRIBUTABLE',
+    policyNow_unknown: '无法确定当前 ebuild 是否符合发布政策',
+    policyPublished: '{policy}；公开的 binpkg 在发布前已按其版本与构建时的 USE 通过发布检查',
     whyLong_removed: 'overlay 已移除该包；该行来自仍在公开索引中的产物',
     whyLong_candidate: '检测到构建流程，但该包目前不在构建清单中',
     lgBuilt: '公开索引已有 binpkg',
@@ -239,6 +244,7 @@ window.MIRROR_I18N = {
     lgDashBin: '不在直接构建清单；仍可能作为依赖随包发布',
     lgBindist: '<code>RESTRICT=bindist</code> 禁止发布 binpkg',
     lgLicense: '<code>LICENSE</code> 表达式不属于 <code>@BINARY-REDISTRIBUTABLE</code>',
+    lgRemoved: 'overlay 已移除该包，公开索引仍有旧 binpkg',
     lgDashDist: '未声明 distfile、禁止镜像或尚未完整镜像',
     lgMore: '查看状态说明与常见原因',
     distNone: '该包没有声明 distfile',
@@ -278,12 +284,16 @@ window.MIRROR_I18N = {
     whyLong_nokeyword: '沒有 amd64 keyword',
     whyLong_masked: '被 profiles/package.mask 遮蔽',
     whyLong_live: '僅有 live ebuild，本站不發布 binpkg',
-    policyPublished: '公開的 binpkg 在發布前已依其版本與建置時的 USE 通過發布檢查',
+    policyNow_bindist: '目前 ebuild 設定了 RESTRICT=bindist',
+    policyNow_license: '目前 ebuild 的 LICENSE 表達式不屬於 @BINARY-REDISTRIBUTABLE',
+    policyNow_unknown: '無法確定目前 ebuild 是否符合發布政策',
+    policyPublished: '{policy}；公開的 binpkg 在發布前已依其版本與建置時的 USE 通過發布檢查',
     whyLong_removed: 'overlay 已移除該套件；該列來自仍在公開索引中的產物',
     whyLong_candidate: '偵測到建置流程，但該套件目前不在建置清單中',
     lgBindist: '<code>RESTRICT=bindist</code> 禁止發布 binpkg',
     lgChannelExcluded: '該套件不符合目前頻道的相依套件或建置邊界',
     lgLicense: '授權條款不屬於 <code>@BINARY-REDISTRIBUTABLE</code>',
+    lgRemoved: 'overlay 已移除該套件，公開索引仍有舊 binpkg',
     lgDashDist: '未宣告 distfile、禁止鏡像或尚未完整鏡像',
     lgMore: '查看狀態說明與常見原因',
     distNone: '該套件沒有宣告 distfile',
@@ -324,12 +334,16 @@ window.MIRROR_I18N = {
     whyLong_nokeyword: 'No amd64 keyword.',
     whyLong_masked: 'Masked in profiles/package.mask.',
     whyLong_live: 'Only a live ebuild exists; this host does not publish a binpkg.',
-    policyPublished: 'The published binpkg passed the publication checks for its own version and build-time USE.',
+    policyNow_bindist: 'The current ebuild sets RESTRICT=bindist.',
+    policyNow_license: 'The current ebuild LICENSE expression is outside @BINARY-REDISTRIBUTABLE.',
+    policyNow_unknown: 'The current ebuild could not be evaluated against the publication policy.',
+    policyPublished: '{policy} The published binpkg passed the publication checks for its own version and build-time USE.',
     whyLong_removed: 'The package left the overlay; this row remains because its artifact is still in the public index.',
     whyLong_candidate: 'A build process was detected, but the package is not currently on the build list.',
     lgBindist: '<code>RESTRICT=bindist</code> prohibits binpkg publication.',
     lgChannelExcluded: 'The package is outside this channel\'s dependency or build boundary.',
     lgLicense: 'The <code>LICENSE</code> expression is outside <code>@BINARY-REDISTRIBUTABLE</code>.',
+    lgRemoved: 'The overlay removed the package; the public index still holds its old binpkg.',
     lgDashDist: 'No declared distfile, mirroring is prohibited, or the mirror is incomplete.',
     lgMore: 'Status definitions and common causes',
     distNone: 'This package does not declare a distfile.',
@@ -484,8 +498,11 @@ function render() {
       const name = esc(r.cp).replace("/", "/<wbr>");
       const policy = r.policy && r.ver
         ? ' ' + reasonTag(r.policy,
-            t("whyLong_" + r.policy) + " " + t("policyPublished"))
+            t("policyPublished").replace("{policy}", t("policyNow_" + r.policy)))
         : '';
+      const markDetail = [r.excluded,
+        r.ver && r.channelExcluded ? t("whyLong_channelExcluded") : ""]
+        .filter(Boolean).join(" ");
       const removed = r.present === false && r.ver ? ' ' + reasonTag("removed") : '';
       const distDetail = distFailed ? t("distUnknown")
         : !r.declaresDist ? t("distNone")
@@ -494,7 +511,7 @@ function render() {
         '<td class="name">' + (r.present === false ? name :
           '<a href="' + esc(url) + '">' + name + '</a>') + policy + removed + '</td>' +
         '<td class="mark ' + (r.ver ? 'yes' : 'no') + '"' +
-          (r.excluded ? ' title="' + esc(r.excluded) + '"' : '') + '>' +
+          (markDetail ? ' title="' + esc(markDetail) + '"' : '') + '>' +
           (r.ver ? '\u2713'
                  : r.policy ? reasonTag(r.policy, reasonDetail(r))
                  : r.excluded ? '<span class="pend">' + t("excluded") + '</span>'
