@@ -115,14 +115,14 @@ setRows([
   { cp: "app-misc/src-only", binhost: false, excluded: "", present: true,
     ver: "", size: 0, declaresDist: true, dist: true, policy: "", why: "candidate" },
   { cp: "virtual/neither", binhost: false, excluded: "", present: true,
-    ver: "", size: 0, declaresDist: false, dist: false, policy: "meta", why: "meta" },
+    ver: "", size: 0, declaresDist: false, dist: false, policy: "", why: "nobuild" },
   { cp: "app-i18n/libkkc-data", binhost: false, excluded: "", present: true,
     ver: "1", size: 1, declaresDist: true, dist: false, policy: "", why: "candidate" },
   { cp: "acct-group/aptly", binhost: false, excluded: "", present: true,
-    ver: "1", size: 1, declaresDist: false, dist: false, policy: "meta", why: "meta" },
-  { cp: "app-misc/license-retiring", binhost: true, excluded: "", present: true,
+    ver: "1", size: 1, declaresDist: false, dist: false, policy: "", why: "nobuild" },
+  { cp: "app-misc/license-published", binhost: true, excluded: "", present: true,
     ver: "1", size: 1, declaresDist: false, dist: false, policy: "license", why: "" },
-  { cp: "app-misc/excluded-retiring", binhost: false, excluded: "manual exclusion", present: true,
+  { cp: "app-misc/excluded-published", binhost: false, excluded: "manual exclusion", present: true,
     ver: "1", size: 1, declaresDist: false, dist: false, policy: "", why: "candidate" },
   { cp: "app-misc/removed", binhost: false, excluded: "", present: false,
     ver: "1", size: 1, declaresDist: false, dist: false, policy: "", why: "removed" },
@@ -131,44 +131,57 @@ setRows([
     channelExcluded: true },
 ]);
 const matrix = renderWith("");
-check("发布状态、当前政策与删除过渡同时渲染",
+check("公开索引已有 binpkg 的行不显示待移除",
       (matrix.match(/class="mark yes"/g) || []).length === 10 &&
       (matrix.match(/class="mark no"/g) || []).length === 10 &&
-      (matrix.match(/>why_retiring<\/span>/g) || []).length === 5 &&
-      matrix.includes("whyLong_license") && matrix.includes("whyLong_removed") &&
-      matrix.includes("whyLong_channelExcluded") &&
+      !matrix.includes("why_retiring") &&
       !matrix.includes('href="https://github.com/gentoo-zh/overlay/tree/master/app-misc/removed"'),
       matrix.slice(0, 1800));
 
-const closureDependency = renderWith("app-i18n/libkkc-data");
-check("依赖闭包里的清单外软件包不标成待移除",
-      closureDependency.includes("app-i18n/libkkc-data") &&
-      !closureDependency.includes("why_retiring"),
-      closureDependency.slice(0, 600));
+const licensePublished = renderWith("app-misc/license-published");
+check("已发布包的当前政策显示在包名旁并说明发布检查",
+      (licensePublished.match(/>why_license<\/span>/g) || []).length === 1 &&
+      licensePublished.includes('title="whyLong_license policyPublished"') &&
+      /why_license<\/span><\/td><td class="mark yes">/.test(licensePublished),
+      licensePublished.slice(0, 600));
 
-const sourceOnly = renderWith("acct-group/aptly");
-check("公开索引里的本地安装类别标成待移除",
-      (sourceOnly.match(/>why_meta<\/span>/g) || []).length === 1 &&
-      sourceOnly.includes("why_retiring") &&
-      /why_retiring<\/span><\/td><td class="mark yes">/.test(sourceOnly),
-      sourceOnly.slice(0, 600));
+const removed = renderWith("app-misc/removed");
+check("overlay 已移除但仍在索引中的包标明已移除",
+      (removed.match(/>why_removed<\/span>/g) || []).length === 1 &&
+      /why_removed<\/span><\/td><td class="mark yes">/.test(removed),
+      removed.slice(0, 600));
 
-const localOnly = renderWith("virtual/neither");
-check("未发布的本地安装类别只显示一个状态标签",
-      (localOnly.match(/>why_meta<\/span>/g) || []).length === 1 &&
-      !localOnly.includes("why_retiring") &&
-      /why_meta<\/span><\/td><td class="mark no"/.test(localOnly),
-      localOnly.slice(0, 600));
+const exclusionPublished = renderWith("app-misc/excluded-published") +
+  renderWith("app-misc/channel-only");
+check("排除清单与频道排除的包已有 binpkg 时只显示勾号",
+      exclusionPublished.includes("app-misc/excluded-published") &&
+      exclusionPublished.includes("app-misc/channel-only") &&
+      !exclusionPublished.includes("why-tag") &&
+      (exclusionPublished.match(/class="mark yes"/g) || []).length === 2,
+      exclusionPublished.slice(0, 900));
 
-check("图例分别说明发布、清单、政策与退役状态",
+const acct = renderWith("acct-group/aptly");
+check("已发布的 acct 包按普通包显示",
+      acct.includes("acct-group/aptly") &&
+      !acct.includes("why-tag") &&
+      /<\/a><\/td><td class="mark yes">/.test(acct),
+      acct.slice(0, 600));
+
+const virtualUnpublished = renderWith("virtual/neither");
+check("未发布的 virtual 包按清单外显示",
+      (virtualUnpublished.match(/>why_nobuild<\/span>/g) || []).length === 1 &&
+      /why_nobuild<\/span><\/td><td class="mark no"/.test(virtualUnpublished),
+      virtualUnpublished.slice(0, 600));
+
+check("图例分别说明发布、清单与政策状态",
       ["lgBuilt", "lgPending", "lgExcluded", "lgChannelExcluded", "lgDashBin",
-       "lgRetiring", "lgDashDist"]
+       "lgDashDist"]
         .every((key) => html.includes(`data-i18n="${key}"`)) &&
-      ["lgBindist", "lgLicense", "lgMeta"]
+      ["lgBindist", "lgLicense"]
         .every((key) => html.includes(`data-i18n-html="${key}"`)));
 
 check("图例中的代码标记按富文本渲染",
-      ["lgBindist", "lgLicense", "lgMeta"].every((key) =>
+      ["lgBindist", "lgLicense"].every((key) =>
         html.includes(`data-i18n-html="${key}"`)));
 
 check("图例链接到 FAQ 的状态说明",
@@ -180,7 +193,7 @@ check("FAQ 说明 bindist 的常见原因与判定边界",
       faq.includes('包名含 <code>-bin</code> 本身不是判定依据') &&
       faq.includes('distfiles 是否镜像仍按 <code>RESTRICT</code>'));
 
-check("FAQ 说明频道排除与待移除的关系",
+check("FAQ 说明频道排除只影响本频道",
       faq.includes('data-i18n-html="stChannelExcluded"') &&
       faq.includes('data-i18n-html="sdChannelExcluded"') &&
       faq.includes('另一个频道仍可能发布该包'));

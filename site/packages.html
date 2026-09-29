@@ -116,10 +116,6 @@
     <dd data-i18n-html="lgBindist"><code>RESTRICT=bindist</code> 禁止发布 binpkg</dd>
     <dt><span class="pend why-tag" data-i18n="why_license">许可证限制</span></dt>
     <dd data-i18n-html="lgLicense"><code>LICENSE</code> 表达式不属于 <code>@BINARY-REDISTRIBUTABLE</code></dd>
-    <dt><span class="pend why-tag" data-i18n="why_meta">本地安装</span></dt>
-    <dd data-i18n-html="lgMeta"><code>acct-group</code>、<code>acct-user</code> 与 <code>virtual</code> 由 Portage 本地安装</dd>
-    <dt><span class="pend why-tag" data-i18n="why_retiring">待移除</span></dt>
-    <dd data-i18n="lgRetiring">公开索引仍有旧 binpkg，后续几轮发布陆续移除</dd>
     <dt class="mark no">&#8212;</dt>
     <dd data-i18n="lgDashDist">未声明 distfile、禁止镜像或尚未完整镜像</dd>
   </dl>
@@ -219,11 +215,9 @@ window.MIRROR_I18N = {
     why_license: '许可证限制',
     why_unknown: '政策不明',
     why_channelExcluded: '本频道不构建',
-    why_retiring: '待移除',
     why_nokeyword: '无 amd64',
     why_masked: '已屏蔽',
     why_live: '仅 9999',
-    why_meta: '本地安装',
     why_removed: '已移除',
     why_candidate: '清单外',
     whyLong_prebuilt: '上游提供预编译内容；这不是发布限制，该包目前不在构建清单中',
@@ -232,11 +226,10 @@ window.MIRROR_I18N = {
     whyLong_license: '当前 ebuild 的 LICENSE 表达式不属于 @BINARY-REDISTRIBUTABLE，本站不发布 binpkg',
     whyLong_unknown: '无法确定当前 ebuild 是否符合二进制包发布政策',
     whyLong_channelExcluded: '该包不符合当前频道的依赖或构建边界，仍可能由另一个频道发布',
-    whyLong_retiring: '公开索引仍包含旧产物；新一代索引成功切换后移除',
     whyLong_nokeyword: '没有 amd64 keyword',
     whyLong_masked: '被 profiles/package.mask 屏蔽',
     whyLong_live: '仅有 live ebuild，本站不发布 binpkg',
-    whyLong_meta: 'acct-group、acct-user 与 virtual 由用户系统的 Portage 本地安装，本站不提供 binpkg',
+    policyPublished: '公开的 binpkg 在发布前已按其版本与构建时的 USE 通过发布检查',
     whyLong_removed: 'overlay 已移除该包；该行来自仍在公开索引中的产物',
     whyLong_candidate: '检测到构建流程，但该包目前不在构建清单中',
     lgBuilt: '公开索引已有 binpkg',
@@ -246,8 +239,6 @@ window.MIRROR_I18N = {
     lgDashBin: '不在直接构建清单；仍可能作为依赖随包发布',
     lgBindist: '<code>RESTRICT=bindist</code> 禁止发布 binpkg',
     lgLicense: '<code>LICENSE</code> 表达式不属于 <code>@BINARY-REDISTRIBUTABLE</code>',
-    lgMeta: '<code>acct-group</code>、<code>acct-user</code> 与 <code>virtual</code> 由 Portage 本地安装',
-    lgRetiring: '公开索引仍有旧 binpkg，后续几轮发布陆续移除',
     lgDashDist: '未声明 distfile、禁止镜像或尚未完整镜像',
     lgMore: '查看状态说明与常见原因',
     distNone: '该包没有声明 distfile',
@@ -275,27 +266,24 @@ window.MIRROR_I18N = {
     lgExcluded: '排除清單指定不建置',
     lgDashBin: '不在直接建置清單；仍可能作為依賴隨套件發布',
     why_prebuilt: '清單外', why_nobuild: '清單外', why_bindist: '不提供 binpkg',
-    why_license: '授權限制', why_unknown: '政策不明', why_retiring: '待移除',
+    why_license: '授權限制', why_unknown: '政策不明',
     why_channelExcluded: '本頻道不建置',
-    why_nokeyword: '無 amd64', why_masked: '已遮蔽', why_live: '僅 9999', why_meta: '本機安裝', why_removed: '已移除', why_candidate: '清單外',
+    why_nokeyword: '無 amd64', why_masked: '已遮蔽', why_live: '僅 9999', why_removed: '已移除', why_candidate: '清單外',
     whyLong_prebuilt: '上游提供預先編譯的內容；這不是發布限制，該套件目前不在建置清單中',
     whyLong_nobuild: '未偵測到常見建置 eclass；這不是發布限制，該套件目前不在建置清單中',
     whyLong_bindist: 'RESTRICT=bindist，本站不發布 binpkg；distfiles 依 mirror、fetch 與 SRC_URI 分別判定',
     whyLong_license: '目前 ebuild 的 LICENSE 表達式不屬於 @BINARY-REDISTRIBUTABLE，本站不發布 binpkg',
     whyLong_unknown: '無法確定目前 ebuild 是否符合二進位套件發布政策',
     whyLong_channelExcluded: '該套件不符合目前頻道的相依套件或建置邊界，仍可能由另一個頻道發布',
-    whyLong_retiring: '公開索引仍包含舊產物；新一代索引成功切換後移除',
     whyLong_nokeyword: '沒有 amd64 keyword',
     whyLong_masked: '被 profiles/package.mask 遮蔽',
     whyLong_live: '僅有 live ebuild，本站不發布 binpkg',
-    whyLong_meta: 'acct-group、acct-user 與 virtual 由使用者系統的 Portage 本機安裝，本站不提供 binpkg',
+    policyPublished: '公開的 binpkg 在發布前已依其版本與建置時的 USE 通過發布檢查',
     whyLong_removed: 'overlay 已移除該套件；該列來自仍在公開索引中的產物',
     whyLong_candidate: '偵測到建置流程，但該套件目前不在建置清單中',
     lgBindist: '<code>RESTRICT=bindist</code> 禁止發布 binpkg',
     lgChannelExcluded: '該套件不符合目前頻道的相依套件或建置邊界',
     lgLicense: '授權條款不屬於 <code>@BINARY-REDISTRIBUTABLE</code>',
-    lgMeta: '<code>acct-group</code>、<code>acct-user</code> 與 <code>virtual</code> 由 Portage 本機安裝',
-    lgRetiring: '公開索引仍有舊 binpkg，後續幾輪發布陸續移除',
     lgDashDist: '未宣告 distfile、禁止鏡像或尚未完整鏡像',
     lgMore: '查看狀態說明與常見原因',
     distNone: '該套件沒有宣告 distfile',
@@ -324,27 +312,24 @@ window.MIRROR_I18N = {
     lgExcluded: 'The exclusion list disables the build.',
     lgDashBin: 'Not a direct build target; may still be published as a dependency.',
     why_prebuilt: 'off-list', why_nobuild: 'off-list', why_bindist: 'no binpkg',
-    why_license: 'licence restricted', why_unknown: 'policy unknown', why_retiring: 'pending removal',
+    why_license: 'licence restricted', why_unknown: 'policy unknown',
     why_channelExcluded: 'not in this channel',
-    why_nokeyword: 'no amd64', why_masked: 'masked', why_live: '9999 only', why_meta: 'local install', why_removed: 'removed', why_candidate: 'off-list',
+    why_nokeyword: 'no amd64', why_masked: 'masked', why_live: '9999 only', why_removed: 'removed', why_candidate: 'off-list',
     whyLong_prebuilt: 'Upstream provides prebuilt content. This is not a publication restriction; the package is not currently on the build list.',
     whyLong_nobuild: 'No common build eclass was detected. This is not a publication restriction; the package is not currently on the build list.',
     whyLong_bindist: 'RESTRICT=bindist; this host does not publish a binpkg. Distfiles follow mirror, fetch and SRC_URI rules separately.',
     whyLong_license: 'The current ebuild LICENSE expression is outside @BINARY-REDISTRIBUTABLE, so this host does not publish a binpkg.',
     whyLong_unknown: 'The current ebuild could not be evaluated against the binary-package publication policy.',
     whyLong_channelExcluded: 'The package is outside this channel\'s dependency or build boundary. Another channel may still publish it.',
-    whyLong_retiring: 'The public index still contains an old artifact. It is removed after a new index generation switches successfully.',
     whyLong_nokeyword: 'No amd64 keyword.',
     whyLong_masked: 'Masked in profiles/package.mask.',
     whyLong_live: 'Only a live ebuild exists; this host does not publish a binpkg.',
-    whyLong_meta: 'Portage installs acct-group, acct-user and virtual packages locally on the user system; this host does not provide a binpkg.',
+    policyPublished: 'The published binpkg passed the publication checks for its own version and build-time USE.',
     whyLong_removed: 'The package left the overlay; this row remains because its artifact is still in the public index.',
     whyLong_candidate: 'A build process was detected, but the package is not currently on the build list.',
     lgBindist: '<code>RESTRICT=bindist</code> prohibits binpkg publication.',
     lgChannelExcluded: 'The package is outside this channel\'s dependency or build boundary.',
     lgLicense: 'The <code>LICENSE</code> expression is outside <code>@BINARY-REDISTRIBUTABLE</code>.',
-    lgMeta: 'Portage installs <code>acct-group</code>, <code>acct-user</code> and <code>virtual</code> locally.',
-    lgRetiring: 'An old binpkg remains public and is removed over the following publishes.',
     lgDashDist: 'No declared distfile, mirroring is prohibited, or the mirror is incomplete.',
     lgMore: 'Status definitions and common causes',
     distNone: 'This package does not declare a distfile.',
@@ -498,22 +483,16 @@ function render() {
       const url = "https://github.com/gentoo-zh/overlay/tree/master/" + r.cp;
       const name = esc(r.cp).replace("/", "/<wbr>");
       const policy = r.policy && r.ver
-        ? ' ' + reasonTag(r.policy)
+        ? ' ' + reasonTag(r.policy,
+            t("whyLong_" + r.policy) + " " + t("policyPublished"))
         : '';
-      const retiring = r.ver &&
-        (r.present === false || r.policy || r.excluded || r.channelExcluded);
-      const retirementDetail = [reasonDetail(r), t("whyLong_retiring")]
-        .filter(Boolean).join(" ");
-      const retiringTag = retiring
-        ? ' <span class="pend why-tag" title="' + esc(retirementDetail) + '">' +
-          t("why_retiring") + '</span>'
-        : '';
+      const removed = r.present === false && r.ver ? ' ' + reasonTag("removed") : '';
       const distDetail = distFailed ? t("distUnknown")
         : !r.declaresDist ? t("distNone")
         : r.dist ? "" : t("distUnavailable");
       return '<tr>' +
         '<td class="name">' + (r.present === false ? name :
-          '<a href="' + esc(url) + '">' + name + '</a>') + policy + retiringTag + '</td>' +
+          '<a href="' + esc(url) + '">' + name + '</a>') + policy + removed + '</td>' +
         '<td class="mark ' + (r.ver ? 'yes' : 'no') + '"' +
           (r.excluded ? ' title="' + esc(r.excluded) + '"' : '') + '>' +
           (r.ver ? '\u2713'
