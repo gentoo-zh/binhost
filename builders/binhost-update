@@ -42,6 +42,8 @@ push() {
 echo "开始于 $(date -u)"
 
 emerge --sync -q || failed+=("emerge --sync")
+{ git -C "${REPO}" reset -q --hard && git -C "${REPO}" pull -q --ff-only; } || failed+=("git pull")
+git -C "${REPO}" rev-parse HEAD > "${REPO}/build/VERSION"
 
 zfs snapshot "${DATASET}@$(date -u +%Y%m%dT%H%M%SZ)" || failed+=("zfs snapshot")
 zfs list -H -t snapshot -d 1 -o name -s creation "${DATASET}" | head -n -7 | xargs -r -n 1 zfs destroy

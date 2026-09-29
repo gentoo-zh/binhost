@@ -21,7 +21,7 @@ ok() {
 # in the temp tree. The script's fixed host paths are rewritten into the same tree.
 setup() {
     d=$(mktemp -d)
-    mkdir -p "${d}/bin" "${d}/repo/ops" "${d}/pkgdir" "${d}/remote" "${d}/site"
+    mkdir -p "${d}/bin" "${d}/repo/ops" "${d}/repo/build" "${d}/pkgdir" "${d}/remote" "${d}/site"
     sed -e "s|^LOCKFILE=.*|LOCKFILE=${d}/lock|" -e "s|^TMPFILE=.*|TMPFILE=${d}/log|" \
         -e "s|^PKGDIR=.*|PKGDIR=${d}/pkgdir|" \
         "${ROOT}/builders/binhost-update" > "${d}/binhost-update"
@@ -38,6 +38,7 @@ EOF
         printf '#!/bin/bash\nexit "${SIGN_RC:-0}"\n' > "${d}/bin/systemd-run"
         printf '#!/bin/bash\nexit "${RSYNC_RC:-0}"\n' > "${d}/bin/rsync"
         printf '#!/bin/bash\nshift\n[[ -z ${SSH_FAIL:-} ]] || exit 255\nexec bash -c "$*"\n' > "${d}/bin/ssh"
+        printf '#!/bin/bash\ncase "$3" in pull) exit "${PULL_RC:-0}" ;; rev-parse) echo 0123abcd ;; esac\n' > "${d}/bin/git"
     }
     printf '#!/bin/bash\n' | tee "${d}/bin/zfs" > "${d}/bin/emerge"
     printf '#!/bin/bash\ncat >/dev/null\necho '"'"'{"path":"/x"}'"'"'\n' > "${d}/bin/curl"
@@ -79,6 +80,12 @@ ok "用时由开始与结束时间计算" \
    "$(( $(field "${d}/site/build-status.json" finished) - $(field "${d}/site/build-status.json" started) ))" \
    "$(field "${d}/site/build-status.json" duration)"
 ok "全部成功时不告警" "$([[ -e ${d}/alert ]] && echo sent)" ""
+ok "拉取仓库后记录所部署的提交" "$(cat "${d}/repo/build/VERSION")" "0123abcd"
+
+setup; PULL_RC=1 run; rc=$?
+ok "拉取仓库失败时退出码为 1" "${rc}" "1"
+ok "拉取仓库失败时仍按现有副本构建发布" "$([[ -s ${d}/remote/status.json ]] && echo yes)" "yes"
+ok "拉取仓库失败时告警" "$(grep -c 'git pull' "${d}/alert" 2>/dev/null)" "1"
 rm -rf "${d}"
 
 setup; RUN_RC=1 run; rc=$?
