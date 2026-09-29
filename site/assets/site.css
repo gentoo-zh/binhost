@@ -1168,8 +1168,10 @@ main.wide ~ .foot { max-width: none; }
   font-family: var(--sans); font-size: var(--fs-small); line-height: var(--lh-label); white-space: normal;
 }
 .badge[data-variant="neutral"] { background: var(--neutral-subtle); color: var(--fg-body); }
-/* The notice dot on a mirror's option: the status API finds that mirror behind or unreachable. */
-.src-opt[data-behind]::after, .menu-item[data-behind] .menu-label::after {
+/* The notice dot on a mirror's option and its mirrors-page cell: the status API (mirror-health.js) finds
+   that mirror behind or unreachable. The cell keeps the width of its longest state, so nothing moves. */
+.mirror-table td[data-mirror-host] { min-inline-size: 11em; white-space: nowrap; }
+.src-opt[data-behind]::after, .menu-item[data-behind] .menu-label::after, .mirror-table td[data-behind]::after {
   content: ""; display: inline-block; width: var(--sp-1); height: var(--sp-1); border-radius: var(--r-full);
   margin-inline-start: var(--sp-1); vertical-align: middle; background: var(--notice);
 }

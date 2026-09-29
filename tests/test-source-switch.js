@@ -230,6 +230,13 @@ const fineApp = load("_app.html", "zh-cn", storage({ "mirror-source": nju }), [f
 fineApp.listeners.sourcechange();
 check("镜像链接直接拼接编码后的路径，不二次解码", fine.getAttribute("href") === nju + oddPath,
       fine.getAttribute("href"));
+// mirror-health.js marks a mirror the status API found down with data-down; its links stay on the origin.
+const dead = oddLink();
+const deadApp = load("_app.html", "zh-cn", storage({ "mirror-source": nju }), [dead]);
+const njuOpt = deadApp.groups[0].opts.find((o) => o.getAttribute("data-uri") === nju);
+njuOpt.setAttribute("data-down", "");
+deadApp.listeners.sourcechange();
+check("状态 API 判定无法连接的镜像：下载链接留在源站", dead.getAttribute("href") === oddPath, dead.getAttribute("href"));
 
 console.log(failed ? `\n  ${failed} 项不通过` : "\n  镜像默认值、语言切换、跨页选择与下载链接：全部通过");
 process.exit(failed ? 1 : 0);
