@@ -222,21 +222,9 @@ check("列表晚于选择器到达时，sourcechange 仍会改写新链接", lat
       lateLink.getAttribute("href"));
 
 
-// /mirror-status.json: a listed file keeps the origin link, compared decoded against the decoded path;
-// an unreachable mirror (listed as true) keeps every link there; other links get the encoded path as is.
+// The encoded data-src-path is appended to the mirror as is.
 const oddPath = "/distfiles/a&b%20c%25/x%26y.iso";
 const oddLink = () => element({ href: "x%26y.iso", "data-src-link": "files", "data-src-path": oddPath });
-const [listed, other, dead] = [oddLink(), fileLink(), oddLink()];
-const synced = load("_app.html", "zh-cn", storage({ "mirror-source": cernet }), [listed, other]);
-global.window.MIRROR_MISSING = { [cernet]: ["/distfiles/a&b c%/x&y.iso"] };
-synced.listeners.sourcechange();
-check("镜像缺少的文件按解码后的路径比对，链接留在源站",
-      listed.getAttribute("href") === oddPath && other.getAttribute("href") === cernet + filePath,
-      JSON.stringify([listed.getAttribute("href"), other.getAttribute("href")]));
-const deadApp = load("_app.html", "zh-cn", storage({ "mirror-source": nju }), [dead]);
-global.window.MIRROR_MISSING = { [nju]: true };
-deadApp.listeners.sourcechange();
-check("无法连接的镜像：下载链接留在源站", dead.getAttribute("href") === oddPath, dead.getAttribute("href"));
 const fine = oddLink();
 const fineApp = load("_app.html", "zh-cn", storage({ "mirror-source": nju }), [fine]);
 fineApp.listeners.sourcechange();

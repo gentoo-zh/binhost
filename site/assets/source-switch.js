@@ -52,27 +52,10 @@
         });
 
       // A download link names its path on the mirror. The option marked data-src-here is the server that
-      // serves this page, so its links stay on this host. A file that window.MIRROR_MISSING lists for the
-      // chosen mirror (the page fills it from /mirror-status.json) also stays here, marked with a badge; true
-      // in place of the list means the mirror was unreachable, so every file stays here. The list holds
-      // decoded origin paths, so the encoded data-src-path is decoded to compare, and appended as is.
-      var missing = (window.MIRROR_MISSING || {})[uri] || [];
+      // serves this page, so its links stay on this host; the encoded data-src-path is appended as is.
       each(document.querySelectorAll('a[data-src-link="' + name + '"]'), function (a) {
         var p = a.getAttribute('data-src-path');
-        var raw = p;
-        try { raw = decodeURIComponent(p); } catch (e) {}
-        var behind = !chosen.hasAttribute('data-src-here') && (missing === true || missing.indexOf(raw) >= 0);
-        a.setAttribute('href', chosen.hasAttribute('data-src-here') || behind ? p : uri + p);
-        var note = a.nextElementSibling;
-        if (note && note.hasAttribute('data-src-note')) note.parentNode.removeChild(note);
-        if (!behind || !window.MIRROR_T) return;
-        note = document.createElement('span');
-        note.className = 'badge';
-        note.setAttribute('data-variant', 'neutral');
-        note.setAttribute('data-src-note', '');
-        note.textContent = window.MIRROR_T('srcBehind');
-        note.title = window.MIRROR_T('srcBehindLong');
-        a.parentNode.insertBefore(note, a.nextSibling);
+        a.setAttribute('href', chosen.hasAttribute('data-src-here') ? p : uri + p);
       });
 
       each(document.querySelectorAll('.copy-chip[data-src-copy="' + name + '"]'),

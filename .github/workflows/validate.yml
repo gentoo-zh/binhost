@@ -277,8 +277,6 @@ jobs:
         run: python3 site/tools/build-search-index.py --check
       - name: Code highlighting is current
         run: python3 tests/test-highlight.py
-      - name: Mirror status check
-        run: python3 tests/test-mirror-status.py
       - name: Mirror pickers agree
         run: python3 site/tools/check-pickers.py
       - name: Both setup modes say the same thing
