@@ -52,10 +52,12 @@
         });
 
       // A download link names its path on the mirror. The option marked data-src-here is the server that
-      // serves this page, so its links stay on this host; the encoded data-src-path is appended as is.
+      // serves this page, so its links stay on this host, as they do for a mirror that mirror-health.js marks
+      // data-down; the encoded data-src-path is appended as is.
+      var stay = chosen.hasAttribute('data-src-here') || chosen.hasAttribute('data-down');
       each(document.querySelectorAll('a[data-src-link="' + name + '"]'), function (a) {
         var p = a.getAttribute('data-src-path');
-        a.setAttribute('href', chosen.hasAttribute('data-src-here') ? p : uri + p);
+        a.setAttribute('href', stay ? p : uri + p);
       });
 
       each(document.querySelectorAll('.copy-chip[data-src-copy="' + name + '"]'),

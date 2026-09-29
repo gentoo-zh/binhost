@@ -8,11 +8,11 @@
 <link rel="icon" href="/assets/logo.webp">
 <link rel="preload" href="/assets/fonts/source-sans-3.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/tokens.css?v=1e90dbb8">
-<link rel="stylesheet" href="/assets/site.css?v=d463d022">
+<link rel="stylesheet" href="/assets/site.css?v=d96d10f7">
 <script src="/assets/early.js?v=e170b3a5"></script>
 <script src="/assets/docs.js?v=7bf4e48d" defer></script>
 <script src="/assets/indicator.js?v=d209281f" defer></script>
-<script src="/assets/seg-picker.js?v=e8734be5" defer></script>
+<script src="/assets/seg-picker.js?v=dab82acd" defer></script>
 <script src="/assets/search.js?v=a358ca65" defer></script>
 <meta property="og:site_name" content="Gentoo-zh 下载">
 <meta property="og:type" content="website">
@@ -198,14 +198,14 @@
   <h2 id="list" data-i18n="h2list">镜像列表</h2>
 
   <table class="ref-table mirror-table">
-    <thead><tr><th data-i18n="thMirror">镜像</th><th data-i18n="thLoc">位置</th><th data-i18n="thAddr">地址</th></tr></thead>
+    <thead><tr><th data-i18n="thMirror">镜像</th><th data-i18n="thLoc">位置</th><th data-i18n="thAddr">地址</th><th><a href="https://status.gentoozh.org/" data-i18n="thSync">同步状态</a></th></tr></thead>
     <tbody>
-      <tr><td data-i18n="mOrigin">源站</td><td data-i18n="locDe">德国</td><td><a href="/">distfiles.gentoozh.org</a></td></tr>
-      <tr><td data-i18n="mCernet">教育网联合镜像站</td><td data-i18n="locCn">中国大陆</td><td><a href="https://mirrors.cernet.edu.cn/gentoo-zh">mirrors.cernet.edu.cn/gentoo-zh</a></td></tr>
-      <tr><td data-i18n="mNju">南京大学</td><td data-i18n="locCn">中国大陆</td><td><a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a></td></tr>
-      <tr><td data-i18n="mNyist">南阳理工学院</td><td data-i18n="locCn">中国大陆</td><td><a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a></td></tr>
-      <tr><td data-i18n="mHernet">河南教育网</td><td data-i18n="locCn">中国大陆</td><td><a href="https://mirrors.ha.edu.cn/gentoo-zh">mirrors.ha.edu.cn/gentoo-zh</a></td></tr>
-      <tr><td data-i18n="mOsuosl">俄勒冈州立大学开源实验室</td><td data-i18n="locUs">美国</td><td><a href="https://ftp2.osuosl.org/pub/gentoo-zh">ftp2.osuosl.org/pub/gentoo-zh</a></td></tr>
+      <tr><td data-i18n="mOrigin">源站</td><td data-i18n="locDe">德国</td><td><a href="/">distfiles.gentoozh.org</a></td><td data-mirror-host="distfiles.gentoozh.org">—</td></tr>
+      <tr><td data-i18n="mCernet">教育网联合镜像站</td><td data-i18n="locCn">中国大陆</td><td><a href="https://mirrors.cernet.edu.cn/gentoo-zh">mirrors.cernet.edu.cn/gentoo-zh</a></td><td data-mirror-host="mirrors.cernet.edu.cn">—</td></tr>
+      <tr><td data-i18n="mNju">南京大学</td><td data-i18n="locCn">中国大陆</td><td><a href="https://mirror.nju.edu.cn/gentoo-zh">mirror.nju.edu.cn/gentoo-zh</a></td><td data-mirror-host="mirror.nju.edu.cn">—</td></tr>
+      <tr><td data-i18n="mNyist">南阳理工学院</td><td data-i18n="locCn">中国大陆</td><td><a href="https://mirror.nyist.edu.cn/gentoo-zh">mirror.nyist.edu.cn/gentoo-zh</a></td><td data-mirror-host="mirror.nyist.edu.cn">—</td></tr>
+      <tr><td data-i18n="mHernet">河南教育网</td><td data-i18n="locCn">中国大陆</td><td><a href="https://mirrors.ha.edu.cn/gentoo-zh">mirrors.ha.edu.cn/gentoo-zh</a></td><td data-mirror-host="mirrors.ha.edu.cn">—</td></tr>
+      <tr><td data-i18n="mOsuosl">俄勒冈州立大学开源实验室</td><td data-i18n="locUs">美国</td><td><a href="https://ftp2.osuosl.org/pub/gentoo-zh">ftp2.osuosl.org/pub/gentoo-zh</a></td><td data-mirror-host="ftp2.osuosl.org">—</td></tr>
     </tbody>
   </table>
 
@@ -251,6 +251,7 @@ window.MIRROR_I18N = {
     "thMirror": "鏡像",
     "thAddr": "位址",
     "thLoc": "位置",
+    "thSync": "同步狀態",
     "locDe": "德國",
     "locCn": "中國大陸",
     "locUs": "美國",
@@ -271,6 +272,7 @@ window.MIRROR_I18N = {
     "thMirror": "Mirror",
     "thAddr": "Address",
     "thLoc": "Location",
+    "thSync": "Sync status",
     "locDe": "Germany",
     "locCn": "mainland China",
     "locUs": "United States",
@@ -288,5 +290,6 @@ window.MIRROR_I18N = {
 };
 </script>
 <script src="/assets/i18n.js?v=da677fcb"></script>
+<script src="/assets/mirror-health.js?v=761f3ab6"></script>
 </body>
 </html>

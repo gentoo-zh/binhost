@@ -218,7 +218,7 @@
     measure();
     if (typeof MutationObserver === 'function') {
       new MutationObserver(schedule).observe(seg, {
-        subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class'],
+        subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'data-behind', 'title'],
       });
     }
     if (typeof ResizeObserver === 'function') new ResizeObserver(schedule).observe(box);
