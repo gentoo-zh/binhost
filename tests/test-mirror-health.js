@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // mirror-health.js reads the public status API once and marks each mirror picker option whose mirror is
-// down or more than six hours behind, matching entries by the host of the option's data-uri. A failed
+// down or behind, matching entries by the host of the option's data-uri. A tree is behind once the first
+// index it lacks has been out more than 30 hours; until then it is only pending and marks nothing. A failed
 // request leaves the page as it was. On the status page it also writes one row per mirror into
 // #mirror-facts, or the fallback line when the answer is missing or stale.
 
@@ -41,11 +42,12 @@ const HOSTS = {
 
 const tree = (key, lagSec, up) => ({ key, name: key, up: up !== false, code: 200, lagSec });
 const NOW = Math.floor(Date.now() / 1000);
-const API = { updated: NOW, overall: "ok", sites: [], events: [], mirrors: { updated: NOW, published: 1, list: [
+const API = { updated: NOW, overall: "ok", sites: [], events: [], mirrors: { updated: NOW,
+  published: [{ key: "stable", ageSec: 3600 }, { key: "unstable", ageSec: 7200 }], list: [
   { host: "distfiles.gentoozh.org", key: "src", origin: true, up: true, trees: [tree("stable", 0), tree("unstable", 0)] },
   { host: "mirror.nju.edu.cn", key: "nju", up: true, trees: [tree("stable", 84715), tree("unstable", 3600)] },
   { host: "mirrors.ha.edu.cn", key: "ha", up: true, trees: [tree("stable", 0), tree("unstable", 0, false)] },
-  { host: "ftp2.osuosl.org", key: "osuosl", up: true, trees: [tree("stable", 21000), tree("unstable", 600)] },
+  { host: "ftp2.osuosl.org", key: "osuosl", up: true, trees: [tree("stable", 21000), tree("unstable", 0)] },
 ] } };
 
 // The status page's mirror names, as i18n.js would return them for the current language.
@@ -98,6 +100,14 @@ function run(fetchImpl, lang, status) {
 const byKey = (page) => Object.fromEntries(Object.keys(HOSTS).map((k, i) => [k, page.opts[i]]));
 const settle = () => new Promise((r) => setImmediate(r));
 const answer = (j) => () => Promise.resolve({ ok: true, json: () => Promise.resolve(j) });
+// A copy of the fake API with Nanjing University's stable lag, and the stable index's age when given.
+function nju(lagSec, ageSec) {
+  const j = JSON.parse(JSON.stringify(API));
+  j.mirrors.list[1].trees[0].lagSec = lagSec;
+  if (ageSec === undefined) delete j.mirrors.published;
+  else j.mirrors.published[0].ageSec = ageSec;
+  return j;
+}
 
 (async function () {
   const page = run(answer(API));
@@ -105,19 +115,20 @@ const answer = (j) => () => Promise.resolve({ ok: true, json: () => Promise.reso
   const o = byKey(page);
   check("只请求一次状态 API", page.asked.length === 1 && page.asked[0] === "https://status.gentoozh.org/api/status",
         JSON.stringify(page.asked));
-  check("落后超过 6 小时：取两棵树中较大的延迟，标记并提示",
-        o.nju.hasAttribute("data-behind") && o.nju.title === "落后约 24 小时" && !o.nju.hasAttribute("data-down"),
+  check("落后约一天但最新索引刚发布一小时：尚未同步，不标记也不提示",
+        !o.nju.hasAttribute("data-behind") && o.nju.title === "" && !o.nju.hasAttribute("data-down"),
         JSON.stringify([o.nju.attrs, o.nju.title]));
   check("按主机名匹配：mirrors.ha.edu.cn 对应 API 的 ha，任一树不可达即视为无法连接",
         o.hernet.hasAttribute("data-behind") && o.hernet.hasAttribute("data-down") &&
         o.hernet.title === "上次检查时无法连接", JSON.stringify([o.hernet.attrs, o.hernet.title]));
-  check("延迟不足 6 小时与已同步的镜像不标记",
+  check("尚未同步与已同步的镜像不标记",
         !o.osuosl.hasAttribute("data-behind") && !o.origin.hasAttribute("data-behind") && o.osuosl.title === "",
         JSON.stringify([o.osuosl.attrs, o.origin.attrs]));
   check("API 未列出的镜像保持原样", !o.other.hasAttribute("data-behind") && o.other.title === "");
-  check("镜像页状态列：落后、无法连接、未列出",
-        page.cells[0].textContent === "无法连接" && page.cells[1].textContent === "落后约 24 小时" &&
-        page.cells[2].textContent === "—", JSON.stringify(page.cells.map((c) => c.textContent)));
+  check("镜像页状态列：无法连接、尚未同步、未列出",
+        page.cells[0].textContent === "无法连接" && page.cells[1].textContent === "尚未同步最新版" &&
+        page.cells[2].textContent === "—" && page.cells[0].hasAttribute("data-behind") &&
+        !page.cells[1].hasAttribute("data-behind"), JSON.stringify(page.cells.map((c) => [c.textContent, c.attrs])));
   check("镜像页状态列写入后保留窄屏字段标签",
         page.cells[0].prepended === page.cells[0].label && page.cells[1].prepended === null);
   check("结果到达后通知 source-switch.js 重写链接", page.events.join() === "sourcechange", page.events.join());
@@ -125,13 +136,32 @@ const answer = (j) => () => Promise.resolve({ ok: true, json: () => Promise.reso
   page.document.documentElement.lang = "zh-TW";
   page.listeners.langchange();
   check("切换到臺灣正體后提示随之更新",
-        o.nju.title === "落後約 24 小時" && o.hernet.title === "上次檢查時無法連線" &&
-        page.cells[0].textContent === "無法連線", JSON.stringify([o.nju.title, o.hernet.title]));
+        o.nju.title === "" && o.hernet.title === "上次檢查時無法連線" &&
+        page.cells[0].textContent === "無法連線" && page.cells[1].textContent === "尚未同步最新版",
+        JSON.stringify([o.nju.title, o.hernet.title, page.cells[1].textContent]));
   page.document.documentElement.lang = "en";
   page.listeners.langchange();
   check("切换到英文后提示随之更新",
-        o.nju.title === "About 24 hours behind" && o.hernet.title === "Unreachable at the last check" &&
-        page.cells[0].textContent === "Unreachable", JSON.stringify([o.nju.title, o.hernet.title]));
+        o.nju.title === "" && o.hernet.title === "Unreachable at the last check" &&
+        page.cells[0].textContent === "Unreachable" && page.cells[1].textContent === "Latest not synced yet",
+        JSON.stringify([o.nju.title, o.hernet.title, page.cells[1].textContent]));
+
+  // Staleness is the newest index's age plus each day of lag past the first; up to 30 hours is pending.
+  for (const [name, j, cell, behind] of [
+    ["落后两天多、最新索引发布两小时：共 27 小时，尚未同步", nju(2 * 86400 + 3600, 7200), "尚未同步最新版", false],
+    ["正好 30 小时仍算尚未同步", nju(86400 + 29 * 3600, 3600), "尚未同步最新版", false],
+    ["落后三天、最新索引发布一小时：共 49 小时，标记落后", nju(3 * 86400, 3600), "落后约 49 小时", true],
+    ["缺少发布时间时按延迟本身判断", nju(40 * 3600), "落后约 40 小时", true],
+    ["缺少发布时间且延迟不足 30 小时：尚未同步", nju(84715), "尚未同步最新版", false],
+  ]) {
+    const p = run(answer(j));
+    await settle();
+    const n = byKey(p).nju;
+    check(name,
+          p.cells[1].textContent === cell && p.cells[1].hasAttribute("data-behind") === behind &&
+          n.hasAttribute("data-behind") === behind && n.title === (behind ? cell : "") &&
+          !n.hasAttribute("data-down"), JSON.stringify([p.cells[1].textContent, p.cells[1].attrs, n.attrs, n.title]));
+  }
 
   const inSync = JSON.parse(JSON.stringify(API));
   inSync.mirrors.list.forEach((m) => m.trees.forEach((t) => { t.lagSec = 0; t.up = true; }));
@@ -172,12 +202,13 @@ const answer = (j) => () => Promise.resolve({ ok: true, json: () => Promise.reso
         rows.length === 3 && rows[0].includes("南京大学") && rows[1].includes("河南教育网") &&
         rows[2].includes("俄勒冈州立大学开源实验室") && !box.innerHTML.includes("distfiles.gentoozh.org"),
         box.innerHTML);
-  check("状态页：南京大学 stable 落后、unstable 已同步",
-        rows[0].includes(part("stable", "落后约 24 小时")) && rows[0].includes(part("unstable", "已同步")),
+  check("状态页：南京大学两棵树都尚未同步",
+        rows[0].includes(part("stable", "尚未同步最新版")) && rows[0].includes(part("unstable", "尚未同步最新版")),
         rows[0]);
   check("状态页：河南教育网 unstable 无法连接",
         rows[1].includes(part("stable", "已同步")) && rows[1].includes(part("unstable", "无法连接")), rows[1]);
-  check("状态页：6 小时内的延迟算已同步", rows[2].includes(part("stable", "已同步")), rows[2]);
+  check("状态页：无延迟的树写已同步",
+        rows[2].includes(part("stable", "尚未同步最新版")) && rows[2].includes(part("unstable", "已同步")), rows[2]);
   check("状态页：时间列写检查时间", rows[0].includes('<span class="when">检查于 <b>3 分钟前</b>'), rows[0]);
   check("状态页：清除忙碌状态，显示说明行，隐藏失败提示",
         box.getAttribute("aria-busy") === "false" && !box.hidden && !st.ids["mirror-more"].hidden &&
@@ -186,9 +217,16 @@ const answer = (j) => () => Promise.resolve({ ok: true, json: () => Promise.reso
   st.listeners.langchange();
   const en = rowsOf(box.innerHTML);
   check("状态页：切换到英文后重新渲染",
-        en[0].includes("Nanjing University") && en[0].includes(part("stable", "About 24 hours behind")) &&
+        en[0].includes("Nanjing University") && en[0].includes(part("stable", "Latest not synced yet")) &&
         en[1].includes(part("unstable", "Unreachable")) && en[2].includes(part("unstable", "In sync")) &&
         en[0].includes("Checked <b>3 minutes ago</b>"), box.innerHTML);
+
+  const late = run(answer(nju(3 * 86400, 3600)), "zh-CN", true);
+  await settle();
+  const lateRows = rowsOf(late.ids["mirror-facts"].innerHTML);
+  check("状态页：每棵树各写自己的状态",
+        lateRows[0].includes(part("stable", "落后约 49 小时")) &&
+        lateRows[0].includes(part("unstable", "尚未同步最新版")), lateRows[0]);
 
   const down = JSON.parse(JSON.stringify(API));
   down.mirrors.list[3].up = false;
