@@ -137,9 +137,11 @@ const geometry = `(() => {
     console.log(`Mobile overflow: ${report.length - bad.length}/${report.length} passed (${pages.length} pages, ${widths.join('/')}px, 2 themes, 3 languages)`);
     if (bad.length) process.exitCode = 1;
   } finally {
-    chrome.kill();
+    // Browser.close shuts Chrome down with its helper processes, which a kill of the main process leaves
+    // writing to the profile; kill only if it does not answer.
+    await call('Browser.close', {}, true).catch(() => chrome.kill());
     await exited;
     server.close();
-    fs.rmSync(profile, { recursive: true, force: true });
+    fs.rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 })().catch(e => { console.error(e); process.exitCode = 1; });
