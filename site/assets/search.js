@@ -255,9 +255,11 @@
   }
   function art(entry) {
     var span = el('span', 'sd-art');
+    // A page with an icon of its own shows it; any other shows its group's.
     var g = index.groups.filter(function (x) { return x.id === entry.group; })[0];
-    if (g && g.icon) {
-      span.appendChild(glyph('sd-art-icon', g.icon.viewBox, g.icon.paths));
+    var icon = entry.icon || (g && g.icon);
+    if (icon) {
+      span.appendChild(glyph('sd-art-icon', icon.viewBox, icon.paths));
     } else {
       var img = el('img', 'sd-art-logo');
       img.src = '/assets/logo.webp';

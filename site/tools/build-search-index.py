@@ -6,7 +6,7 @@ languages: zh-CN from the markup, zh-TW and en from the page's MIRROR_I18N table
 and their groups come from the sidebar template (site/tools/chrome/nav.html), so a page added to the sidebar
 is indexed and the search's category chips follow the sidebar's groups. Each group's icon is the one the
 overview's guide card for that group shows (index.html), matched by the group's title key; a group with no
-card takes its icon from GROUP_ICON.
+card, and a page with an icon of its own, take it from site/tools/search-icons.json.
 
 --check fails when the file on disk differs from what the pages give.
 """
@@ -105,11 +105,14 @@ def plain(markup):
 
 class Page(html.parser.HTMLParser):
     """Collects, inside <main>, the h1, the lead paragraph before the first h2, and each h2 and h3: its
-    i18n key, zh-CN text, anchor (its own id, else the nearest enclosing one) and classes."""
+    i18n key, zh-CN text, anchor (its own id, else the nearest enclosing one) and classes. Also the text of
+    each code and pre element outside a heading, by the position in items of the heading it follows (None
+    before the first): commands and identifiers such as ~amd64 read the same in every language."""
 
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.stack, self.main, self.cur, self.items = [], False, None, []
+        self.code, self.codes = None, {}
 
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
@@ -120,6 +123,8 @@ class Page(html.parser.HTMLParser):
             self.main = True
         if not self.main or self.cur:
             return
+        if tag in ("code", "pre") and self.code is None:
+            self.code = {"text": [], "depth": len(self.stack)}
         classes = (a.get("class") or "").split()
         key = a.get("data-i18n") or a.get("data-i18n-html")
         lead = tag == "p" and "lead" in classes and not any(i["tag"] == "h2" for i in self.items)
@@ -131,8 +136,16 @@ class Page(html.parser.HTMLParser):
     def handle_endtag(self, tag):
         if self.cur and len(self.stack) == self.cur["depth"]:
             self.cur["text"] = re.sub(r"\s+", " ", "".join(self.cur["text"])).strip()
+            self.cur["n"] = len(self.items)
             self.items.append(self.cur)
             self.cur = None
+        if self.code and len(self.stack) == self.code["depth"]:
+            text = re.sub(r"\s+", " ", "".join(self.code["text"])).strip()
+            sec = next((i["n"] for i in reversed(self.items) if i["tag"] in ("h2", "h3")), None)
+            found = self.codes.setdefault(sec, [])
+            if text and text not in found:
+                found.append(text)
+            self.code = None
         if any(t == tag for t, _ in self.stack):
             while self.stack.pop()[0] != tag:
                 pass
@@ -145,6 +158,8 @@ class Page(html.parser.HTMLParser):
     def handle_data(self, data):
         if self.cur:
             self.cur["text"].append(data)
+        elif self.code:
+            self.code["text"].append(data)
 
 
 def sidebar():
@@ -173,17 +188,14 @@ def page_file(href):
     return f if f.is_file() else None
 
 
-# Icons for sidebar groups with no guide card on the overview, by the group's title key. Same Spectrum 2
-# workflow set as the cards: About uses InfoCircle.
-GROUP_ICON = {
-    "navGAbout": {"viewBox": "0 0 20 20", "paths": [
-        "M10 18.75c-4.825 0-8.75-3.925-8.75-8.75S5.175 1.25 10 1.25s8.75 3.925 8.75 8.75-3.925 8.75-8.75 8.75"
-        "m0-16c-3.998 0-7.25 3.252-7.25 7.25s3.252 7.25 7.25 7.25 7.25-3.252 7.25-7.25S13.998 2.75 10 2.75",
-        "M10 5.26c.231-.008.456.074.627.229.33.365.33.921 0 1.286-.17.159-.395.243-.626.235"
-        "-.237.01-.466-.08-.633-.248-.162-.168-.25-.394-.242-.627-.012-.235.07-.465.228-.64.174-.164.408-.25.647-.235"
-        "M10 15.063c-.414 0-.75-.336-.75-.75V9.478c0-.415.336-.75.75-.75s.75.335.75.75v4.835c0 .414-.336.75-.75.75",
-    ]},
-}
+# Spectrum 2 workflow icons the overview's cards do not give: a sidebar group with no guide card, by the
+# group's title key, and a page that shows its own icon instead of its group's, by URL. Copied from
+# @react-spectrum/s2/icons; the "s2" field names the file.
+EXTRA_ICONS = json.loads((ROOT / "site" / "tools" / "search-icons.json").read_text())
+
+
+def bare(icon):
+    return {"viewBox": icon["viewBox"], "paths": icon["paths"]}
 
 
 def icons():
@@ -200,7 +212,7 @@ def icons():
 
 def build():
     common = js_table((SITE / "assets" / "strings.js").read_text(), "MIRROR_I18N_COMMON")
-    art = {**GROUP_ICON, **icons()}
+    art = {**{k: bare(v) for k, v in EXTRA_ICONS["groups"].items()}, **icons()}
     groups, entries, problems = [], [], []
 
     def tr(key, zh, table):
@@ -215,7 +227,8 @@ def build():
     for gid, gkey, gzh, hrefs in sidebar():
         if gid:
             if gkey not in art:
-                problems.append(f"侧栏分组 {gid} 的标题 {gkey} 在 index.html 的指南卡片和 GROUP_ICON 中都找不到图标")
+                problems.append(f"侧栏分组 {gid} 的标题 {gkey} 没有图标："
+                                f"index.html 的指南卡片与 search-icons.json 都没有")
             groups.append({"id": gid, "label": tr(gkey, gzh, {}), "icon": art.get(gkey)})
         for href in hrefs:
             f = page_file(href)
@@ -244,8 +257,13 @@ def build():
                                 names[lang].append(t[lang])
                 desc = {lang: LIST_SEP[lang].join(names[lang]) for lang in LANGS}
             slug = href.strip("/") or "index"
+            # Code under a heading that has no section entry (a pane title) counts toward the page.
+            sections = {h["n"] for h in heads if "pane-title" not in h["classes"]}
+            page_code = [c for n, cs in p.codes.items() if n not in sections for c in cs]
+            own = EXTRA_ICONS["pages"].get(href)
+            icon = {"icon": bare(own)} if own else {}
             entries.append({"url": href, "group": gid, "kind": "page", "title": title, "desc": desc,
-                            "keywords": [slug]})
+                            "keywords": [slug] + list(dict.fromkeys(page_code)), **icon})
             # A section's card names its page and, below the page, the heading it sits under: a pane title
             # (the Live ISO page repeats its h2s once per image) for an h2, the h2 for an h3.
             pane = h2 = None
@@ -259,7 +277,11 @@ def build():
                     h2 = t
                 d = {lang: title[lang] + (" · " + context[lang] if context else "") for lang in LANGS}
                 entries.append({"url": f"{href}#{h['id']}", "group": gid, "kind": "section",
-                                "title": t, "desc": d, "keywords": [h["id"]]})
+                                "title": t, "desc": d, "keywords": [h["id"]] + p.codes.get(h["n"], []),
+                                **icon})
+    for url in EXTRA_ICONS["pages"]:
+        if not any(e["url"] == url for e in entries):
+            problems.append(f"search-icons.json 为 {url} 配了图标，但侧栏没有这个页面")
     return {"langs": list(LANGS), "groups": groups, "entries": entries}, problems
 
 
