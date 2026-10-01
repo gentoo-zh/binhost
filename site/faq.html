@@ -7,8 +7,8 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
 <link rel="preload" href="/assets/fonts/source-sans-3.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/tokens.css?v=1e90dbb8">
-<link rel="stylesheet" href="/assets/site.css?v=fd23a73b">
+<link rel="stylesheet" href="/assets/tokens.css?v=00fe2811">
+<link rel="stylesheet" href="/assets/site.css?v=72d96c28">
 <script src="/assets/early.js?v=e170b3a5"></script>
 <script src="/assets/docs.js?v=7bf4e48d" defer></script>
 <script src="/assets/indicator.js?v=d209281f" defer></script>
@@ -222,6 +222,7 @@
     包列表分开显示公开索引、直接构建清单、当前发布政策和 distfiles 镜像状态。
     同一行可以同时出现多个状态，因为它们说明不同事实。
   </p>
+  <div class="table-scroll">
   <table class="ref-table">
     <thead><tr><th data-i18n="stStatus">状态</th><th data-i18n="stMeaning">触发条件与常见原因</th></tr></thead>
     <tbody>
@@ -236,6 +237,7 @@
       <tr><td data-i18n-html="stDist"><code>Distfiles —</code></td><td data-i18n-html="sdDist">该包没有声明 distfile、<code>RESTRICT</code> 包含 <code>mirror</code> 或 <code>fetch</code>，或声明的文件尚未全部进入镜像。破折号提示会区分没有文件与不可用；该状态不表示 binary package 不可用。</td></tr>
     </tbody>
   </table>
+  </div>
 <span id="signing"></span>
 <h3 id="q5" data-i18n="q5">如何验证下载的 binary package 来自本站且内容未被修改？</h3>
   <p data-i18n-html="a5">导入本站公钥，并使用配置中的 <code>verify-signature = true</code> 让 Portage 验证 binary package 签名。公钥导入与仓库配置见<a href="/binpkg-setup#setup">配置 binary package</a>。</p>

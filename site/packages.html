@@ -20,8 +20,8 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
 <link rel="preload" href="/assets/fonts/source-sans-3.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/tokens.css?v=1e90dbb8">
-<link rel="stylesheet" href="/assets/site.css?v=fd23a73b">
+<link rel="stylesheet" href="/assets/tokens.css?v=00fe2811">
+<link rel="stylesheet" href="/assets/site.css?v=72d96c28">
 <script src="/assets/early.js?v=e170b3a5"></script>
 <script src="/assets/docs.js?v=7bf4e48d" defer></script>
 <script src="/assets/indicator.js?v=d209281f" defer></script>
@@ -253,6 +253,7 @@
   </div>
 
   <div id="out" aria-busy="true">
+    <div class="table-scroll">
     <table class="listing pkgs">
       <thead>
         <tr>
@@ -286,6 +287,7 @@
         <tr class="skeleton-row" aria-hidden="true"><td class="name"></td><td class="mark"></td><td class="mark"></td><td class="ver"></td><td class="size"></td></tr>
       </tbody>
     </table>
+    </div>
     <p class="msg visually-hidden" id="msg" role="status">加载中…</p>
     <button type="button" class="msg-retry" id="retry" hidden
             data-i18n="retry">重试</button>
@@ -303,6 +305,7 @@
     <h2 data-i18n="h2deps">::gentoo 依赖</h2>
     <p class="lead" data-i18n-html="depsLead">依赖收录范围见 <a href="/faq#q7">FAQ</a>；纯文本见 <a id="depsTextDetail" href="/deps.txt">/deps.txt</a>。</p>
     <p class="pkg-caption" id="depsCount"></p>
+    <div class="table-scroll">
     <table class="listing deps-table">
       <thead>
         <tr>
@@ -322,6 +325,7 @@
         <tr class="skeleton-row" aria-hidden="true"><td class="name"></td><td class="slot"></td><td class="ver"></td></tr>
       </tbody>
     </table>
+    </div>
   </section>
 
   <!-- chrome:pager -->
