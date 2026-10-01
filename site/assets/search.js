@@ -15,19 +15,45 @@
     return (s.normalize ? s.normalize('NFKC') : s).toLowerCase();
   }
 
+  // A query may hold the wildcards * (any run of characters) and ? (one character). find(s) is where the
+  // query first matches in s, -1 for none, ignoring a leading or trailing *; whole(s) is whether it matches
+  // all of s, as a shell glob does. q is normalized.
+  function pattern(q) {
+    function regex(g) {
+      return g.split('').map(function (c) {
+        return c === '*' ? '.*' : c === '?' ? '.' : c.replace(/[\\^$.|+()[\]{}\/-]/g, '\\$&');
+      }).join('');
+    }
+    var core = q.replace(/^\*+|\*+$/g, '');
+    var part = /[*?]/.test(core) ? new RegExp(regex(core)) : null;
+    var all = /[*?]/.test(q) ? new RegExp('^(?:' + regex(q) + ')$') : null;
+    return {
+      find: function (s) {
+        if (!part) return s.indexOf(core);
+        var m = part.exec(s);
+        return m ? m.index : -1;
+      },
+      whole: function (s) { return all ? all.test(s) : s === q; }
+    };
+  }
+
+  // How many characters of a query are not wildcards.
+  function literal(q) { return q.replace(/[*?]/g, '').length; }
+
   // Where an entry ranks in one language, best first: its title starts with the query, its title holds it,
   // its description (the page it sits in, or the page's lead) holds it, a keyword holds it; -1 is no match.
   function tier(entry, lang, q) {
-    var title = norm(entry.title[lang]);
-    var desc = norm(entry.desc[lang]);
-    var tiers = [title.indexOf(q) === 0, title.indexOf(q) >= 0, desc.indexOf(q) >= 0,
-      (entry.keywords || []).some(function (k) { return norm(k).indexOf(q) >= 0; })];
+    var p = typeof q === 'string' ? pattern(q) : q;
+    var at = p.find(norm(entry.title[lang]));
+    var tiers = [at === 0, at >= 0, p.find(norm(entry.desc[lang])) >= 0,
+      (entry.keywords || []).some(function (k) { return p.find(norm(k)) >= 0; })];
     return tiers.indexOf(true);
   }
 
   // A match in the reader's language ranks above any match in another; within a tier a page ranks above a
-  // section. q is normalized. Infinity is no match.
+  // section. q is normalized, or a pattern() of it. Infinity is no match.
   function rank(entry, lang, q) {
+    if (typeof q === 'string') q = pattern(q);
     var t = tier(entry, lang, q);
     var other = 0;
     if (t < 0) {
@@ -46,24 +72,29 @@
     var q = norm(String(query).trim());
     if (group === 'pkgs') return [];
     var inGroup = index.entries.filter(function (e) { return !group || e.group === group; });
-    if (!q) return inGroup.filter(function (e) { return e.kind === 'page'; });
+    if (!literal(q)) return inGroup.filter(function (e) { return e.kind === 'page'; });
+    var p = pattern(q);
     return inGroup
-      .map(function (e, i) { return { e: e, r: rank(e, lang, q), i: i }; })
+      .map(function (e, i) { return { e: e, r: rank(e, lang, p), i: i }; })
       .filter(function (x) { return x.r < Infinity; })
       .sort(function (a, b) { return a.r - b.r || a.i - b.i; })
       .map(function (x) { return x.e; });
   }
 
-  // Overlay packages whose category/name holds the query, from PKG_MIN characters: a name starting with it
-  // first, then category/name starting with it, then either holding it; alphabetical within a rank.
+  // Overlay packages whose category/name holds the query, from PKG_MIN characters that are not wildcards: a
+  // name starting with it first, then category/name starting with it, then either holding it; alphabetical
+  // within a rank. A query with wildcards matches the whole name or the whole category/name instead, as
+  // equery list does: fcitx* starts with fcitx, *-bin ends in -bin, app-i18n/* is the category.
   function packages(list, query, limit) {
     var q = norm(String(query).trim());
-    if (q.length < PKG_MIN) return { hits: [], total: 0 };
+    if (literal(q) < PKG_MIN) return { hits: [], total: 0 };
+    var p = pattern(q), glob = /[*?]/.test(q);
     var hits = [];
     list.forEach(function (cp) {
       var full = norm(cp);
       var name = full.slice(full.indexOf('/') + 1);
-      var r = name.indexOf(q) === 0 ? 0 : full.indexOf(q) === 0 ? 1 : full.indexOf(q) >= 0 ? 2 : -1;
+      var r = glob ? (p.whole(name) ? 0 : p.whole(full) ? 1 : -1)
+        : p.find(name) === 0 ? 0 : p.find(full) === 0 ? 1 : p.find(full) >= 0 ? 2 : -1;
       if (r >= 0) hits.push({ cp: cp, r: r });
     });
     hits.sort(function (a, b) { return a.r - b.r || (a.cp < b.cp ? -1 : a.cp > b.cp ? 1 : 0); });
@@ -284,10 +315,10 @@
     }
     status('');
     var pages = search(index, l, raw, group);
-    var wantPkgs = (group === '' || group === 'pkgs') && q.length >= PKG_MIN;
+    var wantPkgs = (group === '' || group === 'pkgs') && literal(q) >= PKG_MIN;
     if (pages.length) {
       var box = el('div', 'sd-cards');
-      section('sd-h-pages', q ? t('aPages') : '').appendChild(box);
+      section('sd-h-pages', literal(q) ? t('aPages') : '').appendChild(box);
       var me = here();
       pages.forEach(function (e) {
         var card = option('a', 'sd-card', e.url);
@@ -323,7 +354,7 @@
         return;
       }
     }
-    if (group === 'pkgs' && q.length < PKG_MIN) status(t('sdPkgHint'));
+    if (group === 'pkgs' && literal(q) < PKG_MIN) status(t('sdPkgHint'));
     else if (q && !pages.length && !pkgCount) status(fill(t('sdNone'), { q: raw }));
     else if (wantPkgs && pkgState === 'failed') status(t('sdPkgFailed'), true);
     if (q) {
