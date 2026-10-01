@@ -1186,7 +1186,7 @@ main.wide ~ .foot { max-width: none; }
 .pkgs td.mark { white-space: normal; }
 .pkgs td.ver, .pkgs th.ver { text-align: end; white-space: nowrap; }
 .pkgs th.mark { width: var(--col-mark); }
-.pkgs th.bin-col { width: calc(var(--col-mark) + var(--sp-8)); }
+.pkgs th.bin-col { width: var(--col-bin); }
 .pkgs th.ver { width: var(--col-pkgver); }
 .pkgs th.size { width: var(--col-size); }
 .deps-table td, .deps-table th { white-space: normal; overflow-wrap: anywhere; }
