@@ -6,7 +6,7 @@ languages: zh-CN from the markup, zh-TW and en from the page's MIRROR_I18N table
 and their groups come from the sidebar template (site/tools/chrome/nav.html), so a page added to the sidebar
 is indexed and the search's category chips follow the sidebar's groups. Each group's icon is the one the
 overview's guide card for that group shows (index.html), matched by the group's title key; a group with no
-card borrows one through BORROWED_ICON.
+card takes its icon from GROUP_ICON.
 
 --check fails when the file on disk differs from what the pages give.
 """
@@ -173,9 +173,17 @@ def page_file(href):
     return f if f.is_file() else None
 
 
-# A sidebar group with no guide card on the overview borrows another card's icon: the title key of the group,
-# then the title key of the card.
-BORROWED_ICON = {"navGAbout": "navHelp"}
+# Icons for sidebar groups with no guide card on the overview, by the group's title key. Same Spectrum 2
+# workflow set as the cards: About uses InfoCircle.
+GROUP_ICON = {
+    "navGAbout": {"viewBox": "0 0 20 20", "paths": [
+        "M10 18.75c-4.825 0-8.75-3.925-8.75-8.75S5.175 1.25 10 1.25s8.75 3.925 8.75 8.75-3.925 8.75-8.75 8.75"
+        "m0-16c-3.998 0-7.25 3.252-7.25 7.25s3.252 7.25 7.25 7.25 7.25-3.252 7.25-7.25S13.998 2.75 10 2.75",
+        "M10 5.26c.231-.008.456.074.627.229.33.365.33.921 0 1.286-.17.159-.395.243-.626.235"
+        "-.237.01-.466-.08-.633-.248-.162-.168-.25-.394-.242-.627-.012-.235.07-.465.228-.64.174-.164.408-.25.647-.235"
+        "M10 15.063c-.414 0-.75-.336-.75-.75V9.478c0-.415.336-.75.75-.75s.75.335.75.75v4.835c0 .414-.336.75-.75.75",
+    ]},
+}
 
 
 def icons():
@@ -192,7 +200,7 @@ def icons():
 
 def build():
     common = js_table((SITE / "assets" / "strings.js").read_text(), "MIRROR_I18N_COMMON")
-    art = icons()
+    art = {**GROUP_ICON, **icons()}
     groups, entries, problems = [], [], []
 
     def tr(key, zh, table):
@@ -206,10 +214,9 @@ def build():
 
     for gid, gkey, gzh, hrefs in sidebar():
         if gid:
-            gkey_art = BORROWED_ICON.get(gkey, gkey)
-            if gkey_art not in art:
-                problems.append(f"侧栏分组 {gid} 的标题 {gkey} 在 index.html 的指南卡片中找不到对应图标")
-            groups.append({"id": gid, "label": tr(gkey, gzh, {}), "icon": art.get(gkey_art)})
+            if gkey not in art:
+                problems.append(f"侧栏分组 {gid} 的标题 {gkey} 在 index.html 的指南卡片和 GROUP_ICON 中都找不到图标")
+            groups.append({"id": gid, "label": tr(gkey, gzh, {}), "icon": art.get(gkey)})
         for href in hrefs:
             f = page_file(href)
             if not f:
