@@ -47,7 +47,7 @@ function load(urlPath, fetchImpl) {
   };
   global.window = {
     MIRROR_I18N: {}, addEventListener() {},
-    MIRROR_T: (k) => ({ navFiles: "Files", title: "Files" }[k] || k),
+    MIRROR_T: (k) => ({ navHome: "Overview", navFiles: "Files", title: "Files" }[k] || k),
   };
   global.location = { pathname: urlPath, replace() {} };
   global.fetch = fetchImpl;
@@ -71,11 +71,14 @@ function load(urlPath, fetchImpl) {
 const settle = () => new Promise((r) => setImmediate(r));
 
 function parse(s) {
-  return [...s.matchAll(/<a href="([^"]*)">([^<]*)<\/a>/g)].map((m) => [m[2], m[1]]);
+  return [...s.matchAll(/<a href="([^"]*)"(?: aria-current="page")?>([^<]*)<\/a>/g)].map((m) => [m[2], m[1]]);
 }
 
 const root = crumbsFor("/files/");
-check("根层不显示面包屑（标题已经写明位置）", root.hidden === true);
+check("根层也显示面包屑：概览、文件", root.hidden !== true && JSON.stringify(parse(root.html)) ===
+      JSON.stringify([["Overview", "/"], ["Files", "/files/"]]), root.html);
+check("最后一节标为当前页，且只标这一节",
+      (root.html.match(/aria-current/g) || []).length === 1 && /aria-current="page">Files</.test(root.html), root.html);
 check("根层标题是页面名，不显示路径", root.title === "Files" && root.pathHidden === true,
       `${root.title} ${root.pathHidden}`);
 check("根层说明区分默认 stable 与 unstable 频道",
@@ -91,21 +94,23 @@ check("频道说明提供三种语言",
 for (const [dir, label] of [["binpkgs", "binpkgs"], ["distfiles", "distfiles"]]) {
   const r = crumbsFor(`/${dir}/`);
   const segs = parse(r.html);
-  check(`/${dir}/ 的节数`, segs.length === 2, JSON.stringify(segs));
-  check(`/${dir}/ 第一节回文件浏览器根`,
-        segs[0] && segs[0][0] === "Files" && segs[0][1] === "/files/", JSON.stringify(segs[0]));
-  check(`/${dir}/ 第二节标签是 ${label}，不是被切剩的碎片`,
-        segs[1] && segs[1][0] === label, JSON.stringify(segs[1]));
-  check(`/${dir}/ 第二节地址是 /${dir}/`,
-        segs[1] && segs[1][1] === `/${dir}/`, JSON.stringify(segs[1]));
+  check(`/${dir}/ 的节数`, segs.length === 3, JSON.stringify(segs));
+  check(`/${dir}/ 第一节回概览`,
+        segs[0] && segs[0][0] === "Overview" && segs[0][1] === "/", JSON.stringify(segs[0]));
+  check(`/${dir}/ 第二节回文件浏览器根`,
+        segs[1] && segs[1][0] === "Files" && segs[1][1] === "/files/", JSON.stringify(segs[1]));
+  check(`/${dir}/ 第三节标签是 ${label}，不是被切剩的碎片`,
+        segs[2] && segs[2][0] === label, JSON.stringify(segs[2]));
+  check(`/${dir}/ 第三节地址是 /${dir}/`,
+        segs[2] && segs[2][1] === `/${dir}/`, JSON.stringify(segs[2]));
 }
 
 const deep = crumbsFor("/binpkgs/x86-64/app-editors/");
 const dsegs = parse(deep.html);
-check("深层每一节都在", dsegs.length === 4, JSON.stringify(dsegs));
+check("深层每一节都在", dsegs.length === 5, JSON.stringify(dsegs));
 check("深层各节地址逐级累加",
       JSON.stringify(dsegs.map((s) => s[1])) ===
-      JSON.stringify(["/files/", "/binpkgs/", "/binpkgs/x86-64/", "/binpkgs/x86-64/app-editors/"]),
+      JSON.stringify(["/", "/files/", "/binpkgs/", "/binpkgs/x86-64/", "/binpkgs/x86-64/app-editors/"]),
       JSON.stringify(dsegs.map((s) => s[1])));
 check("标题写的是当前目录名", deep.title === "app-editors", deep.title);
 check("标题下写出完整路径", deep.path === "/binpkgs/x86-64/app-editors" && deep.pathHidden === false,
@@ -117,19 +122,19 @@ const osegs = parse(odd.html);
 check("名字里的 & 在标签上转义",
       odd.html.includes("a b&amp;c"), odd.html.slice(0, 200));
 check("名字里的空格与 & 在地址上编码",
-      osegs[2] && osegs[2][1] === "/distfiles/a%20b%26c/", JSON.stringify(osegs[2]));
+      osegs[3] && osegs[3][1] === "/distfiles/a%20b%26c/", JSON.stringify(osegs[3]));
 
 const q = parse(crumbsFor("/distfiles/a?b/").html);
 check("名字里的 ? 在地址上编码",
-      q[2] && q[2][1] === "/distfiles/a%3Fb/", JSON.stringify(q[2]));
+      q[3] && q[3][1] === "/distfiles/a%3Fb/", JSON.stringify(q[3]));
 
 const h = parse(crumbsFor("/distfiles/a#b/").html);
 check("名字里的 # 在地址上编码",
-      h[2] && h[2][1] === "/distfiles/a%23b/", JSON.stringify(h[2]));
+      h[3] && h[3][1] === "/distfiles/a%23b/", JSON.stringify(h[3]));
 
 const pct = parse(crumbsFor("/distfiles/100%25/").html);
 check("名字里的 % 在地址上编码",
-      pct[2] && pct[2][1] === "/distfiles/100%25/", JSON.stringify(pct[2]));
+      pct[3] && pct[3][1] === "/distfiles/100%25/", JSON.stringify(pct[3]));
 
 let survived = true;
 try { crumbsFor("/distfiles/100%/"); } catch (e) { survived = false; }
@@ -137,8 +142,8 @@ check("地址里有非法的 % 时不抛异常", survived, "抛了异常");
 
 const cjk = parse(crumbsFor("/distfiles/中文/").html);
 check("中文目录名按相同规则编码",
-      cjk[2] && cjk[2][1] === "/distfiles/" + encodeURIComponent("中文") + "/",
-      JSON.stringify(cjk[2]));
+      cjk[3] && cjk[3][1] === "/distfiles/" + encodeURIComponent("中文") + "/",
+      JSON.stringify(cjk[3]));
 
 (async function () {
   // The root listing: rows drawn, the loading line hidden, the wait cleared.

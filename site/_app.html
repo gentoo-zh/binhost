@@ -269,7 +269,7 @@ window.MIRROR_I18N = {
     notFound: '路径不存在。',
     failed: '读取目录失败：',
     timeout: '未能在 20 秒内读取目录列表，请刷新页面重试。',
-    navFiles: '文件',
+    navHome: '概览', navFiles: '文件',
     metaItems: '条目', metaSize: '文件总大小', metaLatest: '最近修改',
     aMirror: '下载文件使用的镜像', srcLabel: '镜像',
     dirEmpty: '此目录为空',
@@ -366,7 +366,8 @@ function lang() {
 }
 
 // Below the root the title is the directory's own name, as a Spectrum page title is the page's name;
-// the full path follows in smaller type.
+// the full path follows in smaller type. Every directory, the root included, shows breadcrumbs from the
+// overview, so the title sits at the same height on each; the last crumb is the current directory.
 function crumbs() {
   const full = path.replace(/\/$/, "");
   document.getElementById("where").textContent =
@@ -375,17 +376,16 @@ function crumbs() {
   fullEl.hidden = atRoot;
   fullEl.textContent = atRoot ? "" : full;
 
-  const crumbEl = document.getElementById("crumbs");
-  crumbEl.hidden = atRoot;
-  if (atRoot) return;
-
+  const items = [["/", t("navHome")], [ROOT, t("navFiles")]];
   let acc = "";
-  const links = path.split("/").filter(Boolean).map(function (p) {
+  if (!atRoot) path.split("/").filter(Boolean).forEach(function (p) {
     acc += "/" + encodeURIComponent(p);
-    return '<a href="' + acc + '/">' + esc(p) + "</a>";
+    items.push([acc + "/", p]);
   });
-  document.getElementById("crumbs").innerHTML =
-    ['<a href="' + ROOT + '">' + t("navFiles") + "</a>"].concat(links).join(CRUMB_SEP);
+  document.getElementById("crumbs").innerHTML = items.map(function (it, i) {
+    const current = i === items.length - 1 ? ' aria-current="page"' : "";
+    return '<a href="' + it[0] + '"' + current + ">" + esc(it[1]) + "</a>";
+  }).join(CRUMB_SEP);
 }
 
 function fixHead() {
