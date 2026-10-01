@@ -236,10 +236,11 @@ button:not(:disabled) { cursor: pointer; }
 .toc-menu .menu-item:focus { background: var(--fill-hover); color: var(--fg); }
 
 /* The article at reading width; the package list (main.wide) takes the whole panel. The file browser
-   stays in the article column with its title, as a Spectrum component page keeps its tables there. */
+   stays in the article column with its title, as a Spectrum component page keeps its tables there. The
+   article starts at the sidebar's edge on every page, so the title does not move from page to page. */
 main {
   grid-area: main; container: main / inline-size;
-  width: 100%; max-width: calc(var(--measure) + 2 * var(--sp-10)); justify-self: center;
+  width: 100%; max-width: calc(var(--measure) + 2 * var(--sp-10)); justify-self: start;
   padding: var(--sp-10) var(--sp-10) 0; overflow-wrap: break-word;
 }
 main.wide { max-width: none; }
@@ -866,7 +867,7 @@ main li + li { margin-top: var(--sp-2); }
 /* Footer. */
 /* Footer: one secondary line under a divider, as on the Spectrum docs. */
 .foot {
-  grid-area: foot; width: 100%; max-width: calc(var(--measure) + 2 * var(--sp-10)); justify-self: center;
+  grid-area: foot; width: 100%; max-width: calc(var(--measure) + 2 * var(--sp-10)); justify-self: start;
   margin-top: var(--sp-16); padding: 0 var(--sp-10) var(--sp-8);
   color: var(--fg-soft); font-size: var(--fs-small); line-height: 1.5;
 }
@@ -1080,8 +1081,7 @@ main.wide ~ .foot { max-width: none; }
 }
 
 /* Pages without an outline (render-chrome.py marks the ones with one) leave no empty column: the article and
-   footer centre in the whole panel, as the docs' pages without "On this page" do, and stop where the panel
-   stops, 12px short. */
+   footer may run into it and stop where the panel stops, 12px short. */
 @media (min-width: 64rem) {
   body:not(:has(.toc[data-outline])) :is(main, .foot) { grid-column: 2 / 4; margin-inline-end: var(--sp-3); }
 }
