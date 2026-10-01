@@ -292,6 +292,7 @@
   --col-slot: 4rem;       /* dependency slots */
   --col-ver: 8rem;        /* dependency versions */
   --col-mark: 6rem;       /* package list: the status mark */
+  --col-bin: 10rem;       /* package list: the binary package label and its help button (150px) */
   --col-pkgver: 10.5rem;  /* package list: versions */
   /* Motion distances: S2 pressScale sinks a pressed control 2px into a perspective of at least 24px, a
      third of the 11rem menu for its wide items and of the 200px sidebar row (66.7px, measured on the docs'
