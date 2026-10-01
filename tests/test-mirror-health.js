@@ -25,6 +25,9 @@ function el(attrs) {
     setAttribute(k, v) { this.attrs[k] = String(v); },
     removeAttribute(k) { delete this.attrs[k]; if (k === "title") this.title = ""; },
     hasAttribute(k) { return k in this.attrs; },
+    label: null, prepended: null,
+    querySelector(sel) { return sel === ".channel-field" ? this.label : null; },
+    prepend(n) { this.prepended = n; },
   };
 }
 
@@ -57,6 +60,7 @@ function run(fetchImpl, lang, status) {
   const opts = Object.keys(HOSTS).map((k) => el({ "data-uri": HOSTS[k] }));
   const cells = ["mirrors.ha.edu.cn", "mirror.nju.edu.cn", "unlisted.example"].map((h) => el({ "data-mirror-host": h }));
   cells.forEach((c) => { c.textContent = "—"; });
+  cells[0].label = { className: "channel-field" };
   const listeners = {}, events = [], asked = [];
   const ids = {};
   if (status) {
@@ -114,6 +118,8 @@ const answer = (j) => () => Promise.resolve({ ok: true, json: () => Promise.reso
   check("镜像页状态列：落后、无法连接、未列出",
         page.cells[0].textContent === "无法连接" && page.cells[1].textContent === "落后约 24 小时" &&
         page.cells[2].textContent === "—", JSON.stringify(page.cells.map((c) => c.textContent)));
+  check("镜像页状态列写入后保留窄屏字段标签",
+        page.cells[0].prepended === page.cells[0].label && page.cells[1].prepended === null);
   check("结果到达后通知 source-switch.js 重写链接", page.events.join() === "sourcechange", page.events.join());
 
   page.document.documentElement.lang = "zh-TW";
