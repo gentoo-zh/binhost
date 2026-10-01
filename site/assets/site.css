@@ -70,8 +70,10 @@ button:not(:disabled) { cursor: pointer; }
   display: flex; align-items: center; gap: var(--sp-3);
   padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-6); background: var(--bg);
 }
+/* The hover fill needs inline padding; the negative margin keeps the logo where it was. */
 .nav-brand {
   display: inline-flex; align-items: center; gap: var(--sp-3); min-width: 0; min-height: var(--control-h);
+  padding-inline: var(--sp-2); margin-inline-start: calc(-1 * var(--sp-2));
   border-radius: var(--r-md); color: var(--fg); text-decoration: none;
 }
 .nav-brand img { width: var(--logo); height: var(--logo); flex: none; object-fit: contain; }
@@ -1094,7 +1096,7 @@ main.wide ~ .foot { max-width: none; }
   body::before { display: none; }
   .nav { padding: var(--sp-3) var(--sp-4); background: var(--surface); }
   .nav-toggle { display: inline-grid; margin-inline-start: calc(-1 * var(--sp-2)); }
-  .nav-brand { padding-inline: 0; }
+  .nav-brand { padding-inline: 0; margin-inline-start: 0; }
   .gh, .bar-link, .bar-divider { display: none; }
   .sidebar .bar-mirror { display: list-item; }
   .sidebar { position: static; max-height: none; padding: var(--sp-2) var(--sp-4); border-bottom: 1px solid var(--border); }
