@@ -608,8 +608,10 @@ main li + li { margin-top: var(--sp-2); }
    (nearest token 8), a gray-75 header row 32px tall with bold sans labels, 40px body rows parted by 1px
    lines, the same 16px padding in header and body (TableView.tsx:250-300 border/radius, 712-760 header
    cell, 1121-1135 header background, 1255-1296 row height). Column widths, alignment, wrapping, sticky
-   header and other table-specific rules stay with each table below. Narrow containers scroll as one
-   TableView, retaining the outer border and readable column widths. */
+   header and other table-specific rules stay with each table below. In a container 34rem wide or less,
+   the big data tables (the package and dependency lists, the directory listing) scroll sideways inside
+   their own bordered box at readable column widths; the small reference tables (every .ref-table and the
+   404 resource list) stack each row into a card instead, so nothing scrolls sideways. */
 .table-scroll { display: contents; }
 :is(.listing, .ref-table) {
   --cell-x: var(--sp-4);
@@ -634,16 +636,21 @@ main li + li { margin-top: var(--sp-2); }
 :is(.listing, .ref-table):not(:has(thead)) tbody tr:first-child td:last-child { border-start-end-radius: var(--r-md); }
 
 @container main (max-width: 34rem) {
-  .table-scroll {
+  .table-scroll:has(> .listing:not(.resource-list)) {
     display: block; max-inline-size: 100%; margin: 0 0 var(--sp-6);
     overflow-x: auto; border: 1px solid var(--border); border-radius: var(--r-md);
     scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
   }
   .table-scroll:has(> table[hidden]) { display: none; }
-  .table-scroll > :is(.listing, .ref-table) {
+  .table-scroll > .listing:not(.resource-list) {
     min-inline-size: var(--table-min); margin: 0; border: 0;
   }
   .table-scroll .listing thead th { top: 0; }
+
+  .resource-list tr { display: block; padding: var(--sp-2) 0; border-bottom: 1px solid var(--border); }
+  .resource-list td, .resource-list td.name, .resource-list td.desc {
+    display: block; width: auto; padding: var(--sp-1) var(--sp-2); border: 0; white-space: normal;
+  }
 }
 
 .listing { table-layout: fixed; font-family: var(--mono); font-size: var(--fs-code); }
@@ -680,8 +687,9 @@ main li + li { margin-top: var(--sp-2); }
 .listing tbody tr td:not(.name) :is(a, button) { position: relative; z-index: 1; }
 /* Reference tables in prose (the FAQ channel and status guides, the mirror list): the TableView rows at
    reading width, wrapping their prose and addresses instead of truncating (their columns hold sentences
-   and URLs, not short values), the first column bold. On phones the channel guide stacks each row as
-   field pairs. */
+   and URLs, not short values), the first column bold. On phones each row stacks into a card; the channel
+   guide and the mirror list show their fields as pairs, each value after a .channel-field label that
+   only the stacked layout shows. */
 .ref-table td { text-align: start; vertical-align: top; line-height: var(--lh-code); }
 .ref-table th { padding-block: var(--sp-1); vertical-align: bottom; }
 .ref-table th:first-child, .ref-table td:first-child { width: var(--col-term); }
@@ -692,6 +700,38 @@ main li + li { margin-top: var(--sp-2); }
 .channel-guide th:nth-child(2), .channel-guide td:nth-child(2) { width: var(--col-keyword); }
 .channel-guide th:nth-child(3), .channel-guide td:nth-child(3) { width: var(--col-overlay); }
 .channel-field { display: none; }
+
+@container main (max-width: 34rem) {
+  .ref-table th, .ref-table td { padding: var(--sp-2); }
+  .ref-table thead, .ref-table thead th {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+  .ref-table, .ref-table tbody, .ref-table tr, .ref-table td { display: block; width: auto; }
+  .ref-table tr { padding: var(--sp-2) 0; border-bottom: 1px solid var(--border); }
+  .ref-table td, .ref-table td:first-child, .ref-table td:last-child {
+    width: auto; height: auto; padding: var(--sp-1) var(--sp-2); border: 0; white-space: normal;
+  }
+  .channel-guide td, .channel-guide td:first-child, .channel-guide td:nth-child(2),
+  .channel-guide td:nth-child(3), .channel-guide td:last-child {
+    display: grid; grid-template-columns: var(--col-channel) minmax(0, 1fr); gap: var(--sp-2);
+    width: 100%; height: var(--field-h); padding: var(--sp-1); border: 0; white-space: normal;
+  }
+  .channel-field {
+    display: block; color: var(--fg-soft); font-size: var(--fs-small); font-weight: 400;
+  }
+  /* A mirror's card: the name with its location beside it, then the address and the sync state as field
+     pairs. The state cell is filled by mirror-health.js, which keeps the label; its notice dot takes a
+     third column so it stays beside the state. */
+  .mirror-table tr { display: flex; flex-wrap: wrap; align-items: baseline; }
+  .mirror-table td:nth-child(2) { color: var(--fg-soft); }
+  .mirror-table td:nth-child(n+3) {
+    display: grid; flex-basis: 100%; grid-template-columns: var(--col-channel) minmax(0, 1fr); gap: var(--sp-2);
+  }
+  .mirror-table td:last-child { grid-template-columns: var(--col-channel) auto minmax(0, 1fr); gap: 0 var(--sp-2); }
+  .mirror-table td[data-behind]::after { align-self: center; margin: 0; }
+  .mirror-table td a { overflow-wrap: anywhere; }
+}
 
 /* Mirror cards (/thanks): one card per mirror, each an .entry-card in its compact density (no fill, a 2px
    gray-100 ring drawn as a shadow, radius lg), holding the mirror's logo, name, location and site; the whole

@@ -134,7 +134,10 @@
     });
     document.querySelectorAll('[data-mirror-host]').forEach(function (c) {
       var s = health.hosts[c.getAttribute('data-mirror-host').toLowerCase()];
+      // The cell's own phone label (.channel-field) stays in front of the state.
+      var label = c.querySelector('.channel-field');
       c.textContent = s ? words(s).cell : '—';
+      if (label) c.prepend(label);
       if (s && (s.down || s.lag > LAG)) c.setAttribute('data-behind', ''); else c.removeAttribute('data-behind');
     });
   }
