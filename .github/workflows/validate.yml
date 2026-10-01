@@ -273,6 +273,8 @@ jobs:
         run: node tests/test-docs-outline.js
       - name: Pages keep their size while data loads
         run: node tests/test-loading-states.js
+      - name: Pages fit a 360px phone screen
+        run: node tests/test-mobile-overflow.js
       - name: Mirror pickers mark mirrors the status API finds behind or down
         run: node tests/test-mirror-health.js
       - name: Search index matches the pages
