@@ -21,6 +21,11 @@ const urls = list => list.map(e => e.url);
 check('索引有分组、页面与章节', index.groups.length > 0 && index.entries.some(e => e.kind === 'page') &&
   index.entries.some(e => e.kind === 'section' && e.url.includes('#')));
 check('每个分组都有图标', index.groups.every(g => g.icon && g.icon.paths.length));
+check('状态与致谢有自己的图标，关于本站用分组图标', ['/status', '/thanks'].every(u =>
+  index.entries.find(e => e.url === u).icon) && !index.entries.find(e => e.url === '/about').icon);
+check('正文代码里的标识符可以搜到', ['zh-cn', 'zh-tw', 'en'].every(l =>
+  urls(S.search(index, l, '~amd64', '')).includes('/overlay#testing-keyword')) &&
+  urls(S.search(index, 'en', 'accept_keywords', '')).includes('/binpkg-setup#channel'));
 check('每个条目三种语言齐全', index.entries.every(e => ['zh-cn', 'zh-tw', 'en'].every(l =>
   typeof e.title[l] === 'string' && e.title[l] && typeof e.desc[l] === 'string')));
 
@@ -66,7 +71,7 @@ check('通配符匹配整个包名或类别/包名', glob('rime*') === 'app-i18n
   glob('lib?ime') === 'app-i18n/librime', ['rime*', '*RIME', 'app-i18n/*', 'lib?ime'].map(glob));
 check('通配符不计入 2 个字符的下限', S.packages(pkgs, '*').total === 0 && S.packages(pkgs, 'r*?').total === 0);
 check('正则特殊字符按字面匹配', S.packages(pkgs, '..').total === 0 && S.packages(pkgs, '(*').total === 0 &&
-  S.search(index, 'en', '[*', '').length === 0);
+  S.search(index, 'en', '\\d+*', '').length === 0);
 check('页面查询的通配符', S.search(index, 'en', 'f?q', '')[0].url === '/faq' &&
   JSON.stringify(urls(S.search(index, 'en', '*mirror*', ''))) ===
   JSON.stringify(urls(S.search(index, 'en', 'mirror', ''))));

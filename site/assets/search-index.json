@@ -127,7 +127,8 @@
     "en": "Service status, Get started"
    },
    "keywords": [
-    "index"
+    "index",
+    "sudo emerge --ask app-eselect/eselect-repository sudo eselect repository add gentoo-zh git https://mirrors.cernet.edu.cn/gentoo-zh.git sudo emaint sync -r gentoo-zh"
    ]
   },
   {
@@ -199,7 +200,15 @@
     "en": "Overlay"
    },
    "keywords": [
-    "adding-overlay"
+    "adding-overlay",
+    "eselect-repository",
+    "sudo emerge --ask app-eselect/eselect-repository sudo eselect repository add gentoo-zh git https://mirrors.cernet.edu.cn/gentoo-zh.git sudo emaint sync -r gentoo-zh",
+    "/etc/portage/repos.conf/gentoo-zh.conf",
+    "/etc/portage/repos.conf/",
+    "[gentoo-zh]",
+    "/etc/portage/repos.conf/eselect-repo.conf",
+    "# /etc/portage/repos.conf/gentoo-zh.conf [gentoo-zh] location = /var/db/repos/gentoo-zh sync-type = git sync-uri = https://mirrors.cernet.edu.cn/gentoo-zh.git auto-sync = yes",
+    "sudo rm -rf /var/db/repos/gentoo-zh sudo emaint sync -r gentoo-zh"
    ]
   },
   {
@@ -217,7 +226,12 @@
     "en": "Overlay"
    },
    "keywords": [
-    "testing-keyword"
+    "testing-keyword",
+    "~ARCH",
+    "~amd64",
+    "::gentoo-zh",
+    "# /etc/portage/package.accept_keywords/gentoo-zh */*::gentoo-zh ~amd64",
+    "# /etc/portage/package.accept_keywords/gentoo-zh net-im/tencent-qq ~amd64"
    ]
   },
   {
@@ -235,7 +249,9 @@
     "en": "Overlay"
    },
    "keywords": [
-    "install-package"
+    "install-package",
+    "sudo emerge --ask net-im/tencent-qq",
+    "eix -RO gentoo-zh"
    ]
   },
   {
@@ -361,7 +377,10 @@
     "en": "Set up distfiles"
    },
    "keywords": [
-    "setup"
+    "setup",
+    "distfiles/",
+    "# /etc/portage/make.conf GENTOO_MIRRORS=\"${GENTOO_MIRRORS} https://mirrors.cernet.edu.cn/gentoo-zh https://distfiles.gentoozh.org\"",
+    "sudo tee -a /etc/portage/make.conf > /dev/null <<'EOF' GENTOO_MIRRORS=\"${GENTOO_MIRRORS} https://mirrors.cernet.edu.cn/gentoo-zh https://distfiles.gentoozh.org\" EOF"
    ]
   },
   {
@@ -397,7 +416,12 @@
     "en": "Set up binary packages"
    },
    "keywords": [
-    "channel"
+    "channel",
+    "~amd64",
+    "amd64",
+    "/binpkgs/x86-64",
+    "/unstable/binpkgs/x86-64",
+    "ACCEPT_KEYWORDS=\"~amd64\""
    ]
   },
   {
@@ -415,7 +439,15 @@
     "en": "Set up binary packages"
    },
    "keywords": [
-    "setup"
+    "setup",
+    "https://mirrors.cernet.edu.cn/gentoo-zh/binpkgs/x86-64",
+    "sudo emerge sec-keys/openpgp-keys-gentoozh sudo getuto sudo gpg --homedir /etc/portage/gnupg --import /usr/share/openpgp-keys/gentoozh.asc sudo gpg --homedir /etc/portage/gnupg --batch --yes --pinentry-mode loopback \\ --passphrase-file /etc/portage/gnupg/pass \\ --lsign-key 6A0726AF1476A2F382C6AC6638A0234EC16AD42E sudo gpg --homedir /etc/portage/gnupg --check-trustdb sudo mkdir -p /etc/portage/binrepos.conf sudo tee /etc/portage/binrepos.conf/gentoo-zh.conf > /dev/null <<'EOF' [gentoo-zh] sync-uri = https://mirrors.cernet.edu.cn/gentoo-zh/binpkgs/x86-64 priority = 10 verify-signature = true location = /var/cache/binhost/gentoo-zh EOF sudo tee -a /etc/portage/make.conf > /dev/null <<'EOF' FEATURES=\"${FEATURES} getbinpkg\" EOF",
+    "6A07 26AF 1476 A2F3 82C6 AC66 38A0 234E C16A D42E",
+    "sudo emerge sec-keys/openpgp-keys-gentoozh sudo getuto sudo gpg --homedir /etc/portage/gnupg --import /usr/share/openpgp-keys/gentoozh.asc sudo gpg --homedir /etc/portage/gnupg --batch --yes --pinentry-mode loopback \\ --passphrase-file /etc/portage/gnupg/pass \\ --lsign-key 6A0726AF1476A2F382C6AC6638A0234EC16AD42E sudo gpg --homedir /etc/portage/gnupg --check-trustdb",
+    "# /etc/portage/binrepos.conf/gentoo-zh.conf [gentoo-zh] sync-uri = https://mirrors.cernet.edu.cn/gentoo-zh/binpkgs/x86-64 priority = 10 verify-signature = true location = /var/cache/binhost/gentoo-zh",
+    "# /etc/portage/make.conf FEATURES=\"${FEATURES} getbinpkg\"",
+    "make.conf",
+    "sudo emerge --ask --getbinpkg <package>"
    ]
   },
   {
@@ -433,7 +465,10 @@
     "en": "Set up binary packages"
    },
    "keywords": [
-    "key-download"
+    "key-download",
+    "--import",
+    "curl -O https://distfiles.gentoozh.org/gentoo-zh-binhost.asc",
+    "wget https://distfiles.gentoozh.org/gentoo-zh-binhost.asc"
    ]
   },
   {
@@ -487,7 +522,9 @@
     "en": "CJK minimal installation image"
    },
    "keywords": [
-    "minimal-differences"
+    "minimal-differences",
+    "gentoo-zh",
+    "sys-kernel/gentoo-cjk-kernel-bin"
    ]
   },
   {
@@ -505,7 +542,11 @@
     "en": "CJK minimal installation image"
    },
    "keywords": [
-    "verify"
+    "verify",
+    "image.iso",
+    "sha256sum image.iso",
+    ".sha256",
+    ".DIGESTS"
    ]
   },
   {
@@ -523,7 +564,10 @@
     "en": "CJK minimal installation image"
    },
    "keywords": [
-    "usb"
+    "usb",
+    "image.iso",
+    "/dev/sdX",
+    "sudo dd if=image.iso of=/dev/sdX bs=4M status=progress conv=fsync"
    ]
   },
   {
@@ -595,7 +639,8 @@
     "en": "Mirrors"
    },
    "keywords": [
-    "own"
+    "own",
+    "rsync://distfiles.gentoozh.org/gentoo-zh/"
    ]
   },
   {
@@ -649,7 +694,9 @@
     "en": "FAQ · overlay"
    },
    "keywords": [
-    "overlay-sync"
+    "overlay-sync",
+    "microcai/gentoo-zh",
+    "gentoo-zh/overlay"
    ]
   },
   {
@@ -685,7 +732,11 @@
     "en": "FAQ · distfiles"
    },
    "keywords": [
-    "q14"
+    "q14",
+    "RESTRICT",
+    "mirror",
+    "fetch",
+    "bindist"
    ]
   },
   {
@@ -703,7 +754,8 @@
     "en": "FAQ · distfiles"
    },
    "keywords": [
-    "q15"
+    "q15",
+    "GENTOO_MIRRORS"
    ]
   },
   {
@@ -757,7 +809,9 @@
     "en": "FAQ · Binary packages"
    },
    "keywords": [
-    "binpkg-channel"
+    "binpkg-channel",
+    "amd64",
+    "~amd64"
    ]
   },
   {
@@ -775,7 +829,8 @@
     "en": "FAQ · Binary packages"
    },
    "keywords": [
-    "q2"
+    "q2",
+    "/etc/portage/binrepos.conf/gentoo-zh.conf"
    ]
   },
   {
@@ -793,7 +848,8 @@
     "en": "FAQ · Binary packages"
    },
    "keywords": [
-    "q3"
+    "q3",
+    "desktop/systemd"
    ]
   },
   {
@@ -811,7 +867,14 @@
     "en": "FAQ · Binary packages"
    },
    "keywords": [
-    "q7"
+    "q7",
+    "PKGDIR",
+    "::gentoo",
+    "RESTRICT=bindist",
+    "linux-mod",
+    "acct-group",
+    "acct-user",
+    "virtual"
    ]
   },
   {
@@ -829,7 +892,24 @@
     "en": "FAQ · Binary packages"
    },
    "keywords": [
-    "package-status"
+    "package-status",
+    "待构建",
+    "不构建",
+    "本频道不构建",
+    "清单外",
+    "-bin",
+    "不提供 binpkg",
+    "RESTRICT",
+    "bindist",
+    "mirror",
+    "fetch",
+    "SRC_URI",
+    "许可证限制",
+    "LICENSE",
+    "@BINARY-REDISTRIBUTABLE",
+    "RESTRICT=bindist",
+    "已移除",
+    "Distfiles —"
    ]
   },
   {
@@ -847,7 +927,15 @@
     "en": "FAQ · Binary packages"
    },
    "keywords": [
-    "q5"
+    "q5",
+    "verify-signature = true",
+    "FEATURES=\"binpkg-request-signature\"",
+    "binrepos.conf",
+    "FEATURES=\"binpkg-signing\"",
+    "BINPKG_GPG_SIGNING_KEY",
+    "BINPKG_GPG_SIGNING_GPG_HOME",
+    "/etc/portage/gnupg",
+    "pass"
    ]
   },
   {
@@ -883,7 +971,13 @@
     "en": "FAQ · Binary packages"
    },
    "keywords": [
-    "binpkg-keyring"
+    "binpkg-keyring",
+    "getuto",
+    "/etc/portage/gnupg",
+    "--passphrase-file",
+    "/etc/portage/gnupg/pass",
+    "portage",
+    "trustdb"
    ]
   },
   {
@@ -919,7 +1013,10 @@
     "en": "FAQ · Binary packages"
    },
    "keywords": [
-    "q4"
+    "q4",
+    "CFLAGS=\"-O2 -pipe -march=x86-64 -mtune=generic\"",
+    "-march=native",
+    "CFLAGS"
    ]
   },
   {
@@ -1045,7 +1142,8 @@
     "en": "FAQ · Mirrors"
    },
    "keywords": [
-    "q9"
+    "q9",
+    "rsync://distfiles.gentoozh.org/gentoo-zh/"
    ]
   },
   {
@@ -1118,7 +1216,13 @@
    },
    "keywords": [
     "status"
-   ]
+   ],
+   "icon": {
+    "viewBox": "0 0 20 20",
+    "paths": [
+     "M3 17.75c-.155 0-.312-.048-.445-.146-.334-.247-.405-.716-.159-1.05l2.298-3.113c.238-.322.69-.402 1.022-.176l2.05 1.379 1.621-6.985c.07-.299.314-.524.617-.571.304-.049.604.097.76.36l1.932 3.277 3.62-8.034c.17-.378.614-.545.992-.375s.546.615.376.993l-4.215 9.352c-.115.255-.363.425-.643.44-.276.03-.545-.126-.687-.368l-1.715-2.908-1.444 6.219c-.056.24-.226.437-.456.528-.23.09-.488.063-.693-.076L5.475 14.91l-1.871 2.535c-.147.2-.374.305-.604.305"
+    ]
+   }
   },
   {
    "url": "/status#packages",
@@ -1136,7 +1240,13 @@
    },
    "keywords": [
     "packages"
-   ]
+   ],
+   "icon": {
+    "viewBox": "0 0 20 20",
+    "paths": [
+     "M3 17.75c-.155 0-.312-.048-.445-.146-.334-.247-.405-.716-.159-1.05l2.298-3.113c.238-.322.69-.402 1.022-.176l2.05 1.379 1.621-6.985c.07-.299.314-.524.617-.571.304-.049.604.097.76.36l1.932 3.277 3.62-8.034c.17-.378.614-.545.992-.375s.546.615.376.993l-4.215 9.352c-.115.255-.363.425-.643.44-.276.03-.545-.126-.687-.368l-1.715-2.908-1.444 6.219c-.056.24-.226.437-.456.528-.23.09-.488.063-.693-.076L5.475 14.91l-1.871 2.535c-.147.2-.374.305-.604.305"
+    ]
+   }
   },
   {
    "url": "/status#server",
@@ -1154,7 +1264,13 @@
    },
    "keywords": [
     "server"
-   ]
+   ],
+   "icon": {
+    "viewBox": "0 0 20 20",
+    "paths": [
+     "M3 17.75c-.155 0-.312-.048-.445-.146-.334-.247-.405-.716-.159-1.05l2.298-3.113c.238-.322.69-.402 1.022-.176l2.05 1.379 1.621-6.985c.07-.299.314-.524.617-.571.304-.049.604.097.76.36l1.932 3.277 3.62-8.034c.17-.378.614-.545.992-.375s.546.615.376.993l-4.215 9.352c-.115.255-.363.425-.643.44-.276.03-.545-.126-.687-.368l-1.715-2.908-1.444 6.219c-.056.24-.226.437-.456.528-.23.09-.488.063-.693-.076L5.475 14.91l-1.871 2.535c-.147.2-.374.305-.604.305"
+    ]
+   }
   },
   {
    "url": "/status#mirrors",
@@ -1172,7 +1288,13 @@
    },
    "keywords": [
     "mirrors"
-   ]
+   ],
+   "icon": {
+    "viewBox": "0 0 20 20",
+    "paths": [
+     "M3 17.75c-.155 0-.312-.048-.445-.146-.334-.247-.405-.716-.159-1.05l2.298-3.113c.238-.322.69-.402 1.022-.176l2.05 1.379 1.621-6.985c.07-.299.314-.524.617-.571.304-.049.604.097.76.36l1.932 3.277 3.62-8.034c.17-.378.614-.545.992-.375s.546.615.376.993l-4.215 9.352c-.115.255-.363.425-.643.44-.276.03-.545-.126-.687-.368l-1.715-2.908-1.444 6.219c-.056.24-.226.437-.456.528-.23.09-.488.063-.693-.076L5.475 14.91l-1.871 2.535c-.147.2-.374.305-.604.305"
+    ]
+   }
   },
   {
    "url": "/thanks",
@@ -1190,7 +1312,13 @@
    },
    "keywords": [
     "thanks"
-   ]
+   ],
+   "icon": {
+    "viewBox": "0 0 20 20",
+    "paths": [
+     "M10 18c-.489 0-.978-.16-1.386-.48-1.586-1.245-5.202-4.512-6.374-6.43-.933-1.525-1.253-3.412-.857-5.048.34-1.404 1.162-2.537 2.378-3.278 1.374-.84 3.023-.997 4.302-.413.66.301 1.363.827 1.929 1.42.578-.63 1.273-1.14 1.967-1.43 1.312-.551 2.953-.387 4.28.423 1.216.74 2.038 1.874 2.378 3.278.396 1.636.076 3.523-.857 5.049-1.17 1.913-4.787 5.182-6.374 6.429-.408.32-.897.48-1.386.48M6.387 3.499c-.606 0-1.255.186-1.845.546-.87.53-1.457 1.342-1.701 2.35-.305 1.257-.051 2.72.678 3.913.953 1.558 4.15 4.563 6.021 6.032.271.213.649.213.92 0 1.873-1.47 5.07-4.477 6.02-6.032.73-1.193.984-2.656.68-3.913-.245-1.008-.833-1.82-1.701-2.35-.926-.565-2.045-.687-2.92-.32-.683.286-1.434.937-1.914 1.66-.279.418-.971.418-1.25 0-.435-.654-1.249-1.356-1.935-1.67-.318-.145-.677-.216-1.053-.216"
+    ]
+   }
   },
   {
    "url": "/thanks#builder",
@@ -1208,7 +1336,13 @@
    },
    "keywords": [
     "builder"
-   ]
+   ],
+   "icon": {
+    "viewBox": "0 0 20 20",
+    "paths": [
+     "M10 18c-.489 0-.978-.16-1.386-.48-1.586-1.245-5.202-4.512-6.374-6.43-.933-1.525-1.253-3.412-.857-5.048.34-1.404 1.162-2.537 2.378-3.278 1.374-.84 3.023-.997 4.302-.413.66.301 1.363.827 1.929 1.42.578-.63 1.273-1.14 1.967-1.43 1.312-.551 2.953-.387 4.28.423 1.216.74 2.038 1.874 2.378 3.278.396 1.636.076 3.523-.857 5.049-1.17 1.913-4.787 5.182-6.374 6.429-.408.32-.897.48-1.386.48M6.387 3.499c-.606 0-1.255.186-1.845.546-.87.53-1.457 1.342-1.701 2.35-.305 1.257-.051 2.72.678 3.913.953 1.558 4.15 4.563 6.021 6.032.271.213.649.213.92 0 1.873-1.47 5.07-4.477 6.02-6.032.73-1.193.984-2.656.68-3.913-.245-1.008-.833-1.82-1.701-2.35-.926-.565-2.045-.687-2.92-.32-.683.286-1.434.937-1.914 1.66-.279.418-.971.418-1.25 0-.435-.654-1.249-1.356-1.935-1.67-.318-.145-.677-.216-1.053-.216"
+    ]
+   }
   },
   {
    "url": "/thanks#mirrors",
@@ -1226,7 +1360,13 @@
    },
    "keywords": [
     "mirrors"
-   ]
+   ],
+   "icon": {
+    "viewBox": "0 0 20 20",
+    "paths": [
+     "M10 18c-.489 0-.978-.16-1.386-.48-1.586-1.245-5.202-4.512-6.374-6.43-.933-1.525-1.253-3.412-.857-5.048.34-1.404 1.162-2.537 2.378-3.278 1.374-.84 3.023-.997 4.302-.413.66.301 1.363.827 1.929 1.42.578-.63 1.273-1.14 1.967-1.43 1.312-.551 2.953-.387 4.28.423 1.216.74 2.038 1.874 2.378 3.278.396 1.636.076 3.523-.857 5.049-1.17 1.913-4.787 5.182-6.374 6.429-.408.32-.897.48-1.386.48M6.387 3.499c-.606 0-1.255.186-1.845.546-.87.53-1.457 1.342-1.701 2.35-.305 1.257-.051 2.72.678 3.913.953 1.558 4.15 4.563 6.021 6.032.271.213.649.213.92 0 1.873-1.47 5.07-4.477 6.02-6.032.73-1.193.984-2.656.68-3.913-.245-1.008-.833-1.82-1.701-2.35-.926-.565-2.045-.687-2.92-.32-.683.286-1.434.937-1.914 1.66-.279.418-.971.418-1.25 0-.435-.654-1.249-1.356-1.935-1.67-.318-.145-.677-.216-1.053-.216"
+    ]
+   }
   },
   {
    "url": "/thanks#credits",
@@ -1244,7 +1384,13 @@
    },
    "keywords": [
     "credits"
-   ]
+   ],
+   "icon": {
+    "viewBox": "0 0 20 20",
+    "paths": [
+     "M10 18c-.489 0-.978-.16-1.386-.48-1.586-1.245-5.202-4.512-6.374-6.43-.933-1.525-1.253-3.412-.857-5.048.34-1.404 1.162-2.537 2.378-3.278 1.374-.84 3.023-.997 4.302-.413.66.301 1.363.827 1.929 1.42.578-.63 1.273-1.14 1.967-1.43 1.312-.551 2.953-.387 4.28.423 1.216.74 2.038 1.874 2.378 3.278.396 1.636.076 3.523-.857 5.049-1.17 1.913-4.787 5.182-6.374 6.429-.408.32-.897.48-1.386.48M6.387 3.499c-.606 0-1.255.186-1.845.546-.87.53-1.457 1.342-1.701 2.35-.305 1.257-.051 2.72.678 3.913.953 1.558 4.15 4.563 6.021 6.032.271.213.649.213.92 0 1.873-1.47 5.07-4.477 6.02-6.032.73-1.193.984-2.656.68-3.913-.245-1.008-.833-1.82-1.701-2.35-.926-.565-2.045-.687-2.92-.32-.683.286-1.434.937-1.914 1.66-.279.418-.971.418-1.25 0-.435-.654-1.249-1.356-1.935-1.67-.318-.145-.677-.216-1.053-.216"
+    ]
+   }
   }
  ]
 }
