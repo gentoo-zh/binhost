@@ -59,6 +59,19 @@ check('包名开头优先，其次类别/包名开头，再次包含', JSON.stri
   rime.hits);
 const cut = S.packages(pkgs, 'rime', 2);
 check('超出上限时截断并给出总数', cut.hits.length === 2 && cut.total === 5, cut);
+const glob = q => S.packages(pkgs, q).hits.join(' ');
+check('通配符匹配整个包名或类别/包名', glob('rime*') === 'app-i18n/rime-data rime-x/other' &&
+  glob('*RIME') === 'app-i18n/fcitx-rime app-i18n/librime dev-python/pyrime' &&
+  glob('app-i18n/*') === 'app-i18n/fcitx-rime app-i18n/librime app-i18n/rime-data' &&
+  glob('lib?ime') === 'app-i18n/librime', ['rime*', '*RIME', 'app-i18n/*', 'lib?ime'].map(glob));
+check('通配符不计入 2 个字符的下限', S.packages(pkgs, '*').total === 0 && S.packages(pkgs, 'r*?').total === 0);
+check('正则特殊字符按字面匹配', S.packages(pkgs, '..').total === 0 && S.packages(pkgs, '(*').total === 0 &&
+  S.search(index, 'en', '[*', '').length === 0);
+check('页面查询的通配符', S.search(index, 'en', 'f?q', '')[0].url === '/faq' &&
+  JSON.stringify(urls(S.search(index, 'en', '*mirror*', ''))) ===
+  JSON.stringify(urls(S.search(index, 'en', 'mirror', ''))));
+check('只有通配符的查询按空查询处理', JSON.stringify(urls(S.search(index, 'en', '**', ''))) ===
+  JSON.stringify(urls(S.search(index, 'en', '', ''))));
 
 check('ArrowDown 从无到第一个，末尾回到开头', S.step('ArrowDown', -1, 3) === 0 && S.step('ArrowDown', 2, 3) === 0);
 check('ArrowUp 从无或开头到最后一个', S.step('ArrowUp', -1, 3) === 2 && S.step('ArrowUp', 0, 3) === 2 &&
