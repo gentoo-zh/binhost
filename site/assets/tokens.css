@@ -282,6 +282,7 @@
   --fs-brand: 1.25rem;
   --fs-value: 1rem;
   /* Table columns sized to what they hold. */
+  --table-min: 42rem;     /* scroll narrow TableViews without compressing the name column */
   --col-term: 8.5rem;     /* guide tables: the term column */
   --col-channel: 7rem;    /* channel guide: the channel */
   --col-keyword: 7.5rem;  /* channel guide: the Gentoo repository keyword */

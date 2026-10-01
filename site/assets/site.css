@@ -503,6 +503,11 @@ main li + li { margin-top: var(--sp-2); }
   border: 0; border-radius: var(--r-md); font-size: var(--fs-code); font-weight: 400; white-space: nowrap;
 }
 
+@container main (max-width: 34rem) {
+  .fpr-box { max-inline-size: 100%; }
+  .fpr-box .fpr { min-inline-size: 0; white-space: normal; }
+}
+
 /* Buttons are S2 ActionButtons (ActionButton.tsx:109-225; measured on /ActionButton and /ToggleButton
    2026-09-29): gray-800 text turning gray-900 on hover. Copy is the docs' CopyButton at size S (CopyButton.tsx):
    24px, icon only, named by aria-label, a gray-100 fill beside a command and quiet in a code block's corner,
@@ -603,7 +608,9 @@ main li + li { margin-top: var(--sp-2); }
    (nearest token 8), a gray-75 header row 32px tall with bold sans labels, 40px body rows parted by 1px
    lines, the same 16px padding in header and body (TableView.tsx:250-300 border/radius, 712-760 header
    cell, 1121-1135 header background, 1255-1296 row height). Column widths, alignment, wrapping, sticky
-   header and other table-specific rules stay with each table below. */
+   header and other table-specific rules stay with each table below. Narrow containers scroll as one
+   TableView, retaining the outer border and readable column widths. */
+.table-scroll { display: contents; }
 :is(.listing, .ref-table) {
   --cell-x: var(--sp-4);
   width: 100%; margin: 0 0 var(--sp-6);
@@ -625,6 +632,19 @@ main li + li { margin-top: var(--sp-2); }
 /* A table with no header row (the 404 resource list): round the first body row instead. */
 :is(.listing, .ref-table):not(:has(thead)) tbody tr:first-child td:first-child { border-start-start-radius: var(--r-md); }
 :is(.listing, .ref-table):not(:has(thead)) tbody tr:first-child td:last-child { border-start-end-radius: var(--r-md); }
+
+@container main (max-width: 34rem) {
+  .table-scroll {
+    display: block; max-inline-size: 100%; margin: 0 0 var(--sp-6);
+    overflow-x: auto; border: 1px solid var(--border); border-radius: var(--r-md);
+    scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
+  }
+  .table-scroll:has(> table[hidden]) { display: none; }
+  .table-scroll > :is(.listing, .ref-table) {
+    min-inline-size: var(--table-min); margin: 0; border: 0;
+  }
+  .table-scroll .listing thead th { top: 0; }
+}
 
 .listing { table-layout: fixed; font-family: var(--mono); font-size: var(--fs-code); }
 .listing thead th { position: sticky; top: var(--nav-h); z-index: 5; }
@@ -715,7 +735,7 @@ main li + li { margin-top: var(--sp-2); }
 .empty-state .title { margin: 0 0 var(--sp-1); color: var(--fg-muted); }
 .empty-state .lead { margin: 0; color: var(--fg); font-weight: 700; }
 /* The list of known paths and the help line below it centre on the same axis as the message. */
-.empty-state ~ .listing { width: auto; margin-inline: auto; }
+.empty-state ~ .table-scroll > .listing { width: auto; margin-inline: auto; }
 .empty-state ~ .note { text-align: center; }
 .msg { color: var(--fg-soft); padding: var(--sp-8) 0; }
 .msg-retry {
@@ -1040,12 +1060,12 @@ main.wide ~ .foot { max-width: none; }
   }
   [data-nav-open] .sidebar { display: block; }
   /* The outline becomes the top bar's section picker. The wordmark gives way to it, as the docs' bar keeps
-     only the logo on a phone; the picker may take the bar's width less the two sides' buttons, and ellipsises. */
+     only the logo on a phone; the picker takes the space between the brand and actions, and ellipsises. */
   .toc { display: none; }
-  .toc-pick {
-    display: block; position: absolute; top: 50%; left: 50%; translate: -50% -50%;
-    max-width: calc(100% - 2 * (var(--sp-4) + 2 * var(--control-h) + var(--sp-3)));
-  }
+  .toc-pick { display: block; flex: 1; min-width: 0; }
+  .nav-tools { order: 1; }
+  .toc-pick-btn { width: 100%; justify-content: center; }
+  .nav:has(.toc-pick) .nav-brand { flex: none; }
   .nav:has(.toc-pick) .nav-title {
     position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap;
   }
@@ -1056,28 +1076,6 @@ main.wide ~ .foot { max-width: none; }
 }
 
 @media (max-width: 34rem) {
-  .resource-list tr { display: block; padding: var(--sp-2) 0; border-bottom: 1px solid var(--border); }
-  .resource-list td, .resource-list td.name, .resource-list td.desc {
-    display: block; width: auto; padding: var(--sp-1) var(--sp-2); border: 0; white-space: normal;
-  }
-  .ref-table th, .ref-table td { padding: var(--sp-2); }
-  .channel-guide thead {
-    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
-  }
-  .channel-guide, .channel-guide tbody, .channel-guide tr, .channel-guide td {
-    display: block; width: auto;
-  }
-  .channel-guide tr { padding: var(--sp-2) 0; border-bottom: 1px solid var(--border); }
-  .channel-guide td, .channel-guide td:first-child, .channel-guide td:nth-child(2),
-  .channel-guide td:nth-child(3), .channel-guide td:last-child {
-    display: grid; grid-template-columns: var(--col-channel) minmax(0, 1fr); gap: var(--sp-2);
-    width: 100%; padding: var(--sp-1); border: 0; white-space: normal;
-  }
-  .channel-field {
-    display: block; color: var(--fg-soft); font-size: var(--fs-small); font-weight: 400;
-  }
-
   .facts .row { grid-template-columns: minmax(0, 1fr) auto; }
   .facts .val { grid-column: 1 / -1; grid-row: 2; }
   .wide-only { display: none; }

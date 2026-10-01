@@ -7,8 +7,8 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
 <link rel="preload" href="/assets/fonts/source-sans-3.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/tokens.css?v=1e90dbb8">
-<link rel="stylesheet" href="/assets/site.css?v=fd23a73b">
+<link rel="stylesheet" href="/assets/tokens.css?v=00fe2811">
+<link rel="stylesheet" href="/assets/site.css?v=72d96c28">
 <script src="/assets/early.js?v=e170b3a5"></script>
 <script src="/assets/docs.js?v=7bf4e48d" defer></script>
 <script src="/assets/indicator.js?v=d209281f" defer></script>
@@ -220,6 +220,7 @@
     请选择与系统 Gentoo 主仓库关键字相同的频道。两个频道都接受 gentoo-zh overlay 的
     <code>~amd64</code> 软件包，区别是构建依赖时采用稳定还是测试关键字。
   </p>
+  <div class="table-scroll">
   <table class="ref-table channel-guide">
     <thead><tr><th data-i18n="chName">频道</th><th data-i18n="chMain">Gentoo 主仓库</th><th data-i18n="chOverlay">gentoo-zh overlay</th><th data-i18n="chUri">sync-uri 路径</th></tr></thead>
     <tbody>
@@ -237,6 +238,7 @@
       </tr>
     </tbody>
   </table>
+  </div>
   <p class="note callout" data-tone="notice" data-channel-panel="unstable" data-i18n-html="channelUnstableNote" hidden>unstable 只适合已全局设置 <code>ACCEPT_KEYWORDS="~amd64"</code> 的系统；切换前请阅读 <a href="https://wiki.gentoo.org/wiki//etc/portage/package.accept_keywords#.7EARCH_system-wide">Gentoo Wiki 的测试关键字说明</a>。</p>
 
   <h2 id="setup" data-i18n="h2setup">配置</h2>

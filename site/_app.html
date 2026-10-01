@@ -16,8 +16,8 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
 <link rel="preload" href="/assets/fonts/source-sans-3.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/tokens.css?v=1e90dbb8">
-<link rel="stylesheet" href="/assets/site.css?v=fd23a73b">
+<link rel="stylesheet" href="/assets/tokens.css?v=00fe2811">
+<link rel="stylesheet" href="/assets/site.css?v=72d96c28">
 <script src="/assets/early.js?v=e170b3a5"></script>
 <script src="/assets/docs.js?v=7bf4e48d" defer></script>
 <script src="/assets/indicator.js?v=d209281f" defer></script>
@@ -229,6 +229,7 @@ document.documentElement.setAttribute(
             data-uri="https://distfiles.gentoozh.org">源站</button></span>
   </div>
   <div id="out" class="dir-list" aria-busy="true">
+    <div class="table-scroll">
     <table class="listing">
       <thead>
         <tr id="hd">
@@ -241,6 +242,7 @@ document.documentElement.setAttribute(
         <tr class="loading-row"><td colspan="3"><svg class="progress-circle" viewBox="0 0 32 32" role="progressbar" aria-label="加载中…" data-i18n-label="loading"><circle class="track" cx="16" cy="16" r="14.5"/><circle class="fill" cx="16" cy="16" r="14.5" pathLength="100" stroke-dasharray="25 75"/></svg></td></tr>
       </tbody>
     </table>
+    </div>
     <p class="msg" id="msg" hidden></p>
     <noscript><p class="msg" data-i18n-html="noJs">此列表需要脚本。
       不使用脚本时，请通过 <a href="/_raw/">/_raw/</a> 浏览目录。</p></noscript>

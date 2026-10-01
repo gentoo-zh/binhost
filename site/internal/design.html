@@ -7,8 +7,8 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
 <link rel="preload" href="/assets/fonts/source-sans-3.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/tokens.css?v=1e90dbb8">
-<link rel="stylesheet" href="/assets/site.css?v=fd23a73b">
+<link rel="stylesheet" href="/assets/tokens.css?v=00fe2811">
+<link rel="stylesheet" href="/assets/site.css?v=72d96c28">
 <script src="/assets/early.js?v=e170b3a5"></script>
 <script src="/assets/docs.js?v=7bf4e48d" defer></script>
 <script src="/assets/indicator.js?v=d209281f" defer></script>
@@ -342,6 +342,7 @@
 
   <h3 data-i18n="hTable">数据表</h3>
   <div class="demo">
+    <div class="table-scroll">
     <table class="listing pkgs">
       <thead><tr><th data-i18n="thPkg">包</th><th class="mark" data-i18n="thBin">binary package</th><th class="ver" data-i18n="thVer">版本</th></tr></thead>
       <tbody>
@@ -350,6 +351,7 @@
         <tr><td class="name"><a href="#">app-text/goldendict</a></td><td class="mark no"><span class="badge" data-variant="neutral" data-i18n="pending">待构建</span></td><td class="ver"></td></tr>
       </tbody>
     </table>
+    </div>
   </div>
 
   <p data-i18n="table1">包列表搜索只匹配包名。切换频道时，overlay 列表、主仓库依赖、统计与纯文本链接使用同一频道的数据；频道选择保存在浏览器中，设置页与包列表保持一致。状态列保留到最窄布局，用于直接比较发布结果。没有公开 binary package 时，发布政策显示在 binary package 列；公开索引已有 binary package 时，政策改为显示在包名旁。</p>
