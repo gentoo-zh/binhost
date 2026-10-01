@@ -503,10 +503,6 @@ main li + li { margin-top: var(--sp-2); }
   border: 0; border-radius: var(--r-md); font-size: var(--fs-code); font-weight: 400; white-space: nowrap;
 }
 
-@container main (max-width: 34rem) {
-  .fpr-box { max-inline-size: 100%; }
-  .fpr-box .fpr { min-inline-size: 0; white-space: normal; }
-}
 
 /* Buttons are S2 ActionButtons (ActionButton.tsx:109-225; measured on /ActionButton and /ToggleButton
    2026-09-29): gray-800 text turning gray-900 on hover. Copy is the docs' CopyButton at size S (CopyButton.tsx):
@@ -712,11 +708,15 @@ main li + li { margin-top: var(--sp-2); }
   .ref-table td, .ref-table td:first-child, .ref-table td:last-child {
     width: auto; height: auto; padding: var(--sp-1) var(--sp-2); border: 0; white-space: normal;
   }
-  .channel-guide td, .channel-guide td:first-child, .channel-guide td:nth-child(2),
-  .channel-guide td:nth-child(3), .channel-guide td:last-child {
-    display: grid; grid-template-columns: var(--col-channel) minmax(0, 1fr); gap: var(--sp-2);
-    width: 100%; height: var(--field-h); padding: var(--sp-1); border: 0; white-space: normal;
+  .ref-table tr:last-child { border-bottom: 0; }
+  .channel-guide td, .channel-guide td:nth-child(2), .channel-guide td:nth-child(3), .channel-guide td:last-child {
+    display: grid; grid-template-columns: var(--col-channel) minmax(0, 1fr); align-items: center; gap: var(--sp-2);
+    width: 100%; padding: var(--sp-1) var(--sp-2); border: 0; white-space: normal;
   }
+  /* The channel name heads its card; its field label would only repeat it. */
+  .channel-guide td:first-child { display: block; padding-block-end: var(--sp-2); }
+  .channel-guide td:first-child .channel-field { display: none; }
+  .channel-guide td > code { justify-self: start; }
   .channel-field {
     display: block; color: var(--fg-soft); font-size: var(--fs-small); font-weight: 400;
   }
@@ -1060,8 +1060,13 @@ main.wide ~ .foot { max-width: none; }
 
 /* Columns drop by the article width, not the viewport, so the sidebar needs no separate arithmetic. */
 @container main (max-width: 48rem) {
-  .fpr-box { margin-inline-start: 0; width: 100%; }
-  .fpr { white-space: normal; }
+  /* On its own line under the step title, the fingerprint stays one line and scrolls inside its box, as a
+     code block's long line does, beside the copy button. */
+  .fpr-box { margin: var(--sp-2) 0 0; width: 100%; }
+  .fpr-box .fpr {
+    flex: 1; min-inline-size: 0; overflow-x: auto; white-space: nowrap;
+    scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
+  }
 }
 @container main (max-width: 44rem) {
 }
