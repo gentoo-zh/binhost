@@ -8,3 +8,4 @@ dev-qt/qtmultimedia    gstreamer
 app-shells/gitstatus   zsh-completion
 sys-kernel/installkernel dracut
 dev-cpp/simdutf        atomic-base64
+x11-base/xorg-server   xvfb
