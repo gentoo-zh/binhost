@@ -8,7 +8,9 @@
 // Cells marked data-mirror-host (the mirrors page) show each mirror's worst state, and #mirror-facts (the
 // status page) gets one row per mirror with each tree's state. A failed or slow request changes nothing, and
 // neither does an answer whose mirror check is older than STALE seconds, since its marks may no longer hold;
-// the status page then swaps its rows for #mirror-failed, which points to the status site.
+// the status page then swaps its rows for #mirror-failed, which points to the status site. A mirror in RELAY
+// answers with a redirect to another mirror and holds no files, so the lag the API measures through it is
+// that mirror's: only whether it is reachable counts, and the status page gives it no row.
 (function () {
   'use strict';
   var API = 'https://status.gentoozh.org/api/status';
@@ -18,15 +20,16 @@
   var STALE = 2 * 3600;
   var TEXT = {
     'zh-cn': { behind: '落后约 {h} 小时', down: '上次检查时无法连接', ok: '已同步', gone: '无法连接',
-               pending: '尚未同步最新版',
+               pending: '尚未同步最新版', relay: '重定向至其他镜像站',
                checked: '检查于 ' },
     'zh-tw': { behind: '落後約 {h} 小時', down: '上次檢查時無法連線', ok: '已同步', gone: '無法連線',
-               pending: '尚未同步最新版',
+               pending: '尚未同步最新版', relay: '重新導向至其他鏡像站',
                checked: '檢查於 ' },
     en: { behind: 'About {h} hours behind', down: 'Unreachable at the last check', ok: 'In sync', gone: 'Unreachable',
-          pending: 'Latest not synced yet',
+          pending: 'Latest not synced yet', relay: 'Redirects to other mirrors',
           checked: 'Checked ' },
   };
+  var RELAY = { 'mirrors.cernet.edu.cn': true };
   // The status page names each mirror by the mirrors page's i18n keys; an unlisted host shows as itself.
   var NAMES = {
     'ftp2.osuosl.org': 'mOsuosl', 'mirrors.cernet.edu.cn': 'mCernet', 'mirror.nju.edu.cn': 'mNju',
@@ -58,21 +61,22 @@
     return stale > GRACE ? 'behind' : 'pending';
   }
 
-  // One API entry as { down, level, stale, up, trees }, given ages, the age of the origin's newest index by
-  // tree: level the worst tree's (down, behind, pending or ok), down when that is down, stale the largest
-  // staleness of a tree that is behind, up the mirror's own flag, and trees each tree as { key, up, stale,
-  // level } with stale null when in sync.
+  // One API entry as { down, level, stale, up, relay, trees }, given ages, the age of the origin's newest index
+  // by tree: level the worst tree's (down, behind, pending or ok), down when that is down, stale the largest
+  // staleness of a tree that is behind, up the mirror's own flag, relay whether it is in RELAY, and trees each
+  // tree as { key, up, stale, level } with stale null when in sync or when the mirror is a relay.
   function state(m, ages) {
     var up = m.up !== false, worst = up ? 'ok' : 'down', stale = 0, trees = [];
+    var relay = RELAY[String(m.host || '').toLowerCase()] === true;
     (m.trees || []).forEach(function (tr) {
       if (!tr) return;
-      var key = String(tr.key || ''), s = staleness(tr.lagSec, ages && ages[key]);
+      var key = String(tr.key || ''), s = relay ? null : staleness(tr.lagSec, ages && ages[key]);
       var t = { key: key, up: tr.up !== false, stale: s, level: level(!up || tr.up === false, s) };
       if (RANK[t.level] > RANK[worst]) worst = t.level;
       if (t.level === 'behind' && s > stale) stale = s;
       trees.push(t);
     });
-    return { down: worst === 'down', level: worst, stale: stale, up: up, trees: trees };
+    return { down: worst === 'down', level: worst, stale: stale, up: up, relay: relay, trees: trees };
   }
 
   // The answer as { at, hosts, list }: at when the check ran, hosts each mirror's state by lowercase host,
@@ -104,10 +108,10 @@
     return lv === 'pending' ? t.pending : t.ok;
   }
 
-  // A mirror's tooltip, only when it is down or behind, and its cell text.
+  // A mirror's tooltip, only when it is down or behind, and its cell text; a reachable relay says it redirects.
   function words(s) {
     var note = s.level === 'down' ? TEXT[lang()].down : s.level === 'behind' ? say(s.level, s.stale) : '';
-    return { note: note, cell: say(s.level, s.stale) };
+    return { note: note, cell: s.relay && !s.down ? TEXT[lang()].relay : say(s.level, s.stale) };
   }
 
   function escape(s) {
@@ -118,10 +122,11 @@
 
 
   // The status page's rows, in the markup of status-data.js's fact(): the mirror, each tree's state, and
-  // when the check ran, in that script's relative wording when it is on the page.
+  // when the check ran, in that script's relative wording when it is on the page. The origin and relays
+  // have no sync state of their own and get no row.
   function rows(h) {
     var t = TEXT[lang()], age = window.MirrorStatus && window.MirrorStatus.age;
-    return h.list.filter(function (m) { return !m.origin; }).map(function (m) {
+    return h.list.filter(function (m) { return !m.origin && !m.relay; }).map(function (m) {
       var key = NAMES[m.host];
       var name = key && typeof window.MIRROR_T === 'function' ? window.MIRROR_T(key) : '';
       var body = m.trees.map(function (tr) {

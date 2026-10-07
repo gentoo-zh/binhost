@@ -3,7 +3,8 @@
 // down or behind, matching entries by the host of the option's data-uri. A tree is behind once the first
 // index it lacks has been out more than 30 hours; until then it is only pending and marks nothing. A failed
 // request leaves the page as it was. On the status page it also writes one row per mirror into
-// #mirror-facts, or the fallback line when the answer is missing or stale.
+// #mirror-facts, or the fallback line when the answer is missing or stale. CERNET only redirects to another
+// mirror, so the lag measured through it is never shown: only whether it is reachable.
 
 const fs = require("fs");
 const path = require("path");
@@ -34,6 +35,7 @@ function el(attrs) {
 
 const HOSTS = {
   origin: "https://distfiles.gentoozh.org",
+  cernet: "https://mirrors.cernet.edu.cn/gentoo-zh",
   nju: "https://mirror.nju.edu.cn/gentoo-zh",
   hernet: "https://mirrors.ha.edu.cn/gentoo-zh",
   osuosl: "https://ftp2.osuosl.org/pub/gentoo-zh",
@@ -45,6 +47,7 @@ const NOW = Math.floor(Date.now() / 1000);
 const API = { updated: NOW, overall: "ok", sites: [], events: [], mirrors: { updated: NOW,
   published: [{ key: "stable", ageSec: 3600 }, { key: "unstable", ageSec: 7200 }], list: [
   { host: "distfiles.gentoozh.org", key: "src", origin: true, up: true, trees: [tree("stable", 0), tree("unstable", 0)] },
+  { host: "mirrors.cernet.edu.cn", key: "cernet", up: true, trees: [tree("stable", 5 * 86400), tree("unstable", 5 * 86400)] },
   { host: "mirror.nju.edu.cn", key: "nju", up: true, trees: [tree("stable", 84715), tree("unstable", 3600)] },
   { host: "mirrors.ha.edu.cn", key: "ha", up: true, trees: [tree("stable", 0), tree("unstable", 0, false)] },
   { host: "ftp2.osuosl.org", key: "osuosl", up: true, trees: [tree("stable", 21000), tree("unstable", 0)] },
@@ -60,7 +63,7 @@ const NAMES = {
 // set; fetchImpl answers the one request.
 function run(fetchImpl, lang, status) {
   const opts = Object.keys(HOSTS).map((k) => el({ "data-uri": HOSTS[k] }));
-  const cells = ["mirrors.ha.edu.cn", "mirror.nju.edu.cn", "unlisted.example"].map((h) => el({ "data-mirror-host": h }));
+  const cells = ["mirrors.ha.edu.cn", "mirror.nju.edu.cn", "unlisted.example", "mirrors.cernet.edu.cn"].map((h) => el({ "data-mirror-host": h }));
   cells.forEach((c) => { c.textContent = "—"; });
   cells[0].label = { className: "channel-field" };
   const listeners = {}, events = [], asked = [];
@@ -103,7 +106,7 @@ const answer = (j) => () => Promise.resolve({ ok: true, json: () => Promise.reso
 // A copy of the fake API with Nanjing University's stable lag, and the stable index's age when given.
 function nju(lagSec, ageSec) {
   const j = JSON.parse(JSON.stringify(API));
-  j.mirrors.list[1].trees[0].lagSec = lagSec;
+  j.mirrors.list[2].trees[0].lagSec = lagSec;
   if (ageSec === undefined) delete j.mirrors.published;
   else j.mirrors.published[0].ageSec = ageSec;
   return j;
@@ -125,6 +128,10 @@ function nju(lagSec, ageSec) {
         !o.osuosl.hasAttribute("data-behind") && !o.origin.hasAttribute("data-behind") && o.osuosl.title === "",
         JSON.stringify([o.osuosl.attrs, o.origin.attrs]));
   check("API 未列出的镜像保持原样", !o.other.hasAttribute("data-behind") && o.other.title === "");
+  check("教育网联合镜像站仅提供重定向：不依据延迟标记，状态列显示“重定向至其他镜像站”",
+        !o.cernet.hasAttribute("data-behind") && !o.cernet.hasAttribute("data-down") && o.cernet.title === "" &&
+        page.cells[3].textContent === "重定向至其他镜像站" && !page.cells[3].hasAttribute("data-behind"),
+        JSON.stringify([o.cernet.attrs, o.cernet.title, page.cells[3].textContent]));
   check("镜像页状态列：无法连接、尚未同步、未列出",
         page.cells[0].textContent === "无法连接" && page.cells[1].textContent === "尚未同步最新版" &&
         page.cells[2].textContent === "—" && page.cells[0].hasAttribute("data-behind") &&
@@ -137,14 +144,16 @@ function nju(lagSec, ageSec) {
   page.listeners.langchange();
   check("切换到臺灣正體后提示随之更新",
         o.nju.title === "" && o.hernet.title === "上次檢查時無法連線" &&
-        page.cells[0].textContent === "無法連線" && page.cells[1].textContent === "尚未同步最新版",
-        JSON.stringify([o.nju.title, o.hernet.title, page.cells[1].textContent]));
+        page.cells[0].textContent === "無法連線" && page.cells[1].textContent === "尚未同步最新版" &&
+        page.cells[3].textContent === "重新導向至其他鏡像站",
+        JSON.stringify([o.nju.title, o.hernet.title, page.cells[1].textContent, page.cells[3].textContent]));
   page.document.documentElement.lang = "en";
   page.listeners.langchange();
   check("切换到英文后提示随之更新",
         o.nju.title === "" && o.hernet.title === "Unreachable at the last check" &&
-        page.cells[0].textContent === "Unreachable" && page.cells[1].textContent === "Latest not synced yet",
-        JSON.stringify([o.nju.title, o.hernet.title, page.cells[1].textContent]));
+        page.cells[0].textContent === "Unreachable" && page.cells[1].textContent === "Latest not synced yet" &&
+        page.cells[3].textContent === "Redirects to other mirrors",
+        JSON.stringify([o.nju.title, o.hernet.title, page.cells[1].textContent, page.cells[3].textContent]));
 
   // Staleness is the newest index's age plus each day of lag past the first; up to 30 hours is pending.
   for (const [name, j, cell, behind] of [
@@ -162,6 +171,15 @@ function nju(lagSec, ageSec) {
           n.hasAttribute("data-behind") === behind && n.title === (behind ? cell : "") &&
           !n.hasAttribute("data-down"), JSON.stringify([p.cells[1].textContent, p.cells[1].attrs, n.attrs, n.title]));
   }
+
+  const relayDown = JSON.parse(JSON.stringify(API));
+  relayDown.mirrors.list[1].up = false;
+  const rd = run(answer(relayDown));
+  await settle();
+  const rc = byKey(rd).cernet;
+  check("教育网联合镜像站无法连接时仍标记为无法连接，文件链接保留在源站",
+        rc.hasAttribute("data-down") && rc.hasAttribute("data-behind") && rc.title === "上次检查时无法连接" &&
+        rd.cells[3].textContent === "无法连接", JSON.stringify([rc.attrs, rc.title, rd.cells[3].textContent]));
 
   const inSync = JSON.parse(JSON.stringify(API));
   inSync.mirrors.list.forEach((m) => m.trees.forEach((t) => { t.lagSec = 0; t.up = true; }));
@@ -198,10 +216,10 @@ function nju(lagSec, ageSec) {
   pending({ ok: true, json: () => Promise.resolve(API) });
   await settle();
   const box = st.ids["mirror-facts"], rows = rowsOf(box.innerHTML);
-  check("状态页：每个下游镜像一行，跳过源站，顺序同 API",
+  check("状态页：每个下游镜像占一行，不含源站与仅提供重定向的教育网联合镜像站，顺序与 API 一致",
         rows.length === 3 && rows[0].includes("南京大学") && rows[1].includes("河南教育网") &&
-        rows[2].includes("俄勒冈州立大学开源实验室") && !box.innerHTML.includes("distfiles.gentoozh.org"),
-        box.innerHTML);
+        rows[2].includes("俄勒冈州立大学开源实验室") && !box.innerHTML.includes("distfiles.gentoozh.org") &&
+        !box.innerHTML.includes("cernet"), box.innerHTML);
   check("状态页：南京大学两棵树都尚未同步",
         rows[0].includes(part("stable", "尚未同步最新版")) && rows[0].includes(part("unstable", "尚未同步最新版")),
         rows[0]);
@@ -229,7 +247,7 @@ function nju(lagSec, ageSec) {
         lateRows[0].includes(part("unstable", "尚未同步最新版")), lateRows[0]);
 
   const down = JSON.parse(JSON.stringify(API));
-  down.mirrors.list[3].up = false;
+  down.mirrors.list[4].up = false;
   const off = run(answer(down), "zh-CN", true);
   await settle();
   const offRows = rowsOf(off.ids["mirror-facts"].innerHTML);
