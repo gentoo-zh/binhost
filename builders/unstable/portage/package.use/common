@@ -7,3 +7,4 @@ media-video/pipewire   gstreamer
 dev-qt/qtmultimedia    gstreamer
 app-shells/gitstatus   zsh-completion
 sys-kernel/installkernel dracut
+dev-cpp/simdutf        atomic-base64
