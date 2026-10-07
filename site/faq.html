@@ -263,7 +263,7 @@
 <h3 id="q8" data-i18n="q8">中国大陆有哪些镜像，分别怎么配置？</h3>
   <p data-i18n-html="s8">可使用教育网联合镜像站、南京大学、南阳理工学院和河南教育网等镜像，地址见<a href="/mirrors">镜像列表</a>。overlay 的 Git 仓库、distfiles 与 binary package 需分别配置，见 <a href="/overlay#adding-overlay">overlay 指南</a>、<a href="/distfiles-setup#setup">配置 distfiles</a> 和<a href="/binpkg-setup#setup">配置 binary package</a>。</p>
 <h3 id="cernet-redirect" data-i18n-html="cernetRedirect">使用教育网联合镜像站时，为什么 Git 提示重定向？</h3>
-<p data-i18n-html="cernetRedirectAnswer">教育网联合镜像站将请求重定向到就近的成员站，本身不保存文件。因此，Git 提示重定向是正常现象。</p>
+<p data-i18n-html="cernetRedirectAnswer">教育网联合镜像站将请求重定向到就近的其他镜像站，本身不保存文件。因此，Git 提示重定向是正常现象。</p>
 <h3 id="mirror-sync" data-i18n-html="mirrorSync">为什么各镜像的版本不一致？</h3>
 <p data-i18n-html="mirrorSyncAnswer">各镜像按自己的计划同步，进度可能不同。某个镜像版本偏旧时，可换另一个镜像再同步；ISO 请选择对应目录中的最新版本。地址见<a href="/mirrors#list">镜像列表</a>。</p>
 <h3 id="q9" data-i18n="q9">如何自行建立镜像？</h3>
@@ -348,7 +348,7 @@ window.MIRROR_I18N = {
     "overlaySyncAnswer": "2025 年 10 月起，Gentoo 官方不再為第三方倉庫提供快取鏡像。此前加入的 gentoo-zh 倉庫需更新同步來源。舊的 <code>microcai/gentoo-zh</code> 位址會重新導向 <code>gentoo-zh/overlay</code>，手動設定過 remote 的使用者也應更新位址。",
     "overlaySyncLinks": "設定步驟見 <a href=\"/overlay#adding-overlay\">overlay 指南</a>；背景見<a href=\"https://gentoozh.org/posts/2025-10-07-thirdparty-repo-mirror-removal/\">快取鏡像停用說明</a>與<a href=\"https://gentoozh.org/posts/2026-07-02-gentoo-zh-repo-migration/\">倉庫遷移記錄</a>。",
     "cernetRedirect": "使用教育網聯合鏡像站時，為什麼 Git 提示重新導向？",
-    "cernetRedirectAnswer": "教育網聯合鏡像站將請求重新導向鄰近的成員站，本身不儲存檔案。因此，Git 提示重新導向是正常現象。",
+    "cernetRedirectAnswer": "教育網聯合鏡像站將請求重新導向鄰近的其他鏡像站，本身不儲存檔案。因此，Git 提示重新導向是正常現象。",
     "mirrorSync": "為什麼各鏡像的版本不一致？",
     "mirrorSyncAnswer": "各鏡像依自己的排程同步，進度可能不同。某個鏡像版本偏舊時，可換另一個鏡像再同步；ISO 請選擇對應目錄中的最新版本。位址見<a href=\"/mirrors#list\">鏡像列表</a>。",
     "binpkgKeyring": "匯入公鑰時出現 no writable keyring found，怎麼辦？",
@@ -416,7 +416,7 @@ window.MIRROR_I18N = {
     "overlaySyncAnswer": "Since October 2025, Gentoo no longer provides cache mirrors for third-party repositories. Update the sync source if you added gentoo-zh before then. The old <code>microcai/gentoo-zh</code> URL redirects to <code>gentoo-zh/overlay</code>; update manually configured remotes too.",
     "overlaySyncLinks": "See the <a href=\"/overlay#adding-overlay\">overlay setup steps</a>, <a href=\"https://gentoozh.org/posts/2025-10-07-thirdparty-repo-mirror-removal/\">cache mirror retirement notice</a> and <a href=\"https://gentoozh.org/posts/2026-07-02-gentoo-zh-repo-migration/\">repository migration record</a>.",
     "cernetRedirect": "Why does Git report a redirect when using CERNET?",
-    "cernetRedirectAnswer": "CERNET does not store the files itself. It redirects requests to a nearby member mirror, so Git’s redirect message is expected.",
+    "cernetRedirectAnswer": "CERNET does not store the files itself. It redirects requests to a nearby mirror, so Git’s redirect message is expected.",
     "mirrorSync": "Why do mirrors have different versions?",
     "mirrorSyncAnswer": "Mirrors synchronise on separate schedules. If a mirror has an older version, try another mirror and sync again. For ISOs, select the latest version in the directory. See the <a href=\"/mirrors#list\">mirror list</a>.",
     "binpkgKeyring": "How do I fix no writable keyring found when importing the key?",
