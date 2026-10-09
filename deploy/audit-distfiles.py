@@ -135,7 +135,8 @@ def scan(overlay, aux=None):
 
 GRACE_SECONDS = 7 * 24 * 3600
 STATE = os.environ.get("ORPHAN_STATE", "/var/lib/emirrordist/orphans.json")
-RECYCLE = os.environ.get("RECYCLE", "/var/lib/emirrordist/recycle")
+# Same filesystem as the public distfiles, so recycling is a rename, not a copy.
+RECYCLE = os.environ.get("RECYCLE", "/srv/.emirrordist-recycle")
 RECYCLE_RETENTION_SECONDS = 14 * 24 * 3600
 MAX_REAP_SHARE = 1 / 3
 MIN_RESTRICTED_TO_DOUBT = 20

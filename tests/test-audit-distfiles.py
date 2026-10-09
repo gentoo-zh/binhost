@@ -78,10 +78,10 @@ def case(name, fn):
     CASES.append((name, fn))
 
 
-case("孤儿状态、回收目录与清理账本的预设路径不变", lambda: (
+case("孤儿状态、回收目录与清理账本的预设路径", lambda: (
     lambda fresh: (
         fresh.STATE == "/var/lib/emirrordist/orphans.json"
-        and fresh.RECYCLE == "/var/lib/emirrordist/recycle"
+        and fresh.RECYCLE == "/srv/.emirrordist-recycle"
         and fresh.LEDGER == "/var/lib/emirrordist/reaped.json"
     )
 )(load_audit_with_env({})))
