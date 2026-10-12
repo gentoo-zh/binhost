@@ -19,8 +19,11 @@ if not TARGET.exists():
 spec = importlib.util.spec_from_file_location("audit_distfiles", TARGET)
 audit = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(audit)
+# Cases that do not set it themselves must never touch the production record.
+_MISSING_TMP = tempfile.TemporaryDirectory()
+audit.MISSING_STATE = str(pathlib.Path(_MISSING_TMP.name) / "missing.json")
 
-PATH_ENV = ("ORPHAN_STATE", "RECYCLE", "LEDGER")
+PATH_ENV = ("ORPHAN_STATE", "RECYCLE", "LEDGER", "MISSING_STATE")
 
 
 def load_audit_with_env(values):
@@ -83,6 +86,7 @@ case("孤儿状态、回收目录与清理账本的预设路径", lambda: (
         fresh.STATE == "/var/lib/emirrordist/orphans.json"
         and fresh.RECYCLE == "/srv/.emirrordist-recycle"
         and fresh.LEDGER == "/var/lib/emirrordist/reaped.json"
+        and fresh.MISSING_STATE == "/var/lib/emirrordist/missing.json"
     )
 )(load_audit_with_env({})))
 
@@ -226,7 +230,8 @@ def build_overlay(root, packages, src_style="url"):
 
 
 def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False,
-             grace=0, src_style="url", ledger_blocked=False):
+             grace=0, src_style="url", ledger_blocked=False,
+             missing_grace=0, missing_seen=None):
     with tempfile.TemporaryDirectory() as tmp:
         d = pathlib.Path(tmp)
         ov = build_overlay(d / "overlay", packages, src_style)
@@ -237,11 +242,17 @@ def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False,
         now = int(time.time())
         for name, age in (aged or {}).items():
             os.utime(dist / name, (now - age, now - age))
-        old = (audit.STATE, audit.RECYCLE, audit.GRACE_SECONDS, audit.LEDGER)
+        old = (audit.STATE, audit.RECYCLE, audit.GRACE_SECONDS, audit.LEDGER,
+               audit.MISSING_STATE, audit.MISSING_GRACE_SECONDS)
         audit.STATE = str(d / "state.json")
         audit.RECYCLE = str(d / "recycle")
         audit.GRACE_SECONDS = grace
         audit.LEDGER = str(d / "reaped.json")
+        missing_state = d / "missing.json"
+        audit.MISSING_STATE = str(missing_state)
+        audit.MISSING_GRACE_SECONDS = missing_grace
+        if missing_seen is not None:
+            missing_state.write_text(json.dumps(missing_seen))
         if ledger_blocked:
             blocked = d / "noledger"
             blocked.write_text("不是目录")
@@ -260,11 +271,13 @@ def run_main(packages, on_mirror, aged=None, preload=None, bin_readonly=False,
                 rc = audit.main(str(ov), str(d / "dist"),
                                 aux=fixture_aux(packages, src_style))
         finally:
-            audit.STATE, audit.RECYCLE, audit.GRACE_SECONDS, audit.LEDGER = old
+            (audit.STATE, audit.RECYCLE, audit.GRACE_SECONDS, audit.LEDGER,
+             audit.MISSING_STATE, audit.MISSING_GRACE_SECONDS) = old
         left = sorted(p.name for p in dist.iterdir())
         binned = sorted(p.name for p in (d / "recycle").iterdir()) \
             if (d / "recycle").is_dir() else []
-        return rc, left, binned, buf.getvalue()
+        missing = json.loads(missing_state.read_text()) if missing_state.exists() else {}
+        return rc, left, binned, buf.getvalue(), missing
 
 
 # A large orphan count next to a cleanup of zero reads as a stuck reaper.
@@ -810,6 +823,41 @@ case("共用文件有一方禁止镜像时，也不该报成缺失", lambda: (
     lambda r: "缺 0" in r[3]
 )(run_main({"app-misc/a": {"1.0": ["s.tar"]},
             "app-misc/b": {"1.0": (["s.tar"], "mirror")}}, [])))
+
+MISSING_PKGS = {f"app-misc/p{i}": {"1": [f"p{i}.tar.gz"]} for i in range(20)}
+MISSING_HAVE = [f"p{i}.tar.gz" for i in range(1, 20)]
+
+case("刚缺的文件先记下时间，不算失败", lambda: (
+    lambda r: r[0] == 0 and "缺 p0.tar.gz" in r[3] and "暂不算失败" in r[3]
+    and list(r[4]) == ["p0.tar.gz"]
+)(run_main(MISSING_PKGS, MISSING_HAVE, missing_grace=3600)))
+
+case("缺失超过宽限仍未补上才算失败", lambda: (
+    lambda r: r[0] == 1 and "暂不算失败" not in r[3]
+)(run_main(MISSING_PKGS, MISSING_HAVE, missing_grace=3600,
+           missing_seen={"p0.tar.gz": int(time.time()) - 7200})))
+
+case("文件补上后清掉缺失记录", lambda: (
+    lambda r: r[0] == 0 and r[4] == {}
+)(run_main(MISSING_PKGS, MISSING_HAVE + ["p0.tar.gz"], missing_grace=3600,
+           missing_seen={"p0.tar.gz": int(time.time()) - 7200})))
+
+
+def _missing_state_unwritable():
+    with tempfile.TemporaryDirectory() as tmp:
+        blocked = pathlib.Path(tmp) / "blocked"
+        blocked.write_text("不是目录")
+        old = audit.MISSING_STATE, audit.MISSING_GRACE_SECONDS
+        audit.MISSING_STATE = str(blocked / "missing.json")
+        audit.MISSING_GRACE_SECONDS = 3600
+        try:
+            with contextlib.redirect_stderr(io.StringIO()):
+                return audit.overdue_missing(["a.tar.gz"]) == ["a.tar.gz"]
+        finally:
+            audit.MISSING_STATE, audit.MISSING_GRACE_SECONDS = old
+
+
+case("缺失记录写不进去时按超时处理，照常报失败", _missing_state_unwritable)
 
 for name, fn in CASES:
     try:
