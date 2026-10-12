@@ -66,7 +66,7 @@ PUBLISHED_DIR="$PUBLISHED_DIR" bash "$BUILD_ROOT/kernel-archive.sh"
   的既有记录。
 
 正确的恢复路径是 `emirrordist --mirror --repo gentoo-zh`，它按 SRC_URI 逐个取。
-同步日志、孤儿状态、回收目录与清理账本都能指向平行根，不会改写正式同步状态。
+同步日志、孤儿状态、缺失记录、回收目录与清理账本都能指向平行根，不会改写正式同步状态。
 
 ## distfiles 实测
 
@@ -207,6 +207,7 @@ SUCCESS_LOG="$ROOT/log/emirrordist/successes.log" \
 ORPHAN_STATE="$ROOT/emirrordist/orphans.json" \
 RECYCLE="$ROOT/emirrordist/recycle" \
 LEDGER="$ROOT/emirrordist/reaped.json" \
+MISSING_STATE="$ROOT/emirrordist/missing.json" \
     python3 /usr/local/lib/binhost/audit-distfiles.py \
     /var/lib/binhost-overlay "$ROOT/distfiles"
 EOF

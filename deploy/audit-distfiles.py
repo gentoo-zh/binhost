@@ -142,6 +142,9 @@ MAX_REAP_SHARE = 1 / 3
 MIN_RESTRICTED_TO_DOUBT = 20
 MIN_REAP_BUDGET = 5
 LEDGER = os.environ.get("LEDGER", "/var/lib/emirrordist/reaped.json")
+MISSING_STATE = os.environ.get("MISSING_STATE", "/var/lib/emirrordist/missing.json")
+# One failed upstream fetch usually recovers on the next hourly sync.
+MISSING_GRACE_SECONDS = 3 * 3600
 WINDOW_HOURS = 24
 MARKERS = {"layout.conf", "README.txt"}
 
@@ -297,6 +300,28 @@ def _reap_locked(orphan, paths, grace, budget, state):
     return deleted, failed
 
 
+def overdue_missing(missing, now=None):
+    """Missing files first seen at least MISSING_GRACE_SECONDS ago."""
+    now = int(time.time()) if now is None else now
+    state = pathlib.Path(MISSING_STATE)
+    if not missing and not state.exists():
+        return []
+    try:
+        with locked(state):
+            try:
+                seen = json.loads(state.read_text())
+            except (OSError, ValueError):
+                seen = {}
+            if not isinstance(seen, dict):
+                seen = {}
+            seen = {f: seen.get(f, now) for f in missing}
+            write_atomic(state, json.dumps(seen, indent=1, sort_keys=True))
+    except (OSError, LedgerError) as e:
+        print(f"!! 无法记录缺失文件 {state}：{e}，全部按超时处理", file=sys.stderr)
+        return list(missing)
+    return [f for f in missing if now - seen[f] >= MISSING_GRACE_SECONDS]
+
+
 def main(overlay, dest, aux=None):
     overlay, dest = pathlib.Path(overlay), pathlib.Path(dest)
     if not (overlay / "profiles" / "repo_name").exists():
@@ -316,6 +341,7 @@ def main(overlay, dest, aux=None):
     never -= unsure
 
     missing = sorted(mirrorable - have)
+    overdue = overdue_missing(missing)
     extra = sorted(never & have)
     orphan = sorted(have - set(users))
 
@@ -399,6 +425,9 @@ def main(overlay, dest, aux=None):
 
     for f in missing[:20]:
         print(f"  缺 {f}  <- {[p for p, _ in users[f]]}")
+    if len(overdue) < len(missing):
+        print(f"其中 {len(missing) - len(overdue)} 个缺失不到 "
+              f"{MISSING_GRACE_SECONDS // 3600} 小时，等下一轮同步重抓，暂不算失败")
     for f in extra[:20]:
         print(f"  多 {f}  <- {[p for p, _ in users[f]]}"
               f"（至少一个引用方 RESTRICT 禁止镜像或禁止抓取）")
@@ -410,7 +439,7 @@ def main(overlay, dest, aux=None):
     if expiry_failed:
         print(f"!! 回收目录有 {len(expiry_failed)} 个到期文件无法删除", file=sys.stderr)
 
-    return 1 if (missing or refused or failed or restricted_failed or ledger_failed or too_many
+    return 1 if (overdue or refused or failed or restricted_failed or ledger_failed or too_many
                  or expiry_failed) else 0
 
 
