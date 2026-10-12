@@ -127,6 +127,7 @@ net-analyzer/realitlscanner
 net-dns/ddns-go
 net-dns/dnslookup
 net-dns/q
+net-im/telegram-desktop
 net-misc/aliyundrive-webdav
 net-misc/aliyunpan
 net-misc/ananta
