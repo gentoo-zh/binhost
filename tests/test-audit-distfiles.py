@@ -837,7 +837,7 @@ case("缺失超过宽限仍未补上才算失败", lambda: (
 )(run_main(MISSING_PKGS, MISSING_HAVE, missing_grace=3600,
            missing_seen={"p0.tar.gz": int(time.time()) - 7200})))
 
-case("文件补上后清掉缺失记录", lambda: (
+case("文件补上后清除缺失记录", lambda: (
     lambda r: r[0] == 0 and r[4] == {}
 )(run_main(MISSING_PKGS, MISSING_HAVE + ["p0.tar.gz"], missing_grace=3600,
            missing_seen={"p0.tar.gz": int(time.time()) - 7200})))
