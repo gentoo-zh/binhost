@@ -46,8 +46,10 @@ logo is distributed under the same licence. The SVG files on /logo are
 icon, is gentoo-zh-icon-transparent.svg rendered at 256x256, lossless WebP.
 /assets/logo-horizontal.svg, the logo in the page header, is
 gentoo-zh-horizontal-purple-transparent.svg with the lettering moved 30
-units away from the signet and the viewBox cropped to the artwork's edges, as
-in the header of https://gentoozh.org/ . /assets/logo-horizontal-dark.svg,
+units away from the signet, the viewBox cropped to the artwork's edges and the
+soft-shadow filter removed, which blurs at header size on phones; it is the
+same file as the header of https://gentoozh.org/ .
+/assets/logo-horizontal-dark.svg,
 its dark-theme variant, also recolours the lettering from #514776 to #DDDAEA.
 The "gentoo" letter outlines come from the Gentoo logo; its typeface was
 identified as Zurich Light Extra Condensed on the gentoo-pr list (Sebastian
