@@ -236,14 +236,15 @@
   --field-h: 40px;
   /* One home-page status row: 40px, taller on phones where the value wraps under the label. */
   --fact-row: 2.5rem;
-  /* White on the purple art panels of the search results and the mirror logo tiles, in both modes. */
+  /* White on the purple art panels of the search results and the logo tiles on /logo, in both modes. */
   --on-art: #ffffff;
 
   /* Component sizes: S2 workflow icons M and S, the brand mark in the top bar, the numbered step circle,
      and floors for the menu, the status label column and the search field. */
   --icon: 20px;
   --icon-sm: 16px;
-  --logo: 28px;
+  /* The horizontal gentoo-zh logo in the top bar and the search dialog: 40px of the bar's 48px content box. */
+  --brand-h: 40px;
   /* The numbered step circle is one line of the step's text high (s2-docs Step.tsx: height 1lh). */
   --step-dot: 1lh;
   /* Code blocks, measured on the docs 2026-09-29: a fenced block is padded 32 (12 below 1024px); the install
@@ -279,7 +280,6 @@
   /* S2 edge-to-visual: 6px from a button edge to its icon, also a badge's side padding. */
   --edge-visual: 6px;
   /* The brand name at 20px and figures or field text at 16px, between the UI and body sizes. */
-  --fs-brand: 1.25rem;
   --fs-value: 1rem;
   /* Table columns sized to what they hold. */
   --table-min: 42rem;     /* scroll narrow TableViews without compressing the name column */
@@ -387,8 +387,7 @@
   :root {
     --control-h: 40px;
     --top-h: 64px;
-    --logo: 24px;
-    --fs-brand: 1.125rem;
+    --brand-h: 36px;
     --chip-h: 36px;
     --code-pad: var(--sp-3);
     --install-in: var(--sp-3);

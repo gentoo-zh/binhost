@@ -7,8 +7,8 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/assets/logo.webp">
 <link rel="preload" href="/assets/fonts/source-sans-3.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/tokens.css?v=feab1a7c">
-<link rel="stylesheet" href="/assets/site.css?v=bd44fcda">
+<link rel="stylesheet" href="/assets/tokens.css?v=611d4548">
+<link rel="stylesheet" href="/assets/site.css?v=d093f384">
 <script src="/assets/early.js?v=e170b3a5"></script>
 <script src="/assets/docs.js?v=7bf4e48d" defer></script>
 <script src="/assets/indicator.js?v=d209281f" defer></script>
@@ -30,9 +30,9 @@
   <button type="button" class="icon-btn nav-toggle" aria-expanded="false" aria-controls="sidebar" hidden>
     <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M16.25 14H3.75c-.414 0-.75.336-.75.75s.336.75.75.75h12.5c.414 0 .75-.336.75-.75s-.336-.75-.75-.75M3.75 5.5h12.5c.414 0 .75-.336.75-.75S16.664 4 16.25 4H3.75c-.414 0-.75.336-.75.75s.336.75.75.75M16.25 9H3.75c-.414 0-.75.336-.75.75s.336.75.75.75h12.5c.414 0 .75-.336.75-.75S16.664 9 16.25 9"/></svg><span class="visually-hidden" data-i18n="navMenu">页面菜单</span>
   </button>
-  <a class="nav-brand" href="/">
-    <img src="/assets/logo.webp" alt="" width="28" height="28">
-    <span class="nav-title" data-i18n="brand">Gentoo-zh 下载</span>
+  <a class="nav-brand" href="/" aria-label="Gentoo-zh 下载" data-i18n-label="brand">
+    <img class="logo-light" src="/assets/logo-horizontal.svg" alt="Gentoo-zh" width="111" height="40">
+    <img class="logo-dark" src="/assets/logo-horizontal-dark.svg" alt="Gentoo-zh" width="111" height="40">
   </a>
   <div class="nav-tools" id="controls">
     <button type="button" class="search-trigger js-only" aria-haspopup="dialog" aria-expanded="false" aria-controls="site-search" aria-keyshortcuts="Control+K Meta+K /">
@@ -74,7 +74,7 @@
 </header>
 <dialog class="sd" id="site-search" aria-label="搜索 Gentoo-zh 下载" data-i18n-label="sdOpen" data-src="/assets/search-index.json">
   <div class="sd-brand">
-    <a class="sd-brand-link" href="/"><img src="/assets/logo.webp" alt="" width="28" height="28"><span data-i18n="brand">Gentoo-zh 下载</span></a>
+    <a class="sd-brand-link" href="/" aria-label="Gentoo-zh 下载" data-i18n-label="brand"><img class="logo-light" src="/assets/logo-horizontal.svg" alt="Gentoo-zh" width="111" height="40"><img class="logo-dark" src="/assets/logo-horizontal-dark.svg" alt="Gentoo-zh" width="111" height="40"></a>
     <p class="sd-tagline" data-i18n="sdTagline">Gentoo 中文社区的 overlay 指南、distfiles、binhost、Live ISO 与镜像服务。</p>
   </div>
   <div class="sd-main">
@@ -146,6 +146,7 @@
       <li><a class="nav-link" href="/about" data-i18n="navAbout">关于本站</a></li>
       <li><a class="nav-link" href="/status" data-i18n="navStatus">服务状态</a></li>
       <li><a class="nav-link" href="/thanks" data-i18n="navThanks">致谢</a></li>
+      <li><a class="nav-link" href="/logo" data-i18n="navLogo">标志</a></li>
     </ul>
   </details>
 </nav>
@@ -266,7 +267,7 @@
 <div id="copy-toast" role="status" aria-live="polite"></div>
 
 <script src="/assets/util.js?v=216bc353"></script>
-<script src="/assets/strings.js?v=d401535e"></script>
+<script src="/assets/strings.js?v=f130d6d2"></script>
 <script>
 window.MIRROR_I18N = {
   "zh-tw": {

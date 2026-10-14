@@ -36,6 +36,31 @@ License, Version 2.0; the licence text is /assets/LICENSE-Apache-2.0.txt
 (https://www.apache.org/licenses/LICENSE-2.0).
 Source: https://github.com/adobe/react-spectrum
 
+Gentoo-zh logo
+The gentoo-zh logo is adapted from the Gentoo logo
+(https://www.gentoo.org/assets/img/logo/gentoo-signet.svg). Gentoo source
+artwork © Gentoo Foundation and Lennart Andre Rolland, licensed under
+CC BY-SA 2.5 (https://creativecommons.org/licenses/by-sa/2.5/); the adapted
+logo is distributed under the same licence. The SVG files on /logo are
+/assets/brand/gentoo-zh-*.svg, unmodified. /assets/logo.webp, the site's
+icon, is gentoo-zh-icon-transparent.svg rendered at 256x256, lossless WebP.
+/assets/logo-horizontal.svg, the logo in the page header, is
+gentoo-zh-horizontal-purple-transparent.svg with its viewBox cropped to the
+artwork's edges; the drawing is unchanged. /assets/logo-horizontal-dark.svg,
+its dark-theme variant, also recolours the lettering from #514776 to #DDDAEA.
+The "gentoo" letter outlines come from the Gentoo logo; its typeface was
+identified as Zurich Light Extra Condensed on the gentoo-pr list (Sebastian
+Pipping, "Re: [gentoo-pr] Gentoo logo font", 2011-04-26,
+https://www.mail-archive.com/gentoo-pr%40lists.gentoo.org/msg00166.html).
+The "-zh" letters are drawn to match. The site ships the outlines only, no
+font file.
+The 中 and 文 glyphs come from Wikimedia Commons:
+https://commons.wikimedia.org/wiki/File:%E4%B8%AD-seal.svg and
+https://commons.wikimedia.org/wiki/File:%E6%96%87-seal.svg. Both pages state
+"This SVG representation of an ancient script is in the public domain".
+/assets/brand/gentoo-zh-old.jpg is the earlier Gentoo-zh logo, shown
+unmodified for the record; its original author is not identified.
+
 Simple Icons brand marks
 The Telegram and Matrix icons on /about are the Telegram and Matrix brand marks
 from Simple Icons 16.33.0 (icons/telegram.svg, icons/matrix.svg). The SVG
