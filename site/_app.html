@@ -138,7 +138,6 @@ document.documentElement.setAttribute(
     <summary class="nav-group-title"><span data-i18n="navIso">Live ISO</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
     <ul class="pages">
       <li><a class="nav-link" href="/iso" data-i18n="navIsoGet">CJK 最小安装镜像</a></li>
-      <li><a class="nav-link" href="/gigos/" data-i18n="navGigos">Gig-OS（独立项目）</a></li>
     </ul>
   </details>
   <details class="nav-group" data-group="mirrors" data-default-open open>
@@ -165,31 +164,13 @@ document.documentElement.setAttribute(
 </nav>
 <script>
 // Every group is open in the markup, so without scripts the whole list shows. Before the first paint this
-// marks the current page where render-chrome.py could not, keeps its group open, and sets each other group
-// as the reader last left it in this session, else as the markup's data-default-open says: the docs keep
-// their tree as it was between pages and open only their main group at first.
+// keeps the current page's group open and sets each other group as the reader last left it in this session,
+// else as the markup's data-default-open says: the docs keep their tree as it was between pages and open
+// only their main group at first.
 (function () {
   var side = document.getElementById('sidebar'), key = 'nav-groups', saved = {};
   try { saved = JSON.parse(sessionStorage.getItem(key)) || {}; } catch (e) { saved = {}; }
-  var path = location.pathname.replace(/\.html$/, '').replace(/\/index$/, '/');
-  function matches(a) {
-    var href = a.getAttribute('href');
-    return href === path || (href.length > 1 && href.slice(-1) === '/' && path.indexOf(href) === 0);
-  }
-  // The file browser's chrome marks /files/, but a directory the sidebar links to (/gigos/) is marked
-  // itself while the reader browses it.
   var current = side.querySelector('a[aria-current="page"]');
-  if (!current || !matches(current)) {
-    var found = null;
-    side.querySelectorAll('a[href^="/"]').forEach(function (a) {
-      if (!found && matches(a)) found = a;
-    });
-    if (found) {
-      if (current) current.removeAttribute('aria-current');
-      current = found;
-      found.setAttribute('aria-current', 'page');
-    }
-  }
   side.querySelectorAll('.nav-group').forEach(function (g) {
     var id = g.getAttribute('data-group');
     g.open = current && g.contains(current) ? true
@@ -261,7 +242,7 @@ document.documentElement.setAttribute(
 <!-- /chrome:foot -->
 
 <script src="/assets/util.js?v=216bc353"></script>
-<script src="/assets/strings.js?v=f130d6d2"></script>
+<script src="/assets/strings.js?v=8c103095"></script>
 <script>
 window.MIRROR_I18N = {
   'zh-cn': {
@@ -336,11 +317,6 @@ const ROOT_DESC = {
     'zh-cn': '带 CJK 补丁的 Gentoo 最小安装镜像',
     'zh-tw': '帶 CJK 補丁的 Gentoo 最小安裝映像',
     'en': 'Gentoo minimal installation images with the CJK patches'
-  },
-  'gigos': {
-    'zh-cn': 'Gig-OS 镜像',
-    'zh-tw': 'Gig-OS 映像',
-    'en': 'Gig-OS images'
   },
   'distfiles': {
     'zh-cn': 'distfiles 镜像文件',

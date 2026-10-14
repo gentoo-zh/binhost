@@ -125,7 +125,6 @@
     <summary class="nav-group-title"><span data-i18n="navIso">Live ISO</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
     <ul class="pages">
       <li><a class="nav-link" href="/iso" data-i18n="navIsoGet">CJK 最小安装镜像</a></li>
-      <li><a class="nav-link" href="/gigos/" data-i18n="navGigos">Gig-OS（独立项目）</a></li>
     </ul>
   </details>
   <details class="nav-group" data-group="mirrors" data-default-open open>
@@ -152,31 +151,13 @@
 </nav>
 <script>
 // Every group is open in the markup, so without scripts the whole list shows. Before the first paint this
-// marks the current page where render-chrome.py could not, keeps its group open, and sets each other group
-// as the reader last left it in this session, else as the markup's data-default-open says: the docs keep
-// their tree as it was between pages and open only their main group at first.
+// keeps the current page's group open and sets each other group as the reader last left it in this session,
+// else as the markup's data-default-open says: the docs keep their tree as it was between pages and open
+// only their main group at first.
 (function () {
   var side = document.getElementById('sidebar'), key = 'nav-groups', saved = {};
   try { saved = JSON.parse(sessionStorage.getItem(key)) || {}; } catch (e) { saved = {}; }
-  var path = location.pathname.replace(/\.html$/, '').replace(/\/index$/, '/');
-  function matches(a) {
-    var href = a.getAttribute('href');
-    return href === path || (href.length > 1 && href.slice(-1) === '/' && path.indexOf(href) === 0);
-  }
-  // The file browser's chrome marks /files/, but a directory the sidebar links to (/gigos/) is marked
-  // itself while the reader browses it.
   var current = side.querySelector('a[aria-current="page"]');
-  if (!current || !matches(current)) {
-    var found = null;
-    side.querySelectorAll('a[href^="/"]').forEach(function (a) {
-      if (!found && matches(a)) found = a;
-    });
-    if (found) {
-      if (current) current.removeAttribute('aria-current');
-      current = found;
-      found.setAttribute('aria-current', 'page');
-    }
-  }
   side.querySelectorAll('.nav-group').forEach(function (g) {
     var id = g.getAttribute('data-group');
     g.open = current && g.contains(current) ? true
@@ -310,7 +291,7 @@
   <h2 id="components" data-i18n="hComp">组件</h2>
 
   <h3 data-i18n="hShell">外壳</h3>
-  <p data-i18n-html="shell1">顶栏、侧栏、页脚与右侧目录由 <code>site/tools/render-chrome.py</code> 从 <code>site/tools/chrome/</code> 的模板生成，各页一致。顶栏左侧是站点标志与站名，正中是搜索按钮，右侧依次是“文件”图标按钮（S2 Folder 图标）、GitHub 图标、分隔线、语言与主题按钮，顺序与 React Spectrum 文档的顶栏相同。侧栏顶端是单独的概览，其下每个产品一个折叠分组：组名与页面行同样大小、字重与颜色，行尾的 Chevron 在展开时用 150ms 转向下方，组内页面再缩进 16px，展开与收起时立即出现或消失。悬停一行时左侧立即出现浅灰竖条，Chevron 加深；按下时整行按 S2 pressScale 下沉；键盘焦点环画在行内 2px，圆角 8px。以上状态均于 2026-09-29 在官方文档侧栏实测。没有脚本时各组全部展开；有脚本时展开当前页所在的组，其余组沿用读者在本次会话中的选择，初始按 <code>data-default-open</code>。新增页面只需在 <code>nav.html</code> 的组里加一行。以 / 结尾的行是文件浏览器的目录（如 /gigos/），不进上一页与下一页；浏览该目录时，侧栏把当前页标记从“文件”移到这一行。当前页加粗，左侧一道中性灰竖条；右侧目录由 <code>docs.js</code> 从正文 h2 生成，读到的小节同样标出竖条；小节只列在这里，不进侧栏，与 React Spectrum 文档一致。1024px 以下右侧目录收起，顶栏正中改为小节选择按钮：按钮写出正在读的小节，第一个小节之前写页面标题，点开是列出标题与各小节的弹出菜单。页面滚动 24 到 64px 之间，按钮上移淡入，顶栏浮起并加阴影；减少动态效果时按钮直接显示。只有正文含两个以上 h2 的页面保留右侧目录一栏，其余页面的正文在面板内居中。面板高一个视口，粘在顶栏下方：页面滚动时正文从顶栏下方经过，面板上方的圆角始终可见。官方文档在 1024px 以上让面板自身滚动、页面不滚动（2026-09-29 实测）；这里保留页面滚动，锚点、目录的阅读位置与键盘滚动不受影响。</p>
+  <p data-i18n-html="shell1">顶栏、侧栏、页脚与右侧目录由 <code>site/tools/render-chrome.py</code> 从 <code>site/tools/chrome/</code> 的模板生成，各页一致。顶栏左侧是站点标志与站名，正中是搜索按钮，右侧依次是“文件”图标按钮（S2 Folder 图标）、GitHub 图标、分隔线、语言与主题按钮，顺序与 React Spectrum 文档的顶栏相同。侧栏顶端是单独的概览，其下每个产品一个折叠分组：组名与页面行同样大小、字重与颜色，行尾的 Chevron 在展开时用 150ms 转向下方，组内页面再缩进 16px，展开与收起时立即出现或消失。悬停一行时左侧立即出现浅灰竖条，Chevron 加深；按下时整行按 S2 pressScale 下沉；键盘焦点环画在行内 2px，圆角 8px。以上状态均于 2026-09-29 在官方文档侧栏实测。没有脚本时各组全部展开；有脚本时展开当前页所在的组，其余组沿用读者在本次会话中的选择，初始按 <code>data-default-open</code>。新增页面只需在 <code>nav.html</code> 的组里加一行。当前页加粗，左侧一道中性灰竖条；右侧目录由 <code>docs.js</code> 从正文 h2 生成，读到的小节同样标出竖条；小节只列在这里，不进侧栏，与 React Spectrum 文档一致。1024px 以下右侧目录收起，顶栏正中改为小节选择按钮：按钮写出正在读的小节，第一个小节之前写页面标题，点开是列出标题与各小节的弹出菜单。页面滚动 24 到 64px 之间，按钮上移淡入，顶栏浮起并加阴影；减少动态效果时按钮直接显示。只有正文含两个以上 h2 的页面保留右侧目录一栏，其余页面的正文在面板内居中。面板高一个视口，粘在顶栏下方：页面滚动时正文从顶栏下方经过，面板上方的圆角始终可见。官方文档在 1024px 以上让面板自身滚动、页面不滚动（2026-09-29 实测）；这里保留页面滚动，锚点、目录的阅读位置与键盘滚动不受影响。</p>
 
   <h3 data-i18n="hChoice">选项切换</h3>
   <div class="demo">
@@ -583,7 +564,7 @@
 
 <div id="copy-toast" role="status" aria-live="polite"></div>
 
-<script src="/assets/strings.js?v=f130d6d2"></script>
+<script src="/assets/strings.js?v=8c103095"></script>
 <script>
 window.MIRROR_I18N = {
   'zh-tw': {
@@ -730,7 +711,7 @@ window.MIRROR_I18N = {
     r7k: "內文內距",
     r7v: "手機 16px，桌面 40px。更小的值會讓內文緊貼視窗邊緣",
     hShell: "外殼",
-    shell1: "頂欄、側欄、頁尾與右側目錄由 <code>site/tools/render-chrome.py</code> 從 <code>site/tools/chrome/</code> 的範本產生，各頁一致。頂欄左側是站點標誌與站名，正中是搜尋按鈕，右側依序是「檔案」圖示按鈕（S2 Folder 圖示）、GitHub 圖示、分隔線、語言與主題按鈕，順序與 React Spectrum 文件的頂欄相同。側欄頂端是單獨的概覽，其下每個產品一個摺疊分組：組名與頁面列同樣大小、字重與顏色，列尾的 Chevron 在展開時用 150ms 轉向下方，組內頁面再縮排 16px，展開與收合時立即出現或消失。游標停在一列上時左側立即出現淺灰豎條，Chevron 加深；按下時整列依 S2 pressScale 下沉；鍵盤焦點環畫在列內 2px，圓角 8px。以上狀態均於 2026-09-29 在官方文件側欄實測。沒有指令碼時各組全部展開；有指令碼時展開目前頁面所在的組，其餘組沿用讀者在本次工作階段中的選擇，初始依 <code>data-default-open</code>。新增頁面只需在 <code>nav.html</code> 的組裡加一行。以 / 結尾的行是檔案瀏覽器的目錄（如 /gigos/），不進上一頁與下一頁；瀏覽該目錄時，側欄把目前頁面標記從“檔案”移到這一行。目前頁面加粗，左側一道中性灰豎條；右側目錄由 <code>docs.js</code> 從內文 h2 產生，讀到的小節同樣標出豎條；小節只列在這裡，不進側欄，與 React Spectrum 文件一致。1024px 以下右側目錄收起，頂欄正中改為小節選擇按鈕：按鈕寫出正在讀的小節，第一個小節之前寫頁面標題，點開是列出標題與各小節的彈出選單。頁面捲動 24 到 64px 之間，按鈕上移淡入，頂欄浮起並加陰影；減少動態效果時按鈕直接顯示。只有內文含兩個以上 h2 的頁面保留右側目錄一欄，其餘頁面的內文在面板內置中。面板高一個視窗，黏在頂欄下方：頁面捲動時內文從頂欄下方經過，面板上方的圓角始終可見。官方文件在 1024px 以上讓面板自身捲動、頁面不捲動（2026-09-29 實測）；這裡保留頁面捲動，錨點、目錄的閱讀位置與鍵盤捲動不受影響。",
+    shell1: "頂欄、側欄、頁尾與右側目錄由 <code>site/tools/render-chrome.py</code> 從 <code>site/tools/chrome/</code> 的範本產生，各頁一致。頂欄左側是站點標誌與站名，正中是搜尋按鈕，右側依序是「檔案」圖示按鈕（S2 Folder 圖示）、GitHub 圖示、分隔線、語言與主題按鈕，順序與 React Spectrum 文件的頂欄相同。側欄頂端是單獨的概覽，其下每個產品一個摺疊分組：組名與頁面列同樣大小、字重與顏色，列尾的 Chevron 在展開時用 150ms 轉向下方，組內頁面再縮排 16px，展開與收合時立即出現或消失。游標停在一列上時左側立即出現淺灰豎條，Chevron 加深；按下時整列依 S2 pressScale 下沉；鍵盤焦點環畫在列內 2px，圓角 8px。以上狀態均於 2026-09-29 在官方文件側欄實測。沒有指令碼時各組全部展開；有指令碼時展開目前頁面所在的組，其餘組沿用讀者在本次工作階段中的選擇，初始依 <code>data-default-open</code>。新增頁面只需在 <code>nav.html</code> 的組裡加一行。目前頁面加粗，左側一道中性灰豎條；右側目錄由 <code>docs.js</code> 從內文 h2 產生，讀到的小節同樣標出豎條；小節只列在這裡，不進側欄，與 React Spectrum 文件一致。1024px 以下右側目錄收起，頂欄正中改為小節選擇按鈕：按鈕寫出正在讀的小節，第一個小節之前寫頁面標題，點開是列出標題與各小節的彈出選單。頁面捲動 24 到 64px 之間，按鈕上移淡入，頂欄浮起並加陰影；減少動態效果時按鈕直接顯示。只有內文含兩個以上 h2 的頁面保留右側目錄一欄，其餘頁面的內文在面板內置中。面板高一個視窗，黏在頂欄下方：頁面捲動時內文從頂欄下方經過，面板上方的圓角始終可見。官方文件在 1024px 以上讓面板自身捲動、頁面不捲動（2026-09-29 實測）；這裡保留頁面捲動，錨點、目錄的閱讀位置與鍵盤捲動不受影響。",
     choice1: "切換整塊內容的選擇（設定方式）畫成 Spectrum 的分頁標籤：文字下方一道 2px 中性灰橫條，沒有底線。頻道、鏡像與套件列表篩選是 Spectrum 2 的分段控制項：灰色軌道，選中項加 2px 描邊；鏡像選擇與它改動的位址或程式碼放在同一個安裝框裡。檔案瀏覽器在根目錄以下用同一組鏡像選擇器改寫檔案的下載連結，預設來源站；目錄列表仍從來源站讀取。所有鏡像選擇器共用 <code>mirror-source</code>，在一頁選定後其他頁沿用。目前項目寫在元素上（<code>.on</code> 與 <code>aria-pressed</code>），切換後立即更新相關位址、設定和狀態。分頁標籤切換的面板帶 <code>data-pane</code>；初始項是標記中帶 <code>.on</code> 的標籤，連結指向某個面板內的錨點時先切到該面板，右側目錄只列出可見面板的小節。沒有指令碼時標籤隱藏，各面板依序顯示。",
     modeManual: "手動設定",
     aMode: "設定方式", aChannel: "頻道",
@@ -954,7 +935,7 @@ window.MIRROR_I18N = {
     r7k: "Article padding",
     r7v: "16px on phones, 40px on desktop. Less puts the text against the viewport edge",
     hShell: "Shell",
-    shell1: "The top bar, sidebar, footer and outline are generated by <code>site/tools/render-chrome.py</code> from the templates in <code>site/tools/chrome/</code>, so every page matches. The top bar holds the logo and site name at the start, the search trigger in the middle, and at the end the Files icon button (S2 Folder icon), the GitHub icon, a divider, then language and theme, in the order of the React Spectrum docs' bar. The sidebar opens with the overview on its own, then one disclosure per product: the group title has the size, weight and colour of a page row and ends in a chevron that turns down over 150ms when the group is open; the group's pages sit 16px further in and appear or go at once. Hovering a row shows the light grey bar at once and darkens the chevron; pressing sinks the row with S2 pressScale; the keyboard focus ring sits 2px inside the row at radius 8. All measured on the docs' sidebar on 2026-09-29. Without scripts every group is open; with them the current page's group opens and the others keep what the reader chose earlier in the session, starting from <code>data-default-open</code>. A new page is one line in its group in <code>nav.html</code>. A row ending in / is a file-browser directory (such as /gigos/): the pager skips it, and while that directory is browsed the sidebar moves the current-page mark from Files to that row. The current page is bold with a neutral grey bar before it; the outline is built by <code>docs.js</code> from the h2s in main, and the section being read gets the same bar. Sections are listed only there, never in the sidebar, as on the React Spectrum docs. Below 1024px the outline column goes and the top bar centres a section picker: it names the section being read, or the page title before the first one, and opens a popover listing the title and every section. Between 24 and 64px of scrolling the picker rises and fades in and the bar lifts onto the raised layer with a shadow; with reduced motion the picker simply shows. Only pages with two or more h2s keep the outline column; the rest centre their article in the panel. The panel is one viewport tall and sticks below the top bar: the content passes under the bar and the panel's rounded top corners stay in view. From 1024px up the docs scroll the panel itself and not the page (measured 2026-09-29); here the page still scrolls, so anchors, the outline's reading position and keyboard scrolling work as usual.",
+    shell1: "The top bar, sidebar, footer and outline are generated by <code>site/tools/render-chrome.py</code> from the templates in <code>site/tools/chrome/</code>, so every page matches. The top bar holds the logo and site name at the start, the search trigger in the middle, and at the end the Files icon button (S2 Folder icon), the GitHub icon, a divider, then language and theme, in the order of the React Spectrum docs' bar. The sidebar opens with the overview on its own, then one disclosure per product: the group title has the size, weight and colour of a page row and ends in a chevron that turns down over 150ms when the group is open; the group's pages sit 16px further in and appear or go at once. Hovering a row shows the light grey bar at once and darkens the chevron; pressing sinks the row with S2 pressScale; the keyboard focus ring sits 2px inside the row at radius 8. All measured on the docs' sidebar on 2026-09-29. Without scripts every group is open; with them the current page's group opens and the others keep what the reader chose earlier in the session, starting from <code>data-default-open</code>. A new page is one line in its group in <code>nav.html</code>. The current page is bold with a neutral grey bar before it; the outline is built by <code>docs.js</code> from the h2s in main, and the section being read gets the same bar. Sections are listed only there, never in the sidebar, as on the React Spectrum docs. Below 1024px the outline column goes and the top bar centres a section picker: it names the section being read, or the page title before the first one, and opens a popover listing the title and every section. Between 24 and 64px of scrolling the picker rises and fades in and the bar lifts onto the raised layer with a shadow; with reduced motion the picker simply shows. Only pages with two or more h2s keep the outline column; the rest centre their article in the panel. The panel is one viewport tall and sticks below the top bar: the content passes under the bar and the panel's rounded top corners stay in view. From 1024px up the docs scroll the panel itself and not the page (measured 2026-09-29); here the page still scrolls, so anchors, the outline's reading position and keyboard scrolling work as usual.",
     choice1: "A choice that switches a whole pane (the setup mode) is drawn as Spectrum tabs: a 2px neutral grey bar under the label and no track line. The channel, mirrors and package filters are Spectrum 2 segmented controls: a grey track with the selected segment outlined in 2px; a mirror picker shares one install box with the address or code it changes. Below its root the file browser uses the same mirror picker to rewrite file download links, defaulting to the origin; listings still come from the origin. Every mirror picker shares <code>mirror-source</code>, so a choice on one page carries to the others. The current item is stated on the element (<code>.on</code> and <code>aria-pressed</code>), and switching updates the related addresses, configuration and status at once.A pane switched by tabs carries <code>data-pane</code>; the initial tab is the one marked <code>.on</code>, a link to an anchor inside a pane switches to that pane first, and the outline lists only the visible pane's sections. Without scripts the tabs are hidden and the panes follow one another.",
     modeManual: "Step by step",
     aMode: "Setup method", aChannel: "Channel",

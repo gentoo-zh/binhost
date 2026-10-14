@@ -1,7 +1,7 @@
 window.MIRROR_I18N_COMMON = {
   'zh-tw': {
     brand: 'Gentoo-zh 下载',
-    navIso: 'Live ISO', navIsoGet: 'CJK 最小安裝映像', navGigos: 'Gig-OS（獨立專案）', navOverlay: '加入 overlay', navSecIntro: '簡介', navHome: '概覽', navBin: '設定 binary package', navDist: '設定 distfiles',
+    navIso: 'Live ISO', navIsoGet: 'CJK 最小安裝映像', navOverlay: '加入 overlay', navSecIntro: '簡介', navHome: '概覽', navBin: '設定 binary package', navDist: '設定 distfiles',
     navMirrors: '鏡像列表', navStatus: '服務狀態', navHelp: '說明', navPkgs: '套件清單', navFiles: '檔案',
     navGOverlay: 'overlay', navGDist: 'distfiles', navGBin: 'binhost', navGMirrors: '鏡像', navGAbout: '關於', navAbout: '關於本站', navThanks: '致謝', navLogo: '標誌',
     prev: '上一頁', next: '下一頁', aPager: '上一頁與下一頁',
@@ -17,7 +17,7 @@ window.MIRROR_I18N_COMMON = {
   },
   'en': {
     brand: 'Gentoo-zh Downloads',
-    navIso: 'Live ISO', navIsoGet: 'CJK minimal installation image', navGigos: 'Gig-OS (independent project)', navOverlay: 'Add the overlay', navSecIntro: 'Introduction', navHome: 'Overview', navBin: 'Set up binary packages', navDist: 'Set up distfiles',
+    navIso: 'Live ISO', navIsoGet: 'CJK minimal installation image', navOverlay: 'Add the overlay', navSecIntro: 'Introduction', navHome: 'Overview', navBin: 'Set up binary packages', navDist: 'Set up distfiles',
     navMirrors: 'Mirror list', navStatus: 'Service status', navHelp: 'Help', navPkgs: 'Package list', navFiles: 'Files',
     navGOverlay: 'overlay', navGDist: 'distfiles', navGBin: 'binhost', navGMirrors: 'Mirrors', navGAbout: 'About', navAbout: 'About this site', navThanks: 'Acknowledgments', navLogo: 'Logo',
     prev: 'Previous', next: 'Next', aPager: 'Previous and next',

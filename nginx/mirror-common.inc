@@ -40,22 +40,6 @@ location ^~ /distfiles/ {
 	}
 }
 
-location ^~ /gigos/ {
-	root /srv/pub;
-	include /etc/nginx/conf.d/headers-files.inc;
-
-	gzip off;
-	# Same-day rebuilds reuse the file name.
-	open_file_cache off;
-
-	location ~ /$ {
-		root /srv/mirrors;
-		add_header Cache-Control "no-cache";
-		include /etc/nginx/conf.d/headers-site.inc;
-		try_files /_app.html =404;
-	}
-}
-
 location ^~ /binpkgs/ {
 	root /srv/pub;
 	include /etc/nginx/conf.d/headers-files.inc;
@@ -168,7 +152,6 @@ location = /distfiles { return 301 /distfiles/; }
 location = /binpkgs { return 301 /binpkgs/; }
 location = /unstable { return 301 /unstable/; }
 location = /unstable/binpkgs { return 301 /unstable/binpkgs/; }
-location = /gigos { return 301 /gigos/; }
 location = /gentoo-cjk-kernel { return 301 /gentoo-cjk-kernel/; }
 location = /gentoo-cjk-livecd { return 301 /gentoo-cjk-livecd/; }
 location = /files { return 301 /files/; }
@@ -232,6 +215,10 @@ location ~ /$ {
 	open_file_cache off;
 	try_files ${uri}index.html /_app.html;
 }
+
+# Gig-OS images were carried until 2026-10. Old links get a real 404 rather than
+# the file browser that answers any other unknown directory.
+location ^~ /gigos/ { return 404; }
 
 error_page 404 /404.html;
 location = /404.html {
