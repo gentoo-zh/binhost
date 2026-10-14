@@ -14,7 +14,6 @@
 | unstable binpkg | 2.2 GB / 433 个 | 构建机 PKGDIR | 225 秒 |
 | 内核归档 | 274 MB / 2 个 | 构建机已发布副本（补齐后） | **未重新量测** |
 | distfiles | 27 GB / 1403 个 | 各上游 SRC_URI | 575 秒，在用的全部取回 |
-| GIG OS ISO | 7.8 GB / 2 个 | `Gig-OS/*` 仓库，构建机有副本 | 未量测 |
 
 两个频道的 binpkg 加起来 **6 分半**可以恢复到可服务并通过同代校验。
 distfiles 再需 **9 分半**。演练期间有 13 个取源失败的文件；逐一复查后确认，
@@ -216,7 +215,7 @@ EOF
 这两条命令的目标、数据库、日志与清理状态都在同一个平行根下。同步会按 SRC_URI
 逐个取回，失败的文件会记在平行根的失败日志里。
 
-### 4 内核归档与 GIG OS
+### 4 内核归档
 
 内核归档只能从已发布副本恢复。先逐个核对 Manifest；全部通过后，才把原有目录结构同步
 到镜像机：
@@ -242,11 +241,6 @@ rsync -a "$PUBLISHED_DIR/" "$REMOTE:$REMOTE_ROOT/"
 ```
 
 不要用 PKGDIR 代替 `PUBLISHED_DIR`，即使版本和发布名相同，重建的 gpkg 摘要也可能不同。
-
-GIG OS 不由本仓库产生，恢复来源是 `Gig-OS/Live-ISO`（构建）与
-`Gig-OS/gentoozh-liveiso-infra`（`build-and-deploy.sh`、`reupload-iso.sh`）。
-当前两份 ISO 在构建机上有副本，恢复是复制而不是重建。**ISO 构建与 binhost 的两轮
-构建共用同一台机器**，恢复或重建时要与 08:00 和 20:00 两个时段错开。
 
 ## 真的丢了就没有的
 

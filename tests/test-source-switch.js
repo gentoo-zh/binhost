@@ -179,8 +179,8 @@ check("存储不可用的新页面使用语言默认值", all(blockedFresh.selec
 
 // The file browser: the same mirror list, the origin by default in every language, and file links
 // rewritten to the chosen mirror; the listing itself stays on this host.
-const filePath = "/gigos/2026/gig%20os.iso";
-const fileLink = () => element({ href: "gig%20os.iso", "data-src-link": "files", "data-src-path": filePath });
+const filePath = "/gentoo-cjk-livecd/2026/install%20cjk.iso";
+const fileLink = () => element({ href: "install%20cjk.iso", "data-src-link": "files", "data-src-path": filePath });
 for (const lang of ["zh-cn", "zh-tw", "en"]) {
   const link = fileLink();
   const fresh = load("_app.html", lang, storage(), [link]);

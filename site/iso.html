@@ -125,7 +125,6 @@
     <summary class="nav-group-title"><span data-i18n="navIso">Live ISO</span><svg class="chevron" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M7.965 5.178C7.978 5.118 8 5.061 8 5s-.021-.118-.034-.178c-.01-.05-.01-.102-.03-.15-.023-.058-.068-.107-.104-.16-.03-.042-.047-.09-.084-.127l-.004-.003-.003-.004L3.615.303a.875.875 0 1 0-1.23 1.244L5.88 5 2.385 8.453a.875.875 0 1 0 1.23 1.244L7.74 5.622l.003-.004.004-.003c.037-.038.055-.085.084-.127.036-.053.08-.102.104-.16.02-.048.02-.1.03-.15"/></svg></summary>
     <ul class="pages">
       <li><a class="nav-link" href="/iso" aria-current="page" data-i18n="navIsoGet">CJK 最小安装镜像</a></li>
-      <li><a class="nav-link" href="/gigos/" data-i18n="navGigos">Gig-OS（独立项目）</a></li>
     </ul>
   </details>
   <details class="nav-group" data-group="mirrors" data-default-open open>
@@ -152,31 +151,13 @@
 </nav>
 <script>
 // Every group is open in the markup, so without scripts the whole list shows. Before the first paint this
-// marks the current page where render-chrome.py could not, keeps its group open, and sets each other group
-// as the reader last left it in this session, else as the markup's data-default-open says: the docs keep
-// their tree as it was between pages and open only their main group at first.
+// keeps the current page's group open and sets each other group as the reader last left it in this session,
+// else as the markup's data-default-open says: the docs keep their tree as it was between pages and open
+// only their main group at first.
 (function () {
   var side = document.getElementById('sidebar'), key = 'nav-groups', saved = {};
   try { saved = JSON.parse(sessionStorage.getItem(key)) || {}; } catch (e) { saved = {}; }
-  var path = location.pathname.replace(/\.html$/, '').replace(/\/index$/, '/');
-  function matches(a) {
-    var href = a.getAttribute('href');
-    return href === path || (href.length > 1 && href.slice(-1) === '/' && path.indexOf(href) === 0);
-  }
-  // The file browser's chrome marks /files/, but a directory the sidebar links to (/gigos/) is marked
-  // itself while the reader browses it.
   var current = side.querySelector('a[aria-current="page"]');
-  if (!current || !matches(current)) {
-    var found = null;
-    side.querySelectorAll('a[href^="/"]').forEach(function (a) {
-      if (!found && matches(a)) found = a;
-    });
-    if (found) {
-      if (current) current.removeAttribute('aria-current');
-      current = found;
-      found.setAttribute('aria-current', 'page');
-    }
-  }
   side.querySelectorAll('.nav-group').forEach(function (g) {
     var id = g.getAttribute('data-group');
     g.open = current && g.contains(current) ? true
@@ -247,19 +228,6 @@
 <p data-i18n-html="sourceFooter">新版构建通知：<a href="https://t.me/gentoomirror">Telegram @gentoomirror</a>。</p>
 </section>
 
-<h2 id="desktop">Gig-OS</h2>
-<span id="desktop-mirrors"></span>
-<span id="login"></span>
-<span id="desktop-requirements"></span>
-<span id="highlights"></span>
-<span id="zfs"></span>
-<span id="nvidia"></span>
-<p data-i18n="gigosLead">Gig-OS 是其他组织的独立项目，本站及各镜像站只同步其安装镜像。</p>
-<ul class="entry-grid">
-    <li><a class="entry-card" href="/gigos/"><span class="entry-head"><svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M16.75 5h-5.964c-.218 0-.424-.095-.567-.259L8.516 2.776C8.088 2.283 7.468 2 6.816 2H3.25C2.01 2 1 3.01 1 4.25v10.5C1 15.99 2.01 17 3.25 17h13.5c1.24 0 2.25-1.01 2.25-2.25v-7.5C19 6.01 17.99 5 16.75 5M3.25 3.5h3.565c.218 0 .424.095.567.259L8.458 5H2.5v-.75c0-.413.336-.75.75-.75M17.5 14.75c0 .413-.336.75-.75.75H3.25c-.414 0-.75-.337-.75-.75V6.5h14.25c.414 0 .75.337.75.75z"/></svg><span class="entry-title" data-i18n="dlDir">下载目录</span></span><span class="entry-desc" data-i18n="dlGigDesc">Gig-OS 安装镜像，页顶可切换镜像</span></a></li>
-    <li><a class="entry-card" href="https://github.com/Gig-OS"><span class="entry-head"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.02-2.06-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.62-5.48 5.92.43.37.81 1.1.81 2.22 0 1.61-.01 2.9-.01 3.29 0 .32.21.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5z"/></svg><span class="entry-title" data-i18n="gigosGh">GitHub 上的 Gig-OS</span></span><span class="entry-desc">github.com/Gig-OS</span></a></li>
-</ul>
-
   <!-- chrome:pager -->
   <nav class="pager" aria-label="上一页与下一页" data-i18n-label="aPager">
     <a class="pager-link pager-prev" href="/binpkg-setup"><span class="pager-dir" data-i18n="prev">上一页</span><span class="pager-title" data-i18n="navBin">配置 binary package</span></a>
@@ -280,7 +248,7 @@
 <div id="copy-toast" role="status" aria-live="polite"></div>
 
 <script src="/assets/util.js?v=216bc353"></script>
-<script src="/assets/strings.js?v=f130d6d2"></script>
+<script src="/assets/strings.js?v=8c103095"></script>
 <script>
 window.MIRROR_I18N = {
   "zh-tw": {
@@ -297,11 +265,8 @@ window.MIRROR_I18N = {
     "usbNote": "以下指令會覆寫整個目標裝置。寫入前須核對 ISO 摘要和 USB 隨身碟裝置路徑。",
     "mirrorsTitle": "下載鏡像",
     "sourceFooter": "新版建置通知：<a href=\"https://t.me/gentoomirror\">Telegram @gentoomirror</a>。",
-    "gigosLead": "Gig-OS 是其他組織的獨立專案，本站及各鏡像站只同步其安裝鏡像。",
     "dlDir": "下載目錄",
     "dlCjkDesc": "ISO 與校驗檔案，頁面頂端可切換鏡像",
-    "dlGigDesc": "Gig-OS 安裝鏡像，頁面頂端可切換鏡像",
-    "gigosGh": "GitHub 上的 Gig-OS",
     "verifyTitle": "校驗 ISO",
     "hashLocation": "在同一版本目錄下載兩個檔案。",
     "hashDownload": "下載 ISO 和對應的 .sha256 檔案",
@@ -329,11 +294,8 @@ window.MIRROR_I18N = {
     "usbNote": "This command overwrites the entire target device. Verify the ISO digest and the USB device path before writing.",
     "mirrorsTitle": "Download images",
     "sourceFooter": "New-build notifications: <a href=\"https://t.me/gentoomirror\">Telegram @gentoomirror</a>.",
-    "gigosLead": "Gig-OS is an independent project of another organization; this site and its mirrors only carry its installation images.",
     "dlDir": "Download directory",
     "dlCjkDesc": "ISOs and checksum files; switch mirrors at the top of the page",
-    "dlGigDesc": "Gig-OS installation images; switch mirrors at the top of the page",
-    "gigosGh": "Gig-OS on GitHub",
     "verifyTitle": "Verify the ISO",
     "hashLocation": "Download both files from the same version directory.",
     "hashDownload": "Download the ISO and its .sha256 file",

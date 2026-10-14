@@ -571,24 +571,6 @@
    ]
   },
   {
-   "url": "/iso#desktop",
-   "group": "iso",
-   "kind": "section",
-   "title": {
-    "zh-cn": "Gig-OS",
-    "zh-tw": "Gig-OS",
-    "en": "Gig-OS"
-   },
-   "desc": {
-    "zh-cn": "CJK 最小安装镜像",
-    "zh-tw": "CJK 最小安裝鏡像",
-    "en": "CJK minimal installation image"
-   },
-   "keywords": [
-    "desktop"
-   ]
-  },
-  {
    "url": "/mirrors",
    "group": "mirrors",
    "kind": "page",
@@ -653,9 +635,9 @@
     "en": "FAQ"
    },
    "desc": {
-    "zh-cn": "overlay、distfiles、binary package、Live ISO、镜像",
-    "zh-tw": "overlay、distfiles、binary package、Live ISO、鏡像",
-    "en": "overlay, distfiles, Binary packages, Live ISO, Mirrors"
+    "zh-cn": "overlay、distfiles、binary package、镜像",
+    "zh-tw": "overlay、distfiles、binary package、鏡像",
+    "en": "overlay, distfiles, Binary packages, Mirrors"
    },
    "keywords": [
     "faq"
@@ -1017,42 +999,6 @@
     "CFLAGS=\"-O2 -pipe -march=x86-64 -mtune=generic\"",
     "-march=native",
     "CFLAGS"
-   ]
-  },
-  {
-   "url": "/faq#live-iso",
-   "group": "help",
-   "kind": "section",
-   "title": {
-    "zh-cn": "Live ISO",
-    "zh-tw": "Live ISO",
-    "en": "Live ISO"
-   },
-   "desc": {
-    "zh-cn": "FAQ",
-    "zh-tw": "FAQ",
-    "en": "FAQ"
-   },
-   "keywords": [
-    "live-iso"
-   ]
-  },
-  {
-   "url": "/faq#gigos",
-   "group": "help",
-   "kind": "section",
-   "title": {
-    "zh-cn": "Gig-OS 的使用说明在哪里？",
-    "zh-tw": "Gig-OS 的使用說明在哪裡？",
-    "en": "Where is the Gig-OS documentation?"
-   },
-   "desc": {
-    "zh-cn": "FAQ · Live ISO",
-    "zh-tw": "FAQ · Live ISO",
-    "en": "FAQ · Live ISO"
-   },
-   "keywords": [
-    "gigos"
    ]
   },
   {

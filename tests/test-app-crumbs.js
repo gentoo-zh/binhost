@@ -183,14 +183,14 @@ check("中文目录名按相同规则编码",
 
   // Below the root a file link names its path for the mirror picker; a directory link does not, since
   // listings always come from the origin.
-  const GIGOS_LS = [{ name: "2026 09", type: "directory", mtime: "Mon, 10 Aug 2026 16:56:06 GMT" },
-                    { name: "gig os#1.iso", type: "file", size: 3, mtime: "Mon, 10 Aug 2026 16:56:06 GMT" }];
-  const files = load("/gigos/%E4%B8%AD/", () =>
-    Promise.resolve({ ok: true, json: () => Promise.resolve(GIGOS_LS) }));
+  const LIVECD_LS = [{ name: "2026 09", type: "directory", mtime: "Mon, 10 Aug 2026 16:56:06 GMT" },
+                    { name: "install cjk#1.iso", type: "file", size: 3, mtime: "Mon, 10 Aug 2026 16:56:06 GMT" }];
+  const files = load("/gentoo-cjk-livecd/%E4%B8%AD/", () =>
+    Promise.resolve({ ok: true, json: () => Promise.resolve(LIVECD_LS) }));
   await settle();
   const rows = files.nodes.rows.innerHTML;
   check("文件链接写出其在镜像上的路径",
-        rows.includes('href="gig%20os%231.iso" data-src-link="files" data-src-path="/gigos/%E4%B8%AD/gig%20os%231.iso"'),
+        rows.includes('href="install%20cjk%231.iso" data-src-link="files" data-src-path="/gentoo-cjk-livecd/%E4%B8%AD/install%20cjk%231.iso"'),
         rows);
   check("目录链接不交给镜像选择器",
         /<a class="dir" href="2026%2009\/">/.test(rows) && (rows.match(/data-src-link/g) || []).length === 1, rows);
