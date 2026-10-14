@@ -76,8 +76,7 @@ button:not(:disabled) { cursor: pointer; }
   padding-inline: var(--sp-2); margin-inline-start: calc(-1 * var(--sp-2));
   border-radius: var(--r-md); color: var(--fg); text-decoration: none;
 }
-.nav-brand img { width: var(--logo); height: var(--logo); flex: none; object-fit: contain; }
-.nav-title { font-weight: 800; font-size: var(--fs-brand); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav-brand img { width: auto; height: var(--brand-h); flex: none; }
 /* The docs' top bar: 32px quiet buttons 4px apart on one centre line, the last one ending at the panel's
    edge. Each menu's wrapper is a flex box, so it is exactly its button's height rather than a line box
    whose strut pushed the button 2px up. */
@@ -743,7 +742,8 @@ main li + li { margin-top: var(--sp-2); }
    one height (64px, --sp-16) so the names line up; the image keeps its own aspect ratio and starts at the
    box's start edge. Logos are the mirrors' own artwork, only resized: colours are never changed, and every
    logo sits directly on the card in both themes; one that could not be read on the dark surface gets a dark
-   variant (.logo-light / .logo-dark) rather than a backing plate. */
+   variant (.logo-light / .logo-dark) rather than a backing plate.
+   /logo lays out its logo files in the same cards, one per file; each card links to the SVG. */
 .mirror-cards {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4);
   margin: 0 0 var(--sp-6); padding: 0; list-style: none;
@@ -755,8 +755,21 @@ main li + li { margin-top: var(--sp-2); }
 .mirror-name { color: var(--fg); font-size: var(--fs-value); font-weight: 700; overflow-wrap: anywhere; }
 .mirror-loc, .mirror-desc { color: var(--fg-soft); }
 .mirror-site { margin-block-start: auto; padding-block-start: var(--sp-2); color: var(--accent); overflow-wrap: anywhere; }
+/* Logo previews on /logo: the transparent files have black or purple lettering, which the dark surface would
+   hide, so every preview sits on the same white tile in both themes. */
+.brand-tile {
+  display: flex; align-items: center; justify-content: center; height: calc(var(--sp-16) * 2);
+  margin-block-end: var(--sp-3); padding: var(--sp-4); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md); background: var(--on-art);
+}
+.brand-tile img { width: auto; max-width: 100%; height: 100%; object-fit: contain; }
+/* The earlier gentoo-zh logo on /logo: a 124px JPEG shown at twice its size, never wider than the column. */
+.old-logo { margin: 0 0 var(--sp-6); }
+.old-logo img { display: block; max-width: 100%; height: auto; border-radius: var(--r-md); }
+.old-logo figcaption { margin-block-start: var(--sp-2); color: var(--fg-soft); font-size: var(--fs-ui); line-height: var(--lh-ui); }
 /* The variant shown follows the theme in effect, as the theme button's icon does: data-theme when the reader
-   forced one, else the system's. A <source media> could only follow the system. */
+   forced one, else the system's. A <source media> could only follow the system. The top bar's and the search
+   dialog's gentoo-zh logo switch the same way. */
 .logo-dark { display: none; }
 :root[data-theme="dark"] .logo-light { display: none; }
 :root[data-theme="dark"] .logo-dark { display: block; }
@@ -1113,9 +1126,6 @@ main.wide ~ .foot { max-width: none; }
   .nav-tools { order: 1; }
   .toc-pick-btn { width: 100%; justify-content: center; }
   .nav:has(.toc-pick) .nav-brand { flex: none; }
-  .nav:has(.toc-pick) .nav-title {
-    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap;
-  }
   body :is(main, .foot) { grid-column: 1; max-width: none; margin-inline-end: 0; }
   main, main.wide { padding: var(--sp-8) var(--sp-4) 0; }
   .foot, main.wide ~ .foot { margin-top: var(--sp-12); padding: var(--sp-4) var(--sp-4) var(--sp-8); }
@@ -1317,11 +1327,11 @@ html:has(.sd[open]) { overflow: hidden; scrollbar-gutter: stable; }
 .sd[open] { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); gap: var(--sp-6); }
 .sd-brand { align-self: start; padding-inline-start: var(--sp-3); border-inline-start: var(--bw-2) solid var(--fg); }
 .sd-brand-link {
-  display: flex; align-items: center; gap: var(--sp-2); min-height: var(--logo);
+  display: flex; align-items: center; gap: var(--sp-2); min-height: var(--brand-h);
   border-radius: var(--r-sm); color: var(--fg); font-size: var(--fs-value); font-weight: 800; text-decoration: none;
 }
-.sd-brand-link img { width: var(--logo); height: var(--logo); flex: none; object-fit: contain; }
-.sd-tagline { margin: var(--sp-1) 0 0 calc(var(--logo) + var(--sp-2)); color: var(--fg-soft); font-size: var(--fs-ui); line-height: var(--lh-ui); }
+.sd-brand-link img { width: auto; height: var(--brand-h); flex: none; }
+.sd-tagline { margin: var(--sp-1) 0 0; color: var(--fg-soft); font-size: var(--fs-ui); line-height: var(--lh-ui); }
 .sd-main { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .sd::backdrop { background: var(--backdrop); }
 .sd-top { display: flex; align-items: center; padding-inline-end: var(--sp-10); }
