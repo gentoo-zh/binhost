@@ -199,6 +199,8 @@ location = /packages.txt {
 
 location ~* \.json$ {
 	add_header Cache-Control "no-cache";
+	add_header Access-Control-Allow-Origin $gz_cors_origin always;
+	add_header Vary Origin always;
 	include /etc/nginx/conf.d/headers-site.inc;
 	open_file_cache off;
 }
