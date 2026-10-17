@@ -373,7 +373,25 @@ jobs:
           openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
             -subj /CN=distfiles.gentoozh.org \
             -keyout $live/privkey.pem -out $live/fullchain.pem 2>/dev/null
-          cp nginx/*.inc nginx/distfiles.conf /etc/nginx/conf.d/
+          mkdir -p /etc/nginx/modules-enabled
+          echo 'load_module modules/ngx_http_xslt_filter_module.so;' > /etc/nginx/modules-enabled/xslt.conf
+          fail() { echo "!! $1"; exit 1; }
+
+          # A first install has none of the project files in conf.d yet.
+          rm -f /etc/nginx/conf.d/*
+          bash deploy/nginx-stage-test.sh nginx /tmp/stage /etc/nginx/mime.types ||
+            fail "conf.d 为空时暂存测试不通过，说明它依赖已安装的文件"
+
+          sums() { find /etc/nginx -type f -exec sha256sum {} + | sort; }
+          before=$(sums)
+          mkdir /tmp/bad && cp nginx/* /tmp/bad/
+          printf '<xsl:stylesheet version="1.0"\n' > /tmp/bad/listing-txt.xsl
+          if bash deploy/nginx-stage-test.sh /tmp/bad /tmp/stage-bad /etc/nginx/mime.types; then
+            fail "损坏的 XSL 通过了暂存测试"
+          fi
+          [ "$(sums)" = "${before}" ] || fail "暂存测试改动了 /etc/nginx"
+
+          cp nginx/*.inc nginx/*.xsl nginx/distfiles.conf /etc/nginx/conf.d/
           sed 's/mime\.types\.nginx/mime.types/' nginx/nginx.conf > /etc/nginx/nginx.conf
           nginx -t
 
@@ -381,7 +399,8 @@ jobs:
         run: |
           cp site/_app.html site/index.html site/faq.html /srv/mirrors/
           mkdir -p /srv/pub/binpkgs/x86-64 \
-            /srv/pub/unstable/binpkgs/x86-64 /srv/pub/distfiles
+            /srv/pub/unstable/binpkgs/x86-64 /srv/pub/distfiles \
+            /srv/pub/gentoo-cjk-kernel /srv/pub/gentoo-cjk-livecd
           printf 'PACKAGES: 1\n\nCPV: a/b-1\n' > /srv/pub/binpkgs/x86-64/Packages
           printf 'PACKAGES: 1\n\nCPV: c/d-1\n' > /srv/pub/unstable/binpkgs/x86-64/Packages
           printf 'stable package body\n' > /srv/pub/binpkgs/x86-64/a-b-1.gpkg.tar
@@ -390,11 +409,22 @@ jobs:
           echo '{}' > /srv/pub/unstable/binpkgs/x86-64/status.json
           printf '[structure]\n0=filename-hash BLAKE2B 8\n' > /srv/pub/distfiles/layout.conf
           mkdir -p /srv/pub/distfiles/c6 && echo x > /srv/pub/distfiles/c6/t.tar.gz
+          long=$(printf 'n%.0s' $(seq 53)).tar.gz
+          echo x > "/srv/pub/distfiles/c6/${long}"
+          mkdir -p /srv/pub/distfiles/ix && echo 'INDEX FILE' > /srv/pub/distfiles/ix/index.html
+          mkdir -p '/srv/pub/distfiles/a b' && echo x > '/srv/pub/distfiles/a b/c.txt'
+          mkdir -p /srv/pub/distfiles/empty
+          echo k > /srv/pub/gentoo-cjk-kernel/k.tar.xz
+          echo l > /srv/pub/gentoo-cjk-livecd/l.iso
+          echo ok > /srv/mirrors/.health
           nginx
           sleep 1
           H='Host: distfiles.gentoozh.org'
-          code() { curl -sS -o /dev/null -w '%{http_code}' -H "$H" "http://127.0.0.1$1"; }
-          loc()  { curl -sS -o /dev/null -w '%{redirect_url}' -H "$H" "http://127.0.0.1$1"; }
+          BROWSER='text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+          # limit_req allows 50 requests a second per address; stay below it.
+          req()  { sleep 0.025; curl -sS -H "$H" "$@"; }
+          code() { local u="$1"; shift; req -o /dev/null -w '%{http_code}' "$@" "http://127.0.0.1$u"; }
+          loc()  { req -o /dev/null -w '%{redirect_url}' "http://127.0.0.1$1"; }
           fail() { echo "!! $1"; exit 1; }
 
           [ "$(code /binpkgs/x86-64/nope.gpkg.tar)" = 404 ] || fail "不存在的包没有返回 404"
@@ -408,13 +438,16 @@ jobs:
           [ "$(code /distfiles/c6/t.tar.gz)" = 200 ]        || fail "distfiles 布局不对"
           [ "$(code /distfiles/distfiles/layout.conf)" = 404 ] || fail "distfiles 多了一层"
 
-          hdr() { curl -sS -o /dev/null -D - -H "$H" "http://127.0.0.1$1" | tr -d '\r' | grep -i "^$2:" | cut -d' ' -f2-; }
+          # hdr URL NAME [curl args]: every value of that header, one per line.
+          hdr() {
+            local url="$1" name="$2"; shift 2
+            req -o /dev/null -D - "$@" "http://127.0.0.1${url}" |
+              tr -d '\r' | grep -i "^${name}:" | cut -d' ' -f2-
+          }
+          body() { local url="$1"; shift; req "$@" "http://127.0.0.1${url}"; }
           [ "$(hdr /faq x-content-type-options)" = nosniff ] || fail "页面没有 nosniff"
           case "$(hdr /faq content-security-policy)" in "default-src 'self'"*) ;; *) fail "页面 CSP 不对" ;; esac
           case "$(hdr /distfiles/c6/t.tar.gz content-security-policy)" in "default-src 'none'; sandbox") ;; *) fail "distfile 的 CSP 缺少 sandbox" ;; esac
-          case "$(hdr /distfiles/c6/ content-security-policy)" in "default-src 'self'"*) ;; *) fail "distfiles 目录页未使用站点 CSP" ;; esac
-          case "$(hdr /binpkgs/x86-64/ content-security-policy)" in "default-src 'self'"*) ;; *) fail "stable 目录页未使用站点 CSP" ;; esac
-          case "$(hdr /unstable/binpkgs/x86-64/ content-security-policy)" in "default-src 'self'"*) ;; *) fail "unstable 目录页未使用站点 CSP" ;; esac
           [ "$(hdr /binpkgs/x86-64/Packages x-content-type-options)" = nosniff ] || fail "stable 索引没有 nosniff"
           [ "$(hdr /unstable/binpkgs/x86-64/Packages x-content-type-options)" = nosniff ] || fail "unstable 索引没有 nosniff"
           for channel_status in /binpkgs/x86-64/status.json \
@@ -424,6 +457,7 @@ jobs:
               *) fail "${channel_status} 可能返回缓存状态" ;;
             esac
           done
+          [ "$(hdr /.health cache-control)" = no-store ] || fail ".health 可能被缓存"
 
           printf 'User-agent: *\nDisallow: /distfiles/\n' > /srv/mirrors/robots.txt
           [ "$(code /robots.txt)" = 200 ] || fail "robots.txt 无法获取"
@@ -434,9 +468,83 @@ jobs:
           case "$(hdr /t.json cache-control)" in *no-cache*) ;; *) fail "json 不该长缓存" ;; esac
           [ "$(code /_raw/)" = 200 ] || fail "/_raw/ 目录浏览打不开"
 
-          [ "$(code /binpkgs/x86-64/)" = 200 ] || fail "stable 目录浏览打不开"
-          [ "$(code /unstable/binpkgs/x86-64/)" = 200 ] || fail "unstable 目录浏览打不开"
-          [ "$(code /files/)" = 200 ]          || fail "浏览根打不开"
+          # curl and scripts: one text line per entry, name last.
+          line='^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z  (-  [^/]+/|[0-9]+  [^/]+)$'
+          for d in / /files/ /distfiles/ /binpkgs/x86-64/ /unstable/ /unstable/binpkgs/x86-64/ \
+            /gentoo-cjk-kernel/ /gentoo-cjk-livecd/; do
+            [ "$(code "$d")" = 200 ] || fail "curl 打不开 $d"
+            case "$(hdr "$d" content-type)" in "text/plain; charset=utf-8") ;; *) fail "$d 给 curl 的不是纯文本：$(hdr "$d" content-type)" ;; esac
+            out=$(body "$d")
+            [ -n "${out}" ] || fail "$d 的文本清单是空的"
+            bad=$(printf '%s\n' "${out}" | grep -Evc "${line}") || true
+            [ "${bad}" = 0 ] || fail "$d 有 ${bad} 行不合格式：$(printf '%s\n' "${out}" | grep -Ev "${line}" | head -1)"
+            hdr "$d" vary | grep -qx 'Accept, User-Agent' || fail "$d 没有 Vary: Accept, User-Agent"
+            [ "$(hdr "$d" cache-control)" = no-cache ] || fail "$d 的文本清单可能被缓存"
+            [ "$(hdr "$d" content-security-policy)" = "default-src 'none'; sandbox" ] || fail "$d 的文本清单没有用文件的 CSP"
+          done
+          body /distfiles/ | grep -Eq '  -  c6/$' || fail "/distfiles/ 没有列出 c6/"
+          size=$(stat -c %s /srv/pub/distfiles/layout.conf)
+          body /distfiles/ | grep -Eq "  ${size}  layout\.conf$" || fail "/distfiles/ 没有写出 layout.conf 的字节数"
+          [ "$(body /files/)" = "$(body /)" ] || fail "/files/ 的文本清单与 / 不同"
+          body / | grep -Eq '  -  distfiles/$' || fail "/ 没有列出 /srv/pub 的 distfiles/"
+          [ "$(code '/distfiles/a%20b/')" = 200 ] || fail "带空格的目录打不开"
+          body '/distfiles/a%20b/' | grep -Eq '  c\.txt$' || fail "带空格的目录没有列出内容"
+
+          # Text browsers and Wget: the stock autoindex page.
+          for ua in 'w3m/0.5.3' 'Lynx/2.9.0 libwww-FM/2.14' 'Wget/1.21.4'; do
+            for d in / /files/ /distfiles/c6/; do
+              case "$(hdr "$d" content-type -A "$ua")" in text/html*) ;; *) fail "$ua 打开 $d 得到的不是 HTML" ;; esac
+              ! body "$d" -A "$ua" | grep -qi '<script' || fail "$ua 打开 $d 的页面带脚本"
+              hdr "$d" vary -A "$ua" | grep -qx 'Accept, User-Agent' || fail "$ua 打开 $d 没有 Vary"
+              [ "$(hdr "$d" cache-control -A "$ua")" = no-cache ] || fail "$ua 打开 $d 的清单可能被缓存"
+            done
+            [ "$(code /files/ -A "$ua")" = 200 ] || fail "$ua 打开 /files/ 不是 200"
+            [ "$(body /files/ -A "$ua")" = "$(body / -A "$ua")" ] || fail "$ua 打开 /files/ 与 / 不同"
+            body / -A "$ua" | grep -q 'href="distfiles/"' || fail "$ua 打开 / 没有列出 distfiles/"
+            body /distfiles/c6/ -A "$ua" | grep -qF "href=\"${long}\"" || fail "$ua 的清单截断了长文件名的链接"
+          done
+
+          # An empty directory: XSLT output must not be empty, or nginx answers 500.
+          [ "$(code /distfiles/empty/)" = 200 ] || fail "curl 打开空目录不是 200"
+          [ "$(body /distfiles/empty/ | od -An -c | tr -d ' ')" = '\n' ] || fail "空目录给 curl 的不是一个换行"
+          for ua in 'w3m/0.5.3' 'Lynx/2.9.0 libwww-FM/2.14'; do
+            [ "$(code /distfiles/empty/ -A "$ua")" = 200 ] || fail "$ua 打开空目录不是 200"
+          done
+
+          # A directory holding index.html is still listed.
+          body /distfiles/ix/ | grep -Eq '  index\.html$' || fail "含 index.html 的目录没有给 curl 列出清单"
+          ! body /distfiles/ix/ | grep -q 'INDEX FILE' || fail "含 index.html 的目录给 curl 返回了那个文件"
+          body /distfiles/ix/ -A w3m | grep -q 'href="index.html"' || fail "含 index.html 的目录没有给 w3m 列出清单"
+
+          # Browsers keep the old pages until stage C.
+          for d in /files/ /distfiles/ /binpkgs/x86-64/ /unstable/ /unstable/binpkgs/x86-64/ \
+            /gentoo-cjk-kernel/ /gentoo-cjk-livecd/ /distfiles/nope/; do
+            [ "$(code "$d" -A Mozilla/5.0 -H "Accept: ${BROWSER}")" = 200 ] || fail "浏览器打不开 $d"
+            [ "$(body "$d" -A Mozilla/5.0 -H "Accept: ${BROWSER}")" = "$(cat /srv/mirrors/_app.html)" ] || fail "浏览器打开 $d 得到的不是文件浏览器"
+            case "$(hdr "$d" content-security-policy -A Mozilla/5.0 -H "Accept: ${BROWSER}")" in "default-src 'self'"*) ;; *) fail "$d 的浏览器页面未使用站点 CSP" ;; esac
+            hdr "$d" vary -A Mozilla/5.0 -H "Accept: ${BROWSER}" | grep -qx 'Accept, User-Agent' || fail "浏览器打开 $d 没有 Vary"
+          done
+          [ "$(body / -A Mozilla/5.0 -H "Accept: ${BROWSER}")" = "$(cat /srv/mirrors/index.html)" ] || fail "浏览器打开 / 得到的不是首页"
+
+          # /_ls/: CORS for gentoozh.org on every answer, 404 and 301 included.
+          for u in /_ls/ /_ls/missing/ /_ls/distfiles; do
+            [ "$(hdr "$u" access-control-allow-origin -H 'Origin: https://gentoozh.org')" = https://gentoozh.org ] ||
+              fail "$u 没有给 gentoozh.org 发 ACAO"
+            [ -z "$(hdr "$u" access-control-allow-origin -H 'Origin: https://evil.example')" ] ||
+              fail "$u 给了其他来源 ACAO"
+            hdr "$u" vary -H 'Origin: https://gentoozh.org' | grep -qx Origin || fail "$u 没有 Vary: Origin"
+            [ "$(hdr "$u" cache-control)" = no-cache ] || fail "$u 可能被缓存"
+          done
+          [ "$(code /_ls/)" = 200 ]          || fail "/_ls/ 打不开"
+          [ "$(code /_ls/missing/)" = 404 ]  || fail "/_ls/ 下不存在的目录该是 404"
+          [ "$(code /_ls/distfiles)" = 301 ] || fail "/_ls/distfiles 没有补斜杠"
+          case "$(hdr /_ls/ content-type)" in application/json*) ;; *) fail "/_ls/ 不是 JSON" ;; esac
+
+          # A missing path gets nginx's own 404, not the old page.
+          for u in /distfiles/nope/ /nope.txt; do
+            [ "$(code "$u")" = 404 ] || fail "$u 该是 404"
+            body "$u" | grep -q '<center>nginx</center>' || fail "$u 的 404 不是 nginx 默认页"
+          done
 
           [ "$(code /faq)" = 200 ]              || fail "/faq 打不开"
           [ "$(code /faq.html)" = 301 ]         || fail "/faq.html 没有跳转"
@@ -449,12 +557,14 @@ jobs:
           [ "$(code /_app)" = 404 ]      || fail "/_app 不该可访问"
 
           [ "$(code /files/nope/)" = 404 ] || fail "/files/ 下的路径该是 404"
+          for u in /_txt/ /_html/ /_web/; do
+            [ "$(code "$u")" = 404 ] || fail "内部路径 $u 可以直接访问"
+          done
 
           curl -sS -I -H "$H" http://127.0.0.1/faq | grep -qi '^cache-control: no-cache' \
             || fail "页面没有发 Cache-Control"
           curl -sS -I -H "$H" http://127.0.0.1/faq | grep -qi '^strict-transport-security' \
             || fail "页面没有发 HSTS"
-
           echo "  全部通过"
 
   deploy:

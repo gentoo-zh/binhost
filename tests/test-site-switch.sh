@@ -183,14 +183,28 @@ echo "== 来源不是站点目录时不发布"
 d=$(setup)
 site "${d}/src" A
 publish "${d}" >/dev/null
-rm -f "${d}/src/index.html"
+rm -f "${d}/src/gentoo-zh-binhost.asc"
 out=$(publish "${d}")
 rc=$?
 ok "退出码非零" "$((rc != 0))" "1"
-ok "说明来源缺 index.html" \
-   "$([[ ${out} == *未包含\ index.html* ]] && echo yes)" "yes"
+ok "说明来源缺公钥" \
+   "$([[ ${out} == *未包含\ gentoo-zh-binhost.asc* ]] && echo yes)" "yes"
 ok "已发布的站点原样保留" "$(marks "${d}")" "A"
 ok "六个名称仍然指向 .site" "$(linked "${d}")" "6"
+rm -rf "${d}"
+
+echo
+echo "== 只有公钥与 robots.txt 的来源照常发布"
+# The pages move to gentoozh.org, so a source without index.html is a site.
+d=$(setup)
+mkdir -p "${d}/src"
+printf 'key K\n' > "${d}/src/gentoo-zh-binhost.asc"
+printf 'user-agent: K\n' > "${d}/src/robots.txt"
+out=$(publish "${d}")
+rc=$?
+ok "退出码为零" "${rc}" "0"
+ok "公钥已发布" "$(cat "${d}/dest/gentoo-zh-binhost.asc" 2>/dev/null)" "key K"
+ok "robots.txt 已发布" "$(cat "${d}/dest/robots.txt" 2>/dev/null)" "user-agent: K"
 rm -rf "${d}"
 
 echo

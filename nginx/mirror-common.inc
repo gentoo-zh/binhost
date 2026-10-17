@@ -19,11 +19,52 @@ location ^~ /_raw/ {
 
 location ^~ /_ls/ {
 	alias /srv/pub/;
+	log_not_found off;
 	autoindex on;
 	autoindex_format json;
 	include /etc/nginx/conf.d/headers-files.inc;
+	add_header Access-Control-Allow-Origin $gz_cors_origin always;
+	add_header Vary Origin always;
+	add_header Cache-Control "no-cache" always;
 	autoindex_localtime off;
 	index .no-index;
+}
+
+# Directory listings, reached only by the rewrites below; $gz_listing picks one.
+# index .no-index keeps a directory holding index.html a listing.
+# log_not_found off: a missing directory is the client's 404, not an error to log.
+location ^~ /_txt/ {
+	internal;
+	alias /srv/pub/;
+	log_not_found off;
+	index .no-index;
+	autoindex on;
+	autoindex_format xml;
+	xslt_stylesheet /etc/nginx/conf.d/listing-txt.xsl;
+	include /etc/nginx/conf.d/headers-files.inc;
+	include /etc/nginx/conf.d/headers-listing.inc;
+}
+
+location ^~ /_html/ {
+	internal;
+	alias /srv/pub/;
+	log_not_found off;
+	index .no-index;
+	autoindex on;
+	autoindex_format html;
+	autoindex_exact_size on;
+	autoindex_localtime off;
+	include /etc/nginx/conf.d/headers-files.inc;
+	include /etc/nginx/conf.d/headers-listing.inc;
+}
+
+location ^~ /_web/ {
+	internal;
+	root /srv/mirrors;
+	include /etc/nginx/conf.d/headers-site.inc;
+	include /etc/nginx/conf.d/headers-listing.inc;
+	open_file_cache off;
+	try_files $gz_web_page /_app.html =404;
 }
 
 location ^~ /distfiles/ {
@@ -33,10 +74,7 @@ location ^~ /distfiles/ {
 	gzip off;
 
 	location ~ /$ {
-		root /srv/mirrors;
-		add_header Cache-Control "no-cache";
-		include /etc/nginx/conf.d/headers-site.inc;
-		try_files /_app.html =404;
+		rewrite ^ /_$gz_listing$uri last;
 	}
 }
 
@@ -45,10 +83,7 @@ location ^~ /binpkgs/ {
 	include /etc/nginx/conf.d/headers-files.inc;
 
 	location ~ /$ {
-		root /srv/mirrors;
-		add_header Cache-Control "no-cache";
-		include /etc/nginx/conf.d/headers-site.inc;
-		try_files /_app.html =404;
+		rewrite ^ /_$gz_listing$uri last;
 	}
 
 	location ~ \.gpkg\.tar$ {
@@ -79,10 +114,7 @@ location ^~ /unstable/binpkgs/ {
 	include /etc/nginx/conf.d/headers-files.inc;
 
 	location ~ /$ {
-		root /srv/mirrors;
-		add_header Cache-Control "no-cache";
-		include /etc/nginx/conf.d/headers-site.inc;
-		try_files /_app.html =404;
+		rewrite ^ /_$gz_listing$uri last;
 	}
 
 	location ~ \.gpkg\.tar$ {
@@ -116,10 +148,7 @@ location ^~ /gentoo-cjk-kernel/ {
 	access_log /var/log/nginx/mirror.log mirror;
 
 	location ~ /$ {
-		root /srv/mirrors;
-		add_header Cache-Control "no-cache";
-		include /etc/nginx/conf.d/headers-site.inc;
-		try_files /_app.html =404;
+		rewrite ^ /_$gz_listing$uri last;
 	}
 }
 
@@ -131,10 +160,7 @@ location ^~ /gentoo-cjk-livecd/ {
 	access_log /var/log/nginx/mirror.log mirror;
 
 	location ~ /$ {
-		root /srv/mirrors;
-		add_header Cache-Control "no-cache";
-		include /etc/nginx/conf.d/headers-site.inc;
-		try_files /_app.html =404;
+		rewrite ^ /_$gz_listing$uri last;
 	}
 }
 
@@ -155,11 +181,8 @@ location = /unstable/binpkgs { return 301 /unstable/binpkgs/; }
 location = /gentoo-cjk-kernel { return 301 /gentoo-cjk-kernel/; }
 location = /gentoo-cjk-livecd { return 301 /gentoo-cjk-livecd/; }
 location = /files { return 301 /files/; }
-location = /files/ {
-	add_header Cache-Control "no-cache";
-	include /etc/nginx/conf.d/headers-site.inc;
-	try_files /_app.html =404;
-}
+# /files/ is a second name for the root directory.
+location = /files/ { rewrite ^ /_$gz_listing/ last; }
 location ^~ /files/ { return 404; }
 
 location = /_app { return 404; }
@@ -211,23 +234,13 @@ location ~* \.(css|js)$ {
 	open_file_cache off;
 }
 
-location ~ /$ {
-	add_header Cache-Control "no-cache";
-	include /etc/nginx/conf.d/headers-site.inc;
-	open_file_cache off;
-	try_files ${uri}index.html /_app.html;
-}
+location = / { rewrite ^ /_$gz_listing/ last; }
+
+location ~ /$ { rewrite ^ /_$gz_listing$uri last; }
 
 # Gig-OS images were carried until 2026-10. Old links get a real 404 rather than
 # the file browser that answers any other unknown directory.
 location ^~ /gigos/ { return 404; }
-
-error_page 404 /404.html;
-location = /404.html {
-	internal;
-	add_header Cache-Control "no-cache";
-	include /etc/nginx/conf.d/headers-site.inc;
-}
 
 location / {
 	add_header Cache-Control "no-cache";

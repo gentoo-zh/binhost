@@ -9,8 +9,6 @@ FPR_FILE="${FPR_FILE:-/etc/binhost/signing-key.fpr}"
 [[ -d ${SRC} ]] || { echo "!! ${SRC} 不存在" >&2; exit 1; }
 [[ -r ${SRC}/gentoo-zh-binhost.asc ]] ||
     { echo "!! ${SRC} 未包含 gentoo-zh-binhost.asc" >&2; exit 1; }
-[[ -r ${SRC}/index.html ]] ||
-    { echo "!! ${SRC} 未包含 index.html" >&2; exit 1; }
 
 if [[ ! -r ${FPR_FILE} ]]; then
     echo "!! ${FPR_FILE} 不存在，不发布任何内容" >&2

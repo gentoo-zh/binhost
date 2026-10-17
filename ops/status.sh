@@ -195,7 +195,7 @@ check_kernel_archive
 
 
 check_site_sync() {
-    local fetched age_h here_site marked drift pages f site_fd
+    local fetched age_h here_site marked key_ok site_fd
 
     fetched=$(stat -c %Y "${SITE_WORK}/.git/FETCH_HEAD" 2>/dev/null || echo 0)
     age_h=$(( ($(date +%s) - fetched) / 3600 ))
@@ -224,24 +224,19 @@ check_site_sync() {
 
     here_site=$(git -C "${SITE_WORK}" rev-parse HEAD 2>/dev/null)
     marked=$(cat "${SITE_WORK}/.synced" 2>/dev/null || true)
-    drift=$(diff -rq "${SITE_WORK}/site/assets" "${SITE_DEST}/assets" 2>&1 | wc -l)
-    pages=0
-    for f in "${SITE_WORK}"/site/*.html; do
-        cmp -s "${f}" "${SITE_DEST}/$(basename "${f}")" || pages=$((pages + 1))
-    done
+    key_ok=0
+    [[ -r ${SITE_DEST}/gentoo-zh-binhost.asc ]] && key_ok=1
+    cmp -s "${SITE_WORK}/site/gentoo-zh-binhost.asc" "${SITE_DEST}/gentoo-zh-binhost.asc" &&
+        key_ok=2
     exec {site_fd}>&-
 
     if [[ ! ${here_site} =~ ^[0-9a-f]{40}$ ]]; then
         bad "站点同步" "无法解析 ${SITE_WORK} 的版本：${here_site:-无输出}"
     elif [[ ${marked} != "${here_site}" ]]; then
         bad "站点同步" "仓库副本在 ${here_site:0:8}，上次完成的是 ${marked:0:8}，最近一次未完成"
-    elif (( drift )); then
-        bad "站点同步" "assets 有 ${drift} 处与仓库副本不一致，rsync 未完成"
-    elif (( pages )); then
-        bad "站点同步" "${pages} 个页面与仓库副本不一致，rsync 未完成"
-    elif [[ ! -r ${SITE_DEST}/gentoo-zh-binhost.asc ]]; then
+    elif (( key_ok == 0 )); then
         bad "站点同步" "发布目录未包含公钥，用户无法按站点第 1 步获取公钥"
-    elif ! cmp -s "${SITE_WORK}/site/gentoo-zh-binhost.asc" "${SITE_DEST}/gentoo-zh-binhost.asc"; then
+    elif (( key_ok == 1 )); then
         bad "站点同步" "仓库里的公钥与已发布的不一致，publish-site.sh 的指纹校验可能拒绝了本次发布"
     else
         note "站点同步" "${here_site:0:8}，${age_h} 小时内已拉取"

@@ -19,7 +19,7 @@ ok() {
 setup() {
     local d
     d=$(mktemp -d)
-    mkdir -p "${d}/bin" "${d}/work/site/assets" "${d}/dest/assets"
+    mkdir -p "${d}/bin" "${d}/work/site" "${d}/dest"
 
     cat > "${d}/bin/curl" <<'EOF'
 #!/bin/bash
@@ -47,8 +47,8 @@ EOF
         commit -q --allow-empty -m t
     touch "${d}/work/.git/FETCH_HEAD"
 
-    printf 'x\n' > "${d}/work/site/index.html"
-    printf 'x\n' > "${d}/dest/index.html"
+    printf 'ua\n' > "${d}/work/site/robots.txt"
+    printf 'ua\n' > "${d}/dest/robots.txt"
     printf 'k\n' > "${d}/work/site/gentoo-zh-binhost.asc"
     printf 'k\n' > "${d}/dest/gentoo-zh-binhost.asc"
     /usr/bin/git -C "${d}/work" rev-parse HEAD > "${d}/work/.synced"
@@ -72,6 +72,33 @@ echo "== 一致时不报站点同步"
 d=$(setup)
 out=$(run "${d}")
 ok "一致时不是故障" "$([[ $(line "${out}") != *'!'* ]] && echo yes)" "yes"
+rm -rf "${d}"
+
+echo
+echo "== 站点只剩公钥与 robots.txt 时不报故障"
+# The pages and assets move to gentoozh.org; the check compares the key only,
+# so an empty glob or a missing assets directory is not a sync failure.
+d=$(setup)
+printf 'x\n' > "${d}/dest/index.html"
+mkdir -p "${d}/dest/assets"
+out=$(run "${d}")
+ok "没有页面与 assets 时不是故障" "$([[ $(line "${out}") != *'<--'* ]] && echo yes)" "yes"
+rm -rf "${d}"
+
+echo
+echo "== 公钥缺失或不一致时报故障"
+d=$(setup)
+rm -f "${d}/dest/gentoo-zh-binhost.asc"
+out=$(run "${d}")
+ok "指出发布目录缺公钥" \
+   "$([[ $(line "${out}") == *未包含公钥* ]] && echo yes)" "yes"
+rm -rf "${d}"
+
+d=$(setup)
+printf 'other\n' > "${d}/dest/gentoo-zh-binhost.asc"
+out=$(run "${d}")
+ok "指出公钥与仓库不一致" \
+   "$([[ $(line "${out}") == *公钥与已发布的不一致* ]] && echo yes)" "yes"
 rm -rf "${d}"
 
 echo

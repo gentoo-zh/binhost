@@ -97,7 +97,7 @@ echo
 echo "== 部署验证、锁与版本标记的顺序"
 
 install="${ROOT}/deploy/install.sh"
-nginx_check=$(line_of "${install}" "sudo nginx -t -c")
+nginx_check=$(line_of "${install}" "bash nginx-stage-test.sh")
 nginx_install=$(line_of "${install}" "sudo install -m644 nginx.conf")
 logrotate_check=$(line_of "${install}" "sudo logrotate -d nginx-test/logrotate-binhost")
 logrotate_install=$(line_of "${install}" "sudo install -m644 logrotate-binhost /etc/logrotate.d/binhost")
@@ -217,6 +217,93 @@ echo "== 确认动作在本地执行，不在远端脚本里"
 # shellcheck disable=SC2016  # we grep for a literal ${VAR}, not its value
 has "本地会建立第二条连线确认" "sudo install -m644 /dev/stdin '\${CONFIRM}'" "${ROOT}/deploy/install.sh"
 has "确认之后才保存规则" "rc-service nftables save" "${ROOT}/deploy/install.sh"
+
+echo
+echo "== nginx 换用程序与新配置检查"
+
+# Stubs for the commands the nginx steps call. NX_EXE is what readlink says
+# about the running master, NX_CT the content type curl gets for /distfiles/.
+nx="${tmp}/nx"
+mkdir -p "${nx}/bin"
+cat > "${nx}/bin/sudo" <<'EOF'
+#!/bin/bash
+case "$1" in
+    cat)      [ "$2" = /run/nginx/nginx.pid ] && echo 4242 && exit 0; exit 1 ;;
+    readlink) [ "$2" = /proc/4242/exe ] && echo "${NX_EXE}"; exit 0 ;;
+    install)  case "${*: -1}" in
+                  */VERSION) cat > "${NX_DIR}/version" ;;
+                  *) case " $* " in *' /dev/stdin '*) cat > /dev/null ;; esac ;;
+              esac
+              exit 0 ;;
+    test)     exit "${NX_CERT_RC:-0}" ;;
+    grep)     exit 0 ;;
+    emerge)   echo emerge >> "${NX_DIR}/log"; exit 0 ;;
+esac
+exec "$@"
+EOF
+cat > "${nx}/bin/rc-service" <<'EOF'
+#!/bin/bash
+echo "$*" >> "${NX_DIR}/log"
+exit 0
+EOF
+# shellcheck disable=SC2016  # the stub expands NX_CT when it runs
+printf '#!/bin/sh\nprintf %%s "${NX_CT}"\n' > "${nx}/bin/curl"
+printf '#!/bin/sh\necho "nginx version: nginx/1.31 --with-http_v3_module"\n' > "${nx}/bin/nginx"
+printf '#!/bin/sh\nexit 0\n' > "${nx}/bin/sleep"
+cp "${nx}/bin/sleep" "${nx}/bin/rc-update"
+cp "${nx}/bin/sleep" "${nx}/bin/rsync"
+chmod +x "${nx}"/bin/*
+
+# The install steps from the cronie check up to the VERSION write.
+sed -n '/^svc_bad=0$/,/\/usr\/local\/lib\/binhost\/VERSION$/p' "${tmp}/remote.sh" > "${nx}/install-start.sh"
+# deploy-site.sh's remote script, from the pid lookup on.
+cat > "${nx}/bin/ssh" <<EOF
+#!/bin/bash
+for a in "\$@"; do last="\$a"; done
+case "\${last}" in
+    *mktemp*) echo /tmp/stage ;;
+    *'nginx -t'*) printf '%s\n' "\${last}" > "${nx}/site-remote.sh" ;;
+esac
+exit 0
+EOF
+chmod +x "${nx}/bin/ssh"
+( cd "${ROOT}" && PATH="${nx}/bin:${PATH}" bash deploy-site.sh </dev/null >/dev/null 2>&1 ) || true
+sed -n '/^ *pid=\$(sudo cat/,$p' "${nx}/site-remote.sh" > "${nx}/site-start.sh"
+ok "取出了 install.sh 的启动步骤" "$(grep -c 'rc-service nginx reload' "${nx}/install-start.sh")" "1"
+ok "取出了 deploy-site.sh 的启动步骤" "$(grep -c 'rc-service nginx reload' "${nx}/site-start.sh")" "1"
+
+# nx_run SCRIPT EXE CT: prints "<rc>|<nginx action>|<VERSION written?>".
+nx_run() {
+    local rc=0 act
+    rm -f "${nx}/log" "${nx}/version"
+    PATH="${nx}/bin:${PATH}" NX_DIR="${nx}" NX_EXE="$2" NX_CT="$3" \
+        bash -euo pipefail "$1" </dev/null >/dev/null 2>&1 || rc=$?
+    act=$(grep -oE '^nginx (upgrade|reload)' "${nx}/log" | tr '\n' ' ')
+    printf '%s|%s|%s\n' "${rc}" "${act% }" "$([ -s "${nx}/version" ] && echo written || echo none)"
+}
+
+for script in install-start site-start; do
+    f="${nx}/${script}.sh"
+    ok "${script}：运行中的程序已被替换就 upgrade，哪怕本次没有编译" \
+       "$(nx_run "${f}" '/usr/sbin/nginx (deleted)' 'text/plain; charset=utf-8' | cut -d'|' -f1,2)" "0|nginx upgrade"
+    ok "${script}：程序未被替换就 reload" \
+       "$(nx_run "${f}" /usr/sbin/nginx 'text/plain; charset=utf-8' | cut -d'|' -f1,2)" "0|nginx reload"
+    ok "${script}：curl 拿不到纯文本清单就失败" \
+       "$(nx_run "${f}" /usr/sbin/nginx 'text/html' | cut -d'|' -f1 | grep -cv '^0$')" "1"
+done
+ok "install.sh 检查通过才写 VERSION" \
+   "$(nx_run "${nx}/install-start.sh" /usr/sbin/nginx 'text/plain; charset=utf-8' | cut -d'|' -f3)" "written"
+ok "install.sh 检查不通过就不写 VERSION" \
+   "$(nx_run "${nx}/install-start.sh" /usr/sbin/nginx 'text/html' | cut -d'|' -f3)" "none"
+
+# Unreadable cert while the live config serves 443: stop before the emerge.
+sed -n "/^echo '--- nginx'$/,/^bash nginx-stage-test.sh/p" "${tmp}/remote.sh" > "${nx}/cert.sh"
+rc=0
+: > "${nx}/log"
+PATH="${nx}/bin:${PATH}" NX_DIR="${nx}" NX_CERT_RC=1 \
+    bash -euo pipefail "${nx}/cert.sh" </dev/null >/dev/null 2>&1 || rc=$?
+ok "证书不可读且现有配置监听 443 时中止" "$((rc != 0))" "1"
+ok "并且在重新编译 nginx 之前中止" "$(grep -c emerge "${nx}/log")" "0"
 
 echo
 if (( fail )); then

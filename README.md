@@ -113,6 +113,13 @@ SIGNING_KEY=<签名指纹> REMOTE="ssh build" \
 上一份索引刷新包列表，并保持本次失败状态。TLS 证书和 `/etc/binhost/alert.conf` 需要
 单独配置。
 
+部署前在镜像机执行 `nginx -V 2>&1 | grep -o http_xslt`，确认 nginx 带有 xslt 模块。没有输出时，
+`install.sh` 先重新编译 nginx，再以 `rc-service nginx upgrade` 换用新程序；安装最后检查
+`/distfiles/` 是否向 curl 返回纯文本清单，不是就中止并且不写入 `VERSION`。
+
+回滚：在本机执行 `git revert <提交>`，再执行 `./deploy/install.sh`。安装会覆盖镜像机上的
+nginx 配置、脚本与 `VERSION`，重新编译过的 nginx 不会还原。
+
 `deploy/install-builder.sh` 在构建机安装 `build/`、内核归档与状态检查的定时器，并停用旧
 流水线的 `binhost-build*.timer`。脚本检测到构建锁时会中止；运行中的构建不应使用
 `FORCE=1` 覆盖。两个频道的更新单元按 [`builders/README.md`](builders/README.md) 安装。
@@ -144,7 +151,8 @@ rename 整体切换，因此不会出现页面与其指纹化 assets 分属两�
 ./deploy-site.sh
 ```
 
-该脚本先通过指纹清单验证公开密钥，再发布站点；nginx 配置通过 `nginx -t` 后才重新载入。
+该脚本先通过指纹清单验证公开密钥，再发布站点；nginx 配置通过 `nginx -t` 后才重新载入，运行中的
+nginx 程序已被重新编译替换时改用 `upgrade`，之后同样检查 `/distfiles/` 的纯文本清单。
 
 ## 监控
 

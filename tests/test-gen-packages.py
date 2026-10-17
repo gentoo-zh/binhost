@@ -15,10 +15,19 @@ ACCT = 'EAPI=8\ninherit acct-group\nKEYWORDS="~amd64"\nACCT_GROUP_ID=-1\n'
 HEADER = "ACCEPT_KEYWORDS: ~amd64\nPACKAGES: 9\nTIMESTAMP: 1\nVERSION: 0"
 
 
-def stanza(cpv, repo, slot="0"):
+def stanza(cpv, repo, slot="0", extra=""):
     cp = cpv.rsplit("-", 1)[0]
     return (f"CPV: {cpv}\nPATH: {cp}/{cpv.split('/')[-1]}.gpkg.tar\n"
-            f"REPO: {repo}\nSLOT: {slot}")
+            f"REPO: {repo}\nSLOT: {slot}" + extra)
+
+
+SCHEMA4_KEYS = {"cp", "binhost", "dist", "channelExcluded", "policy", "why",
+                "excluded", "present"}
+
+
+def schema4(row):
+    """The fields schema 4 wrote, so a schema-5 row compares with the old output."""
+    return {k: v for k, v in row.items() if k in SCHEMA4_KEYS}
 
 
 def fresh(d, index_text=None, index_path=None, list_lines=(), distfiles=None):
@@ -261,7 +270,7 @@ case("已设定的索引无法读取时中止，不覆写上一份输出", lambd
         run_main("", index_path="/nonexistent/Packages"))))
 
 case("写出 schema 版本，供页面判断数据是否够新", lambda: (
-    run_main(stanza("dev-libs/lib-1", "gentoo"))[1]["schema"] == 4))
+    run_main(stanza("dev-libs/lib-1", "gentoo"))[1]["schema"] == 5))
 
 case("acct 与 virtual 按普通包分类", lambda: (
     classify("acct-group/example", ACCT) == "nobuild"
@@ -374,7 +383,7 @@ case("overlay 所有包都列出，包括两者都没有的包", lambda: (
     }))
 
 case("已发布的 acct 包按普通包写出", lambda: (
-    availability_matrix()[1]["acct-group/published"] == {
+    schema4(availability_matrix()[1]["acct-group/published"]) == {
         "cp": "acct-group/published", "binhost": False, "dist": [],
         "why": "nobuild",
     }
@@ -384,7 +393,7 @@ case("只有 9999 的包仍列出并标明原因", lambda: (
     availability_matrix()[1]["app-misc/live-only"].get("why") == "live"))
 
 case("overlay 已移除但仍在公开索引中的包标为 removed", lambda: (
-    availability_matrix()[1]["app-misc/removed"] == {
+    schema4(availability_matrix()[1]["app-misc/removed"]) == {
         "cp": "app-misc/removed", "binhost": False, "dist": [],
         "present": False, "why": "removed",
     }))
@@ -392,6 +401,73 @@ case("overlay 已移除但仍在公开索引中的包标为 removed", lambda: (
 case("包数据与纯文本清单不再写入说明", lambda: (
     all("desc" not in row for row in availability_matrix()[1].values())
     and "DESCRIPTION" not in availability_matrix()[0][3]))
+
+def built_rows(index, list_lines=(), packages=None, distfiles=("both.tar",)):
+    with tempfile.TemporaryDirectory() as tmp:
+        overlay = make_overlay(pathlib.Path(tmp) / "overlay", packages or {
+            "app-misc/a": {"dist": ["both.tar"]},
+        })
+        result = run_main(index, overlay=overlay, list_lines=list_lines,
+                          distfiles=distfiles)
+        return result[1], {row["cp"]: row for row in result[1]["packages"]}
+
+
+case("schema 5 写出已发布的最新版本，按 Portage 规则比较", lambda: (
+    built_rows("\n\n".join([
+        stanza("app-misc/a-1.10", "gentoo-zh", extra="\nSIZE: 10"),
+        stanza("app-misc/a-1.9", "gentoo-zh", extra="\nSIZE: 9"),
+    ]))[1]["app-misc/a"].get("ver") == "1.10"))
+
+case("schema 5 的 size 取所选版本的 SIZE", lambda: (
+    built_rows("\n\n".join([
+        stanza("app-misc/a-1.10", "gentoo-zh", extra="\nSIZE: 10"),
+        stanza("app-misc/a-1.9", "gentoo-zh", extra="\nSIZE: 9"),
+    ]))[1]["app-misc/a"].get("size") == 10))
+
+case("同一 CPV 的多次构建取 BUILD_ID 最大的一份", lambda: (
+    built_rows("\n\n".join([
+        stanza("app-misc/a-1", "gentoo-zh", extra="\nBUILD_ID: 2\nSIZE: 22"),
+        stanza("app-misc/a-1", "gentoo-zh", extra="\nBUILD_ID: 3\nSIZE: 33"),
+        stanza("app-misc/a-1", "gentoo-zh", extra="\nBUILD_ID: 1\nSIZE: 11"),
+    ]))[1]["app-misc/a"].get("size") == 33))
+
+case("::gentoo 的同名产物不当作本仓库的版本", lambda: (
+    "ver" not in built_rows(stanza("app-misc/a-9", "gentoo"))[1]["app-misc/a"]))
+
+case("缺 SIZE 时只写版本，不写 size", lambda: (
+    (lambda row: row.get("ver") == "1" and "size" not in row)(
+        built_rows(stanza("app-misc/a-1", "gentoo-zh"))[1]["app-misc/a"])))
+
+case("未发布的包不写 ver 与 size", lambda: (
+    (lambda row: "ver" not in row and "size" not in row)(
+        built_rows("", list_lines=("app-misc/a",))[1]["app-misc/a"])))
+
+case("distfiles 全部镜像时 mirrored 为 true，缺一个为 false", lambda: (
+    (lambda rows: rows["app-misc/a"].get("mirrored") is True
+     and rows["app-misc/b"].get("mirrored") is False
+     and "mirrored" not in rows["app-misc/c"])(
+        built_rows("", packages={
+            "app-misc/a": {"dist": ["both.tar"]},
+            "app-misc/b": {"dist": ["both.tar", "gone.tar"]},
+            "app-misc/c": {},
+        })[1])))
+
+case("distfiles 索引无法读取时不写 mirrored 与 distGenerated", lambda: (
+    (lambda data, rows: "mirrored" not in rows["app-misc/a"]
+     and "distGenerated" not in data)(
+        *built_rows("", distfiles=None))))
+
+case("顶层写出两份索引的生成时间", lambda: (
+    (lambda data: data.get("binGenerated") == 1 and data.get("distGenerated") == 1)(
+        built_rows(stanza("app-misc/a-1", "gentoo-zh"))[0])))
+
+case("::gentoo 依赖带上 SIZE", lambda: (
+    load(stanza("dev-libs/lib-1", "gentoo", extra="\nSIZE: 42"))[0].get("size") == 42))
+
+case("schema 4 已有的字段与含义不变", lambda: (
+    all(set(schema4(row)) == set(row) - {"ver", "size", "mirrored"}
+        for row in availability_matrix()[1].values())
+    and availability_matrix()[1]["app-misc/bin-only"]["binhost"] is True))
 
 print(f"  {'用例':<44} 结果")
 bad = 0

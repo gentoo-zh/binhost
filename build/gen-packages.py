@@ -91,22 +91,48 @@ def read_excluded(path=EXCLUDED):
     return out
 
 
+def version_string(parts):
+    return parts[2] + ("-" + parts[3] if parts[3] != "r0" else "")
+
+
 def read_built():
+    """The newest published binary package of each gentoo-zh package.
+
+    Returns {cp: {"ver", "size"?, "build_id"}} and the index's TIMESTAMP (None
+    when the header has none). Two stanzas of one CPV (binpkg-multi-instance)
+    go to the higher BUILD_ID, since that is the build a client resolving the
+    index gets. "size" is left out when the stanza carries no SIZE.
+    """
     if not INDEX:
-        return set()
+        return {}, None
     p = pathlib.Path(INDEX)
     if not p.exists():
-        return set()
-    out = set()
-    for stanza in p.read_text(errors="ignore").split("\n\n")[1:]:
+        return {}, None
+    text = p.read_text(errors="ignore").split("\n\n")
+    header = dict(STANZA.findall(text[0]))
+    stamp = int(header["TIMESTAMP"]) if header.get("TIMESTAMP", "").isdigit() else None
+    out = {}
+    for stanza in text[1:]:
         fields = dict(STANZA.findall(stanza))
         if fields.get("REPO") != "gentoo-zh":
             continue
         cpv = fields.get("CPV", "")
         parts = catpkgsplit(cpv)
-        if parts:
-            out.add(f"{parts[0]}/{parts[1]}")
-    return out
+        if not parts:
+            continue
+        cp = f"{parts[0]}/{parts[1]}"
+        build_id = fields.get("BUILD_ID", "")
+        entry = {"ver": version_string(parts),
+                 "build_id": int(build_id) if build_id.isdigit() else 0}
+        if fields.get("SIZE", "").isdigit():
+            entry["size"] = int(fields["SIZE"])
+        old = out.get(cp)
+        if old is not None:
+            order = vercmp(entry["ver"], old["ver"]) or 0
+            if order < 0 or (order == 0 and entry["build_id"] <= old["build_id"]):
+                continue
+        out[cp] = entry
+    return out, stamp
 
 
 class IndexUnreadable(Exception):
@@ -150,9 +176,11 @@ def read_deps():
         parts = catpkgsplit(cpv)
         if not parts:
             raise IndexUnreadable(f"无法解析 CPV：{cpv}")
-        ver = parts[2] + ("-" + parts[3] if parts[3] != "r0" else "")
-        out.append({"cp": f"{parts[0]}/{parts[1]}", "ver": ver,
-                    "slot": f.get("SLOT", "0").split("/", 1)[0]})
+        dep = {"cp": f"{parts[0]}/{parts[1]}", "ver": version_string(parts),
+               "slot": f.get("SLOT", "0").split("/", 1)[0]}
+        if f.get("SIZE", "").isdigit():
+            dep["size"] = int(f["SIZE"])
+        out.append(dep)
     if others:
         raise IndexUnreadable(f"索引里有未知仓库的产物：{' '.join(sorted(others))}")
     def compare(left, right):
@@ -166,10 +194,12 @@ def read_deps():
 
 
 def mirrored():
+    """The mirrored distfile names and the index's "generated", or (None, None)."""
     try:
-        return set(json.loads(DIST_INDEX.read_text())["files"])
-    except (OSError, ValueError, KeyError):
-        return None
+        data = json.loads(DIST_INDEX.read_text())
+        return set(data["files"]), data.get("generated")
+    except (OSError, ValueError, KeyError, TypeError):
+        return None, None
 
 
 def main(overlay, policy_lookup=None):
@@ -183,13 +213,13 @@ def main(overlay, policy_lookup=None):
         if ATOM.match(line.strip())
     }
 
-    have = mirrored()
+    have, dist_generated = mirrored()
     if have is None:
         print(f"!! 无法获取 {DIST_INDEX}，源码一列无法确定", file=sys.stderr)
 
     excluded = read_excluded()
     channel_excluded = read_excluded(CHANNEL_EXCLUDED) if CHANNEL_EXCLUDED else {}
-    built = read_built()
+    built, bin_generated = read_built()
     try:
         deps = read_deps()
     except IndexUnreadable as e:
@@ -243,9 +273,21 @@ def main(overlay, policy_lookup=None):
             row["excluded"] = excluded[cp]
         out.append(row)
 
-    for cp in sorted(built - present):
+    for cp in sorted(built.keys() - present):
         out.append({"cp": cp, "binhost": False, "dist": [],
                     "present": False, "why": "removed"})
+
+    # Schema 5 adds fields and changes none: ver and size of the published
+    # binary package, and whether every distfile is mirrored, each left out
+    # when unknown. "binhost" still means listed, not published.
+    for row in out:
+        pkg = built.get(row["cp"])
+        if pkg is not None:
+            row["ver"] = pkg["ver"]
+            if "size" in pkg:
+                row["size"] = pkg["size"]
+        if row["dist"] and have is not None:
+            row["mirrored"] = all(f in have for f in row["dist"])
 
     out.sort(key=lambda p: p["cp"])
 
@@ -257,10 +299,13 @@ def main(overlay, policy_lookup=None):
         return 1
 
     tmp = OUT.with_suffix(".json.new")
-    tmp.write_text(json.dumps(
-        {"schema": 4, "generated": int(time.time()), "packages": out,
-         "deps": deps},
-        ensure_ascii=False, separators=(",", ":")))
+    data = {"schema": 5, "generated": int(time.time()), "packages": out,
+            "deps": deps}
+    if bin_generated is not None:
+        data["binGenerated"] = bin_generated
+    if isinstance(dist_generated, int):
+        data["distGenerated"] = dist_generated
+    tmp.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")))
     os.replace(tmp, OUT)
 
     txt = PACKAGE_TEXT

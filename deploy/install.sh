@@ -44,17 +44,18 @@ ssh "${REMOTE}" "set -euo pipefail
 cd '${tmp}'
 
 echo '--- 依赖'
-for cmd in git rsync logrotate certbot; do
+for cmd in git rsync logrotate certbot curl; do
     command -v \${cmd} >/dev/null && continue
     case \${cmd} in
         git)       sudo emerge -q dev-vcs/git ;;
         rsync)     sudo emerge -q net-misc/rsync ;;
         logrotate) sudo emerge -q app-admin/logrotate ;;
         certbot)   sudo emerge -q app-crypt/certbot ;;
+        curl)      sudo emerge -q net-misc/curl ;;
     esac
 done
 missing=''
-for cmd in git rsync logrotate certbot; do command -v \${cmd} >/dev/null || missing=\"\${missing} \${cmd}\"; done
+for cmd in git rsync logrotate certbot curl; do command -v \${cmd} >/dev/null || missing=\"\${missing} \${cmd}\"; done
 [ -z \"\${missing}\" ] || { echo \"!! 缺少命令：\${missing}\" >&2; exit 1; }
 
 echo '--- 防火墙'
@@ -110,33 +111,27 @@ cd '${tmp}'
 
 echo '--- nginx'
 sudo install -dm755 /etc/portage/package.use
-printf '%s\n' 'www-servers/nginx NGINX_MODULES_HTTP: v3' |
+printf '%s\n' 'www-servers/nginx NGINX_MODULES_HTTP: v3 xslt' |
     sudo install -m644 /dev/stdin /etc/portage/package.use/nginx
-if ! nginx -V 2>&1 | grep -q http_v3; then
-    echo '    nginx 没有 http_v3，重新编译'
-    sudo emerge --oneshot --quiet-build=y www-servers/nginx
-fi
-mkdir -p nginx-test/conf.d
-cp mirror-common.inc headers-site.inc headers-files.inc nginx-test/conf.d/
 CERT=/etc/letsencrypt/live/distfiles.gentoozh.org
 if sudo test -r \"\${CERT}/fullchain.pem\" && sudo test -r \"\${CERT}/privkey.pem\"; then
-    cp distfiles.conf nginx-test/conf.d/distfiles.conf
+    :
+elif sudo grep -qs 'listen 443' /etc/nginx/conf.d/distfiles.conf; then
+    # The installed distfiles.conf lacks the maps the new mirror-common.inc
+    # reads, so keeping it would only fail the stage test after the emerge.
+    echo '    !! 无法读取证书，但现有配置在监听 443，未部署' >&2
+    echo '       新的 mirror-common.inc 依赖新的 distfiles.conf，不能保留现有配置；先处理证书，再重新执行本脚本' >&2
+    exit 1
 else
-    if sudo grep -qs 'listen 443' /etc/nginx/conf.d/distfiles.conf; then
-        echo '    !! 无法读取证书，但现有配置在监听 443；保留现有配置' >&2
-        echo '       证书确实已失效时，先处理证书，再重新执行本脚本' >&2
-        sudo cat /etc/nginx/conf.d/distfiles.conf > nginx-test/conf.d/distfiles.conf
-    else
-        echo '    证书尚未签发，先只配置 HTTP；签发之后重新执行本脚本'
-        awk '/^server \{/{n++} n<2' distfiles.conf |
-            tee nginx-test/conf.d/distfiles.conf >/dev/null
-    fi
+    echo '    证书尚未签发，先只配置 HTTP；签发之后重新执行本脚本'
+    awk '/^server \{/{n++} n<2' distfiles.conf > distfiles.conf.http
+    mv distfiles.conf.http distfiles.conf
 fi
-sed -e 's|include modules-enabled/\*.conf;|include /etc/nginx/modules-enabled/*.conf;|' \
-    -e 's|include mime.types.nginx;|include /etc/nginx/mime.types.nginx;|' \
-    -e 's|include /etc/nginx/conf.d/\*.conf;|include ${tmp}/nginx-test/conf.d/*.conf;|' \
-    nginx.conf > nginx-test/nginx.conf
-sudo nginx -t -c '${tmp}/nginx-test/nginx.conf'
+if ! nginx -V 2>&1 | grep -q http_v3 || ! nginx -V 2>&1 | grep -q http_xslt; then
+    echo '    nginx 缺少 http_v3 或 http_xslt，重新编译'
+    sudo emerge --oneshot --quiet-build=y www-servers/nginx
+fi
+bash nginx-stage-test.sh . nginx-test /etc/nginx/mime.types.nginx
 sudo install -m644 logrotate-binhost nginx-test/logrotate-binhost
 sudo logrotate -d nginx-test/logrotate-binhost >/dev/null
 
@@ -176,10 +171,12 @@ sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/pub/binpkgs /srv/pu
 sudo install -dm755 /var/www/acme/.well-known/acme-challenge
 sudo install -dm755 /etc/nginx/conf.d
 sudo install -m644 nginx.conf                          /etc/nginx/nginx.conf
-sudo install -m644 nginx-test/conf.d/mirror-common.inc /etc/nginx/conf.d/mirror-common.inc
-sudo install -m644 nginx-test/conf.d/headers-site.inc  /etc/nginx/conf.d/headers-site.inc
-sudo install -m644 nginx-test/conf.d/headers-files.inc /etc/nginx/conf.d/headers-files.inc
-sudo install -m644 nginx-test/conf.d/distfiles.conf    /etc/nginx/conf.d/distfiles.conf
+sudo install -m644 nginx-test/mirror-common.inc   /etc/nginx/conf.d/mirror-common.inc
+sudo install -m644 nginx-test/headers-site.inc    /etc/nginx/conf.d/headers-site.inc
+sudo install -m644 nginx-test/headers-files.inc   /etc/nginx/conf.d/headers-files.inc
+sudo install -m644 nginx-test/headers-listing.inc /etc/nginx/conf.d/headers-listing.inc
+sudo install -m644 nginx-test/listing-txt.xsl     /etc/nginx/conf.d/listing-txt.xsl
+sudo install -m644 nginx-test/distfiles.conf      /etc/nginx/conf.d/distfiles.conf
 
 echo '--- 日志轮替'
 sudo install -m644 logrotate-binhost /etc/logrotate.d/binhost
@@ -235,8 +232,22 @@ for s in cronie rsyncd; do
         sudo rc-service \$s start >/dev/null 2>&1 || { echo "    !! \$s 未能启动"; svc_bad=1; }
     fi
 done
-if sudo rc-service nginx status >/dev/null 2>&1; then
-    if sudo rc-service nginx reload >/dev/null 2>&1; then
+# A reload parses the new config in the running binary. Once emerge has
+# replaced that binary, it lacks the modules the config needs and keeps the old
+# config, so upgrade starts the binary on disk instead. This looks at the running
+# master, not at whether this run emerged, so a rerun after a failed upgrade
+# still upgrades. The initd passes -g 'pid /run/nginx/nginx.pid'.
+nginx_pid=\$(sudo cat /run/nginx/nginx.pid 2>/dev/null || sudo cat /run/nginx.pid 2>/dev/null || true)
+if sudo rc-service nginx status >/dev/null 2>&1 && [ -n \"\${nginx_pid}\" ] &&
+   sudo readlink \"/proc/\${nginx_pid}/exe\" | grep -q ' (deleted)\$'; then
+    if sudo rc-service nginx upgrade >/dev/null; then
+        echo \"    nginx 已换用重新编译的程序，进行中的下载不受影响\"
+    else
+        echo \"    !! nginx 未能换用重新编译的程序\"
+        svc_bad=1
+    fi
+elif sudo rc-service nginx status >/dev/null 2>&1; then
+    if sudo rc-service nginx reload >/dev/null; then
         echo "    nginx 已重新载入配置，进行中的下载不受影响"
     else
         echo "    !! nginx 未能重新载入配置"
@@ -248,6 +259,18 @@ fi
 sudo rc-service node_exporter restart >/dev/null 2>&1 ||
     echo "    !! node_exporter 未能启动（可选）"
 [ \${svc_bad} -eq 0 ] || { echo "!! 关键服务未能启动" >&2; exit 1; }
+# rc-service returns 0 even when the running nginx kept the old config, so ask it.
+# Workers switch over shortly after the signal; allow them a few seconds.
+listing=''
+for _ in 1 2 3 4 5; do
+    listing=\$(curl -s -o /dev/null -w '%{content_type}' -H 'Host: distfiles.gentoozh.org' http://127.0.0.1/distfiles/ || true)
+    case \"\${listing}\" in text/plain*) break ;; esac
+    sleep 1
+done
+case \"\${listing}\" in
+    text/plain*) echo '    nginx 已按新配置响应：curl 取得纯文本清单' ;;
+    *) echo \"!! 运行中的 nginx 仍按旧配置响应：curl 取得的 /distfiles/ 是 \${listing:-无响应}，未写入 VERSION\" >&2; exit 1 ;;
+esac
 printf %s '${COMMIT}' | sudo install -m644 /dev/stdin /usr/local/lib/binhost/VERSION
 cd /
 rm -rf '${tmp}'
