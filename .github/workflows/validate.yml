@@ -528,20 +528,19 @@ jobs:
           body /distfiles/ix/ -A w3m | grep -q 'href="index.html"' || fail "含 index.html 的目录没有给 w3m 列出清单"
 
           # Browsers go to the file browser on gentoozh.org, in the language asked for.
-          B=(-A Mozilla/5.0 -H "Accept: ${BROWSER}")
           for d in / /files/ /distfiles/ /binpkgs/x86-64/ /unstable/ /unstable/binpkgs/x86-64/ \
             /gentoo-cjk-kernel/ /gentoo-cjk-livecd/ /distfiles/c6/ /distfiles/nope/ \
             /files/distfiles/ /files/nope/ '/distfiles/a%20b/'; do
             rel="${d#/files}"
-            [ "$(code "$d" "${B[@]}")" = 302 ] || fail "浏览器打开 $d 不是 302"
-            [ "$(loc "$d" "${B[@]}")" = "https://gentoozh.org/files${rel}" ] || fail "浏览器打开 $d 跳到了 $(loc "$d" "${B[@]}")"
-            [ "$(loc "$d?lang=en" "${B[@]}")" = "https://gentoozh.org/en/files${rel}" ] || fail "$d?lang=en 跳到了 $(loc "$d?lang=en" "${B[@]}")"
-            [ "$(loc "$d" "${B[@]}" -H 'Accept-Language: zh-TW,zh;q=0.9')" = "https://gentoozh.org/zh-tw/files${rel}" ] ||
+            [ "$(code "$d" -A Mozilla/5.0 -H "Accept: ${BROWSER}")" = 302 ] || fail "浏览器打开 $d 不是 302"
+            [ "$(loc "$d" -A Mozilla/5.0 -H "Accept: ${BROWSER}")" = "https://gentoozh.org/files${rel}" ] || fail "浏览器打开 $d 跳到了 $(loc "$d" -A Mozilla/5.0 -H "Accept: ${BROWSER}")"
+            [ "$(loc "$d?lang=en" -A Mozilla/5.0 -H "Accept: ${BROWSER}")" = "https://gentoozh.org/en/files${rel}" ] || fail "$d?lang=en 跳到了 $(loc "$d?lang=en" -A Mozilla/5.0 -H "Accept: ${BROWSER}")"
+            [ "$(loc "$d" -A Mozilla/5.0 -H "Accept: ${BROWSER}" -H 'Accept-Language: zh-TW,zh;q=0.9')" = "https://gentoozh.org/zh-tw/files${rel}" ] ||
               fail "Accept-Language: zh-TW 打开 $d 没有跳到 /zh-tw/"
-            [ "$(loc "$d?lang=zh-cn" "${B[@]}" -H 'Accept-Language: en-US')" = "https://gentoozh.org/files${rel}" ] ||
+            [ "$(loc "$d?lang=zh-cn" -A Mozilla/5.0 -H "Accept: ${BROWSER}" -H 'Accept-Language: en-US')" = "https://gentoozh.org/files${rel}" ] ||
               fail "$d?lang=zh-cn 没有优先于 Accept-Language"
-            [ "$(hdr "$d" vary "${B[@]}")" = 'Accept, User-Agent, Accept-Language' ] || fail "浏览器打开 $d 的 Vary 不对：$(hdr "$d" vary "${B[@]}")"
-            [ "$(hdr "$d" cache-control "${B[@]}")" = no-cache ] || fail "浏览器打开 $d 的跳转可能被缓存"
+            [ "$(hdr "$d" vary -A Mozilla/5.0 -H "Accept: ${BROWSER}")" = 'Accept, User-Agent, Accept-Language' ] || fail "浏览器打开 $d 的 Vary 不对：$(hdr "$d" vary -A Mozilla/5.0 -H "Accept: ${BROWSER}")"
+            [ "$(hdr "$d" cache-control -A Mozilla/5.0 -H "Accept: ${BROWSER}")" = no-cache ] || fail "浏览器打开 $d 的跳转可能被缓存"
           done
 
           # /_ls/: CORS for gentoozh.org on every answer, 404 and 301 included.
