@@ -302,7 +302,7 @@ rc=0
 : > "${nx}/log"
 PATH="${nx}/bin:${PATH}" NX_DIR="${nx}" NX_CERT_RC=1 \
     bash -euo pipefail "${nx}/cert.sh" </dev/null >/dev/null 2>&1 || rc=$?
-ok "证书不可读且现有配置监听 443 时中止" "$((rc != 0))" "1"
+ok "无法读取证书且现有配置监听 443 时中止" "$((rc != 0))" "1"
 ok "并且在重新编译 nginx 之前中止" "$(grep -c emerge "${nx}/log")" "0"
 
 echo
