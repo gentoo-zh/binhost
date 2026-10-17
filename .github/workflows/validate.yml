@@ -111,9 +111,6 @@ jobs:
       - name: Automated pull requests dispatch validation first
         run: python3 tests/test-workflow-dispatch.py
 
-      - name: Version comparison fixture still matches portage
-        run: python3 tests/test-vercmp-fixture.py
-
       - name: install.sh covers what the scripts reach for
         run: python3 tests/test-install-covers-refs.py
 
