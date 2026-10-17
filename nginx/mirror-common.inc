@@ -200,18 +200,9 @@ location = /_app { return 404; }
 location = /_app.html { return 404; }
 location = /404.html { return 404; }
 location ^~ /internal/ { return 404; }
-# gentoozh.org's thanks page links the attribution text here until it moves
-# to the site (plan W6); NOTICE.txt names the licence file.
-location ^~ /assets/ {
-	location ~ ^/assets/(NOTICE|LICENSE-Apache-2\.0)\.txt$ {
-		root /srv/mirrors;
-		charset utf-8;
-		add_header Cache-Control "no-cache";
-		include /etc/nginx/conf.d/headers-site.inc;
-		open_file_cache off;
-	}
-	return 404;
-}
+location ^~ /assets/ { return 404; }
+# The attribution text moved to the thanks page on gentoozh.org.
+location = /assets/NOTICE.txt { rewrite ^ /_page/thanks/ last; }
 
 location ~ ^/~([a-z][a-z0-9_-]*)(/.*)?$ {
 	alias /home/$1/public_html$2;

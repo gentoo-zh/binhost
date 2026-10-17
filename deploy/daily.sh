@@ -67,8 +67,6 @@ step "unstable 包列表" env LIST="${LIB}/packages.txt" EXCLUDED="${LIB}/exclud
     INDEX=/srv/pub/unstable/binpkgs/x86-64/Packages \
     python3 "${LIB}/gen-packages.py" "${OVERLAY}"
 
-step "服务器状态" /usr/local/bin/binhost-server-status
-
 verify_channel() {
     local label=$1 binpkgs=$2
     step "${label} 索引验证" python3 - "${binpkgs}" <<'PY'

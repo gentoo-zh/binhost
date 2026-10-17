@@ -197,6 +197,10 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Compile
         run: python3 -m py_compile build/*.py tools/*.py deploy/*.py site/tools/*.py builders/prune-unpublishable
+      - name: Check copy
+        run: python3 site/tools/check-copy.py site
+      - name: The copy checker still catches every shape
+        run: python3 tests/test-check-copy.py
       - name: Classifier against real log shapes
         run: |
           d=$(mktemp -d)
@@ -225,74 +229,6 @@ jobs:
           echo "$out" | grep -q "许可证不允许再分发（1 个）" || { echo "!! 依赖的许可证被算到本包头上"; exit 1; }
           echo "$out" | grep -q "未归类"                     && { echo "!! 出现未归类"; exit 1; }
           exit 0
-
-  site:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-      - name: Parse the scripts
-        run: |
-          for f in site/assets/*.js; do node --check "$f" || exit 1; done
-          echo "  $(ls site/assets/*.js | wc -l) 个脚本可解析"
-      - name: The front-end scripts survive being loaded
-        run: node tests/test-scripts-load.js site/assets
-
-      - name: Check i18n tables
-        run: node site/tools/check-i18n.js site
-      - name: Version order on the packages page
-        run: node tests/test-vercmp.js
-      - name: Shared chrome is up to date
-        run: python3 site/tools/render-chrome.py --check
-      - name: Check nav and footer
-        run: python3 site/tools/check-chrome.py site
-      - name: Search hint on the packages page
-        run: node tests/test-packages-search.js
-      - name: Build timing on the home page
-        run: node tests/test-index-facts.js
-      - name: Packages page failure state
-        run: node tests/test-packages-error.js
-      - name: Package lists follow the selected channel
-        run: node tests/test-package-channels.js
-      - name: File browser breadcrumbs
-        run: node tests/test-app-crumbs.js
-      - name: Links that differ per language
-        run: node tests/test-i18n-engine.js
-      - name: Mirror defaults follow the selected language
-        run: node tests/test-source-switch.js
-      - name: Binary package channels switch as one configuration
-        run: node tests/test-channel-switch.js
-      - name: Code blocks copy what they show
-        run: node tests/test-code-copy.js
-      - name: The sudo toggle rewrites every command block
-        run: node tests/test-sudo-switch.js
-      - name: Segmented controls slide their selection indicator
-        run: node tests/test-indicator.js
-      - name: Segmented controls fall back to a Picker when they overflow
-        run: node tests/test-seg-picker.js
-      - name: The page outline follows the headings
-        run: node tests/test-docs-outline.js
-      - name: Pages keep their size while data loads
-        run: node tests/test-loading-states.js
-      - name: Pages fit a 360px phone screen
-        run: node tests/test-mobile-overflow.js
-      - name: Mirror pickers mark mirrors the status API finds behind or down
-        run: node tests/test-mirror-health.js
-      - name: Search index matches the pages
-        run: python3 site/tools/build-search-index.py --check
-      - name: Code highlighting is current
-        run: python3 tests/test-highlight.py
-      - name: Mirror pickers agree
-        run: python3 site/tools/check-pickers.py
-      - name: Both setup modes say the same thing
-        run: python3 site/tools/check-panes.py
-      - name: Check copy
-        run: python3 site/tools/check-copy.py site
-      - name: The copy checker still catches every shape
-        run: python3 tests/test-check-copy.py
-      - name: Site checkers reject structural bypasses
-        run: python3 tests/test-site-checkers.py
-      - name: Check stylesheet
-        run: python3 site/tools/check-css.py site
 
   shell:
     runs-on: ubuntu-latest
@@ -468,6 +404,7 @@ jobs:
           mkdir -p /srv/mirrors/assets && echo 'body{}' > /srv/mirrors/assets/t.css
           echo x > /srv/mirrors/assets/NOTICE.txt
           echo x > /srv/mirrors/assets/LICENSE-Apache-2.0.txt
+          echo x > /srv/mirrors/assets/OTHER.txt
           echo '{}' > /srv/mirrors/t.json
           case "$(hdr /t.json cache-control)" in *no-cache*) ;; *) fail "json 不该长缓存" ;; esac
           [ "$(code /gentoo-zh-binhost.asc)" = 200 ] || fail "签名公钥无法获取"
@@ -577,14 +514,12 @@ jobs:
             redirect "$u" https://gentoozh.org/mirrorlist/
           done
           redirect /index.html https://gentoozh.org/files/
-          # The thanks page on gentoozh.org links the attribution text here.
-          for u in /assets/NOTICE.txt /assets/LICENSE-Apache-2.0.txt; do
-            [ "$(code "$u")" = 200 ] || fail "$u 无法获取"
-            [ "$(hdr "$u" content-type)" = "text/plain; charset=utf-8" ] || fail "$u 不是 UTF-8 纯文本：$(hdr "$u" content-type)"
-            [ "$(hdr "$u" x-content-type-options)" = nosniff ] || fail "$u 没有 nosniff"
+          # The attribution text moved to the thanks page; the copies left on disk are not served.
+          redirect /assets/NOTICE.txt https://gentoozh.org/thanks/
+          redirect '/assets/NOTICE.txt?lang=en' 'https://gentoozh.org/en/thanks/?lang=en'
+          for u in /assets/LICENSE-Apache-2.0.txt /assets/OTHER.txt; do
+            [ "$(code "$u")" = 404 ] || fail "$u 该是 404"
           done
-          echo x > /srv/mirrors/assets/OTHER.txt
-          [ "$(code /assets/OTHER.txt)" = 404 ] || fail "/assets/ 下的其他文件该是 404"
           redirect '/packages?q=fcitx' 'https://gentoozh.org/packages/?q=fcitx'
           redirect '/faq.html?lang=en' 'https://gentoozh.org/en/faq/?lang=en'
           redirect /faq https://gentoozh.org/zh-tw/faq/ -H 'Accept-Language: zh-Hant-TW'

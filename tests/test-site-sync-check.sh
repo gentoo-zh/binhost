@@ -102,6 +102,15 @@ ok "指出公钥与仓库不一致" \
 rm -rf "${d}"
 
 echo
+echo "== 仓库副本不是 git 仓库而发布目录有公钥时报故障"
+d=$(setup)
+rm -rf "${d}/work/.git"
+out=$(run "${d}")
+ok "指出仓库副本不是仓库" \
+   "$([[ $(line "${out}") == *不是仓库副本* ]] && echo yes)" "yes"
+rm -rf "${d}"
+
+echo
 echo "== 同步进行中不读取仓库副本"
 d=$(setup)
 : > "${d}/work.lock"

@@ -1,13 +1,13 @@
 # gentoo-zh binhost
 
-本仓库维护 [distfiles.gentoozh.org](https://distfiles.gentoozh.org/) 的静态站点、
-nginx 配置，以及构建、签名和发布 [gentoo-zh overlay](https://github.com/gentoo-zh/overlay)
+本仓库维护 [distfiles.gentoozh.org](https://distfiles.gentoozh.org/) 的 nginx 配置与
+公开签名密钥，以及构建、签名和发布 [gentoo-zh overlay](https://github.com/gentoo-zh/overlay)
 二进制包的脚本。
 
-用户可直接查看[二进制包配置](https://distfiles.gentoozh.org/binpkg-setup)、
-[distfiles 配置](https://distfiles.gentoozh.org/distfiles-setup)、
-[软件包状态](https://distfiles.gentoozh.org/packages)和
-[常见问题](https://distfiles.gentoozh.org/faq)。
+用户文档在 gentoozh.org：[二进制包配置](https://gentoozh.org/binpkg-setup/)、
+[distfiles 配置](https://gentoozh.org/distfiles-setup/)、
+[软件包状态](https://gentoozh.org/packages/)和
+[常见问题](https://gentoozh.org/faq/)。
 
 ## 仓库结构
 
@@ -19,9 +19,8 @@ nginx 配置，以及构建、签名和发布 [gentoo-zh overlay](https://github
 | `ops/` | 两台共用的健康检查与告警 |
 | `tools/` | 清单维护、仓库校验与提交检查，供本机与 CI 使用 |
 | `nginx/` | HTTP、HTTP/3 和文件服务配置 |
-| `site/` | 静态站点与公开签名密钥 |
-| `site/tools/` | 站点数据生成与内容检查，供镜像机、本机与 CI 使用 |
-| `site/internal/` | 不发布的维护者页面：设计语言与组件目录 |
+| `site/` | 公开签名密钥与 `robots.txt` |
+| `site/tools/` | 全仓库注释与输出字符串的用词检查，供本机与 CI 使用 |
 | `docs/` | 密钥轮替、恢复与已评估未实施的改动 |
 
 ## 发布范围
@@ -44,10 +43,10 @@ nginx 配置，以及构建、签名和发布 [gentoo-zh overlay](https://github
 `RESTRICT` 中的 `bindist` 只限制 binpkg；distfiles 是否镜像由 `mirror`、`fetch` 与每项
 `SRC_URI` 独立决定。
 
-[软件包页](https://distfiles.gentoozh.org/packages)分别显示公开产物、直接构建清单、当前
+[软件包页](https://gentoozh.org/packages/)分别显示公开产物、直接构建清单、当前
 发布政策和 distfiles 镜像状态。`✓` 表示公开索引已有 binpkg，不表示软件包仍在直接构建
 清单。各标签的触发条件和常见原因见
-[FAQ 状态说明](https://distfiles.gentoozh.org/faq#package-status)。
+[状态说明](https://gentoozh.org/package-status/#status-help)。
 
 ## 构建与发布
 
@@ -141,9 +140,10 @@ distfiles。完整镜像应使用 rsync module。
 
 ## 站点
 
-镜像机的 `deploy/site-sync.sh` 每五分钟从 `master` 拉取并发布静态站点。站点同步使用
-独立锁，不修改 binpkg 或 distfiles。页面与 assets 先写进本次发布的目录，再由一次
-rename 整体切换，因此不会出现页面与其指纹化 assets 分属两代的中间状态。
+页面已迁到 gentoozh.org，`site/` 只发布公开签名密钥与 `robots.txt`。镜像机的
+`deploy/site-sync.sh` 每五分钟从 `master` 拉取并发布这两个文件，使用独立锁，不修改 binpkg 或
+distfiles。文件先写进本次发布的目录，再由一次 rename 整体切换；来源中已删除的旧页面与
+assets 在下一次同步时从发布目录移除。
 
 需要立即发布站点，或同时更新 nginx 配置时执行：
 

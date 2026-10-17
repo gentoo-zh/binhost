@@ -148,7 +148,6 @@ sudo install -m755 daily.sh            /usr/local/bin/binhost-daily
 sudo install -m755 distfiles-sync.sh   /usr/local/bin/binhost-distfiles-sync
 sudo install -m755 distfiles-index.sh  /usr/local/bin/binhost-distfiles-index
 sudo install -m755 livecd-sync.sh      /usr/local/bin/binhost-livecd-sync
-sudo install -m755 server-status.sh    /usr/local/bin/binhost-server-status
 sudo install -m755 site-sync.sh        /usr/local/bin/binhost-site-sync
 sudo install -m755 publish-site.sh     /usr/local/lib/binhost/publish-site.sh
 sudo install -m755 status.sh           /usr/local/bin/binhost-status

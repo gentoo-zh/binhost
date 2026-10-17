@@ -270,12 +270,12 @@ daily_list_probe() {
 
 mapfile -t calls < <(daily_list_probe failed)
 ok "distfiles 同步失败时仍刷新两个频道的包列表" \
-   "${calls[*]}" "distfiles 同步 stable 包列表 unstable 包列表 服务器状态"
+   "${calls[*]}" "distfiles 同步 stable 包列表 unstable 包列表"
 
 mapfile -t calls < <(daily_list_probe success)
 ok "distfiles 同步成功时先对账并重建索引" \
    "${calls[*]}" \
-   "distfiles 同步 distfiles 对账 distfiles 索引 stable 包列表 unstable 包列表 服务器状态"
+   "distfiles 同步 distfiles 对账 distfiles 索引 stable 包列表 unstable 包列表"
 
 daily_channel_probe() {
     local d

@@ -4,7 +4,7 @@
 
 - [发布范围与构建频道](README.md#发布范围)
 - [依赖闭包边界](docs/dependency-closure.md)
-- [站点设计与文案规范](site/internal/design.html)
+- [网站设计语言](https://github.com/gentoo-zh/gentoo-zh.github.io/blob/master/docs/design-language.md)
 - [提交信息](#提交信息)
 
 在 [`build/packages.txt`](build/packages.txt) 中添加一行 `category/package`，按字母序排列，
@@ -58,16 +58,9 @@ stable 与 unstable 分别生成站点包列表，生成结果不入版本库。
 
 ## 站点与脚本
 
-`site/` 为静态页面，`nginx/` 为服务器配置，`build/` 为构建与发布脚本，改动同样通过 PR 提交。
-
-页面资源使用绝对路径，直接通过 `file://` 打开时缺少样式。预览请运行：
-
-```bash
-python3 -m http.server -d site 8000
-```
-
-目录浏览与包状态需连接真实服务器方有数据。页面之间的链接不带扩展名（`/faq`），
-无扩展名的页面路径由 nginx 映射，本地预览要用 `/faq.html` 这样的地址。
+`site/` 只有公开签名密钥与 `robots.txt`，`nginx/` 为服务器配置，`build/` 为构建与发布脚本，
+改动同样通过 PR 提交。页面与文件浏览器在
+[gentoo-zh.github.io](https://github.com/gentoo-zh/gentoo-zh.github.io) 仓库维护。
 
 ## 提交信息
 

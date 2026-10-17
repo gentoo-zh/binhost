@@ -243,7 +243,7 @@ check_site_sync() {
     fi
 }
 
-if [[ ! -d ${SITE_WORK}/.git && -d ${SITE_DEST} && -e ${SITE_DEST}/index.html ]]; then
+if [[ ! -d ${SITE_WORK}/.git && -d ${SITE_DEST} && -e ${SITE_DEST}/gentoo-zh-binhost.asc ]]; then
     bad "站点同步" "${SITE_WORK} 不是仓库副本，而 ${SITE_DEST} 里有站点内容"
 elif [[ -d ${SITE_WORK}/.git ]]; then
     check_site_sync

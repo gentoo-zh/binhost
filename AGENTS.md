@@ -12,9 +12,7 @@
 
     python3 tools/validate.py <overlay>        两份清单互斥、包在 overlay 里
     python3 tools/check-commits.py <range>     提交信息格式
-    python3 site/tools/check-copy.py site      站点文案与口语词
-    node site/tools/check-i18n.js site         三语键一致
-    python3 site/tools/check-panes.py site     站点结构
+    python3 site/tools/check-copy.py site      注释与输出字符串的口语词
     bash tests/test-shell-behaviour.sh         shell 行为
 
 容器 shellcheck（本地版本可能与 CI 不同）：
@@ -36,7 +34,7 @@ grep 依赖。**修改文案时必须同步更新断言**，否则测试失败�
 
 ## 中文用语
 
-简体用大陆用语，站点的 `zh-tw` 段用台湾用语，两边都不能混。
+简体用大陆用语，不混用台湾用语。
 
 | 用 | 不用 |
 |---|---|
@@ -46,8 +44,6 @@ grep 依赖。**修改文案时必须同步更新断言**，否则测试失败�
 
 例外：`build/` 里的 `使用者` 指 preserved-libs 的 consumer——连结某个库的那一方，
 是术语不是 user，不要替换。
-
-站点 `zh-tw` 段里的 `建置`、`套件`、`設定` 是正确的台湾用语，扫描时不要报。
 
 ## 测试
 
