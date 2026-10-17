@@ -9,13 +9,8 @@ location ^~ /.well-known/acme-challenge/ {
 	root /var/www/acme;
 }
 
-location ^~ /_raw/ {
-	alias /srv/pub/;
-	autoindex on;
-	autoindex_exact_size off;
-	autoindex_localtime on;
-	include /etc/nginx/conf.d/headers-site.inc;
-}
+# The old raw listing; every directory now lists itself.
+location ^~ /_raw/ { return 302 $gz_raw_rel$is_args$args; }
 
 location ^~ /_ls/ {
 	alias /srv/pub/;
@@ -58,13 +53,23 @@ location ^~ /_html/ {
 	include /etc/nginx/conf.d/headers-listing.inc;
 }
 
+# Browsers go to the file browser on gentoozh.org, in the reader's language.
 location ^~ /_web/ {
 	internal;
-	root /srv/mirrors;
-	include /etc/nginx/conf.d/headers-site.inc;
-	include /etc/nginx/conf.d/headers-listing.inc;
-	open_file_cache off;
-	try_files $gz_web_page /_app.html =404;
+	include /etc/nginx/conf.d/headers-files.inc;
+	add_header Vary "Accept, User-Agent, Accept-Language" always;
+	add_header Cache-Control "no-cache" always;
+	return 302 https://gentoozh.org$gz_prefix/files$gz_path_rel;
+}
+
+# The old site pages moved to gentoozh.org; the rewrites below land here with
+# the target path. The original query string is kept.
+location ^~ /_page/ {
+	internal;
+	include /etc/nginx/conf.d/headers-files.inc;
+	add_header Vary "Accept-Language" always;
+	add_header Cache-Control "no-cache" always;
+	rewrite ^/_page(?<gz_page>/.*)$ https://gentoozh.org$gz_prefix$gz_page redirect;
 }
 
 location ^~ /distfiles/ {
@@ -181,15 +186,31 @@ location = /unstable/binpkgs { return 301 /unstable/binpkgs/; }
 location = /gentoo-cjk-kernel { return 301 /gentoo-cjk-kernel/; }
 location = /gentoo-cjk-livecd { return 301 /gentoo-cjk-livecd/; }
 location = /files { return 301 /files/; }
-# /files/ is a second name for the root directory.
+# /files/ is a second name for the root directory, and /files/<dir>/ for
+# /<dir>/; a file under /files/ has no second name.
+# Named captures: evaluating a regex map such as $gz_listing or $gz_prefix
+# resets $1, so a numbered capture after one of them comes out wrong.
 location = /files/ { rewrite ^ /_$gz_listing/ last; }
-location ^~ /files/ { return 404; }
+location ^~ /files/ {
+	rewrite ^/files(?<gz_dir>/.*/)$ /_$gz_listing$gz_dir last;
+	return 404;
+}
 
 location = /_app { return 404; }
-
-location = /_app.html {
-	add_header Cache-Control "no-cache";
-	include /etc/nginx/conf.d/headers-site.inc;
+location = /_app.html { return 404; }
+location = /404.html { return 404; }
+location ^~ /internal/ { return 404; }
+# gentoozh.org's thanks page links the attribution text here until it moves
+# to the site (plan W6); NOTICE.txt names the licence file.
+location ^~ /assets/ {
+	location ~ ^/assets/(NOTICE|LICENSE-Apache-2\.0)\.txt$ {
+		root /srv/mirrors;
+		charset utf-8;
+		add_header Cache-Control "no-cache";
+		include /etc/nginx/conf.d/headers-site.inc;
+		open_file_cache off;
+	}
+	return 404;
 }
 
 location ~ ^/~([a-z][a-z0-9_-]*)(/.*)?$ {
@@ -199,12 +220,13 @@ location ~ ^/~([a-z][a-z0-9_-]*)(/.*)?$ {
 	include /etc/nginx/conf.d/headers-files.inc;
 }
 
-location = /index.html { return 301 /; }
-location ~ ^/(.+)\.html$ { return 301 /$1; }
+location ~ ^/(about|binpkg-setup|distfiles-setup|faq|iso|logo|overlay|packages|status|thanks)(\.html)?$ {
+	rewrite ^/([a-z-]+) /_page/$1/ last;
+}
+location ~ ^/mirrors?(\.html)?$ { rewrite ^ /_page/mirrorlist/ last; }
+location ~ ^/index(\.html)?$ { rewrite ^ /_page/files/ last; }
 
-location = /mirror { return 301 /mirrors; }
-
-location = /favicon.ico { return 301 /assets/logo.webp; }
+location = /favicon.ico { return 302 https://gentoozh.org/favicon.ico; }
 
 location = /robots.txt {
 	root /srv/mirrors;

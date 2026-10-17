@@ -397,7 +397,10 @@ jobs:
 
       - name: Answer real requests
         run: |
-          cp site/_app.html site/index.html site/faq.html /srv/mirrors/
+          # The old pages stay on disk until stage D; their redirects must win over the files.
+          for f in _app index faq 404; do echo "old ${f}" > "/srv/mirrors/${f}.html"; done
+          cp site/gentoo-zh-binhost.asc /srv/mirrors/
+          printf 'a/b\n' > /srv/mirrors/packages.txt
           mkdir -p /srv/pub/binpkgs/x86-64 \
             /srv/pub/unstable/binpkgs/x86-64 /srv/pub/distfiles \
             /srv/pub/gentoo-cjk-kernel /srv/pub/gentoo-cjk-livecd
@@ -424,7 +427,7 @@ jobs:
           # limit_req allows 50 requests a second per address; stay below it.
           req()  { sleep 0.025; curl -sS -H "$H" "$@"; }
           code() { local u="$1"; shift; req -o /dev/null -w '%{http_code}' "$@" "http://127.0.0.1$u"; }
-          loc()  { req -o /dev/null -w '%{redirect_url}' "http://127.0.0.1$1"; }
+          loc()  { local u="$1"; shift; req -o /dev/null -w '%{redirect_url}' "$@" "http://127.0.0.1$u"; }
           fail() { echo "!! $1"; exit 1; }
 
           [ "$(code /binpkgs/x86-64/nope.gpkg.tar)" = 404 ] || fail "不存在的包没有返回 404"
@@ -445,8 +448,7 @@ jobs:
               tr -d '\r' | grep -i "^${name}:" | cut -d' ' -f2-
           }
           body() { local url="$1"; shift; req "$@" "http://127.0.0.1${url}"; }
-          [ "$(hdr /faq x-content-type-options)" = nosniff ] || fail "页面没有 nosniff"
-          case "$(hdr /faq content-security-policy)" in "default-src 'self'"*) ;; *) fail "页面 CSP 不对" ;; esac
+          [ "$(hdr /faq x-content-type-options)" = nosniff ] || fail "旧页面的跳转没有 nosniff"
           case "$(hdr /distfiles/c6/t.tar.gz content-security-policy)" in "default-src 'none'; sandbox") ;; *) fail "distfile 的 CSP 缺少 sandbox" ;; esac
           [ "$(hdr /binpkgs/x86-64/Packages x-content-type-options)" = nosniff ] || fail "stable 索引没有 nosniff"
           [ "$(hdr /unstable/binpkgs/x86-64/Packages x-content-type-options)" = nosniff ] || fail "unstable 索引没有 nosniff"
@@ -461,17 +463,23 @@ jobs:
 
           printf 'User-agent: *\nDisallow: /distfiles/\n' > /srv/mirrors/robots.txt
           [ "$(code /robots.txt)" = 200 ] || fail "robots.txt 无法获取"
-          [ "$(code /favicon.ico)" = 301 ] || fail "favicon.ico 没有跳转"
+          [ "$(code /favicon.ico)" = 302 ] || fail "favicon.ico 没有跳转"
+          [ "$(loc /favicon.ico)" = https://gentoozh.org/favicon.ico ] || fail "favicon.ico 跳到了 $(loc /favicon.ico)"
           mkdir -p /srv/mirrors/assets && echo 'body{}' > /srv/mirrors/assets/t.css
+          echo x > /srv/mirrors/assets/NOTICE.txt
+          echo x > /srv/mirrors/assets/LICENSE-Apache-2.0.txt
           echo '{}' > /srv/mirrors/t.json
-          case "$(hdr /assets/t.css cache-control)" in *immutable*) ;; *) fail "css 没有长缓存" ;; esac
           case "$(hdr /t.json cache-control)" in *no-cache*) ;; *) fail "json 不该长缓存" ;; esac
-          [ "$(code /_raw/)" = 200 ] || fail "/_raw/ 目录浏览打不开"
+          [ "$(code /gentoo-zh-binhost.asc)" = 200 ] || fail "签名公钥无法获取"
+          [ "$(code /packages.txt)" = 200 ] || fail "packages.txt 无法获取"
+          [ "$(code '/_raw/distfiles/?a=1')" = 302 ] || fail "/_raw/ 没有跳转"
+          [ "$(loc '/_raw/distfiles/?a=1')" = http://distfiles.gentoozh.org/distfiles/?a=1 ] ||
+            fail "/_raw/distfiles/ 跳到了 $(loc '/_raw/distfiles/?a=1')"
 
           # curl and scripts: one text line per entry, name last.
           line='^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z  (-  [^/]+/|[0-9]+  [^/]+)$'
           for d in / /files/ /distfiles/ /binpkgs/x86-64/ /unstable/ /unstable/binpkgs/x86-64/ \
-            /gentoo-cjk-kernel/ /gentoo-cjk-livecd/; do
+            /gentoo-cjk-kernel/ /gentoo-cjk-livecd/ /files/distfiles/; do
             [ "$(code "$d")" = 200 ] || fail "curl 打不开 $d"
             case "$(hdr "$d" content-type)" in "text/plain; charset=utf-8") ;; *) fail "$d 给 curl 的不是纯文本：$(hdr "$d" content-type)" ;; esac
             out=$(body "$d")
@@ -486,13 +494,14 @@ jobs:
           size=$(stat -c %s /srv/pub/distfiles/layout.conf)
           body /distfiles/ | grep -Eq "  ${size}  layout\.conf$" || fail "/distfiles/ 没有写出 layout.conf 的字节数"
           [ "$(body /files/)" = "$(body /)" ] || fail "/files/ 的文本清单与 / 不同"
+          [ "$(body /files/distfiles/)" = "$(body /distfiles/)" ] || fail "/files/distfiles/ 的文本清单与 /distfiles/ 不同"
           body / | grep -Eq '  -  distfiles/$' || fail "/ 没有列出 /srv/pub 的 distfiles/"
           [ "$(code '/distfiles/a%20b/')" = 200 ] || fail "带空格的目录打不开"
           body '/distfiles/a%20b/' | grep -Eq '  c\.txt$' || fail "带空格的目录没有列出内容"
 
           # Text browsers and Wget: the stock autoindex page.
           for ua in 'w3m/0.5.3' 'Lynx/2.9.0 libwww-FM/2.14' 'Wget/1.21.4'; do
-            for d in / /files/ /distfiles/c6/; do
+            for d in / /files/ /distfiles/c6/ /files/distfiles/c6/; do
               case "$(hdr "$d" content-type -A "$ua")" in text/html*) ;; *) fail "$ua 打开 $d 得到的不是 HTML" ;; esac
               ! body "$d" -A "$ua" | grep -qi '<script' || fail "$ua 打开 $d 的页面带脚本"
               hdr "$d" vary -A "$ua" | grep -qx 'Accept, User-Agent' || fail "$ua 打开 $d 没有 Vary"
@@ -500,6 +509,8 @@ jobs:
             done
             [ "$(code /files/ -A "$ua")" = 200 ] || fail "$ua 打开 /files/ 不是 200"
             [ "$(body /files/ -A "$ua")" = "$(body / -A "$ua")" ] || fail "$ua 打开 /files/ 与 / 不同"
+            [ "$(code /files/distfiles/ -A "$ua")" = 200 ] || fail "$ua 打开 /files/distfiles/ 不是 200"
+            [ "$(body /files/distfiles/ -A "$ua")" = "$(body /distfiles/ -A "$ua")" ] || fail "$ua 打开 /files/distfiles/ 与 /distfiles/ 不同"
             body / -A "$ua" | grep -q 'href="distfiles/"' || fail "$ua 打开 / 没有列出 distfiles/"
             body /distfiles/c6/ -A "$ua" | grep -qF "href=\"${long}\"" || fail "$ua 的清单截断了长文件名的链接"
           done
@@ -516,15 +527,22 @@ jobs:
           ! body /distfiles/ix/ | grep -q 'INDEX FILE' || fail "含 index.html 的目录给 curl 返回了那个文件"
           body /distfiles/ix/ -A w3m | grep -q 'href="index.html"' || fail "含 index.html 的目录没有给 w3m 列出清单"
 
-          # Browsers keep the old pages until stage C.
-          for d in /files/ /distfiles/ /binpkgs/x86-64/ /unstable/ /unstable/binpkgs/x86-64/ \
-            /gentoo-cjk-kernel/ /gentoo-cjk-livecd/ /distfiles/nope/; do
-            [ "$(code "$d" -A Mozilla/5.0 -H "Accept: ${BROWSER}")" = 200 ] || fail "浏览器打不开 $d"
-            [ "$(body "$d" -A Mozilla/5.0 -H "Accept: ${BROWSER}")" = "$(cat /srv/mirrors/_app.html)" ] || fail "浏览器打开 $d 得到的不是文件浏览器"
-            case "$(hdr "$d" content-security-policy -A Mozilla/5.0 -H "Accept: ${BROWSER}")" in "default-src 'self'"*) ;; *) fail "$d 的浏览器页面未使用站点 CSP" ;; esac
-            hdr "$d" vary -A Mozilla/5.0 -H "Accept: ${BROWSER}" | grep -qx 'Accept, User-Agent' || fail "浏览器打开 $d 没有 Vary"
+          # Browsers go to the file browser on gentoozh.org, in the language asked for.
+          B=(-A Mozilla/5.0 -H "Accept: ${BROWSER}")
+          for d in / /files/ /distfiles/ /binpkgs/x86-64/ /unstable/ /unstable/binpkgs/x86-64/ \
+            /gentoo-cjk-kernel/ /gentoo-cjk-livecd/ /distfiles/c6/ /distfiles/nope/ \
+            /files/distfiles/ /files/nope/ '/distfiles/a%20b/'; do
+            rel="${d#/files}"
+            [ "$(code "$d" "${B[@]}")" = 302 ] || fail "浏览器打开 $d 不是 302"
+            [ "$(loc "$d" "${B[@]}")" = "https://gentoozh.org/files${rel}" ] || fail "浏览器打开 $d 跳到了 $(loc "$d" "${B[@]}")"
+            [ "$(loc "$d?lang=en" "${B[@]}")" = "https://gentoozh.org/en/files${rel}" ] || fail "$d?lang=en 跳到了 $(loc "$d?lang=en" "${B[@]}")"
+            [ "$(loc "$d" "${B[@]}" -H 'Accept-Language: zh-TW,zh;q=0.9')" = "https://gentoozh.org/zh-tw/files${rel}" ] ||
+              fail "Accept-Language: zh-TW 打开 $d 没有跳到 /zh-tw/"
+            [ "$(loc "$d?lang=zh-cn" "${B[@]}" -H 'Accept-Language: en-US')" = "https://gentoozh.org/files${rel}" ] ||
+              fail "$d?lang=zh-cn 没有优先于 Accept-Language"
+            [ "$(hdr "$d" vary "${B[@]}")" = 'Accept, User-Agent, Accept-Language' ] || fail "浏览器打开 $d 的 Vary 不对：$(hdr "$d" vary "${B[@]}")"
+            [ "$(hdr "$d" cache-control "${B[@]}")" = no-cache ] || fail "浏览器打开 $d 的跳转可能被缓存"
           done
-          [ "$(body / -A Mozilla/5.0 -H "Accept: ${BROWSER}")" = "$(cat /srv/mirrors/index.html)" ] || fail "浏览器打开 / 得到的不是首页"
 
           # /_ls/: CORS for gentoozh.org on every answer, 404 and 301 included.
           for u in /_ls/ /_ls/missing/ /_ls/distfiles; do
@@ -546,25 +564,49 @@ jobs:
             body "$u" | grep -q '<center>nginx</center>' || fail "$u 的 404 不是 nginx 默认页"
           done
 
-          [ "$(code /faq)" = 200 ]              || fail "/faq 打不开"
-          [ "$(code /faq.html)" = 301 ]         || fail "/faq.html 没有跳转"
-          case "$(loc /faq.html)" in *"/faq") ;; *) fail "/faq.html 跳到了 $(loc /faq.html)" ;; esac
-          [ "$(code /index.html)" = 301 ]       || fail "/index.html 没有跳转"
+          # The old pages, with or without .html, moved to gentoozh.org.
+          redirect() {
+            local u="$1" want="$2"; shift 2
+            [ "$(code "$u" "$@")" = 302 ] || fail "$u 不是 302"
+            [ "$(loc "$u" "$@")" = "${want}" ] || fail "$u 跳到了 $(loc "$u" "$@")，应为 ${want}"
+          }
+          for p in about binpkg-setup distfiles-setup faq iso logo overlay packages status thanks; do
+            redirect "/$p" "https://gentoozh.org/$p/"
+            redirect "/$p.html" "https://gentoozh.org/$p/"
+          done
+          for u in /mirrors /mirrors.html /mirror /mirror.html; do
+            redirect "$u" https://gentoozh.org/mirrorlist/
+          done
+          redirect /index.html https://gentoozh.org/files/
+          # The thanks page on gentoozh.org links the attribution text here.
+          for u in /assets/NOTICE.txt /assets/LICENSE-Apache-2.0.txt; do
+            [ "$(code "$u")" = 200 ] || fail "$u 无法获取"
+            [ "$(hdr "$u" content-type)" = "text/plain; charset=utf-8" ] || fail "$u 不是 UTF-8 纯文本：$(hdr "$u" content-type)"
+            [ "$(hdr "$u" x-content-type-options)" = nosniff ] || fail "$u 没有 nosniff"
+          done
+          echo x > /srv/mirrors/assets/OTHER.txt
+          [ "$(code /assets/OTHER.txt)" = 404 ] || fail "/assets/ 下的其他文件该是 404"
+          redirect '/packages?q=fcitx' 'https://gentoozh.org/packages/?q=fcitx'
+          redirect '/faq.html?lang=en' 'https://gentoozh.org/en/faq/?lang=en'
+          redirect /faq https://gentoozh.org/zh-tw/faq/ -H 'Accept-Language: zh-Hant-TW'
+          redirect /about.html https://gentoozh.org/en/about/ -H 'Accept-Language: en-US,en;q=0.9'
+          hdr /faq vary | grep -qx 'Accept-Language' || fail "/faq 的跳转没有 Vary: Accept-Language"
 
           [ "$(code /gentoo-zh/binpkgs/x86-64/Packages)" = 301 ] || fail "旧路径没有跳转"
 
-          [ "$(code /_app.html)" = 200 ] || fail "_app.html 被跳转了"
-          [ "$(code /_app)" = 404 ]      || fail "/_app 不该可访问"
+          for u in /_app.html /_app /404.html /internal/ /internal/x.html /assets/ /assets/t.css; do
+            [ "$(code "$u")" = 404 ] || fail "$u 该是 404"
+          done
 
           [ "$(code /files/nope/)" = 404 ] || fail "/files/ 下的路径该是 404"
-          for u in /_txt/ /_html/ /_web/; do
+          for u in /_txt/ /_html/ /_web/ /_page/faq/; do
             [ "$(code "$u")" = 404 ] || fail "内部路径 $u 可以直接访问"
           done
 
           curl -sS -I -H "$H" http://127.0.0.1/faq | grep -qi '^cache-control: no-cache' \
-            || fail "页面没有发 Cache-Control"
+            || fail "旧页面的跳转没有发 Cache-Control"
           curl -sS -I -H "$H" http://127.0.0.1/faq | grep -qi '^strict-transport-security' \
-            || fail "页面没有发 HSTS"
+            || fail "旧页面的跳转没有发 HSTS"
           echo "  全部通过"
 
   deploy:
