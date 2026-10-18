@@ -24,10 +24,10 @@ ssh "${REMOTE}" '
     sudo cp /tmp/nginx-conf/nginx.conf /etc/nginx/nginx.conf
     sudo cp /tmp/nginx-conf/distfiles.conf /etc/nginx/conf.d/distfiles.conf
     sudo cp /tmp/nginx-conf/mirror-common.inc /etc/nginx/conf.d/mirror-common.inc
-    sudo cp /tmp/nginx-conf/headers-site.inc /etc/nginx/conf.d/headers-site.inc
     sudo cp /tmp/nginx-conf/headers-files.inc /etc/nginx/conf.d/headers-files.inc
     sudo cp /tmp/nginx-conf/headers-listing.inc /etc/nginx/conf.d/headers-listing.inc
     sudo cp /tmp/nginx-conf/listing-txt.xsl /etc/nginx/conf.d/listing-txt.xsl
+    sudo rm -f /etc/nginx/conf.d/headers-site.inc
     rm -rf /tmp/nginx-conf
     if ! sudo nginx -t; then
         echo "!! 配置不通过，已还原" >&2

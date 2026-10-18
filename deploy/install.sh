@@ -171,11 +171,12 @@ sudo install -dm755 /var/www/acme/.well-known/acme-challenge
 sudo install -dm755 /etc/nginx/conf.d
 sudo install -m644 nginx.conf                          /etc/nginx/nginx.conf
 sudo install -m644 nginx-test/mirror-common.inc   /etc/nginx/conf.d/mirror-common.inc
-sudo install -m644 nginx-test/headers-site.inc    /etc/nginx/conf.d/headers-site.inc
 sudo install -m644 nginx-test/headers-files.inc   /etc/nginx/conf.d/headers-files.inc
 sudo install -m644 nginx-test/headers-listing.inc /etc/nginx/conf.d/headers-listing.inc
 sudo install -m644 nginx-test/listing-txt.xsl     /etc/nginx/conf.d/listing-txt.xsl
 sudo install -m644 nginx-test/distfiles.conf      /etc/nginx/conf.d/distfiles.conf
+# No config includes it now; CI stage-tests with an empty conf.d to prove it.
+sudo rm -f /etc/nginx/conf.d/headers-site.inc
 
 echo '--- 日志轮替'
 sudo install -m644 logrotate-binhost /etc/logrotate.d/binhost

@@ -142,8 +142,8 @@ distfiles。完整镜像应使用 rsync module。
 
 页面已迁到 gentoozh.org，`site/` 只发布公开签名密钥与 `robots.txt`。镜像机的
 `deploy/site-sync.sh` 每五分钟从 `master` 拉取并发布这两个文件，使用独立锁，不修改 binpkg 或
-distfiles。文件先写进本次发布的目录，再由一次 rename 整体切换；来源中已删除的旧页面与
-assets 在下一次同步时从发布目录移除。
+distfiles。文件先写进本次发布的目录，再由一次 rename 整体切换；发布目录中的其他文件，例如每日任务生成的
+`packages.json` 与 `deps.txt`，不会被复制或删除。
 
 需要立即发布站点，或同时更新 nginx 配置时执行：
 

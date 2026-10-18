@@ -152,23 +152,25 @@ echo
 echo "== publish-site.sh 本身"
 
 pubsite() {
-    local d src dest
+    local d src dest f
     d=$(mktemp -d)
     src="${d}/site"; dest="${d}/dest"
-    mkdir -p "${src}/assets" "${dest}/assets"
+    mkdir -p "${src}/assets" "${dest}"
     printf 'KEY\n' > "${src}/gentoo-zh-binhost.asc"
     printf '<p>new</p>\n' > "${src}/index.html"
-    printf 'ua\n' > "${src}/robots.txt"
     printf 'css\n' > "${src}/assets/site.css"
-    printf '<p>old</p>\n' > "${dest}/gone.html"
-    printf 'stale\n' > "${dest}/assets/removed.css"
+    printf 'AAAA\n' > "${src}/robots.txt"
+    printf 'BBBB\n' > "${dest}/robots.txt"
+    touch -d '2026-01-01 00:00:00' "${src}/robots.txt" "${dest}/robots.txt"
+    # The daily jobs write these next to the site files.
+    for f in packages.json packages.txt packages-unstable.json packages-unstable.txt \
+        deps.txt deps-unstable.txt distfiles-index.json distfiles-status.json .health; do
+        printf 'data\n' > "${dest}/${f}"
+    done
     mkdir -p "${dest}/binpkgs/x86-64" "${dest}/distfiles/ab"
     printf 'pkg\n' > "${dest}/binpkgs/x86-64/a.gpkg.tar"
     printf 'idx\n' > "${dest}/binpkgs/x86-64/Packages"
     printf 'src\n' > "${dest}/distfiles/ab/a.tar.gz"
-    printf 'AAAA\n' > "${src}/same.html"
-    printf 'BBBB\n' > "${dest}/same.html"
-    touch -d '2026-01-01 00:00:00' "${src}/same.html" "${dest}/same.html"
     mkdir -p "${d}/bin"
     cat > "${d}/bin/gpg" <<'EOF'
 #!/bin/bash
@@ -178,30 +180,28 @@ EOF
     echo AAAA0000000000000000000000000000000000AA > "${d}/fpr"
     PATH="${d}/bin:${PATH}" FPR_FILE="${d}/fpr" \
         bash "${ROOT}/deploy/publish-site.sh" "${src}" "${dest}" >/dev/null 2>&1
-    printf '%s %s %s %s %s %s\n' \
+    printf '%s %s %s %s %s\n' \
         "$(test -e "${dest}/gentoo-zh-binhost.asc" && echo asc || echo noasc)" \
-        "$(test -e "${dest}/gone.html" && echo kept || echo removed)" \
-        "$(test -e "${dest}/assets/removed.css" && echo kept || echo removed)" \
-        "$(tr -d '\n' < "${dest}/index.html" 2>/dev/null)" \
-        "$(tr -d '\n' < "${dest}/same.html" 2>/dev/null)" \
+        "$(tr -d '\n' < "${dest}/robots.txt" 2>/dev/null)" \
+        "$(find "${dest}" -maxdepth 1 \( -name '*.html' -o -name assets \) | wc -l)" \
+        "$(cat "${dest}"/packages* "${dest}"/deps* "${dest}"/distfiles-* "${dest}/.health" \
+            2>/dev/null | grep -c '^data$')" \
         "$(find "${dest}/binpkgs" "${dest}/distfiles" -type f 2>/dev/null | wc -l)"
     rm -rf "${d}"
 }
-read -r a b c dd ee ff <<< "$(pubsite)"
+read -r a b c dd ee <<< "$(pubsite)"
 ok "公钥会发布" "${a}" "asc"
-ok "来源中已不存在的页面会一并移除" "${b}" "removed"
-ok "assets 里多余的文件也会移除" "${c}" "removed"
-ok "页面内容已更新" "${dd}" "<p>new</p>"
-ok "同大小同 mtime 但内容不同时仍然更新" "${ee}" "AAAA"
-ok "已发布的包与 distfiles 不受删除影响" "${ff}" "3"
+ok "robots.txt 同大小同 mtime 但内容不同时仍然更新" "${b}" "AAAA"
+ok "来源中的页面与 assets 不再发布" "${c}" "0"
+ok "每日任务的数据档一个不少" "${dd}" "9"
+ok "已发布的包与 distfiles 不受删除影响" "${ee}" "3"
 
 pubsite_interrupted() {
     local d rc
     d=$(mktemp -d)
     mkdir -p "${d}/site" "${d}/dest" "${d}/bin"
-    printf 'KEY\n' > "${d}/site/gentoo-zh-binhost.asc"
-    printf '<p>fresh</p>\n' > "${d}/site/index.html"
-    printf '<p>old</p>\n' > "${d}/dest/old.html"
+    printf 'fresh\n' > "${d}/site/gentoo-zh-binhost.asc"
+    printf 'old\n' > "${d}/dest/gentoo-zh-binhost.asc"
     cat > "${d}/bin/gpg" <<'EOF'
 #!/bin/bash
 printf 'pub:u:255:22::::::::scSC:\nfpr:::::::::AAAA0000000000000000000000000000000000AA:\n'
@@ -212,7 +212,7 @@ EOF
 #!/bin/bash
 for a in "\$@"; do dest="\$a"; done
 mkdir -p "\${dest}"
-printf 'half\n' > "\${dest}/index.html"
+printf 'half\n' > "\${dest}/gentoo-zh-binhost.asc"
 exit 23
 EOF
     chmod +x "${d}/bin/gpg" "${d}/bin/rsync"
@@ -222,15 +222,15 @@ EOF
         >/dev/null 2>&1
     rc=$?
     printf '%s %s %s %s\n' "${rc}" \
-        "$(tr -d '\n' < "${d}/dest/old.html" 2>/dev/null)" \
+        "$(tr -d '\n' < "${d}/dest/gentoo-zh-binhost.asc" 2>/dev/null)" \
         "$(readlink "${d}/dest/.site" | grep -c seed)" \
-        "$(test -e "${d}/dest/index.html" && echo 上线 || echo 没上线)"
+        "$(grep -q half "${d}/dest/gentoo-zh-binhost.asc" && echo 上线 || echo 没上线)"
     rm -rf "${d}"
 }
 
 read -r rc old_state on_seed half <<< "$(pubsite_interrupted)"
 ok "站点传输中断时退出码非零" "$((rc != 0))" "1"
-ok "站点传输中断时已发布的内容不变" "${old_state}" "<p>old</p>"
+ok "站点传输中断时已发布的内容不变" "${old_state}" "old"
 ok "站点传输中断时读的是转换前那一份" "${on_seed}" "1"
 ok "半份产物不会上线" "${half}" "没上线"
 
@@ -1730,9 +1730,8 @@ echo "== site-sync.sh"
 
 setup_site() {
     d=$(mktemp -d)
-    mkdir -p "${d}/work/site/assets" "${d}/work/.git" "${d}/dest" "${d}/bin"
-    echo "<html>" > "${d}/work/site/index.html"
-    echo "body{}" > "${d}/work/site/assets/site.css"
+    mkdir -p "${d}/work/site" "${d}/work/.git" "${d}/dest" "${d}/bin"
+    echo "User-agent: *" > "${d}/work/site/robots.txt"
     printf 'KEY\n' > "${d}/work/site/gentoo-zh-binhost.asc"
     cat > "${d}/bin/git" <<'EOF'
 #!/bin/bash
@@ -1807,8 +1806,7 @@ out=$(cd "${ROOT}" && PATH="${d}/bin:${PATH}" WORK="${d}/work" DEST="${d}/dest" 
 ok "指纹不符时以非零结束" "$?" "1"
 ok "并且不写 DONE，下次会重试" "$(test -e "${d}/work/.synced" && echo 有 || echo 无)" "无"
 ok "公钥没有发布" "$(test -e "${d}/dest/gentoo-zh-binhost.asc" && echo 有 || echo 无)" "无"
-ok "页面也没有发布，本次不切换任何内容" "$(test -e "${d}/dest/index.html" && echo 有 || echo 无)" "无"
-ok "assets 也没有发布" "$(test -d "${d}/dest/assets" && echo 有 || echo 无)" "无"
+ok "robots.txt 也没有发布，本次不切换任何内容" "$(test -e "${d}/dest/robots.txt" && echo 有 || echo 无)" "无"
 contains "输出分开列出两侧指纹" "${out}" "本机记录的指纹"
 rm -rf "${d}"
 

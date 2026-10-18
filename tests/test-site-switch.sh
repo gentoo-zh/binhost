@@ -16,20 +16,18 @@ ok() {
     fi
 }
 
-PAGES=(index.html faq.html packages.html)
+OWNED=(gentoo-zh-binhost.asc robots.txt)
 
-# The fingerprint check the publisher exists for: a page names its stylesheet
-# with the generation's mark, so a page and an asset from different runs are
-# visible as a mismatch instead of having to be reasoned about.
+# Both owned files carry the generation's mark, so files from different runs
+# show up as a mismatch. The page and assets stand in for anything else a
+# source holds: none of it is published.
 site() {
-    local d="$1" mark="$2" page
+    local d="$1" mark="$2"
     mkdir -p "${d}/assets"
-    for page in "${PAGES[@]}"; do
-        printf '<link href="assets/site.css?v=%s">\n' "${mark}" > "${d}/${page}"
-    done
-    printf '/* %s */\n' "${mark}" > "${d}/assets/site.css"
     printf 'key %s\n' "${mark}" > "${d}/gentoo-zh-binhost.asc"
     printf 'user-agent: %s\n' "${mark}" > "${d}/robots.txt"
+    printf '<p>%s</p>\n' "${mark}" > "${d}/index.html"
+    printf '/* %s */\n' "${mark}" > "${d}/assets/site.css"
 }
 
 # The publisher refuses to run without a fingerprint file and a key that
@@ -53,11 +51,11 @@ publish() {
         bash "${ROOT}/deploy/publish-site.sh" "${d}/src" "${d}/dest" 2>&1
 }
 
-# Every mark the served tree carries, collapsed. Two marks means a page and an
-# asset came from different runs.
+# Every mark the owned files carry, collapsed. Two marks means they came from
+# different runs.
 marks() {
     local d="$1" f out=""
-    for f in "${PAGES[@]}" assets/site.css robots.txt gentoo-zh-binhost.asc; do
+    for f in "${OWNED[@]}"; do
         out+=$(grep -ho '[A-Z]' "${d}/dest/${f}" 2>/dev/null | head -1)
     done
     fold -w1 <<< "${out}" | sort -u | tr -d '\n'
@@ -65,7 +63,7 @@ marks() {
 
 linked() {
     local d="$1" name n=0
-    for name in "${PAGES[@]}" assets robots.txt gentoo-zh-binhost.asc; do
+    for name in "${OWNED[@]}"; do
         [[ $(readlink "${d}/dest/${name}" 2>/dev/null) == ".site/${name}" ]] &&
             n=$((n + 1))
     done
@@ -77,64 +75,61 @@ leftovers() {
         \( -name '.switch-*' -o -name '.site-seed-*' -o -name '.replaced-*' \) | wc -l
 }
 
-echo "== 首次发布：目标里已经有一份普通文件与真目录"
+# The daily jobs write these into the same directory; the publisher must
+# never copy or delete them.
+DATA=(packages.json packages.txt packages-unstable.json packages-unstable.txt
+      deps.txt deps-unstable.txt distfiles-index.json distfiles-status.json .health)
+
+data_intact() {
+    local d="$1" f n=0
+    for f in "${DATA[@]}"; do
+        [[ ! -L ${d}/dest/${f} && $(cat "${d}/dest/${f}" 2>/dev/null) == "data ${f}" ]] &&
+            n=$((n + 1))
+    done
+    echo "${n}"
+}
+
+echo "== 首次发布：目标里已经有普通文件"
 d=$(setup)
 site "${d}/src" A
-site "${d}/dest" A
+printf 'key A\n' > "${d}/dest/gentoo-zh-binhost.asc"
+printf 'user-agent: A\n' > "${d}/dest/robots.txt"
 out=$(publish "${d}")
 ok "退出码为零" "$?" "0"
 ok "读到的还是同一代" "$(marks "${d}")" "A"
-ok "六个名称都指向 .site" "$(linked "${d}")" "6"
-ok "assets 变成链接而不是目录" \
-   "$([[ -L ${d}/dest/assets ]] && echo 链接 || echo 目录)" "链接"
+ok "两个名称都指向 .site" "$(linked "${d}")" "2"
+ok "页面与 assets 不发布" \
+   "$(find "${d}/dest" \( -name '*.html' -o -name assets -o -name '*.css' \) | wc -l)" "0"
 ok "不留临时档" "$(leftovers "${d}")" "0"
 
 echo
-echo "== 再次发布：页面与 assets 一起换代"
+echo "== 再次发布：公钥与 robots.txt 一起换代"
 site "${d}/src" B
 publish "${d}" >/dev/null
-ok "页面与 assets 同为新一代" "$(marks "${d}")" "B"
-ok "六个名称仍然指向 .site" "$(linked "${d}")" "6"
+ok "两份同为新一代" "$(marks "${d}")" "B"
+ok "两个名称仍然指向 .site" "$(linked "${d}")" "2"
 ok "上一代目录已移除" \
    "$(find "${d}/dest" -maxdepth 1 -name '.site-*' -type d | wc -l)" "1"
 ok "不留临时档" "$(leftovers "${d}")" "0"
 
 echo
 echo "== 每日任务写在同一个目录里的文件不受影响"
-printf '{"packages":1}\n' > "${d}/dest/packages.json"
-printf 'app-misc/a\n' > "${d}/dest/packages.txt"
-printf '123\n' > "${d}/dest/.health"
+for f in "${DATA[@]}"; do printf 'data %s\n' "${f}" > "${d}/dest/${f}"; done
 site "${d}/src" C
+# A source that happens to hold a data file's name must not overwrite it.
+printf 'from site\n' > "${d}/src/packages.json"
 publish "${d}" >/dev/null
-ok "packages.json 还在" "$(cat "${d}/dest/packages.json")" '{"packages":1}'
-ok "packages.txt 还在" "$(cat "${d}/dest/packages.txt")" "app-misc/a"
-ok ".health 还在" "$(cat "${d}/dest/.health")" "123"
+ok "数据档全部原样保留" "$(data_intact "${d}")" "${#DATA[@]}"
 ok "站点仍然换到新一代" "$(marks "${d}")" "C"
 
 echo
-echo "== 仓库中已移除的页面会一并下线"
-rm -f "${d}/src/faq.html"
+echo "== 仓库中移除 robots.txt 后它一并下线"
+rm -f "${d}/src/robots.txt"
 publish "${d}" >/dev/null
-ok "页面已下线" \
-   "$(test -e "${d}/dest/faq.html" && echo 在 || echo 不在)" "不在"
-ok "连断掉的链接都不剩" \
-   "$(find "${d}/dest" -maxdepth 1 -name 'faq.html' | wc -l)" "0"
-ok "其余页面照常" "$(marks "${d}")" "C"
-ok "数据档仍然没被动" "$(cat "${d}/dest/packages.json")" '{"packages":1}'
-
-echo
-echo "== site/internal/ 的维护者页面不发布，原先发布的副本会下线"
-printf 'design\n' > "${d}/src/design.html"
-publish "${d}" >/dev/null
-ok "顶层页面照常发布" "$(cat "${d}/dest/design.html" 2>/dev/null)" "design"
-mkdir -p "${d}/src/internal"
-mv "${d}/src/design.html" "${d}/src/internal/design.html"
-publish "${d}" >/dev/null
-ok "移到 internal/ 后旧副本下线" \
-   "$(test -e "${d}/dest/design.html" && echo 在 || echo 不在)" "不在"
-ok "internal/ 不发布" \
-   "$(find "${d}/dest" -path '*internal*' | wc -l)" "0"
-ok "其余页面照常" "$(marks "${d}")" "C"
+ok "robots.txt 已下线" \
+   "$(find "${d}/dest" -maxdepth 1 -name robots.txt | wc -l)" "0"
+ok "公钥照常" "$(cat "${d}/dest/gentoo-zh-binhost.asc")" "key C"
+ok "数据档仍然没被动" "$(data_intact "${d}")" "${#DATA[@]}"
 rm -rf "${d}"
 
 echo
@@ -145,8 +140,8 @@ echo "== 半转换的目录：种子取每个名称当下解析到的内容"
 d=$(setup)
 site "${d}/src" A
 publish "${d}" >/dev/null
-rm -f "${d}/dest/index.html"
-printf '<link href="assets/site.css?v=D">\n' > "${d}/dest/index.html"
+rm -f "${d}/dest/robots.txt"
+printf 'user-agent: D\n' > "${d}/dest/robots.txt"
 cat > "${d}/bin/rsync" <<'EOF'
 #!/bin/bash
 exit 23
@@ -158,9 +153,8 @@ rc=$?
 ok "退出码非零" "$((rc != 0))" "1"
 ok "读的是种子那一代" \
    "$([[ $(readlink "${d}/dest/.site") == .site-seed-* ]] && echo 是 || echo 否)" "是"
-ok "六个名称都读得到" \
-   "$(for n in "${PAGES[@]}" assets/site.css robots.txt gentoo-zh-binhost.asc; do
-        [[ -s ${d}/dest/${n} ]] || echo x; done | wc -l)" "0"
+ok "两个名称都读得到" \
+   "$(for n in "${OWNED[@]}"; do [[ -s ${d}/dest/${n} ]] || echo x; done | wc -l)" "0"
 ok "手动放的那份没有被换掉" "$(marks "${d}")" "AD"
 rm -rf "${d}"
 
@@ -190,21 +184,7 @@ ok "退出码非零" "$((rc != 0))" "1"
 ok "说明来源缺公钥" \
    "$([[ ${out} == *未包含\ gentoo-zh-binhost.asc* ]] && echo yes)" "yes"
 ok "已发布的站点原样保留" "$(marks "${d}")" "A"
-ok "六个名称仍然指向 .site" "$(linked "${d}")" "6"
-rm -rf "${d}"
-
-echo
-echo "== 只有公钥与 robots.txt 的来源照常发布"
-# The pages move to gentoozh.org, so a source without index.html is a site.
-d=$(setup)
-mkdir -p "${d}/src"
-printf 'key K\n' > "${d}/src/gentoo-zh-binhost.asc"
-printf 'user-agent: K\n' > "${d}/src/robots.txt"
-out=$(publish "${d}")
-rc=$?
-ok "退出码为零" "${rc}" "0"
-ok "公钥已发布" "$(cat "${d}/dest/gentoo-zh-binhost.asc" 2>/dev/null)" "key K"
-ok "robots.txt 已发布" "$(cat "${d}/dest/robots.txt" 2>/dev/null)" "user-agent: K"
+ok "两个名称仍然指向 .site" "$(linked "${d}")" "2"
 rm -rf "${d}"
 
 echo
@@ -222,7 +202,7 @@ else
     chmod 700 "${d}/dest"
     ok "退出码非零" "$((rc != 0))" "1"
     ok "读到的仍是上一代" "$(marks "${d}")" "A"
-    ok "六个名称仍然指向 .site" "$(linked "${d}")" "6"
+    ok "两个名称仍然指向 .site" "$(linked "${d}")" "2"
     rm -rf "${d}"
 fi
 

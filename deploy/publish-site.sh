@@ -34,18 +34,15 @@ RUN_ID="${RUN_ID:-$$-$(date +%s)}"
 GEN=".site-${RUN_ID}"
 
 # Owned names link into .site, one rename switches them together. DEST also
-# holds the daily jobs' output, so only OWNED is copied or deleted.
-OWNED=('/assets/***' '/gentoo-zh-binhost.asc' '/*.html' '/robots.txt')
+# holds the daily jobs' output (packages*.json, deps*.txt, *-index.json), so
+# only OWNED is copied or deleted. The names are literal, not globs, so no
+# data file can ever match one.
+OWNED=('/gentoo-zh-binhost.asc' '/robots.txt')
 
 owns() {
     local name="$1" pattern
     for pattern in "${OWNED[@]}"; do
-        pattern=${pattern#/}
-        pattern=${pattern%/\*\*\*}
-        # shellcheck disable=SC2053  # pattern is a glob, matching is the point
-        if [[ ${name} == ${pattern} ]]; then
-            return 0
-        fi
+        [[ ${name} == "${pattern#/}" ]] && return 0
     done
     return 1
 }

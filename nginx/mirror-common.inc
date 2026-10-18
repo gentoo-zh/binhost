@@ -175,7 +175,7 @@ location ^~ /gentoo-zh/ {
 
 location = /.health {
 	add_header Cache-Control "no-store";
-	include /etc/nginx/conf.d/headers-site.inc;
+	include /etc/nginx/conf.d/headers-files.inc;
 	default_type text/plain;
 }
 
@@ -221,7 +221,7 @@ location = /favicon.ico { return 302 https://gentoozh.org/favicon.ico; }
 
 location = /robots.txt {
 	root /srv/mirrors;
-	include /etc/nginx/conf.d/headers-site.inc;
+	include /etc/nginx/conf.d/headers-files.inc;
 }
 
 location = /packages.txt {
@@ -229,7 +229,7 @@ location = /packages.txt {
 	default_type text/plain;
 	charset utf-8;
 	add_header Cache-Control "no-cache";
-	include /etc/nginx/conf.d/headers-site.inc;
+	include /etc/nginx/conf.d/headers-files.inc;
 	open_file_cache off;
 }
 
@@ -237,13 +237,13 @@ location ~* \.json$ {
 	add_header Cache-Control "no-cache";
 	add_header Access-Control-Allow-Origin $gz_cors_origin always;
 	add_header Vary Origin always;
-	include /etc/nginx/conf.d/headers-site.inc;
+	include /etc/nginx/conf.d/headers-files.inc;
 	open_file_cache off;
 }
 
 location ~* \.(css|js)$ {
 	add_header Cache-Control "public, max-age=31536000, immutable";
-	include /etc/nginx/conf.d/headers-site.inc;
+	include /etc/nginx/conf.d/headers-files.inc;
 	open_file_cache off;
 }
 
@@ -257,7 +257,7 @@ location ^~ /gigos/ { return 404; }
 
 location / {
 	add_header Cache-Control "no-cache";
-	include /etc/nginx/conf.d/headers-site.inc;
+	include /etc/nginx/conf.d/headers-files.inc;
 	open_file_cache off;
 	try_files $uri $uri.html $uri/index.html $uri/ =404;
 }

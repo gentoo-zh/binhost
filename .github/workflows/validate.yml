@@ -326,6 +326,8 @@ jobs:
 
           cp nginx/*.inc nginx/*.xsl nginx/distfiles.conf /etc/nginx/conf.d/
           sed 's/mime\.types\.nginx/mime.types/' nginx/nginx.conf > /etc/nginx/nginx.conf
+          # Every location uses headers-files.inc; the site headers are gone.
+          [ ! -e /etc/nginx/conf.d/headers-site.inc ] || fail "conf.d 里仍有 headers-site.inc"
           nginx -t
 
       - name: Answer real requests
@@ -406,6 +408,25 @@ jobs:
           case "$(hdr /t.json cache-control)" in *no-cache*) ;; *) fail "json 不该长缓存" ;; esac
           [ "$(code /gentoo-zh-binhost.asc)" = 200 ] || fail "签名公钥无法获取"
           [ "$(code /packages.txt)" = 200 ] || fail "packages.txt 无法获取"
+
+          # Data files and .health carry the file headers.
+          for u in /.health /robots.txt /packages.txt /t.json /gentoo-zh-binhost.asc; do
+            [ "$(hdr "$u" content-security-policy)" = "default-src 'none'; sandbox" ] || fail "$u 没有用文件的 CSP"
+            [ "$(hdr "$u" x-content-type-options)" = nosniff ] || fail "$u 没有 nosniff"
+            [ "$(hdr "$u" x-robots-tag)" = noindex ] || fail "$u 没有 X-Robots-Tag: noindex"
+            hdr "$u" strict-transport-security | grep -q '^max-age=' || fail "$u 没有 HSTS"
+          done
+          case "$(hdr /packages.txt cache-control)" in *no-cache*) ;; *) fail "packages.txt 不该长缓存" ;; esac
+          [ "$(hdr /t.json access-control-allow-origin -H 'Origin: https://gentoozh.org')" = https://gentoozh.org ] ||
+            fail "json 没有给 gentoozh.org 发 ACAO"
+          [ -z "$(hdr /t.json access-control-allow-origin -H 'Origin: https://evil.example')" ] ||
+            fail "json 给了其他来源 ACAO"
+          hdr /t.json vary -H 'Origin: https://gentoozh.org' | grep -qx Origin || fail "json 没有 Vary: Origin"
+          # The HTTPS server's own headers reach locations that set none, such as this redirect.
+          csp443=$(req -k -o /dev/null -D - https://127.0.0.1/distfiles | tr -d '\r' |
+            grep -i '^content-security-policy:' | cut -d' ' -f2-)
+          [ "${csp443}" = "default-src 'none'; sandbox" ] || fail "443 上的跳转没有用文件的 CSP：${csp443}"
+
           [ "$(code '/_raw/distfiles/?a=1')" = 302 ] || fail "/_raw/ 没有跳转"
           [ "$(loc '/_raw/distfiles/?a=1')" = http://distfiles.gentoozh.org/distfiles/?a=1 ] ||
             fail "/_raw/distfiles/ 跳到了 $(loc '/_raw/distfiles/?a=1')"
