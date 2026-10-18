@@ -8,14 +8,12 @@
 
 ## 网页在 gentoozh.org
 
-distfiles.gentoozh.org 不再托管网页。旧下载站已删除，备份在 `archive/old-download-site`
-分支。改网页去 gentoo-zh/gentoo-zh.github.io，不要在本仓库重建。
+distfiles.gentoozh.org 不提供网页，网页源码在 gentoo-zh/gentoo-zh.github.io。
 
 - 浏览器打开目录时，`nginx/mirror-common.inc` 以 302 转到
-  `https://gentoozh.org[/zh-tw|/en]/files/<路径>`；curl 与 wget 仍取得目录清单，文件本身仍由本站提供
+  `https://gentoozh.org[/zh-tw|/en]/files/<路径>`；curl 与 wget 仍取得目录清单
 - 旧页面地址（`/about`、`/iso`、`/packages`、`/status`、`/mirrors` 等）跳转到 gentoozh.org 的对应页面
 - 发布目录只保留数据文件、`gentoo-zh-binhost.asc` 与 `robots.txt`，见 `deploy/publish-site.sh`
-- 服务状态页是 gentoozh.org/status/，数据来自 Cloudflare Worker `gentoozh-status`，不在本仓库
 
 ## 先执行检查器，它们是规则的权威
 
