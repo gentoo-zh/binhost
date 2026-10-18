@@ -6,6 +6,17 @@
 这套系统每天为 gentoo-zh overlay 构建二进制包，签名后发布到镜像机，用户通过
 `binrepos.conf` 取用。它每天执行，改坏了用户当天就无法安装软件包。
 
+## 网页在 gentoozh.org
+
+distfiles.gentoozh.org 不再托管网页。旧下载站已删除，备份在 `archive/old-download-site`
+分支。改网页去 gentoo-zh/gentoo-zh.github.io，不要在本仓库重建。
+
+- 浏览器打开目录时，`nginx/mirror-common.inc` 以 302 转到
+  `https://gentoozh.org[/zh-tw|/en]/files/<路径>`；curl 与 wget 仍取得目录清单，文件本身仍由本站提供
+- 旧页面地址（`/about`、`/iso`、`/packages`、`/status`、`/mirrors` 等）跳转到 gentoozh.org 的对应页面
+- 发布目录只保留数据文件、`gentoo-zh-binhost.asc` 与 `robots.txt`，见 `deploy/publish-site.sh`
+- 服务状态页是 gentoozh.org/status/，数据来自 Cloudflare Worker `gentoozh-status`，不在本仓库
+
 ## 先执行检查器，它们是规则的权威
 
 检查器是本仓库的规范。改动后至少执行与改动相关的检查器：
