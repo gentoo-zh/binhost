@@ -167,7 +167,6 @@ net-proxy/qv2ray
 net-proxy/qvplugin-command
 net-proxy/qvplugin-ss
 net-proxy/qvplugin-trojan
-net-proxy/qvplugin-trojan-go
 net-proxy/serenity
 net-proxy/shadowsocks-rust
 net-proxy/sing-box
