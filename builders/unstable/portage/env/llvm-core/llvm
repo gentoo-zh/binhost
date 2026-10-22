@@ -1,0 +1,8 @@
+# The LLVM 23 manpage tarball ships clang's pages in its llvm directory, so
+# llvm collides with clang on merge (bug 984675). clang still installs them.
+# Removing them from the image covers both the merge and the binary package;
+# a package.env INSTALL_MASK reached only the binary package.
+post_src_install() {
+	[[ ${PVR} == 23.1.4 ]] || return 0
+	rm -f "${ED}"/usr/lib/llvm/23/share/man/man1/{clang,diagtool,extraclangtools,scan-build}.1*
+}
