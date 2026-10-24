@@ -52,7 +52,6 @@ dev-lang/python:3.13
 dev-libs/libpqmarble
 dev-libs/lunar-calendar
 dev-libs/lunar-date
-dev-libs/singleapplication
 dev-libs/v2ray-domain-list-community
 dev-libs/v2ray-geoip
 dev-python/adafruit-board-toolkit

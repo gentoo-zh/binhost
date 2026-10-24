@@ -34,3 +34,4 @@ net-proxy/qvplugin-command	overlay 的 package.mask 屏蔽了全部版本
 net-proxy/qvplugin-ss	overlay 的 package.mask 屏蔽了全部版本
 net-proxy/qvplugin-trojan	overlay 的 package.mask 屏蔽了全部版本
 net-proxy/qvplugin-trojan-go	overlay 的 package.mask 屏蔽了全部版本
+dev-libs/singleapplication	overlay 的 package.mask 屏蔽了全部版本
