@@ -37,7 +37,7 @@ rsync -a deploy/ build/gen-packages.py build/ebuilds.py build/verify-deps.py \
     build/generation.py \
     build/dep-exceptions.txt build/packages.txt build/excluded.txt build/stable-excluded.txt \
     ops/status.sh ops/alert.sh \
-    nginx/ site/ "${REMOTE}:${tmp}/"
+    nginx site/ "${REMOTE}:${tmp}/"
 
 # shellcheck disable=SC2029  # as above
 ssh "${REMOTE}" "set -euo pipefail
@@ -124,14 +124,19 @@ elif sudo grep -qs 'listen 443' /etc/nginx/conf.d/distfiles.conf; then
     exit 1
 else
     echo '    证书尚未签发，先只配置 HTTP；签发之后重新执行本脚本'
-    awk '/^server \{/{n++} n<2' distfiles.conf > distfiles.conf.http
-    mv distfiles.conf.http distfiles.conf
+    awk '/^server \{/{n++} n<2' nginx/distfiles.conf > distfiles.conf.http
+    mv distfiles.conf.http nginx/distfiles.conf
+fi
+OW=/etc/letsencrypt/live/openwrt.daeuniverse.org
+if ! sudo test -r \"\${OW}/fullchain.pem\" || ! sudo test -r \"\${OW}/privkey.pem\"; then
+    echo '    openwrt.daeuniverse.org 的证书尚未签发，不部署该站点'
+    rm -f nginx/openwrt-daeuniverse.conf nginx/openwrt-daeuniverse.inc
 fi
 if ! nginx -V 2>&1 | grep -q http_v3 || ! nginx -V 2>&1 | grep -q http_xslt; then
     echo '    nginx 缺少 http_v3 或 http_xslt，重新编译'
     sudo emerge --oneshot --quiet-build=y www-servers/nginx
 fi
-bash nginx-stage-test.sh . nginx-test /etc/nginx/mime.types.nginx
+bash nginx-stage-test.sh nginx nginx-test /etc/nginx/mime.types.nginx
 sudo install -m644 logrotate-binhost nginx-test/logrotate-binhost
 sudo logrotate -d nginx-test/logrotate-binhost >/dev/null
 
@@ -164,17 +169,30 @@ sudo install -m755 audit-distfiles.py  /usr/local/lib/binhost/audit-distfiles.py
 
 echo '--- rsync'
 sudo install -m644 rsyncd.conf /etc/rsyncd.conf
+printf '%s\n' 'net-misc/rsync rrsync' |
+    sudo install -m644 /dev/stdin /etc/portage/package.use/rsync-rrsync
+[ -x /usr/bin/rrsync ] || sudo emerge --oneshot --quiet-build=y net-misc/rsync
+# Upload account for the daeuniverse OpenWrt feeds. Its authorized_keys and
+# the sshd AllowUsers entry are kept by hand.
+id daeuniverse >/dev/null 2>&1 || {
+    sudo useradd -r -U -m -d /var/lib/daeuniverse -s /bin/sh daeuniverse
+    sudo passwd -l daeuniverse >/dev/null
+}
+sudo install -dm755 -o daeuniverse -g daeuniverse /srv/daeuniverse /srv/daeuniverse/openwrt
 
 sudo install -dm755 /srv/pub
 sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/pub/binpkgs /srv/pub/distfiles /srv/pub/gentoo-cjk-kernel /srv/pub/gentoo-cjk-livecd
 sudo install -dm755 /var/www/acme/.well-known/acme-challenge
 sudo install -dm755 /etc/nginx/conf.d
-sudo install -m644 nginx.conf                          /etc/nginx/nginx.conf
+sudo install -m644 nginx-test/nginx.conf          /etc/nginx/nginx.conf
 sudo install -m644 nginx-test/mirror-common.inc   /etc/nginx/conf.d/mirror-common.inc
 sudo install -m644 nginx-test/headers-files.inc   /etc/nginx/conf.d/headers-files.inc
 sudo install -m644 nginx-test/headers-listing.inc /etc/nginx/conf.d/headers-listing.inc
 sudo install -m644 nginx-test/listing-txt.xsl     /etc/nginx/conf.d/listing-txt.xsl
 sudo install -m644 nginx-test/distfiles.conf      /etc/nginx/conf.d/distfiles.conf
+for f in openwrt-daeuniverse.conf openwrt-daeuniverse.inc; do
+    [ ! -e nginx-test/\${f} ] || sudo install -m644 nginx-test/\${f} /etc/nginx/conf.d/\${f}
+done
 # No config includes it now; CI stage-tests with an empty conf.d to prove it.
 sudo rm -f /etc/nginx/conf.d/headers-site.inc
 

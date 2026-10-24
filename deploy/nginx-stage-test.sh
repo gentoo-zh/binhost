@@ -5,8 +5,9 @@
 # under /etc/nginx/conf.d, so nginx -t on an unchanged copy reads the files
 # already installed there: a first install fails on a file that is not there
 # yet, and a leftover file hides one the new config no longer ships. This copies
-# nginx.conf, distfiles.conf, *.inc and *.xsl into <stage>, writes copies under
-# <stage>/check whose conf.d paths point at <stage>/check, and tests those.
+# nginx.conf and every *.conf, *.inc and *.xsl beside it into <stage>, writes
+# copies under <stage>/check whose conf.d paths point at <stage>/check, and
+# tests those. Every *.conf other than nginx.conf is a conf.d vhost.
 # The system module directory and mime types stay where the system keeps them.
 # The files in <stage> itself are not rewritten; they are what gets installed.
 
@@ -23,7 +24,10 @@ for f in nginx.conf distfiles.conf; do
 done
 
 shopt -s nullglob
-parts=("${SRC}"/distfiles.conf "${SRC}"/*.inc "${SRC}"/*.xsl)
+parts=()
+for f in "${SRC}"/*.conf "${SRC}"/*.inc "${SRC}"/*.xsl; do
+    [[ ${f} == "${SRC}/nginx.conf" ]] || parts+=("${f}")
+done
 mkdir -p "${STAGE}/check/conf.d"
 STAGE=$(cd "${STAGE}" && pwd)
 CHECK="${STAGE}/check"

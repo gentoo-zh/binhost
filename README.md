@@ -138,6 +138,32 @@ rsync://distfiles.gentoozh.org/gentoo-zh/distfiles
 [`deploy/mirror-sync.sh`](deploy/mirror-sync.sh) 供只有 HTTP 的下游同步 binpkg；它不处理
 distfiles。完整镜像应使用 rsync module。
 
+## 托管的软件源
+
+源站还托管 [daeuniverse](https://github.com/daeuniverse/openwrt-packages) 的 OpenWrt
+软件源（dae、honk、vmlinux-btf），地址为 <https://openwrt.daeuniverse.org/>，对应
+`/srv/daeuniverse/openwrt`，同时提供只读 rsync：
+
+```text
+rsync://distfiles.gentoozh.org/openwrt-daeuniverse
+```
+
+目录结构与包签名由 daeuniverse 维护。它的 CI 以 `daeuniverse` 账号上传，每把密钥都由
+`rrsync` 限定在该目录，不能执行其他命令：
+
+```text
+command="/usr/bin/rrsync /srv/daeuniverse/openwrt",restrict ssh-ed25519 AAAA... <注释>
+```
+
+`install.sh` 创建账号与目录，并启用 `net-misc/rsync` 的 `rrsync` USE。以下几步只需手动执行一次：
+
+1. 在 `/etc/ssh/sshd_config` 的 `AllowUsers` 中加入 `daeuniverse`，`sshd -t` 通过后 reload。
+2. 将密钥追加到 `/var/lib/daeuniverse/.ssh/authorized_keys`（目录 700、文件 600，属主
+   `daeuniverse`）。
+3. DNS 指向源站后签发证书：
+   `certbot certonly --webroot -w /var/www/acme -d openwrt.daeuniverse.org`。证书签发前，
+   `install.sh` 与 `deploy-site.sh` 不安装这个站点的 nginx 配置。
+
 ## 站点
 
 页面已迁到 gentoozh.org，`site/` 只发布公开签名密钥与 `robots.txt`。镜像机的
