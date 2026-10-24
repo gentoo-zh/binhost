@@ -578,6 +578,32 @@ jobs:
           [ "$(ow /binpkgs/x86-64/Packages -o /dev/null -w '%{http_code}')" = 404 ] \
             || fail "openwrt 站点泄露了 distfiles 的内容"
           [ "$(code /binpkgs/x86-64/Packages)" = 200 ] || fail "加入 openwrt 站点后 distfiles 索引无法获取"
+          ow /files/ | grep -q '25\.12\.6/' || fail "openwrt 的 /files/ 没有列出版本目录"
+          [ "$(ow /files -o /dev/null -w '%{redirect_url}')" = http://openwrt.daeuniverse.org/files/ ] \
+            || fail "openwrt 的 /files 没有跳到 /files/"
+
+          # Once the guide is uploaded, / picks its language and the pages may load their stylesheet.
+          for l in en zh-cn zh-tw; do
+            mkdir -p "/srv/daeuniverse/openwrt/$l"; echo "guide $l" > "/srv/daeuniverse/openwrt/$l/index.html"
+          done
+          echo 'body{}' > /srv/daeuniverse/openwrt/style.css
+          lang() { ow / -o /dev/null -w '%{redirect_url}' "$@"; }
+          [ "$(lang)" = http://openwrt.daeuniverse.org/en/ ] || fail "openwrt 默认语言不是英文：$(lang)"
+          [ "$(lang -H 'Accept-Language: zh-TW,zh;q=0.9')" = http://openwrt.daeuniverse.org/zh-tw/ ] \
+            || fail "zh-TW 没有跳到 /zh-tw/"
+          [ "$(lang -H 'Accept-Language: zh-HK')" = http://openwrt.daeuniverse.org/zh-tw/ ] || fail "zh-HK 没有跳到 /zh-tw/"
+          [ "$(lang -H 'Accept-Language: zh-CN,en;q=0.8')" = http://openwrt.daeuniverse.org/zh-cn/ ] \
+            || fail "zh-CN 没有跳到 /zh-cn/"
+          [ "$(lang -H 'Accept-Language: en-US,zh-CN;q=0.5')" = http://openwrt.daeuniverse.org/en/ ] \
+            || fail "en-US 没有跳到 /en/"
+          ow / -I | grep -qi '^vary: Accept-Language' || fail "openwrt 的语言跳转没有 Vary: Accept-Language"
+          ow / -I | grep -qi '^cache-control: no-cache' || fail "openwrt 的语言跳转可能被缓存"
+          [ "$(ow /zh-tw/)" = "guide zh-tw" ] || fail "openwrt 的 /zh-tw/ 没有给出页面"
+          ow /en/ -I | grep -qi "^content-security-policy: default-src 'none'; style-src 'self'" \
+            || fail "openwrt 页面的 CSP 不允许自己的样式表"
+          ! ow /en/ -I | grep -qi '^content-security-policy:.*sandbox' || fail "openwrt 页面仍带 sandbox"
+          [ "$(ow /style.css)" = 'body{}' ] || fail "openwrt 的样式表无法获取"
+          ow /files/en/ | grep -q 'index\.html' || fail "openwrt 的 /files/en/ 没有列出目录"
           echo "  全部通过"
 
   deploy:
