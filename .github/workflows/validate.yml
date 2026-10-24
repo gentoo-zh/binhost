@@ -587,6 +587,8 @@ jobs:
             mkdir -p "/srv/daeuniverse/openwrt/$l"; echo "guide $l" > "/srv/daeuniverse/openwrt/$l/index.html"
           done
           echo 'body{}' > /srv/daeuniverse/openwrt/style.css
+          mkdir -p /srv/daeuniverse/openwrt/assets
+          echo 'copy()' > /srv/daeuniverse/openwrt/assets/copy.js
           lang() { ow / -o /dev/null -w '%{redirect_url}' "$@"; }
           [ "$(lang)" = http://openwrt.daeuniverse.org/en/ ] || fail "openwrt 默认语言不是英文：$(lang)"
           [ "$(lang -H 'Accept-Language: zh-TW,zh;q=0.9')" = http://openwrt.daeuniverse.org/zh-tw/ ] \
@@ -599,8 +601,13 @@ jobs:
           ow / -I | grep -qi '^vary: Accept-Language' || fail "openwrt 的语言跳转没有 Vary: Accept-Language"
           ow / -I | grep -qi '^cache-control: no-cache' || fail "openwrt 的语言跳转可能被缓存"
           [ "$(ow /zh-tw/)" = "guide zh-tw" ] || fail "openwrt 的 /zh-tw/ 没有给出页面"
-          ow /en/ -I | grep -qi "^content-security-policy: default-src 'none'; style-src 'self'" \
-            || fail "openwrt 页面的 CSP 不允许自己的样式表"
+          for d in "script-src 'self'" "style-src 'self'" "font-src 'self'" "img-src 'self'"; do
+            ow /en/ -I | grep -i '^content-security-policy:' | grep -qF "$d" || fail "openwrt 页面的 CSP 缺少 $d"
+          done
+          ow /en/ -I | grep -i '^content-security-policy:' | grep -qF "default-src 'none'" \
+            || fail "openwrt 页面的 CSP 没有默认拒绝"
+          [ "$(ow /assets/copy.js)" = 'copy()' ] || fail "openwrt 的 /assets/ 无法获取"
+          ow /assets/copy.js -I | grep -qi '^cache-control: no-cache' || fail "openwrt 的 /assets/ 没有按页面文件处理"
           ! ow /en/ -I | grep -qi '^content-security-policy:.*sandbox' || fail "openwrt 页面仍带 sandbox"
           [ "$(ow /style.css)" = 'body{}' ] || fail "openwrt 的样式表无法获取"
           ow /files/en/ | grep -q 'index\.html' || fail "openwrt 的 /files/en/ 没有列出目录"

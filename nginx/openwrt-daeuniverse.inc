@@ -20,13 +20,13 @@ location = / {
 	return 302 /$ow_lang/;
 }
 
-# The guide pages load only their own stylesheet and images.
-location ~ ^/(en|zh-cn|zh-tw)/|^/style\.css$ {
+# The guide pages load only their own scripts, styles, fonts and images.
+location ~ ^/(en|zh-cn|zh-tw|assets)/|^/style\.css$ {
 	add_header Cache-Control "no-cache" always;
 	add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 	add_header X-Content-Type-Options "nosniff" always;
 	add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-	add_header Content-Security-Policy "default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" always;
+	add_header Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" always;
 	add_header Alt-Svc 'h3=":443"; ma=86400' always;
 }
 
