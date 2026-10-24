@@ -301,11 +301,13 @@ jobs:
         run: |
           apt-get update -qq && apt-get install -y -qq openssl curl
           mkdir -p /srv/mirrors /var/www/acme
-          live=/etc/letsencrypt/live/distfiles.gentoozh.org
-          mkdir -p $live
-          openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
-            -subj /CN=distfiles.gentoozh.org \
-            -keyout $live/privkey.pem -out $live/fullchain.pem 2>/dev/null
+          for host in distfiles.gentoozh.org openwrt.daeuniverse.org; do
+            live=/etc/letsencrypt/live/${host}
+            mkdir -p $live
+            openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+              -subj /CN=${host} \
+              -keyout $live/privkey.pem -out $live/fullchain.pem 2>/dev/null
+          done
           mkdir -p /etc/nginx/modules-enabled
           echo 'load_module modules/ngx_http_xslt_filter_module.so;' > /etc/nginx/modules-enabled/xslt.conf
           fail() { echo "!! $1"; exit 1; }
@@ -324,7 +326,7 @@ jobs:
           fi
           [ "$(sums)" = "${before}" ] || fail "暂存测试改动了 /etc/nginx"
 
-          cp nginx/*.inc nginx/*.xsl nginx/distfiles.conf /etc/nginx/conf.d/
+          cp nginx/*.inc nginx/*.xsl nginx/distfiles.conf nginx/openwrt-daeuniverse.conf /etc/nginx/conf.d/
           sed 's/mime\.types\.nginx/mime.types/' nginx/nginx.conf > /etc/nginx/nginx.conf
           # Every location uses headers-files.inc; the site headers are gone.
           [ ! -e /etc/nginx/conf.d/headers-site.inc ] || fail "conf.d 里仍有 headers-site.inc"
@@ -559,6 +561,23 @@ jobs:
             || fail "旧页面的跳转没有发 Cache-Control"
           curl -sS -I -H "$H" http://127.0.0.1/faq | grep -qi '^strict-transport-security' \
             || fail "旧页面的跳转没有发 HSTS"
+
+          # openwrt.daeuniverse.org serves /srv/daeuniverse/openwrt and nothing of distfiles.
+          mkdir -p /srv/daeuniverse/openwrt/25.12.6/packages/x86_64
+          printf 'index\n' > /srv/daeuniverse/openwrt/25.12.6/packages/x86_64/packages.adb
+          printf 'pkg\n' > /srv/daeuniverse/openwrt/25.12.6/packages/x86_64/dae-2.1.1-r1.apk
+          ow() { local u="$1"; shift; sleep 0.025; curl -sS -H 'Host: openwrt.daeuniverse.org' "$@" "http://127.0.0.1$u"; }
+          adb=/25.12.6/packages/x86_64/packages.adb
+          [ "$(ow / -o /dev/null -w '%{http_code}')" = 200 ] || fail "openwrt 根目录没有列表"
+          ow /25.12.6/packages/x86_64/ | grep -q 'dae-2\.1\.1-r1\.apk' || fail "openwrt 目录列表没有列出包"
+          [ "$(ow "$adb")" = index ] || fail "openwrt 索引无法获取"
+          ow "$adb" -I | grep -qi '^cache-control: public, max-age=300, must-revalidate' \
+            || fail "openwrt 索引的缓存时间不是 5 分钟"
+          ow "$adb" -I | grep -qi '^strict-transport-security' || fail "openwrt 索引没有 HSTS"
+          [ "$(ow /nope.apk -o /dev/null -w '%{http_code}')" = 404 ] || fail "openwrt 不存在的文件不是 404"
+          [ "$(ow /binpkgs/x86-64/Packages -o /dev/null -w '%{http_code}')" = 404 ] \
+            || fail "openwrt 站点泄露了 distfiles 的内容"
+          [ "$(code /binpkgs/x86-64/Packages)" = 200 ] || fail "加入 openwrt 站点后 distfiles 索引无法获取"
           echo "  全部通过"
 
   deploy:
