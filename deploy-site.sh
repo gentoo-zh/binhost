@@ -27,6 +27,13 @@ ssh "${REMOTE}" '
     sudo cp /tmp/nginx-conf/headers-files.inc /etc/nginx/conf.d/headers-files.inc
     sudo cp /tmp/nginx-conf/headers-listing.inc /etc/nginx/conf.d/headers-listing.inc
     sudo cp /tmp/nginx-conf/listing-txt.xsl /etc/nginx/conf.d/listing-txt.xsl
+    ow=/etc/letsencrypt/live/openwrt.daeuniverse.org
+    if sudo test -r "${ow}/fullchain.pem" && sudo test -r "${ow}/privkey.pem"; then
+        sudo cp /tmp/nginx-conf/openwrt-daeuniverse.conf /etc/nginx/conf.d/openwrt-daeuniverse.conf
+        sudo cp /tmp/nginx-conf/openwrt-daeuniverse.inc /etc/nginx/conf.d/openwrt-daeuniverse.inc
+    else
+        echo "    openwrt.daeuniverse.org 的证书尚未签发，不部署该站点"
+    fi
     sudo rm -f /etc/nginx/conf.d/headers-site.inc
     rm -rf /tmp/nginx-conf
     if ! sudo nginx -t; then

@@ -44,7 +44,11 @@ def nginx_roots():
 
 
 def created_dirs():
-    return set(re.findall(r"install\s+-dm\d+[^\n]*?(/(?:srv|var|etc)/\S+)", install))
+    """Every directory an install -d line names, not only the first."""
+    dirs = set()
+    for line in re.findall(r"install\s+-dm\d+[^\n]*", install):
+        dirs.update(re.findall(r"(/(?:srv|var|etc)/\S+)", line))
+    return dirs
 
 
 def cron_commands():

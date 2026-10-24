@@ -98,7 +98,7 @@ echo "== 部署验证、锁与版本标记的顺序"
 
 install="${ROOT}/deploy/install.sh"
 nginx_check=$(line_of "${install}" "bash nginx-stage-test.sh")
-nginx_install=$(line_of "${install}" "sudo install -m644 nginx.conf")
+nginx_install=$(line_of "${install}" "sudo install -m644 nginx-test/nginx.conf")
 logrotate_check=$(line_of "${install}" "sudo logrotate -d nginx-test/logrotate-binhost")
 logrotate_install=$(line_of "${install}" "sudo install -m644 logrotate-binhost /etc/logrotate.d/binhost")
 site_lock_fd=$(line_of "${install}" "exec 9>/var/lib/binhost-site.lock")
