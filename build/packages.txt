@@ -89,6 +89,7 @@ dev-python/pyqt6-charts
 dev-python/pyrime
 dev-python/qasync
 dev-python/simplesat
+dev-python/telethon
 dev-util/asdf-vm
 dev-util/binsider
 dev-util/cmakerc
