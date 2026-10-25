@@ -56,6 +56,7 @@ dev-libs/v2ray-domain-list-community
 dev-libs/v2ray-geoip
 dev-python/adafruit-board-toolkit
 dev-python/archspec
+dev-python/asyncpg
 dev-python/autopxd2
 dev-python/browser-cookie3
 dev-python/conda
