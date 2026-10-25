@@ -574,6 +574,9 @@ jobs:
           ow "$adb" -I | grep -qi '^cache-control: public, max-age=300, must-revalidate' \
             || fail "openwrt 索引的缓存时间不是 5 分钟"
           ow "$adb" -I | grep -qi '^strict-transport-security' || fail "openwrt 索引没有 HSTS"
+          for u in "$adb" /25.12.6/packages/x86_64/dae-2.1.1-r1.apk; do
+            ow "$u" -I | tr -d '\r' | grep -qix 'content-type: application/octet-stream' || fail "openwrt 的 $u 不是 application/octet-stream"
+          done
           [ "$(ow /nope.apk -o /dev/null -w '%{http_code}')" = 404 ] || fail "openwrt 不存在的文件不是 404"
           [ "$(ow /binpkgs/x86-64/Packages -o /dev/null -w '%{http_code}')" = 404 ] \
             || fail "openwrt 站点泄露了 distfiles 的内容"

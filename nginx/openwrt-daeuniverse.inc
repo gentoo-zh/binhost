@@ -51,8 +51,17 @@ location / {
 }
 
 # apk fetches the index on every update; a new one must show within minutes.
+# Both are binary: mime.types has no .adb, and its .apk is Android's.
 location ~ \.adb$ {
+	types {}
+	default_type application/octet-stream;
 	add_header Cache-Control "public, max-age=300, must-revalidate" always;
 	open_file_cache off;
+	include /etc/nginx/conf.d/headers-files.inc;
+}
+
+location ~ \.apk$ {
+	types {}
+	default_type application/octet-stream;
 	include /etc/nginx/conf.d/headers-files.inc;
 }
