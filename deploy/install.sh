@@ -179,6 +179,7 @@ id daeuniverse >/dev/null 2>&1 || {
     sudo passwd -l daeuniverse >/dev/null
 }
 sudo install -dm755 -o daeuniverse -g daeuniverse /srv/daeuniverse /srv/daeuniverse/openwrt
+sudo install -dm755 -o daeuniverse -g daeuniverse /srv/daeuniverse/openwrt/feed /srv/daeuniverse/openwrt/site
 
 sudo install -dm755 /srv/pub
 sudo install -dm755 -o '${SITE_USER}' -g '${SITE_USER}' /srv/pub/binpkgs /srv/pub/distfiles /srv/pub/gentoo-cjk-kernel /srv/pub/gentoo-cjk-livecd

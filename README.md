@@ -141,8 +141,10 @@ distfiles。完整镜像应使用 rsync module。
 ## 托管的软件源
 
 源站还托管 [daeuniverse](https://github.com/daeuniverse/openwrt-packages) 的 OpenWrt
-软件源（dae、honk、vmlinux-btf），地址为 <https://openwrt.daeuniverse.org/>，对应
-`/srv/daeuniverse/openwrt`，同时提供只读 rsync：
+软件源（dae、honk、vmlinux-btf），地址为 <https://openwrt.daeuniverse.org/>。
+`/srv/daeuniverse/openwrt` 下分两个目录：`feed/` 存放软件包、索引与公钥，是网站根目录与
+`/files/` 列表的内容；`site/` 存放三种语言的说明页及其 `assets/`。只读 rsync 只提供
+`feed/`：
 
 ```text
 rsync://distfiles.gentoozh.org/openwrt-daeuniverse

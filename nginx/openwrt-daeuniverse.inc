@@ -1,4 +1,4 @@
-root /srv/daeuniverse/openwrt;
+root /srv/daeuniverse/openwrt/feed;
 access_log /var/log/nginx/openwrt-daeuniverse.log mirror;
 
 limit_conn perip 16;
@@ -8,10 +8,11 @@ location ^~ /.well-known/acme-challenge/ {
 	root /var/www/acme;
 }
 
-# The feed's CI uploads the guide as /<lang>/index.html and /style.css. Until
-# it has, / shows the listing.
+# The feed's CI uploads the packages to feed/ and the guide to site/, as
+# site/<lang>/index.html with its assets/. Until the guide is there, / shows the
+# listing.
 location = / {
-	if (!-f /srv/daeuniverse/openwrt/en/index.html) {
+	if (!-f /srv/daeuniverse/openwrt/site/en/index.html) {
 		rewrite ^ /files/ last;
 	}
 	add_header Vary "Accept-Language" always;
@@ -21,7 +22,8 @@ location = / {
 }
 
 # The guide pages load only their own scripts, styles, fonts and images.
-location ~ ^/(en|zh-cn|zh-tw|assets)/|^/style\.css$ {
+location ~ ^/(en|zh-cn|zh-tw|assets)/ {
+	root /srv/daeuniverse/openwrt/site;
 	add_header Cache-Control "no-cache" always;
 	add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 	add_header X-Content-Type-Options "nosniff" always;
@@ -30,13 +32,11 @@ location ~ ^/(en|zh-cn|zh-tw|assets)/|^/style\.css$ {
 	add_header Alt-Svc 'h3=":443"; ma=86400' always;
 }
 
-# Every file, the guide's directories included; index .no-index keeps a
-# directory holding index.html a listing.
+# The feed alone, which is also what the rsync module serves.
 location = /files { return 301 /files/; }
 
 location ^~ /files/ {
-	alias /srv/daeuniverse/openwrt/;
-	index .no-index;
+	alias /srv/daeuniverse/openwrt/feed/;
 	autoindex on;
 	autoindex_exact_size on;
 	autoindex_localtime off;

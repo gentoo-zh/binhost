@@ -562,15 +562,19 @@ jobs:
           curl -sS -I -H "$H" http://127.0.0.1/faq | grep -qi '^strict-transport-security' \
             || fail "旧页面的跳转没有发 HSTS"
 
-          # openwrt.daeuniverse.org serves /srv/daeuniverse/openwrt and nothing of distfiles.
-          mkdir -p /srv/daeuniverse/openwrt/25.12.6/packages/x86_64
-          printf 'index\n' > /srv/daeuniverse/openwrt/25.12.6/packages/x86_64/packages.adb
-          printf 'pkg\n' > /srv/daeuniverse/openwrt/25.12.6/packages/x86_64/dae-2.1.1-r1.apk
+          # openwrt.daeuniverse.org serves the feed from feed/ and the guide from site/,
+          # and nothing of distfiles.
+          f=/srv/daeuniverse/openwrt/feed
+          mkdir -p $f/25.12.6/packages/x86_64 /srv/daeuniverse/openwrt/site
+          printf 'index\n' > $f/25.12.6/packages/x86_64/packages.adb
+          printf 'pkg\n' > $f/25.12.6/packages/x86_64/dae-2.1.1-r1.apk
+          printf 'key\n' > $f/public-key.pem
           ow() { local u="$1"; shift; sleep 0.025; curl -sS -H 'Host: openwrt.daeuniverse.org' "$@" "http://127.0.0.1$u"; }
           adb=/25.12.6/packages/x86_64/packages.adb
           [ "$(ow / -o /dev/null -w '%{http_code}')" = 200 ] || fail "openwrt 根目录没有列表"
           ow /25.12.6/packages/x86_64/ | grep -q 'dae-2\.1\.1-r1\.apk' || fail "openwrt 目录列表没有列出包"
           [ "$(ow "$adb")" = index ] || fail "openwrt 索引无法获取"
+          [ "$(ow /public-key.pem)" = key ] || fail "openwrt 公钥无法获取"
           ow "$adb" -I | grep -qi '^cache-control: public, max-age=300, must-revalidate' \
             || fail "openwrt 索引的缓存时间不是 5 分钟"
           ow "$adb" -I | grep -qi '^strict-transport-security' || fail "openwrt 索引没有 HSTS"
@@ -586,12 +590,12 @@ jobs:
             || fail "openwrt 的 /files 没有跳到 /files/"
 
           # Once the guide is uploaded, / picks its language and the pages may load their stylesheet.
+          s=/srv/daeuniverse/openwrt/site
           for l in en zh-cn zh-tw; do
-            mkdir -p "/srv/daeuniverse/openwrt/$l"; echo "guide $l" > "/srv/daeuniverse/openwrt/$l/index.html"
+            mkdir -p "$s/$l"; echo "guide $l" > "$s/$l/index.html"
           done
-          echo 'body{}' > /srv/daeuniverse/openwrt/style.css
-          mkdir -p /srv/daeuniverse/openwrt/assets
-          echo 'copy()' > /srv/daeuniverse/openwrt/assets/copy.js
+          mkdir -p $s/assets
+          echo 'copy()' > $s/assets/copy.js
           lang() { ow / -o /dev/null -w '%{redirect_url}' "$@"; }
           [ "$(lang)" = http://openwrt.daeuniverse.org/en/ ] || fail "openwrt 默认语言不是英文：$(lang)"
           [ "$(lang -H 'Accept-Language: zh-TW,zh;q=0.9')" = http://openwrt.daeuniverse.org/zh-tw/ ] \
@@ -612,8 +616,10 @@ jobs:
           [ "$(ow /assets/copy.js)" = 'copy()' ] || fail "openwrt 的 /assets/ 无法获取"
           ow /assets/copy.js -I | grep -qi '^cache-control: no-cache' || fail "openwrt 的 /assets/ 没有按页面文件处理"
           ! ow /en/ -I | grep -qi '^content-security-policy:.*sandbox' || fail "openwrt 页面仍带 sandbox"
-          [ "$(ow /style.css)" = 'body{}' ] || fail "openwrt 的样式表无法获取"
-          ow /files/en/ | grep -q 'index\.html' || fail "openwrt 的 /files/en/ 没有列出目录"
+          # /files/ and the rsync module hold the feed only, never the guide.
+          ! ow /files/ | grep -qE 'href="(en|zh-cn|zh-tw|assets)/"' || fail "openwrt 的 /files/ 列出了说明页目录"
+          [ "$(ow /files/en/ -o /dev/null -w '%{http_code}')" = 404 ] || fail "openwrt 的 /files/en/ 不是 404"
+          ow /files/ | grep -q 'public-key\.pem' || fail "openwrt 的 /files/ 没有列出公钥"
           echo "  全部通过"
 
   deploy:
