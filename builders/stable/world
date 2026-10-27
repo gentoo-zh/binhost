@@ -167,6 +167,7 @@ net-vpn/easytier
 net-vpn/netbird
 net-vpn/rathole
 net-vpn/sstp-server
+sci-biology/fastani
 sci-electronics/openfpgaloader
 sci-ml/llama-cpp
 sys-apps/aptly
