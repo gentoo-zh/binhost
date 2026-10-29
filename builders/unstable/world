@@ -45,6 +45,7 @@ dev-cpp/cppcoro
 dev-cpp/nameof
 dev-cpp/reproc
 dev-cpp/tgbot-cpp
+dev-db/pgroonga
 dev-debug/lldb-mi
 dev-games/alcom
 dev-go/gotests
