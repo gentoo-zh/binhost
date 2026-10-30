@@ -21,7 +21,9 @@ ok() {
 # in the temp tree. The script's fixed host paths are rewritten into the same tree.
 setup() {
     d=$(mktemp -d)
-    mkdir -p "${d}/bin" "${d}/repo/ops" "${d}/repo/build" "${d}/pkgdir" "${d}/remote" "${d}/site"
+    mkdir -p "${d}/bin" "${d}/repo/ops" "${d}/repo/build" "${d}/pkgdir" "${d}/remote" "${d}/site" \
+        "${d}/machine/var/lib/portage"
+    echo stale > "${d}/machine/var/lib/portage/world"
     sed -e "s|^LOCKFILE=.*|LOCKFILE=${d}/lock|" -e "s|^TMPFILE=.*|TMPFILE=${d}/log|" \
         -e "s|^PKGDIR=.*|PKGDIR=${d}/pkgdir|" \
         "${ROOT}/builders/binhost-update" > "${d}/binhost-update"
@@ -63,7 +65,7 @@ EOF
 }
 
 run() {
-    PATH="${d}/bin:${PATH}" REPO="${d}/repo" REMOTE_ROOT="${d}/remote" SITE_ROOT="${d}/site" \
+    PATH="${d}/bin:${PATH}" REPO="${d}/repo" REMOTE_ROOT="${d}/remote" SITE_ROOT="${d}/site" MACHINE="${d}/machine" \
         bash "${d}/binhost-update" "${1:-stable}" > "${d}/out" 2>&1
 }
 
@@ -81,6 +83,7 @@ ok "用时由开始与结束时间计算" \
    "$(field "${d}/site/build-status.json" duration)"
 ok "全部成功时不告警" "$([[ -e ${d}/alert ]] && echo sent)" ""
 ok "拉取仓库后记录所部署的提交" "$(cat "${d}/repo/build/VERSION")" "0123abcd"
+ok "portage 换成文件的 world 改回仓库链接" "$(readlink "${d}/machine/var/lib/portage/world")" "/etc/binhost/stable/world"
 
 setup; PULL_RC=1 run; rc=$?
 ok "拉取仓库失败时退出码为 1" "${rc}" "1"
