@@ -304,6 +304,40 @@ ok "stable 包列表实际读取 stable 索引" "${channel_inputs[0]}" \
 ok "unstable 包列表实际读取 unstable 索引" "${channel_inputs[1]}" \
    "/srv/mirrors/packages-unstable.json|/srv/pub/unstable/binpkgs/x86-64/Packages"
 
+daily_lists_probe() {
+    local mode=$1 d f
+    d=$(mktemp -d)
+    mkdir -p "${d}/site/build" "${d}/lib"
+    for f in packages.txt excluded.txt stable-excluded.txt; do
+        printf 'master/%s\n' "${f}" > "${d}/site/build/${f}"
+        printf 'old/%s\n' "${f}" > "${d}/lib/${f}"
+    done
+    [[ ${mode} == missing ]] && rm "${d}/site/build/stable-excluded.txt"
+    git -C "${d}/site" init -q
+    git -C "${d}/site" add -A
+    git -C "${d}/site" -c user.name=t -c user.email=t@t commit -qm t
+    # The working tree is not what the mirror reads; only the commit counts.
+    printf 'uncommitted\n' > "${d}/site/build/packages.txt"
+    sed -n '/^refresh_lists() {/,/^}/p' "${ROOT}/deploy/daily.sh" > "${d}/fn.sh"
+    (
+        # shellcheck disable=SC1091  # fn.sh is generated above.
+        . "${d}/fn.sh"
+        LIB="${d}/lib" SITE_WORK="${d}/site" refresh_lists 2>/dev/null
+        echo "rc=$?"
+    )
+    cat "${d}/lib/packages.txt" "${d}/lib/excluded.txt" "${d}/lib/stable-excluded.txt"
+    find "${d}/lib" -name '*.new' -printf 'left %f\n'
+    rm -rf "${d}"
+}
+
+ok "每日任务从站点 checkout 的提交更新三份包清单" "$(daily_lists_probe ok | tr '\n' ' ')" \
+   "rc=0 master/packages.txt master/excluded.txt master/stable-excluded.txt "
+ok "缺一份清单时整组不换，也不留下 .new" "$(daily_lists_probe missing | tr '\n' ' ')" \
+   "rc=1 old/packages.txt old/excluded.txt old/stable-excluded.txt "
+lists_line=$(grep -n '^step "包清单更新"' "${ROOT}/deploy/daily.sh" | cut -d: -f1)
+ok "包清单在两个频道生成之前更新" \
+   "$(( ${lists_line:-999999} < ${packages_line:-0} ))" "1"
+
 daily_index_probe() {
     local mode="$1" d out channel
     d=$(mktemp -d)
