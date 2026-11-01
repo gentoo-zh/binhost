@@ -106,7 +106,9 @@ SIGNING_KEY=<签名指纹> REMOTE="ssh build" \
 ```
 
 `deploy/install.sh` 在镜像机安装 nginx、rsync、distfiles 同步、站点同步、状态检查与相关
-定时任务。每日任务分别生成 stable 与 unstable 的网页数据和纯文本清单；一个频道生成失败
+定时任务。每日任务先从站点同步维护的 master checkout 取出 `packages.txt`、`excluded.txt`
+与 `stable-excluded.txt`，所以合并收录或退役 PR 后不必重新部署；任一份读取失败时沿用
+原有的整组清单。随后分别生成 stable 与 unstable 的网页数据和纯文本清单；一个频道生成失败
 不会覆写另一个频道上一份有效输出。任务分别检查两个频道的 `Packages` 能否解析、
 `PACKAGES` 是否等于 `PATH` 条数，以及每个 `PATH` 是否存在；distfiles 同步失败时仍使用
 上一份索引刷新包列表，并保持本次失败状态。TLS 证书和 `/etc/binhost/alert.conf` 需要

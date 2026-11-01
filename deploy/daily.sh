@@ -20,6 +20,7 @@ main() {
 ALERT_CONF="${ALERT_CONF:-/etc/binhost/alert.conf}"
 LIB="${LIB:-/usr/local/lib/binhost}"
 OVERLAY="${OVERLAY:-/var/lib/binhost-overlay}"
+SITE_WORK="${SITE_WORK:-/var/lib/binhost-site}"
 DISTDIR="${DISTDIR:-/srv/pub/distfiles}"
 FAILURES="${FAILURES:-/var/log/emirrordist/failures.log}"
 
@@ -47,6 +48,25 @@ if ! step "overlay 更新" git -C "${OVERLAY}" fetch --quiet origin master ||
     echo "!! overlay 更新失败，本次终止" >&2
     exit 1
 fi
+
+# Newcomer and retire pull requests change these lists without a deploy, so
+# take them from the checkout site-sync keeps at master. git show reads the
+# committed blob, which a concurrent reset of the working tree cannot tear.
+# shellcheck disable=SC2317,SC2329  # step invokes it.
+refresh_lists() {
+    local f g lists=(packages.txt excluded.txt stable-excluded.txt)
+    for f in "${lists[@]}"; do
+        if ! git -c safe.directory="${SITE_WORK}" -C "${SITE_WORK}" \
+                show "HEAD:build/${f}" > "${LIB}/${f}.new"; then
+            for g in "${lists[@]}"; do rm -f "${LIB}/${g}.new"; done
+            return 1
+        fi
+    done
+    for f in "${lists[@]}"; do
+        mv -f "${LIB}/${f}.new" "${LIB}/${f}"
+    done
+}
+step "包清单更新" refresh_lists
 
 : > "${FAILURES}"
 
