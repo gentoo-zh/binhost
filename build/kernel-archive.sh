@@ -27,6 +27,15 @@ RETIRE_PER_RUN="${RETIRE_PER_RUN:-2}"
     exit 1
 }
 RETIRE_MIN_KEEP_SHARE="${RETIRE_MIN_KEEP_SHARE:-50}"
+# Series to build, such as "6.12 7.3"; empty builds every series the overlay offers.
+SERIES="${SERIES:-}"
+read -ra series_list <<< "${SERIES}"
+for one in "${series_list[@]}"; do
+    [[ ${one} =~ ^[0-9]+\.[0-9]+$ ]] || {
+        echo "!!! SERIES 应为空格分隔的内核系列（如 6.12 7.3），收到：${SERIES}" >&2
+        exit 1
+    }
+done
 MAX_BUILDS="${MAX_BUILDS:-4}"
 # binhost-update skips its run while this job holds the shared lock.
 BUILD_WINDOW_S="${BUILD_WINDOW_S:-14400}"
@@ -169,6 +178,10 @@ echo ">>> overlay 提供 ${#wanted[@]} 条内核线"
 todo=()
 for entry in "${wanted[@]}"; do
     read -r series version <<< "${entry}"
+    if [[ -n ${SERIES} && " ${SERIES} " != *" ${series} "* ]]; then
+        echo "    ${series}  ${version}  不在 SERIES 内，跳过"
+        continue
+    fi
     plain_name="${PACKAGE#*/}-${version}-1.${ARCH}.gpkg.tar"
     named_version=no
     manifest_has_entry "${MANIFEST}" "${plain_name}" && named_version=yes

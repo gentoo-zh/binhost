@@ -162,6 +162,7 @@ run_archive() {
         GIT_CALLS="${WORK}/git.calls" GIT_FETCH_RC="${GIT_FETCH_RC}" \
         OVERLAY_FETCH_WAIT=0 BUILD_WINDOW_S="${BUILD_WINDOW_S:-14400}" \
         EXTRA_VARIANTS="${EXTRA_VARIANTS-}" \
+        SERIES="${SERIES-}" \
         TEST_BUILT="${TEST_BUILT}" bash "${ARCHIVE_SCRIPT}"
 }
 
@@ -483,6 +484,37 @@ grep -q '本地副本已 30 小时未更新' "${WORK}/out"
 [[ ! -e ${WORK}/remote/archive/7.1/${NAME} ]]
 [[ ! -s ${WORK}/nspawn.calls ]]
 echo "  ✓ overlay 副本过期且无法取得时不构建"
+
+reset_case
+: > "${WORK}/Manifest"
+SERIES="6.12 7.3" run_archive 1 > "${WORK}/out" 2>&1
+grep -q '7.1  7.1.7  不在 SERIES 内，跳过' "${WORK}/out"
+if grep -q '^::: ' "${WORK}/out"; then
+    echo "  ✗ 不应构建"
+    exit 1
+fi
+[[ ! -e ${WORK}/remote/archive/7.1/${NAME} ]]
+echo "  ✓ 不在 SERIES 内的系列不构建"
+
+reset_case
+: > "${WORK}/Manifest"
+SERIES="6.12 7.1" run_archive 1 > "${WORK}/out" 2>&1
+grep -q '^::: 7.1 ' "${WORK}/out"
+cmp "${TEST_BUILT}" "${WORK}/remote/archive/7.1/${NAME}"
+echo "  ✓ SERIES 内的系列照常构建并发布"
+
+reset_case
+: > "${WORK}/Manifest"
+if SERIES="6.12,7.1" run_archive 1 > "${WORK}/out" 2>&1; then
+    echo "  ✗ SERIES 格式错误时应当失败"
+    exit 1
+fi
+grep -q 'SERIES 应为空格分隔的内核系列' "${WORK}/out"
+if grep -q '^::: ' "${WORK}/out"; then
+    echo "  ✗ 不应构建"
+    exit 1
+fi
+echo "  ✓ SERIES 格式错误时不构建"
 
 reset_case
 : > "${WORK}/Manifest"
