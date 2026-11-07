@@ -162,6 +162,7 @@ run_archive() {
         GIT_CALLS="${WORK}/git.calls" GIT_FETCH_RC="${GIT_FETCH_RC}" \
         OVERLAY_FETCH_WAIT=0 BUILD_WINDOW_S="${BUILD_WINDOW_S:-14400}" \
         EXTRA_VARIANTS="${EXTRA_VARIANTS-}" \
+        LATEST_ONLY="${LATEST_ONLY:-0}" \
         TEST_BUILT="${TEST_BUILT}" bash "${ARCHIVE_SCRIPT}"
 }
 
@@ -483,6 +484,29 @@ grep -q '本地副本已 30 小时未更新' "${WORK}/out"
 [[ ! -e ${WORK}/remote/archive/7.1/${NAME} ]]
 [[ ! -s ${WORK}/nspawn.calls ]]
 echo "  ✓ overlay 副本过期且无法取得时不构建"
+
+reset_case
+: > "${WORK}/Manifest"
+printf '7.1 7.1.6\n7.1 7.1.7\n' > "${WORK}/series"
+LATEST_ONLY=1 run_archive 2 > "${WORK}/out" 2>&1
+grep -q '7.1  7.1.6  不是本系列最新版，跳过' "${WORK}/out"
+[[ $(grep -c '^::: ' "${WORK}/out") == 1 ]]
+grep -q '^::: 7.1 =sys-kernel/gentoo-cjk-kernel-7.1.7$' "${WORK}/out"
+cmp "${TEST_BUILT}" "${WORK}/remote/archive/7.1/${NAME}"
+echo "  ✓ LATEST_ONLY=1 时只构建每个系列的最新版"
+
+reset_case
+: > "${WORK}/Manifest"
+if LATEST_ONLY=yes run_archive 1 > "${WORK}/out" 2>&1; then
+    echo "  ✗ LATEST_ONLY 取值错误时应当失败"
+    exit 1
+fi
+grep -q 'LATEST_ONLY 应为 0 或 1' "${WORK}/out"
+if grep -q '^::: ' "${WORK}/out"; then
+    echo "  ✗ 不应构建"
+    exit 1
+fi
+echo "  ✓ LATEST_ONLY 取值错误时不构建"
 
 reset_case
 : > "${WORK}/Manifest"
