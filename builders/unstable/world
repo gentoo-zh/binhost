@@ -106,6 +106,7 @@ dev-util/mamba
 dev-util/osc
 dev-util/pack-cli
 dev-util/pacstrap
+dev-util/pahole-cachyos
 dev-util/patchelf-liblol
 dev-util/redpanda-cpp
 dev-util/tailspin
