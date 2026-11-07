@@ -28,6 +28,12 @@ RETIRE_PER_RUN="${RETIRE_PER_RUN:-2}"
 }
 RETIRE_MIN_KEEP_SHARE="${RETIRE_MIN_KEEP_SHARE:-50}"
 MAX_BUILDS="${MAX_BUILDS:-4}"
+# 1 builds only the newest version of each series; older ones are still kept.
+LATEST_ONLY="${LATEST_ONLY:-0}"
+[[ ${LATEST_ONLY} == [01] ]] || {
+    echo "!!! LATEST_ONLY 应为 0 或 1，收到：${LATEST_ONLY}" >&2
+    exit 1
+}
 # binhost-update skips its run while this job holds the shared lock.
 BUILD_WINDOW_S="${BUILD_WINDOW_S:-14400}"
 REQUIRED_USE_FLAG="${REQUIRED_USE_FLAG:-cjk}"
@@ -166,6 +172,13 @@ mapfile -t wanted < <(
 
 echo ">>> overlay 提供 ${#wanted[@]} 条内核线"
 
+# kernel-series.py sorts by version, so the last entry of a series is its newest.
+declare -A newest=()
+for entry in "${wanted[@]}"; do
+    read -r series version <<< "${entry}"
+    newest[${series}]=${version}
+done
+
 todo=()
 for entry in "${wanted[@]}"; do
     read -r series version <<< "${entry}"
@@ -211,6 +224,10 @@ for entry in "${wanted[@]}"; do
             fi
             [[ ${manifest_source} == main ]] &&
                 die "${series}/${name} 无法重新构建（gpkg 不可重现）：远程文件与 Manifest 不一致，保留副本不存在或也不一致"
+        fi
+        if [[ ${LATEST_ONLY} == 1 && ${version} != "${newest[${series}]}" ]]; then
+            echo "    ${series}  ${version}${suffix}  不是本系列最新版，跳过"
+            continue
         fi
         echo "    ${series}  ${version}${suffix}  要构建"
         todo+=("${series} ${version} ${suffix:-_} ${extra:-_} ${manifest_source:-none}")
