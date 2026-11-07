@@ -11,3 +11,4 @@ app-shells/gitstatus   zsh-completion
 sys-kernel/installkernel dracut
 dev-cpp/simdutf        atomic-base64
 x11-base/xorg-server   xvfb
+dev-lang/rust          llvm_targets_BPF rust_sysroots_bpf
