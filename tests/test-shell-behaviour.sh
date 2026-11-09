@@ -334,6 +334,41 @@ ok "每日任务从站点 checkout 的提交更新三份包清单" "$(daily_list
    "rc=0 master/packages.txt master/excluded.txt master/stable-excluded.txt "
 ok "缺一份清单时整组不换，也不留下 .new" "$(daily_lists_probe missing | tr '\n' ' ')" \
    "rc=1 old/packages.txt old/excluded.txt old/stable-excluded.txt "
+daily_gentoo_probe() {
+    local mode=$1 d
+    d=$(mktemp -d)
+    mkdir -p "${d}/gentoo/metadata" "${d}/bin"
+    cat > "${d}/bin/emaint" <<EOF
+#!/bin/bash
+echo "\$*" >> "${d}/calls"
+date -u > "${d}/gentoo/metadata/timestamp.chk"
+exit \${EMAINT_RC:-0}
+EOF
+    chmod +x "${d}/bin/emaint"
+    case ${mode} in
+        fresh) touch "${d}/gentoo/metadata/timestamp.chk" ;;
+        stale|failed) touch -d '-2 days' "${d}/gentoo/metadata/timestamp.chk" ;;
+    esac
+    sed -n '/^refresh_gentoo() {/,/^}/p' "${ROOT}/deploy/daily.sh" > "${d}/fn.sh"
+    (
+        # shellcheck disable=SC1091  # fn.sh is generated above.
+        . "${d}/fn.sh"
+        [[ ${mode} == failed ]] && export EMAINT_RC=1
+        PATH="${d}/bin:${PATH}" GENTOO="${d}/gentoo" refresh_gentoo >/dev/null 2>&1
+        echo "rc=$?"
+    )
+    cat "${d}/calls" 2>/dev/null || echo "no sync"
+    rm -rf "${d}"
+}
+
+ok "::gentoo 不到 23 小时就不同步" "$(daily_gentoo_probe fresh | tr '\n' ' ')" "rc=0 no sync "
+ok "::gentoo 过期就同步" "$(daily_gentoo_probe stale | tr '\n' ' ')" "rc=0 sync -r gentoo "
+ok "没有 timestamp.chk 也同步" "$(daily_gentoo_probe missing | tr '\n' ' ')" "rc=0 sync -r gentoo "
+ok "同步失败时步骤失败" "$(daily_gentoo_probe failed | tr '\n' ' ')" "rc=1 sync -r gentoo "
+gentoo_line=$(grep -n '^step "gentoo 更新"' "${ROOT}/deploy/daily.sh" | cut -d: -f1)
+overlay_line=$(grep -n '^if ! step "overlay 更新"' "${ROOT}/deploy/daily.sh" | cut -d: -f1)
+ok "::gentoo 在 overlay 之前更新" "$(( ${gentoo_line:-999999} < ${overlay_line:-0} ))" "1"
+
 lists_line=$(grep -n '^step "包清单更新"' "${ROOT}/deploy/daily.sh" | cut -d: -f1)
 ok "包清单在两个频道生成之前更新" \
    "$(( ${lists_line:-999999} < ${packages_line:-0} ))" "1"
