@@ -23,6 +23,7 @@ OVERLAY="${OVERLAY:-/var/lib/binhost-overlay}"
 SITE_WORK="${SITE_WORK:-/var/lib/binhost-site}"
 DISTDIR="${DISTDIR:-/srv/pub/distfiles}"
 FAILURES="${FAILURES:-/var/log/emirrordist/failures.log}"
+GENTOO="${GENTOO:-/var/db/repos/gentoo}"
 
 rc=0
 
@@ -42,6 +43,20 @@ ${out}"
     fi
     echo "${out}"
 }
+
+# shellcheck disable=SC2317,SC2329  # step invokes it.
+refresh_gentoo() {
+    local out
+    if [[ -n $(find "${GENTOO}/metadata/timestamp.chk" -mmin -1380 2>/dev/null) ]]; then
+        return 0
+    fi
+    if ! out=$(emaint sync -r gentoo 2>&1); then
+        echo "${out}"
+        return 1
+    fi
+    echo "::gentoo 已同步到 $(cat "${GENTOO}/metadata/timestamp.chk")"
+}
+step "gentoo 更新" refresh_gentoo
 
 if ! step "overlay 更新" git -C "${OVERLAY}" fetch --quiet origin master ||
    ! step "overlay 切换" git -C "${OVERLAY}" reset --quiet --hard origin/master; then
