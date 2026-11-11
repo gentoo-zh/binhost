@@ -45,7 +45,6 @@ dev-cpp/cppcoro
 dev-cpp/nameof
 dev-cpp/reproc
 dev-cpp/tgbot-cpp
-dev-db/pgroonga
 dev-debug/lldb-mi
 dev-games/alcom
 dev-go/gotests
@@ -150,7 +149,6 @@ net-p2p/qbittorrent-enhanced
 net-proxy/bore
 net-proxy/cgproxy
 net-proxy/clash-rs
-net-proxy/clash-verge-rev
 net-proxy/dae
 net-proxy/daed
 net-proxy/honk
