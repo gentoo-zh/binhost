@@ -59,7 +59,7 @@ for cmd in git rsync logrotate certbot curl; do command -v \${cmd} >/dev/null ||
 [ -z \"\${missing}\" ] || { echo \"!! 缺少命令：\${missing}\" >&2; exit 1; }
 
 echo '--- 防火墙'
-listening=\$(sudo sshd -T 2>/dev/null | awk '/^port /{print \$2}')
+listening=\$(sudo sshd -T 2>/dev/null | awk '/^[Pp]ort /{print \$2}')
 if [ '${SKIP_SSH_PORT_CHECK:-0}' = 1 ]; then
     echo '   !! SKIP_SSH_PORT_CHECK=1：跳过端口一致性检查' >&2
     echo \"   即将 flush ruleset 并只放行 ${SSH_PORT}；若与实际不符，当前连线会中断，且没有已确认的备用管理通道\" >&2
