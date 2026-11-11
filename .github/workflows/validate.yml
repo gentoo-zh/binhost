@@ -639,9 +639,11 @@ jobs:
       - name: Parse logrotate
         run: |
           sudo apt-get install -y -qq logrotate
-          sudo logrotate -d deploy/logrotate-binhost >/dev/null 2>&1 || {
+          sudo install -o root -g root -m644 deploy/logrotate-binhost /tmp/logrotate-binhost
+          sudo chmod g-w /var/log
+          sudo logrotate -d /tmp/logrotate-binhost >/dev/null 2>&1 || {
             echo "!! logrotate-binhost 解析不过"
-            sudo logrotate -d deploy/logrotate-binhost
+            sudo logrotate -d /tmp/logrotate-binhost
             exit 1
           }
           echo "  logrotate-binhost 可解析"
