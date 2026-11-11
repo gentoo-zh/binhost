@@ -34,7 +34,7 @@ LATEST_ONLY="${LATEST_ONLY:-0}"
     echo "!!! LATEST_ONLY 应为 0 或 1，收到：${LATEST_ONLY}" >&2
     exit 1
 }
-# binhost-update skips its run while this job holds the shared lock.
+# binhost-update waits for the shared lock, so a long run here delays the daily channel build.
 BUILD_WINDOW_S="${BUILD_WINDOW_S:-14400}"
 REQUIRED_USE_FLAG="${REQUIRED_USE_FLAG:-cjk}"
 # One "suffix use-flags" per line, built in addition to the plain kernel.

@@ -76,7 +76,7 @@ stable 频道使用 Gentoo 主树稳定关键字，只对 `::gentoo-zh` 接受 `
 | stable | `/binpkgs/x86-64` | 16:00 后随机 0–15 分钟 |
 | unstable | `/unstable/binpkgs/x86-64` | 04:00 后随机 0–15 分钟 |
 
-两个频道共用一个构建锁，因此不会同时运行；锁被占用时本轮跳过。
+两个频道共用一个构建锁，因此不会同时运行；锁被占用时本轮最多等待 6 小时，仍未取得就不构建并发送告警。
 
 `build/kernel-archive.sh` 每日检查 `sys-kernel/gentoo-cjk-kernel` 的各条版本线，并将
 对应 `-bin` ebuild 使用的归档发布到 `/gentoo-cjk-kernel/amd64/`。该任务在新构建机

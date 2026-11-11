@@ -124,12 +124,21 @@ rm -rf "${d}"
 echo "== binhost-update 的锁与频道"
 
 setup; echo "上一轮日志" > "${d}/log"
-( flock -n 9 && run ) 9>"${d}/lock"; rc=$?
-ok "锁被占用时跳过并以 0 退出" "${rc}" "0"
-ok "锁被占用时不覆盖上一轮日志" "$(cat "${d}/log")" "上一轮日志"
-ok "锁被占用时不告警" "$([[ -e ${d}/alert ]] && echo sent)" ""
-ok "锁被占用时说明原因" "$(grep -c '已被占用' "${d}/out")" "1"
-ok "锁被占用时不写任何状态" "$(find "${d}/remote" "${d}/site" -type f | wc -l)" "0"
+( flock -n 9 && LOCK_WAIT_S=1 run ) 9>"${d}/lock"; rc=$?
+ok "等锁超时时以 1 退出" "${rc}" "1"
+ok "等锁超时时不覆盖上一轮日志" "$(cat "${d}/log")" "上一轮日志"
+ok "等锁超时时告警" "$(grep -c '本次未构建' "${d}/alert" 2>/dev/null)" "1"
+ok "等锁超时时说明原因" "$(grep -c '仍被占用' "${d}/out")" "1"
+ok "等锁超时时不写任何状态" "$(find "${d}/remote" "${d}/site" -type f | wc -l)" "0"
+rm -rf "${d}"
+
+setup
+# shellcheck disable=SC2016  # The inner shell expands $1.
+flock "${d}/lock" bash -c 'touch "$1"; sleep 1' _ "${d}/held" &
+until [[ -e ${d}/held ]]; do sleep 0.05; done
+LOCK_WAIT_S=30 run; rc=$?; wait
+ok "锁在等待期间释放时照常构建" "${rc}" "0"
+ok "锁在等待期间释放时写入构建状态" "$(field "${d}/site/build-status.json" state)" "done"
 rm -rf "${d}"
 
 setup; run testing; rc=$?

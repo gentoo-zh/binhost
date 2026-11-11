@@ -22,11 +22,16 @@ MACHINE=${MACHINE:-/var/lib/machines/binhost-${CHANNEL}}
 PKGDIR=/var/cache/binhost/${CHANNEL}
 LOCKFILE=/var/lib/binhost/build.lock
 TMPFILE=/var/log/binhost-update-${CHANNEL}.log
+# Waits out a kernel archive run or the other channel; a skipped day would otherwise go unnoticed.
+LOCK_WAIT_S=${LOCK_WAIT_S:-21600}
 
 exec {lock}>"${LOCKFILE}"
-if ! flock -n "${lock}"; then
-	echo "锁 ${LOCKFILE} 已被占用，本次跳过"
-	exit 0
+if ! flock -w "${LOCK_WAIT_S}" "${lock}"; then
+	echo "锁 ${LOCKFILE} 等待 ${LOCK_WAIT_S} 秒后仍被占用，本次未构建"
+	# shellcheck source=/dev/null
+	. "${REPO}/ops/alert.sh"
+	alert "binhost ${CHANNEL} 频道本次未构建（$(hostname)）：锁 ${LOCKFILE} 等待 ${LOCK_WAIT_S} 秒后仍被占用"
+	alert_exit 1
 fi
 
 exec > >(tee "${TMPFILE}") 2>&1
