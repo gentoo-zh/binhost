@@ -20,7 +20,6 @@ app-i18n/fcitx-libthai
 app-i18n/fcitx-mcbopomofo
 app-i18n/fcitx-meta
 app-i18n/fcitx-openbangla
-app-i18n/fcitx-skk
 app-i18n/fcitx-vinput
 app-i18n/fcitx-zhuyin
 app-i18n/libime-jyutping
@@ -28,7 +27,6 @@ app-i18n/libkkc
 app-i18n/lunar
 app-misc/cc-switch
 app-misc/cc-switch-cli
-app-misc/codex-auth
 app-misc/fast-resume
 app-misc/gpick
 app-misc/joshuto
