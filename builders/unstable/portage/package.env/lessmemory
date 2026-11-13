@@ -1,2 +1,3 @@
 net-libs/webkit-gtk lessmemory.conf
 dev-qt/qtwebengine lessmemory.conf
+dev-util/codex lessmemory.conf
