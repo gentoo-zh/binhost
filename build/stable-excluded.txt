@@ -6,6 +6,8 @@
 # Format: category/package<TAB>reason
 
 app-emulation/winetricks-zh	requires a 32-bit Wine dependency graph outside the stable build profile
+app-i18n/fcitx-skk	runtime dependency >=app-i18n/fcitx-5.1.22 is ~amd64 only
+app-misc/codex-auth	build dependency dev-lang/zig-bin:0.17 is ~amd64 only
 dev-db/pgroonga	runtime dependency >=app-text/groonga-14.1.0 is ~amd64 only
 dev-python/fuo-netease	runtime dependency dev-python/marshmallow-4.3.0 is ~amd64 only
 dev-python/fuo-qqmusic	runtime dependency dev-python/marshmallow-4.3.0 is ~amd64 only
