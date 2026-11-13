@@ -122,6 +122,7 @@ kde-misc/plasma-applet-netspeed-widget
 kde-misc/plasma-ions-china
 media-libs/libdicom
 media-libs/openslide
+media-plugins/kotonoha
 media-plugins/waylyrics
 media-sound/euphonica
 media-sound/feeluown
