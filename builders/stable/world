@@ -113,6 +113,7 @@ gui-apps/tux-manager
 kde-misc/plasma-applet-netspeed-widget
 media-libs/libdicom
 media-libs/openslide
+media-plugins/kotonoha
 media-sound/feeluown
 media-sound/go-musicfox
 media-sound/netease-cloud-music-gtk
