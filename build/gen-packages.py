@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import collections
 import functools
 import json
 import os
@@ -95,10 +96,42 @@ def version_string(parts):
     return parts[2] + ("-" + parts[3] if parts[3] != "r0" else "")
 
 
+def slot_bindings(fields):
+    """The subslots this build was linked against: each `:=` atom in RDEPEND.
+
+    Two builds of one CPV with the same USE differ here when the second was a
+    rebuild after a dependency changed its subslot, e.g. media-libs/libjxl
+    going from 0/0.12 to 0/0.13.
+    """
+    out = set()
+    for token in fields.get("RDEPEND", "").split():
+        atom = token.split("[", 1)[0]
+        if not atom.endswith("=") or ":" not in atom:
+            continue
+        name, slot = atom[:-1].split(":", 1)
+        name = name.lstrip("<>=~!")
+        parts = catpkgsplit(name)
+        cp = f"{parts[0]}/{parts[1]}" if parts else name
+        out.add(f"{cp}:{slot}")
+    return sorted(out)
+
+
+def use_flags(fields):
+    """The package's own flags as emerge -pv shows them: IUSE, minus for off.
+
+    USE also carries profile-implicit flags (arch, elibc, kernel, abi), which
+    say nothing about the build, so only IUSE members are listed.
+    """
+    enabled = set(fields.get("USE", "").split())
+    flags = sorted({flag.lstrip("+-") for flag in fields.get("IUSE", "").split()},
+                   key=str.lower)
+    return [flag if flag in enabled else f"-{flag}" for flag in flags]
+
+
 def read_built():
     """The newest published binary package of each gentoo-zh package.
 
-    Returns {cp: {"ver", "size"?, "build_id"}} and the index's TIMESTAMP (None
+    Returns {cp: {"ver", "size"?, "use"?, "build_id"}} and the index's TIMESTAMP (None
     when the header has none). Two stanzas of one CPV (binpkg-multi-instance)
     go to the higher BUILD_ID, since that is the build a client resolving the
     index gets. "size" is left out when the stanza carries no SIZE.
@@ -126,6 +159,9 @@ def read_built():
                  "build_id": int(build_id) if build_id.isdigit() else 0}
         if fields.get("SIZE", "").isdigit():
             entry["size"] = int(fields["SIZE"])
+        use = use_flags(fields)
+        if use:
+            entry["use"] = use
         old = out.get(cp)
         if old is not None:
             order = vercmp(entry["ver"], old["ver"]) or 0
@@ -145,7 +181,11 @@ def read_deps():
     Keyed by CPV rather than by package, because staging publishes more than
     one version of the same package whenever two slots or two exact atoms are
     depended on, and dropping the older one would name a version that is not
-    the one a consumer gets.
+    the one a consumer gets. Stanzas of one CPV (binpkg-multi-instance) are
+    one entry only when SLOT with its subslot, USE and the bound dependency
+    subslots all match, and then the higher BUILD_ID is kept; a build that
+    differs in any of them is its own entry. Entries that share cp, slot and
+    version carry "bindings", the bound subslots that tell them apart.
 
     Only REPO: gentoo counts. A stanza from any other repository is a state
     this script does not know how to describe, so it stops rather than file it
@@ -161,7 +201,7 @@ def read_deps():
     except OSError as e:
         raise IndexUnreadable(f"{p} 读取失败：{e}") from e
 
-    out, others = [], set()
+    out, others = {}, set()
     for s in text.split("\n\n")[1:]:
         f = dict(STANZA.findall(s))
         cpv = f.get("CPV")
@@ -176,21 +216,42 @@ def read_deps():
         parts = catpkgsplit(cpv)
         if not parts:
             raise IndexUnreadable(f"无法解析 CPV：{cpv}")
+        slot, _, subslot = f.get("SLOT", "0").partition("/")
         dep = {"cp": f"{parts[0]}/{parts[1]}", "ver": version_string(parts),
-               "slot": f.get("SLOT", "0").split("/", 1)[0]}
+               "slot": slot}
+        if subslot and subslot != slot:
+            dep["subslot"] = subslot
         if f.get("SIZE", "").isdigit():
             dep["size"] = int(f["SIZE"])
-        out.append(dep)
+        use = use_flags(f)
+        if use:
+            dep["use"] = use
+        build_id = int(f["BUILD_ID"]) if f.get("BUILD_ID", "").isdigit() else 0
+        bound = slot_bindings(f)
+        key = cpv, f.get("SLOT", "0"), tuple(use), tuple(bound)
+        if key in out and out[key][0] >= build_id:
+            continue
+        out[key] = (build_id, dep, bound)
     if others:
         raise IndexUnreadable(f"索引里有未知仓库的产物：{' '.join(sorted(others))}")
+    groups = collections.defaultdict(list)
+    for build_id, dep, bound in out.values():
+        groups[dep["cp"], dep["slot"], dep["ver"]].append((build_id, dep, set(bound)))
+    for builds in groups.values():
+        if len(builds) < 2:
+            continue
+        shared = set.intersection(*(bound for _, _, bound in builds))
+        for _, dep, bound in builds:
+            if bound - shared:
+                dep["bindings"] = sorted(bound - shared)
+
     def compare(left, right):
-        prefix = (left["cp"], left["slot"]), (right["cp"], right["slot"])
+        prefix = (left[1]["cp"], left[1]["slot"]), (right[1]["cp"], right[1]["slot"])
         if prefix[0] != prefix[1]:
             return -1 if prefix[0] < prefix[1] else 1
-        return vercmp(left["ver"], right["ver"]) or 0
+        return (vercmp(left[1]["ver"], right[1]["ver"]) or 0) or (left[0] > right[0]) - (left[0] < right[0])
 
-    out.sort(key=functools.cmp_to_key(compare))
-    return out
+    return [dep for _, dep, _ in sorted(out.values(), key=functools.cmp_to_key(compare))]
 
 
 def mirrored():
@@ -278,14 +339,16 @@ def main(overlay, policy_lookup=None):
                     "present": False, "why": "removed"})
 
     # Schema 5 adds fields and changes none: ver and size of the published
-    # binary package, and whether every distfile is mirrored, each left out
-    # when unknown. "binhost" still means listed, not published.
+    # binary package, its USE flags, and whether every distfile is mirrored,
+    # each left out when unknown. "binhost" still means listed, not published.
     for row in out:
         pkg = built.get(row["cp"])
         if pkg is not None:
             row["ver"] = pkg["ver"]
             if "size" in pkg:
                 row["size"] = pkg["size"]
+            if "use" in pkg:
+                row["use"] = pkg["use"]
         if row["dist"] and have is not None:
             row["mirrored"] = all(f in have for f in row["dist"])
 
@@ -345,7 +408,14 @@ def main(overlay, policy_lookup=None):
                  f"# 生成于 {time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime())}",
                  "# 第二列 slot，第三列版本；不替代 Gentoo 官方 binhost",
                  ""]
-    dep_lines += [f"{d['cp']:<44} {d['slot']:<8} {d['ver']}" for d in deps]
+    variants = collections.Counter((d["cp"], d["slot"], d["ver"]) for d in deps)
+    def distinguish(d):
+        if variants[d["cp"], d["slot"], d["ver"]] < 2:
+            return ""
+        return "".join([f"  subslot={d['subslot']}" if "subslot" in d else "",
+                        f"  USE=\"{' '.join(d.get('use', []))}\"",
+                        f"  {' '.join(d['bindings'])}" if "bindings" in d else ""])
+    dep_lines += [f"{d['cp']:<44} {d['slot']:<8} {d['ver']}{distinguish(d)}" for d in deps]
     tmp_dep = dep_txt.with_suffix(".txt.new")
     tmp_dep.write_text("\n".join(dep_lines) + "\n")
     os.replace(tmp_dep, dep_txt)

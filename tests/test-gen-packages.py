@@ -431,6 +431,48 @@ case("同一 CPV 的多次构建取 BUILD_ID 最大的一份", lambda: (
         stanza("app-misc/a-1", "gentoo-zh", extra="\nBUILD_ID: 1\nSIZE: 11"),
     ]))[1]["app-misc/a"].get("size") == 33))
 
+case("::gentoo 依赖同一 CPV、同一 USE 的多次构建只列一行，取 BUILD_ID 最大的一份", lambda: (
+    load("\n\n".join([
+        stanza("dev-qt/b-6", "gentoo", slot="6", extra="\nBUILD_ID: 1\nSIZE: 11\nIUSE: +x y\nUSE: amd64 x"),
+        stanza("dev-qt/b-6", "gentoo", slot="6", extra="\nBUILD_ID: 2\nSIZE: 22\nIUSE: +x y\nUSE: amd64 x"),
+    ])) == [{"cp": "dev-qt/b", "ver": "6", "slot": "6", "size": 22, "use": ["x", "-y"]}]))
+
+case("::gentoo 依赖同一 CPV 但 USE 不同的构建各列一行", lambda: (
+    [d["use"] for d in load("\n\n".join([
+        stanza("dev-qt/b-6", "gentoo", slot="6", extra="\nBUILD_ID: 1\nIUSE: x\nUSE: x"),
+        stanza("dev-qt/b-6", "gentoo", slot="6", extra="\nBUILD_ID: 2\nIUSE: x\nUSE: amd64"),
+    ]))] == [["x"], ["-x"]]))
+
+case("同一 CPV、同一 USE 但绑定的依赖 subslot 不同的构建各列一行，并写出不同的绑定", lambda: (
+    [d.get("bindings") for d in load("\n\n".join([
+        stanza("net-libs/w-2", "gentoo", extra="\nBUILD_ID: 1\nRDEPEND: dev-libs/icu:0/78= media-libs/libjxl:0/0.12=[x(+)]"),
+        stanza("net-libs/w-2", "gentoo", extra="\nBUILD_ID: 2\nRDEPEND: dev-libs/icu:0/78= >=media-libs/libjxl-0.13:0/0.13="),
+    ]))] == [["media-libs/libjxl:0/0.12"], ["media-libs/libjxl:0/0.13"]]))
+
+case("deps.txt 在同一版本有多份构建时写出 USE 与不同的绑定，只有一份时不写", lambda: (
+    (lambda txt: 'USE="x"  media-libs/libjxl:0/0.12' in txt
+     and 'USE="x"  media-libs/libjxl:0/0.13' in txt
+     and not any("USE=" in l for l in txt.splitlines() if l.startswith("dev-libs/one")))(
+        run_main("\n\n".join([
+            stanza("net-libs/w-2", "gentoo", extra="\nBUILD_ID: 1\nIUSE: x\nUSE: x\nRDEPEND: media-libs/libjxl:0/0.12="),
+            stanza("net-libs/w-2", "gentoo", extra="\nBUILD_ID: 2\nIUSE: x\nUSE: x\nRDEPEND: media-libs/libjxl:0/0.13="),
+            stanza("dev-libs/one-1", "gentoo", extra="\nIUSE: x\nUSE: x"),
+        ]))[2])))
+
+case("只有一份构建的依赖不写 bindings", lambda: (
+    "bindings" not in load(stanza("net-libs/w-2", "gentoo", extra="\nRDEPEND: dev-libs/icu:0/78="))[0]))
+
+case("自身的 subslot 写入 subslot，slot 仍只取 slot", lambda: (
+    (lambda d: d["slot"] == "0" and d["subslot"] == "16")(
+        load(stanza("dev-libs/l-1", "gentoo", slot="0/16"))[0])))
+
+case("USE 只列 IUSE 里的旗标，不列 arch、elibc 等隐式旗标", lambda: (
+    load(stanza("dev-libs/c-1", "gentoo", extra="\nIUSE: -a +b\nUSE: abi_x86_64 amd64 b elibc_glibc"))[0]["use"]
+    == ["-a", "b"]))
+
+case("没有 IUSE 的依赖不写 use", lambda: (
+    "use" not in load(stanza("dev-libs/c-1", "gentoo"))[0]))
+
 case("::gentoo 的同名产物不当作本仓库的版本", lambda: (
     "ver" not in built_rows(stanza("app-misc/a-9", "gentoo"))[1]["app-misc/a"]))
 
@@ -465,7 +507,7 @@ case("::gentoo 依赖带上 SIZE", lambda: (
     load(stanza("dev-libs/lib-1", "gentoo", extra="\nSIZE: 42"))[0].get("size") == 42))
 
 case("schema 4 已有的字段与含义不变", lambda: (
-    all(set(schema4(row)) == set(row) - {"ver", "size", "mirrored"}
+    all(set(schema4(row)) == set(row) - {"ver", "size", "use", "mirrored"}
         for row in availability_matrix()[1].values())
     and availability_matrix()[1]["app-misc/bin-only"]["binhost"] is True))
 
