@@ -47,7 +47,7 @@ push() {
 
 echo "开始于 $(date -u)"
 
-emerge --sync -q || failed+=("emerge --sync")
+emerge --sync -q || { sleep 300 && emerge --sync -q; } || failed+=("emerge --sync")
 { git -C "${REPO}" reset -q --hard && git -C "${REPO}" pull -q --ff-only; } || failed+=("git pull")
 git -C "${REPO}" rev-parse HEAD > "${REPO}/build/VERSION"
 # Portage writes world by renaming a new file over it, which replaces the link with a stale copy.
