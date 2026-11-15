@@ -136,6 +136,7 @@ media-video/tsukimi
 media-video/wiliwili
 net-analyzer/dstp
 net-analyzer/nali
+net-analyzer/nexttrace
 net-analyzer/pwru
 net-analyzer/realitlscanner
 net-dns/ddns-go
