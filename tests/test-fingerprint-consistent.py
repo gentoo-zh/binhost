@@ -23,8 +23,7 @@ SKIP_FILES = {"tests/test-fingerprint-consistent.py",
               "tests/test-site-switch.sh"}
 
 ASC = ROOT / "site" / "gentoo-zh-binhost.asc"
-SERVICES = {"deploy/systemd/binhost-build.service",
-            "deploy/systemd/binhost-build-unstable.service"}
+SERVICES = {"builders/binhost-update"}
 REQUIRED = SERVICES | {"docs/key-rotation.md"}
 
 bad = 0

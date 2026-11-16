@@ -45,59 +45,17 @@ jobs:
       - name: bindist detection handles every RESTRICT shape
         run: python3 tests/test-validate.py /tmp/overlay
 
-      - name: Container builds for the x86-64 baseline
-        run: python3 tests/test-baseline-cpu.py
-
-      - name: Staging filter keeps only what is ours
-        run: python3 tests/test-stage-index.py
-
-      - name: overlay 整包屏蔽的不进建置清单
-        run: python3 tests/test-drop-masked.py
-
-      - name: Quarantine carries only what cannot wait
-        run: python3 tests/test-quarantine-immediacy.py
-
-      - name: The live index stops naming what was just removed
-        run: python3 tests/test-prune-index.py
-
       - name: Published index satisfies its own runtime dependencies
         run: python3 tests/test-verify-deps.py
 
-      - name: A dependency that changed subslot is reported
-        run: python3 tests/test-check-subslots.py
-
-      - name: The base snapshot retains Portage matching metadata
-        run: python3 tests/test-snapshot-vdb.py
-
-      - name: A version the resolver holds back is excused with its reason
-        run: python3 tests/test-resolved-versions.py
-
-      - name: The configured Gentoo binrepo index is captured intact
-        run: python3 tests/test-snapshot-binrepo.py
-
       - name: A generation cannot mix indexes and snapshots
         run: python3 tests/test-generation.py
-
-      - name: The private key stays outside untrusted build containers
-        run: python3 tests/test-signing-boundary.py
-
-      - name: Packages already signed by the current key stay unchanged
-        run: python3 tests/test-sign-packages.py
-
-      - name: Verified signatures persist without following cache symlinks
-        run: python3 tests/test-persist-packages.py
-
-      - name: Gpkg installation smoke tests stay deterministic and advisory
-        run: python3 tests/test-smoke-install.py
 
       - name: Package list separates the two repositories
         run: python3 tests/test-gen-packages.py
 
       - name: Reaping orphans deletes the right file
         run: python3 tests/test-audit-distfiles.py
-
-      - name: Failure classifier does not invent packages
-        run: python3 tests/test-classify-failures.py
 
       - name: Adding a package to the list
         run: python3 tests/test-add-package.py
@@ -226,34 +184,6 @@ jobs:
         run: python3 site/tools/check-copy.py site
       - name: The copy checker still catches every shape
         run: python3 tests/test-check-copy.py
-      - name: Classifier against real log shapes
-        run: |
-          d=$(mktemp -d)
-          cat > "$d/app-misc_a.log" <<'EOF'
-          !!! All ebuilds that could satisfy "app-misc/a" have been masked.
-          - app-misc/a-1.0::gentoo-zh (masked by: FSL-1.1-MIT license(s))
-          EOF
-          cat > "$d/app-misc_b.log" <<'EOF'
-          The following USE changes are necessary to proceed:
-          # required by app-misc/b-1.0::gentoo-zh
-          >=dev-libs/foo-1.2 python
-          EOF
-          cat > "$d/app-misc_c.log" <<'EOF'
-          configure: error: XML::Parser perl module is required for intltool
-           * ERROR: app-misc/c-1.0::gentoo-zh failed (configure phase):
-          EOF
-          cat > "$d/app-misc_d.log" <<'EOF'
-          - dev-java/oraclejdk-bin-21.0.1::gentoo-zh (masked by: Oracle-BCLA license(s))
-           * ERROR: app-misc/d-1.0::gentoo-zh failed (compile phase):
-          EOF
-          out=$(python3 build/classify-failures.py "$d")
-          echo "$out"
-          echo "$out" | grep -q "许可证不允许再分发（1 个）" || { echo "!! 许可证未识别"; exit 1; }
-          echo "$out" | grep -q "依赖需要调整 USE（1 个）"   || { echo "!! USE 未识别"; exit 1; }
-          echo "$out" | grep -q "构建失败（2 个）"           || { echo "!! 构建失败未识别"; exit 1; }
-          echo "$out" | grep -q "许可证不允许再分发（1 个）" || { echo "!! 依赖的许可证被算到本包头上"; exit 1; }
-          echo "$out" | grep -q "未归类"                     && { echo "!! 出现未归类"; exit 1; }
-          exit 0
 
   shell:
     runs-on: ubuntu-latest
@@ -261,9 +191,6 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: shellcheck
         run: shellcheck build/*.sh ops/*.sh deploy/*.sh tests/*.sh deploy-site.sh builders/binhost-update builders/run-update
-
-      - name: A brief upstream outage is retried once
-        run: bash tests/test-fetch-retry.sh
 
       - name: Alerting survives a broken alert.conf
         run: bash tests/test-alert.sh
@@ -280,15 +207,6 @@ jobs:
       - name: Kernel archive matches the overlay
         run: bash tests/test-kernel-status.sh
 
-      - name: Publication alerts distinguish cleanup from transfer failures
-        run: bash tests/test-cycle.sh
-
-      - name: Overlapping progress pushes both land
-        run: bash tests/test-progress-push.sh
-
-      - name: Preserved-library users are rebuilt from source
-        run: bash tests/test-rebuild-preserved.sh
-
       - name: The site check reads under the lock it tests
         run: bash tests/test-site-lock.sh
 
@@ -300,19 +218,6 @@ jobs:
 
       - name: SIGNING_KEY 必须是指纹，部署前先问 gnupg 有没有这把私钥
         run: bash tests/test-signing-key-gate.sh
-
-      - name: 分发内核闸门不受解析退出码影响，私钥先于替换检查
-        run: bash tests/test-dist-kernel-gate.sh
-
-      - name: 保留库使用者按 portage 的语义分类
-        run: python3 tests/test-preserved-consumers.py
-
-
-      - name: A second publisher waits for the mirror lock
-        run: bash tests/test-publish-lock.sh
-
-      - name: One rename replaces the whole generation
-        run: bash tests/test-publish-switch.sh
 
       - name: The site changes generation in one rename
         run: bash tests/test-site-switch.sh

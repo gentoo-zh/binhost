@@ -71,12 +71,12 @@ stable 与 unstable 分别生成站点包列表，生成结果不入版本库。
 主题写成 `scope: subject`：
 
 ```
-stage-index: decide by version, not by package directory
+kernel-archive: publish first, then record the digest
 site-sync: delete pages removed from the repository
 test: skip repository-level tests on build-only machines
 ```
 
-`scope` 应明确对应改动范围：单个脚本使用去掉扩展名的脚本名（`stage-index`、
+`scope` 应明确对应改动范围：单个脚本使用去掉扩展名的脚本名（`kernel-archive`、
 `site-sync`），多个脚本使用目录名（`build`、`deploy`、`site`、`nginx`），CI 改动使用
 `ci`。同一组文件使用连字符前的共同部分；修改多个 `test-*.py` 时使用 `test:`。
 
