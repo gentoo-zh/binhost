@@ -13,19 +13,12 @@
 #
 # Format: category/package  <TAB>  reason
 
-app-i18n/fcitx-kkc		依赖 libkkc 的 configure 需要 XML::Parser，基础镜像补 perl-cleaner 后复查
 app-misc/crush			许可证 FSL-1.1-MIT 含竞争用途限制，不属于 @BINARY-REDISTRIBUTABLE
 app-text/xreader		meson 的 C 项目编译很快，而 IUSE 有九个，二进制包只在 USE 完全匹配时才被采用，命中率收不回构建成本
 media-gfx/scangearmp		许可证 Canon-IJ 只准搭配 Canon 喷墨机使用，不在 @BINARY-REDISTRIBUTABLE
-media-plugins/osdlyrics	configure 需要 XML::Parser，基础镜像补 perl-cleaner 后复查
-net-proxy/proxy-server		ebuild 没有 KEYWORDS 声明，本站两个频道都不可见
 sys-kernel/mkinitcpio		需要 dbus[systemd]，与我们的 OpenRC profile 不兼容
 sys-kernel/xanmod-kernel	内核配置因人而异，发预编译的等于把我们的配置强加给用户
 app-dicts/fcitx-pinyin-moegirl	许可证 CC-BY-NC-SA-3.0 含非商业限制，不属于 @BINARY-REDISTRIBUTABLE
-gui-apps/waywallen		0.3.1 在 compile 阶段 ninja 失败，上游问题；overlay 已无更早版本
-media-gfx/open-wallpaper-engine	默认 USE=waywallen 会拉入上面那个包
-dev-libs/qml-material		overlay 已 mask，维护者停止维护，2026-09-27 移除
-media-plugins/waywallen-display	overlay 已 mask，维护者停止维护，2026-09-27 移除
 sys-boot/zfsbootmenu		依赖 sys-fs/zfs，它要匹配构建机内核，预编译对用户无意义
 net-im/telegram-desktop	依赖的 media-libs/tg_owt 无条件需要 media-libs/openh264，后者 RESTRICT=bindist，两个频道都无法满足依赖
 net-im/ayugram-desktop	与 telegram-desktop 相同：依赖的 media-libs/tg_owt 无条件需要 RESTRICT=bindist 的 media-libs/openh264
