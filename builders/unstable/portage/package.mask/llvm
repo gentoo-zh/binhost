@@ -1,0 +1,2 @@
+# Remove once dev-util/mesa_clc accepts LLVM 23; its LLVM_COMPAT stops at 22
+>=llvm-runtimes/libclc-23
