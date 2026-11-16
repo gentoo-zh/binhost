@@ -10,3 +10,4 @@ sys-kernel/installkernel dracut
 dev-cpp/simdutf        atomic-base64
 x11-base/xorg-server   xvfb
 dev-lang/rust          llvm_targets_BPF rust_sysroots_bpf
+net-libs/webkit-gtk     keyring
