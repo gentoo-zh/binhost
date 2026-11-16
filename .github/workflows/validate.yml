@@ -173,6 +173,34 @@ jobs:
             python3 build/gen-packages.py /tmp/overlay
           test ! -e /tmp/packages.json
 
+  deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - name: Packages added to a world resolve under the builder's restrictions
+        run: |
+          target="${{ github.event_name == 'pull_request' && github.base_ref || 'master' }}"
+          mkdir /tmp/base
+          git archive "$(git merge-base "origin/${target}" HEAD)" builders | tar -x -C /tmp/base
+          docker run --rm -v "${PWD}:/src:ro" -v /tmp/base:/base:ro \
+            -e PORTAGE_REPOSITORIES="$(printf '[DEFAULT]\nmain-repo = gentoo\n[gentoo]\nlocation = /var/db/repos/gentoo\n[gentoo-zh]\nlocation = /var/db/repos/gentoo-zh\n')" \
+            gentoo/stage3@sha256:512f766577179a7768b4243eb030d25292d1b3bb5bdf306d58ffe1e58a54bf0d \
+            bash -ec '
+              mkdir -p /var/db/repos/gentoo-zh
+              wget -qO- https://github.com/gentoo-zh/overlay/archive/refs/heads/master.tar.gz |
+                tar xz -C /var/db/repos/gentoo-zh --strip-components=1
+              emerge-webrsync -q
+              rc=0
+              for channel in stable unstable; do
+                rm -rf /etc/portage
+                ln -s "/src/builders/${channel}/portage" /etc/portage
+                python3 /src/tools/check-new-deps.py /base "${channel}" || rc=1
+              done
+              exit "${rc}"
+            '
+
   commits:
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
