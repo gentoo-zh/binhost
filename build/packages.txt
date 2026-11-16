@@ -17,6 +17,7 @@ app-i18n/akaza
 app-i18n/cskk
 app-i18n/fcitx-bamboo
 app-i18n/fcitx-cskk
+app-i18n/fcitx-kkc
 app-i18n/fcitx-libthai
 app-i18n/fcitx-mcbopomofo
 app-i18n/fcitx-meta
@@ -123,6 +124,7 @@ kde-misc/plasma-ions-china
 media-libs/libdicom
 media-libs/openslide
 media-plugins/kotonoha
+media-plugins/osdlyrics
 media-plugins/waylyrics
 media-sound/euphonica
 media-sound/feeluown
@@ -169,6 +171,7 @@ net-proxy/honk
 net-proxy/hysteria
 net-proxy/juicity
 net-proxy/mihomo
+net-proxy/proxy-server
 net-proxy/queqiao
 net-proxy/serenity
 net-proxy/shadowsocks-rust

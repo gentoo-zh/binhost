@@ -111,9 +111,13 @@ gnome-extra/resources
 gui-apps/crystal-dock
 gui-apps/tux-manager
 kde-misc/plasma-applet-netspeed-widget
+kde-misc/plasma-ions-china
 media-libs/libdicom
 media-libs/openslide
 media-plugins/kotonoha
+media-plugins/osdlyrics
+media-plugins/waylyrics
+media-sound/euphonica
 media-sound/feeluown
 media-sound/go-musicfox
 media-sound/netease-cloud-music-gtk
@@ -156,6 +160,7 @@ net-proxy/honk
 net-proxy/hysteria
 net-proxy/juicity
 net-proxy/mihomo
+net-proxy/proxy-server
 net-proxy/queqiao
 net-proxy/serenity
 net-proxy/shadowsocks-rust
