@@ -1,0 +1,3 @@
+# Remove once gtk 4.22 and libadwaita 1.9 are stable on amd64 in ::gentoo
+=gui-libs/gtk-4.22* ~amd64
+=gui-libs/libadwaita-1.9* ~amd64
