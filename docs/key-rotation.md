@@ -133,7 +133,7 @@ verify_download https://distfiles.gentoozh.org/unstable/binpkgs/x86-64
 
 - `.asc` 可以包含多把公钥，重叠期即为此状态，它会打印数量提醒收尾
 - 仓库中出现的每个指纹都必须是 `.asc` 已发布的公钥
-- 两个构建服务必须指定同一把密钥，且该密钥未撤销、具备签名能力
+- `builders/binhost-update` 只能指定一把密钥，且该密钥未撤销、具备签名能力
 - 当前签名密钥必须出现在本文中
 - `.asc` 中不得保留已过期的公钥
 
@@ -143,8 +143,7 @@ verify_download https://distfiles.gentoozh.org/unstable/binpkgs/x86-64
 
 | 位置 | 作用 |
 |---|---|
-| `deploy/systemd/binhost-build.service` 的 `Environment=SIGNING_KEY=` | stable 构建使用的密钥 |
-| `deploy/systemd/binhost-build-unstable.service` 的 `Environment=SIGNING_KEY=` | unstable 构建使用的密钥 |
+| `builders/binhost-update` 中 `SIGNING_KEY` 的默认值 | 两个频道签名使用的密钥 |
 | gentoozh.org 安装指南中的指纹 | 用户导入后核对的依据，由网站仓库维护，本仓库的 CI 不检查 |
 | `docs/key-rotation.md` 开头 | 本文记录的当前指纹 |
 | 镜像机的 `/etc/binhost/signing-key.fpr` | `site-sync.sh` 据此决定是否同步公钥 |

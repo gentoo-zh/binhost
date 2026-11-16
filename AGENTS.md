@@ -51,9 +51,6 @@ grep 依赖。**修改文案时必须同步更新断言**，否则测试失败�
 | 软件包 | 套件 |
 | 用户 | 使用者 |
 
-例外：`build/` 里的 `使用者` 指 preserved-libs 的 consumer——连结某个库的那一方，
-是术语不是 user，不要替换。
-
 ## 测试
 
 **不要写这三类断言**，它们把重构路径变成契约，改对了也会红：
@@ -93,6 +90,6 @@ grep 依赖。**修改文案时必须同步更新断言**，否则测试失败�
 - 不在 PR 或 issue 上发评论
 - 不加 AI 署名
 - 部署前确认三个服务都处于 inactive：
-  `systemctl is-active binhost-build binhost-build-unstable binhost-kernel`
+  `systemctl is-active binhost-update@stable binhost-update@unstable binhost-kernel`
 - 手动执行 `build/` 下的脚本时不要加 `sudo`——`mirror` 是 `adminc3b9c6` 的
   SSH config 别名，root 没有那份配置，脚本内部需要提权时会自己 sudo

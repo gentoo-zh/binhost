@@ -73,17 +73,10 @@ fi
 echo '--- 定时单元'
 sudo install -m644 '${tmp}'/systemd/binhost-*.service '${tmp}'/systemd/binhost-*.timer \
     /etc/systemd/system/
-for unit in binhost-build.service binhost-build-unstable.service; do
-    sudo sed -i -e 's|^Environment=SIGNING_KEY=.*|Environment=SIGNING_KEY=${SIGNING_KEY}|' \
-        \"/etc/systemd/system/\${unit}\"
-    grep -q \"^Environment=SIGNING_KEY=${SIGNING_KEY}\$\" \
-        \"/etc/systemd/system/\${unit}\" ||
-        { echo \"    !! SIGNING_KEY 没有写进 \${unit}\"; exit 1; }
-done
 sudo sed -i -e 's|^User=.*|User=${BUILD_USER}|' -e 's|^Group=.*|Group=${BUILD_USER}|' \
     /etc/systemd/system/binhost-*.service
 sudo systemctl daemon-reload
-sudo systemctl disable --now binhost-build.timer binhost-build-unstable.timer binhost-kernel.timer binhost-status.timer
+sudo systemctl disable --now binhost-kernel.timer binhost-status.timer
 printf %s '${COMMIT}' | sudo install -m644 /dev/stdin '${ROOT}/build/VERSION'
 systemctl list-timers --all --no-pager | grep binhost || true
 "

@@ -14,7 +14,7 @@
 | 路径 | 内容 |
 | --- | --- |
 | `builders/` | 两个频道的构建机配置、更新、签名与发布 |
-| `build/` | 软件包清单、内核归档，以及只为回滚保留的旧流水线 |
+| `build/` | 软件包清单与内核归档 |
 | `deploy/` | 镜像机和构建机的安装、同步、定时任务与监控 |
 | `ops/` | 两台共用的健康检查与告警 |
 | `tools/` | 清单维护、仓库校验与提交检查，供本机与 CI 使用 |
@@ -92,8 +92,6 @@ ops/status.sh
 
 将 `stable` 改为 `unstable` 可手动运行测试频道。
 
-`build/` 中基于 Docker 的旧流水线已停止定时运行，只为回滚保留，后续删除。
-
 ## 部署
 
 镜像机与构建机分别安装。以下命令假设本机已有可用的 `mirror` 和 `build` SSH 目标：
@@ -121,9 +119,8 @@ SIGNING_KEY=<签名指纹> REMOTE="ssh build" \
 回滚：在本机执行 `git revert <提交>`，再执行 `./deploy/install.sh`。安装会覆盖镜像机上的
 nginx 配置、脚本与 `VERSION`，重新编译过的 nginx 不会还原。
 
-`deploy/install-builder.sh` 在构建机安装 `build/`、内核归档与状态检查的定时器，并停用旧
-流水线的 `binhost-build*.timer`。脚本检测到构建锁时会中止；运行中的构建不应使用
-`FORCE=1` 覆盖。两个频道的更新单元按 [`builders/README.md`](builders/README.md) 安装。
+`deploy/install-builder.sh` 在构建机安装 `build/`、内核归档与状态检查的定时器。脚本检测到
+构建锁时会中止；运行中的构建不应使用 `FORCE=1` 覆盖。两个频道的更新单元按 [`builders/README.md`](builders/README.md) 安装。
 
 ## 镜像
 

@@ -16,8 +16,6 @@ UNITS = ROOT / "deploy" / "systemd"
 CRON = ROOT / "deploy" / "cron.d-binhost"
 EXPECTED_EXECUTABLES = {
     "binhost-alert@.service": "/var/lib/binhost/ops/alert-failed.sh",
-    "binhost-build-unstable.service": "/var/lib/binhost/build/cycle.sh",
-    "binhost-build.service": "/var/lib/binhost/build/cycle.sh",
     "binhost-kernel.service": "/var/lib/binhost/build/kernel-archive.sh",
     "binhost-status.service": "/var/lib/binhost/ops/status.sh",
     "binhost-update@.service": "/var/lib/binhost/builders/binhost-update",
@@ -85,9 +83,9 @@ def systemd_checks():
         check("systemd 单元通过完整验证", result.returncode == 0,
               result.stdout.strip())
 
-        mutated = target / "binhost-build.service"
+        mutated = target / "binhost-kernel.service"
         mutated.write_text(mutated.read_text().replace(
-            "ExecStart=/var/lib/binhost/build/cycle.sh",
+            "ExecStart=/var/lib/binhost/build/kernel-archive.sh",
             "ExecStart=/definitely/missing/binhost-command"))
         result = verify_units(root)
         check("不存在的 ExecStart 会使验证失败",
