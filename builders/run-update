@@ -4,6 +4,12 @@ set -e
 
 emerge -uDN --changed-deps --backtrack=100 --exclude virtual/dist-kernel @world
 
+for cpv in $(qlist -Iv net-libs/webkit-gtk); do
+	USE=-systemd emerge -pv --oneshot --nodeps --usepkgonly --binpkg-respect-use=y "=${cpv}" 2>/dev/null |
+		grep -q '^\[binary' ||
+		USE=-systemd emerge --oneshot --nodeps --buildpkgonly "=${cpv}"
+done
+
 CLEAN_DELAY=0 emerge --depclean --quiet-unmerge-warn
 eclean-pkg --unreachable
 
