@@ -167,7 +167,6 @@ net-proxy/cgproxy
 net-proxy/clash-rs
 net-proxy/clash-verge-rev
 net-proxy/dae
-net-proxy/daed
 net-proxy/honk
 net-proxy/hysteria
 net-proxy/juicity

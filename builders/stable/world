@@ -155,7 +155,6 @@ net-proxy/bore
 net-proxy/cgproxy
 net-proxy/clash-rs
 net-proxy/dae
-net-proxy/daed
 net-proxy/honk
 net-proxy/hysteria
 net-proxy/juicity
