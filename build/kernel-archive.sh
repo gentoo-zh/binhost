@@ -27,7 +27,7 @@ RETIRE_PER_RUN="${RETIRE_PER_RUN:-2}"
     exit 1
 }
 RETIRE_MIN_KEEP_SHARE="${RETIRE_MIN_KEEP_SHARE:-50}"
-MAX_BUILDS="${MAX_BUILDS:-4}"
+MAX_BUILDS="${MAX_BUILDS:-6}"
 # 1 builds only the newest version of each series; older ones are still kept.
 LATEST_ONLY="${LATEST_ONLY:-0}"
 [[ ${LATEST_ONLY} == [01] ]] || {
