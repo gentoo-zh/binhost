@@ -191,6 +191,7 @@ sci-biology/skani
 sci-electronics/openfpgaloader
 sci-ml/llama-cpp
 sys-apps/aptly
+sys-apps/bootvine
 sys-apps/pacman
 sys-apps/pnpm
 sys-fs/ssdfs-tools
