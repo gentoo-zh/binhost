@@ -96,6 +96,7 @@ dev-python/pyrime
 dev-python/qasync
 dev-python/simplesat
 dev-python/telethon
+dev-python/textual
 dev-util/asdf-vm
 dev-util/binsider
 dev-util/cmakerc
