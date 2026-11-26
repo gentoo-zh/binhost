@@ -86,6 +86,7 @@ dev-python/mw2fcitx
 dev-python/nudatus
 dev-python/nvchecker
 dev-python/okonomiyaki
+dev-python/pfzy
 dev-python/pure-protobuf
 dev-python/pycosat
 dev-python/pygls
